@@ -16,7 +16,7 @@ class AppConfig {
       return 'http://localhost:3000/api';
     }
     try {
-      if (Platform.isAndroid) {
+      if (Platform.isAndroid || Platform.isIOS) {
         // Use local PC Wi-Fi IP for physical phone, fallback to emulator 10.0.2.2
         return 'http://192.168.0.151:3000/api';
       }

@@ -18,6 +18,8 @@ class RiderLocationService extends ChangeNotifier {
   bool _isBroadcasting = false;
 
   Position? _currentPosition;
+  Position? _lastBroadcastPosition;
+  DateTime? _lastDbWriteTime;
   bool _isGpsActive = false;
   bool _permissionDenied = false;
   String? _currentRiderId;
@@ -81,17 +83,17 @@ class RiderLocationService extends ChangeNotifier {
         debugPrint('[RiderLocationService] Error obteniendo posición inicial: $e');
       }
 
-      // 4. Suscribirse al flujo continuo de GPS de alta frecuencia (cada ~800ms y sin salto de 5m)
+      // 4. Suscribirse al flujo continuo de GPS con filtro de movimiento inteligente (ahorro de batería y datos)
       _positionStreamSubscription?.cancel();
       final LocationSettings locationSettings = defaultTargetPlatform == TargetPlatform.android
           ? AndroidSettings(
               accuracy: LocationAccuracy.bestForNavigation,
-              distanceFilter: 0,
-              intervalDuration: const Duration(milliseconds: 800),
+              distanceFilter: 4, // Reporta cada vez que se desplaza al menos 4 metros
+              intervalDuration: const Duration(milliseconds: 3000), // Intervalo óptimo de 3 segundos
             )
           : const LocationSettings(
               accuracy: LocationAccuracy.bestForNavigation,
-              distanceFilter: 0,
+              distanceFilter: 4,
             );
 
       _positionStreamSubscription = Geolocator.getPositionStream(
@@ -105,9 +107,9 @@ class RiderLocationService extends ChangeNotifier {
         },
       );
 
-      // 5. Ping continuo de alta frecuencia cada 1 segundo para fluidez en tiempo real
+      // 5. Heartbeat periódico a 3.5 segundos para garantizar la señal continua
       _periodicPingTimer?.cancel();
-      _periodicPingTimer = Timer.periodic(const Duration(milliseconds: 1000), (_) async {
+      _periodicPingTimer = Timer.periodic(const Duration(milliseconds: 3500), (_) async {
         if (_currentPosition != null && _currentRiderId != null) {
           _broadcastLocationToBackendAndSupabase(_currentPosition!);
         }
@@ -151,7 +153,40 @@ class RiderLocationService extends ChangeNotifier {
   Future<void> _broadcastLocationToBackendAndSupabase(Position position) async {
     final riderId = _currentRiderId;
     if (riderId == null || riderId.isEmpty || _isBroadcasting) return;
+
+    // Filtro inteligente de producción:
+    // Solo emitir a base de datos si:
+    // a) Han pasado al menos 3.0 segundos desde la última escritura
+    // b) O se ha movido más de 5 metros
+    // Si el repartidor está detenido (semáforo o esperando comanda), solo envía un heartbeat cada 15 segundos
+    final now = DateTime.now();
+    double movedMeters = 999.0;
+    if (_lastBroadcastPosition != null) {
+      movedMeters = Geolocator.distanceBetween(
+        _lastBroadcastPosition!.latitude,
+        _lastBroadcastPosition!.longitude,
+        position.latitude,
+        position.longitude,
+      );
+    }
+
+    final msSinceLastWrite = _lastDbWriteTime != null
+        ? now.difference(_lastDbWriteTime!).inMilliseconds
+        : 99999;
+
+    // Si está estacionado y pasaron menos de 15 segundos, omitir escritura
+    if (movedMeters < 4.0 && msSinceLastWrite < 15000) {
+      return;
+    }
+
+    // Si está en movimiento pero pasaron menos de 3 segundos, omitir para no saturar disco
+    if (msSinceLastWrite < 3000) {
+      return;
+    }
+
     _isBroadcasting = true;
+    _lastDbWriteTime = now;
+    _lastBroadcastPosition = position;
 
     try {
       final lat = double.parse(position.latitude.toStringAsFixed(6));

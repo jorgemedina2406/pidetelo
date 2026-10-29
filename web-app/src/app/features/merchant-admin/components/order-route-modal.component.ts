@@ -169,7 +169,7 @@ export class OrderRouteModalComponent implements OnChanges, OnDestroy {
     if (Math.abs(dLat) < 0.000002 && Math.abs(dLng) < 0.000002) {
       return;
     }
-    const durationMs = 750;
+    const durationMs = 2400;
     const startTime = performance.now();
     const step = (now: number) => {
       if (!this.riderMarker) return;
@@ -332,7 +332,7 @@ export class OrderRouteModalComponent implements OnChanges, OnDestroy {
             }
           }
         });
-      }, 1000);
+      }, 4000);
     }
 
     const routeStart: [number, number] = isInTransit ? [riderLat, riderLng] : [originLat, originLng];

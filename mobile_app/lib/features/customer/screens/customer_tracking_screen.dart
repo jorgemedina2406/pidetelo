@@ -199,8 +199,8 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
       });
     });
 
-    // Refresco de alta frecuencia cada 1 segundo
-    _pollTimer = Timer.periodic(const Duration(milliseconds: 1000), (_) {
+    // Refresco de respaldo a 4 segundos (Supabase Realtime ya envía cambios instantáneamente)
+    _pollTimer = Timer.periodic(const Duration(milliseconds: 4000), (_) {
       _refreshOrderStatus();
     });
   }

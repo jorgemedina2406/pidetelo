@@ -68,7 +68,7 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
         if (!currentOrd || currentOrd.status !== 'delivered') {
           this.pollLiveOrderAndTelemetry(orderIdParam);
         }
-      }, 1000);
+      }, 4000);
     }
   }
 
@@ -84,7 +84,7 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
     if (Math.abs(dLat) < 0.000002 && Math.abs(dLng) < 0.000002) {
       return;
     }
-    const durationMs = 750;
+    const durationMs = 2400;
     const startTime = performance.now();
     const step = (now: number) => {
       if (!this.riderMarker) return;

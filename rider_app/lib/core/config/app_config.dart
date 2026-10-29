@@ -16,7 +16,7 @@ class AppConfig {
       return 'http://localhost:3000/api';
     }
     try {
-      if (Platform.isAndroid) {
+      if (Platform.isAndroid || Platform.isIOS) {
         return 'http://192.168.0.151:3000/api';
       }
     } catch (_) {

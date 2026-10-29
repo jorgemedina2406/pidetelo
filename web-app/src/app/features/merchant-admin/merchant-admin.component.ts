@@ -680,19 +680,19 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       });
     }
 
-    // Auto-polling rápido para órdenes y ubicación en vivo de motorizados
+    // Polling de respaldo para órdenes y ubicación en vivo de motorizados (Supabase Realtime notifica al instante)
     this.ordersPollingInterval = setInterval(() => {
       reloadOrders();
-    }, 2000);
+    }, 5000);
 
-    // Carga inicial, Realtime y auto-polling cada 1.5 segundos para telemetría GPS satelital real de los motorizados
+    // Carga inicial, Realtime y polling de respaldo cada 4 segundos para telemetría GPS de motorizados
     this.refreshRidersLocation();
     this.supabase.subscribeToRiders(() => {
       this.refreshRidersLocation();
     });
     this.ridersPollingInterval = setInterval(() => {
       this.refreshRidersLocation();
-    }, 1500);
+    }, 4000);
 
     // Preload live exchange rate from DolarApi
     this.currency.fetchDolarApiRate('oficial').then(data => {
