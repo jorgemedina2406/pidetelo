@@ -10,8 +10,9 @@ on:
 jobs:
   build:
     name: Build iOS (${{ matrix.app }})
-    runs-on: macos-14
+    runs-on: macos-13
     strategy:
+      max-parallel: 1
       matrix:
         app: [rider_app, mobile_app]
     steps:
