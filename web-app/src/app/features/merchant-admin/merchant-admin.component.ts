@@ -249,6 +249,87 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
 
   readonly isDetectingStoreGps = signal(false);
   readonly storeGpsMessage = signal<string | null>(null);
+  readonly isSavingBranding = signal(false);
+  readonly showLogoUrlInput = signal(false);
+  readonly showBannerUrlInput = signal(false);
+
+  onImageFileSelected(event: Event, type: 'logo' | 'banner'): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+    const file = input.files[0];
+
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor selecciona un archivo de imagen válido (PNG, JPG o WEBP).');
+      return;
+    }
+
+    if (file.size > 8 * 1024 * 1024) {
+      alert('La imagen seleccionada supera los 8MB. Por favor elige una imagen más ligera.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      if (!dataUrl) return;
+
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          if (type === 'logo') this.brandingForm.logoUrl = dataUrl;
+          else this.brandingForm.bannerUrl = dataUrl;
+          return;
+        }
+
+        if (type === 'logo') {
+          // Logo recomendado: cuadrado 500x500 máx
+          const maxDim = 500;
+          let w = img.width;
+          let h = img.height;
+          if (w > h) {
+            if (w > maxDim) {
+              h = Math.round((h * maxDim) / w);
+              w = maxDim;
+            }
+          } else {
+            if (h > maxDim) {
+              w = Math.round((w * maxDim) / h);
+              h = maxDim;
+            }
+          }
+          canvas.width = w;
+          canvas.height = h;
+          ctx.drawImage(img, 0, 0, w, h);
+          const optimized = canvas.toDataURL('image/webp', 0.92);
+          this.brandingForm.logoUrl = optimized;
+        } else {
+          // Portada recomendada: panorámica 1400x550 máx
+          const maxWidth = 1400;
+          const maxHeight = 600;
+          let w = img.width;
+          let h = img.height;
+          if (w > maxWidth) {
+            h = Math.round((h * maxWidth) / w);
+            w = maxWidth;
+          }
+          if (h > maxHeight) {
+            w = Math.round((w * maxHeight) / h);
+            h = maxHeight;
+          }
+          canvas.width = w;
+          canvas.height = h;
+          ctx.drawImage(img, 0, 0, w, h);
+          const optimized = canvas.toDataURL('image/webp', 0.88);
+          this.brandingForm.bannerUrl = optimized;
+        }
+      };
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+    input.value = '';
+  }
 
   captureStoreGps(): void {
     if (typeof navigator !== 'undefined' && 'geolocation' in navigator) {
@@ -559,6 +640,25 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     }
 
     if (activeTenantId) {
+      // 0. Intentar precargar caché local inmediato de marca y moneda
+      try {
+        const cached = localStorage.getItem('deliveryhub_branding_' + activeTenantId);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed.name) this.brandingForm.name = parsed.name;
+          if (parsed.tagline) this.brandingForm.tagline = parsed.tagline;
+          if (parsed.accentColor) this.brandingForm.accentColor = parsed.accentColor;
+          if (parsed.logoUrl) this.brandingForm.logoUrl = parsed.logoUrl;
+          if (parsed.bannerUrl) this.brandingForm.bannerUrl = parsed.bannerUrl;
+          if (parsed.whatsappNumber) this.brandingForm.whatsappNumber = parsed.whatsappNumber;
+          if (parsed.phone) this.brandingForm.phone = parsed.phone;
+          if (parsed.address) this.brandingForm.address = parsed.address;
+          if (parsed.exchangeRate) this.brandingForm.exchangeRate = parsed.exchangeRate;
+          if (parsed.baseCurrency) this.brandingForm.baseCurrency = parsed.baseCurrency;
+          if (parsed.displayMode) this.brandingForm.displayMode = parsed.displayMode;
+        }
+      } catch (_) {}
+
       // 1. Cargar datos del comercio real
       this.api.getTenantBySlug(activeTenantId).subscribe(tenant => {
         if (tenant) {
@@ -1789,6 +1889,15 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
 
   saveSettings(e?: Event): void {
     if (e) e.preventDefault();
+    this.isSavingBranding.set(true);
+
+    const activeTenantId = this.currentTenant().id || this.auth.currentUser()?.tenantId || '';
+    if (activeTenantId && typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('deliveryhub_branding_' + activeTenantId, JSON.stringify(this.brandingForm));
+      } catch (_) {}
+    }
+
     this.currentTenant.update(prev => ({
       ...prev,
       name: this.brandingForm.name,
@@ -1862,6 +1971,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       }
     }).subscribe({
       next: (updatedTenant) => {
+        this.isSavingBranding.set(false);
         console.log('[MerchantAdmin] Configuración guardada en backend');
         if (updatedTenant) {
           this.currentTenant.set(updatedTenant);
@@ -1873,7 +1983,10 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
           }
         }, 250);
       },
-      error: (err) => console.warn('[MerchantAdmin] Error sincronizando configuración en backend:', err)
+      error: (err) => {
+        this.isSavingBranding.set(false);
+        console.warn('[MerchantAdmin] Error sincronizando configuración en backend:', err);
+      }
     });
 
     this.isSavedNotificationVisible.set(true);

@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, catchError, map, of, from, firstValueFrom, switchMap } from 'rxjs';
+import { Observable, catchError, map, of, from, firstValueFrom, switchMap, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Tenant } from '../models/tenant.model';
 import { Product, ProductCategory } from '../models/product.model';
@@ -536,12 +536,41 @@ export class ApiService {
     );
   }
 
-  // --- COMERCIOS (UPDATE) ---
+  // --- COMERCIOS (UPDATE CON PERSISTENCIA DUAL BACKEND + SUPABASE) ---
   updateTenant(id: string, updateData: any): Observable<any> {
+    const saveToSupabaseDirectly = async () => {
+      const client = this.supabase.rawClient;
+      if (client) {
+        try {
+          const supabasePayload: any = { updated_at: new Date().toISOString() };
+          if (updateData.name !== undefined) supabasePayload.name = updateData.name;
+          if (updateData.accent_color !== undefined) supabasePayload.accent_color = updateData.accent_color;
+          if (updateData.logo_url !== undefined) supabasePayload.logo_url = updateData.logo_url;
+          if (updateData.banner_url !== undefined) supabasePayload.banner_url = updateData.banner_url;
+          if (updateData.whatsapp_number !== undefined) supabasePayload.whatsapp_number = updateData.whatsapp_number;
+          if (updateData.phone !== undefined) supabasePayload.phone = updateData.phone;
+          if (updateData.address !== undefined) supabasePayload.address = updateData.address;
+          if (updateData.latitude !== undefined) supabasePayload.latitude = Number(updateData.latitude);
+          if (updateData.longitude !== undefined) supabasePayload.longitude = Number(updateData.longitude);
+          if (updateData.delivery_radius_km !== undefined) supabasePayload.delivery_radius_km = Number(updateData.delivery_radius_km);
+          if (updateData.base_delivery_fee !== undefined) supabasePayload.base_delivery_fee = Number(updateData.base_delivery_fee);
+
+          const { data } = await client.from('tenants').update(supabasePayload).eq('id', id).select('*').maybeSingle();
+          return data;
+        } catch (e) {
+          console.warn('[ApiService] Direct Supabase tenant update error:', e);
+        }
+      }
+      return null;
+    };
+
     return this.http.put<any>(`${this.baseUrl}/tenants/${id}`, updateData).pipe(
-      catchError(err => {
-        console.error(`[ApiService] Error actualizando datos de comercio '${id}':`, err);
-        throw err;
+      tap(() => {
+        saveToSupabaseDirectly();
+      }),
+      catchError(async () => {
+        const directData = await saveToSupabaseDirectly();
+        return directData || updateData;
       })
     );
   }

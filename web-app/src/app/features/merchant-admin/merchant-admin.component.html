@@ -2252,10 +2252,15 @@
               </span>
               }
 
-              <button (click)="saveSettings()"
-                class="bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm flex items-center gap-2 transition-all active:scale-95 cursor-pointer">
-                <app-icon name="check" [size]="16" className="text-white"></app-icon>
-                <span>Guardar Cambios</span>
+              <button (click)="saveSettings()" [disabled]="isSavingBranding()"
+                class="bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm flex items-center gap-2 transition-all active:scale-95 cursor-pointer">
+                @if (isSavingBranding()) {
+                  <span class="animate-spin text-sm">⏳</span>
+                  <span>Guardando Cambios...</span>
+                } @else {
+                  <app-icon name="check" [size]="16" className="text-white"></app-icon>
+                  <span>Guardar Cambios</span>
+                }
               </button>
             </div>
           </div>
@@ -2466,6 +2471,24 @@
                 </div>
               </div>
 
+              <!-- Nombre Comercial y Eslogan -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div>
+                  <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">
+                    Nombre Comercial de la Marca
+                  </label>
+                  <input type="text" [(ngModel)]="brandingForm.name" placeholder="Ej: Burger King"
+                    class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
+                </div>
+                <div>
+                  <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">
+                    Eslogan o Subtítulo Comercial
+                  </label>
+                  <input type="text" [(ngModel)]="brandingForm.tagline" placeholder="Ej: A la parrilla sabe mejor"
+                    class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
+                </div>
+              </div>
+
               <!-- Selector de Color de Acento -->
               <div class="space-y-3">
                 <label class="block text-xs font-bold text-slate-700 dark:text-slate-300">
@@ -2495,22 +2518,104 @@
                 </div>
               </div>
 
-              <!-- Logo & Portada URLs -->
-              <div class="space-y-3 pt-2">
-                <div>
-                  <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">
-                    URL del Logo del Comercio
-                  </label>
-                  <input type="url" [(ngModel)]="brandingForm.logoUrl"
-                    class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-mono" />
+              <!-- Logo & Portada con Subida desde el Dispositivo y Dimensiones Recomendadas -->
+              <div class="space-y-4 pt-2">
+                <!-- LOGO PICKER -->
+                <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3">
+                  <div class="flex items-start justify-between gap-3 flex-wrap sm:flex-nowrap">
+                    <div class="flex items-center gap-3">
+                      <!-- Mini Thumbnail -->
+                      <div class="w-14 h-14 rounded-xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 flex items-center justify-center overflow-hidden shadow-xs flex-shrink-0">
+                        @if (brandingForm.logoUrl) {
+                          <img [src]="brandingForm.logoUrl" class="w-full h-full object-cover" alt="Logo" />
+                        } @else {
+                          <app-icon name="camera" [size]="22" className="text-slate-400"></app-icon>
+                        }
+                      </div>
+
+                      <div>
+                        <div class="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-1.5 flex-wrap">
+                          <span>Logo del Comercio</span>
+                          <span class="text-[9px] px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 font-extrabold uppercase">1:1 Cuadrado</span>
+                        </div>
+                        <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                          Recomendado: <strong class="text-slate-700 dark:text-slate-200">500 x 500 px</strong> (mín. 200 x 200 px).<br />
+                          Formatos: <span class="font-medium">PNG transparente, JPG o WEBP</span> (máx. 3 MB).
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Upload Button -->
+                    <div class="sm:self-center">
+                      <input type="file" #logoFileInput accept="image/png,image/jpeg,image/webp" (change)="onImageFileSelected($event, 'logo')" class="hidden" />
+                      <button type="button" (click)="logoFileInput.click()"
+                        class="px-3.5 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-extrabold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer flex-shrink-0 active:scale-95">
+                        <app-icon name="upload" [size]="14" className="text-white"></app-icon>
+                        <span>{{ brandingForm.logoUrl ? 'Cambiar Logo' : 'Subir desde dispositivo' }}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Direct URL toggle -->
+                  <div class="pt-2 border-t border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between">
+                    <button type="button" (click)="showLogoUrlInput.set(!showLogoUrlInput())" class="text-[10px] text-brand-600 dark:text-brand-400 hover:underline font-semibold flex items-center gap-1 cursor-pointer">
+                      <span>🔗 {{ showLogoUrlInput() ? 'Ocultar enlace URL' : 'O pegar enlace URL de logo externo' }}</span>
+                    </button>
+                  </div>
+
+                  @if (showLogoUrlInput()) {
+                    <input type="url" [(ngModel)]="brandingForm.logoUrl" placeholder="https://ejemplo.com/logo.png"
+                      class="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-mono" />
+                  }
                 </div>
 
-                <div>
-                  <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">
-                    URL de Portada / Banner Hero
-                  </label>
-                  <input type="url" [(ngModel)]="brandingForm.bannerUrl"
-                    class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-mono" />
+                <!-- BANNER PICKER -->
+                <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3">
+                  <div class="flex items-start justify-between gap-3 flex-wrap sm:flex-nowrap">
+                    <div class="flex items-center gap-3">
+                      <!-- Mini Thumbnail -->
+                      <div class="w-20 h-12 rounded-xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 flex items-center justify-center overflow-hidden shadow-xs flex-shrink-0">
+                        @if (brandingForm.bannerUrl) {
+                          <img [src]="brandingForm.bannerUrl" class="w-full h-full object-cover" alt="Banner" />
+                        } @else {
+                          <app-icon name="camera" [size]="22" className="text-slate-400"></app-icon>
+                        }
+                      </div>
+
+                      <div>
+                        <div class="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-1.5 flex-wrap">
+                          <span>Portada / Banner Hero</span>
+                          <span class="text-[9px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 font-extrabold uppercase">16:9 Panorámico</span>
+                        </div>
+                        <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                          Recomendado: <strong class="text-slate-700 dark:text-slate-200">1200 x 450 px</strong> o <strong class="text-slate-700 dark:text-slate-200">1600 x 600 px</strong>.<br />
+                          Formatos: <span class="font-medium">JPG o WEBP de alta resolución</span> (máx. 5 MB).
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Upload Button -->
+                    <div class="sm:self-center">
+                      <input type="file" #bannerFileInput accept="image/png,image/jpeg,image/webp" (change)="onImageFileSelected($event, 'banner')" class="hidden" />
+                      <button type="button" (click)="bannerFileInput.click()"
+                        class="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer flex-shrink-0 active:scale-95">
+                        <app-icon name="upload" [size]="14" className="text-white"></app-icon>
+                        <span>{{ brandingForm.bannerUrl ? 'Cambiar Portada' : 'Subir desde dispositivo' }}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Direct URL toggle -->
+                  <div class="pt-2 border-t border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between">
+                    <button type="button" (click)="showBannerUrlInput.set(!showBannerUrlInput())" class="text-[10px] text-blue-600 dark:text-blue-400 hover:underline font-semibold flex items-center gap-1 cursor-pointer">
+                      <span>🔗 {{ showBannerUrlInput() ? 'Ocultar enlace URL' : 'O pegar enlace URL de portada externa' }}</span>
+                    </button>
+                  </div>
+
+                  @if (showBannerUrlInput()) {
+                    <input type="url" [(ngModel)]="brandingForm.bannerUrl" placeholder="https://ejemplo.com/portada.jpg"
+                      class="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-blue-500 font-mono" />
+                  }
                 </div>
               </div>
 
