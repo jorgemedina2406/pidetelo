@@ -10,11 +10,11 @@ on:
 jobs:
   build:
     name: Build iOS (${{ matrix.app }})
-    runs-on: macos-13
+    runs-on: macos-latest
     strategy:
       max-parallel: 1
       matrix:
-        app: [rider_app, mobile_app]
+        app: [rider_app]
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
