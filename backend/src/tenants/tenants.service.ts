@@ -1,0 +1,412 @@
+import { Injectable, NotFoundException, InternalServerErrorException } from '@nestjs/common';
+import { SupabaseService } from '../supabase/supabase.service.js';
+import * as path from 'path';
+import * as fs from 'fs';
+import * as crypto from 'crypto';
+
+@Injectable()
+export class TenantsService {
+  private metadataFilePath = path.join(process.cwd(), 'data', 'tenants_metadata.json');
+
+  constructor(private supabase: SupabaseService) {}
+
+  private loadMetadata(): Record<string, any> {
+    try {
+      if (fs.existsSync(this.metadataFilePath)) {
+        return JSON.parse(fs.readFileSync(this.metadataFilePath, 'utf-8'));
+      }
+    } catch (_) {}
+    return {};
+  }
+
+  private saveTagline(tenantId: string, tagline: string) {
+    try {
+      const data = this.loadMetadata();
+      data[tenantId] = { ...(data[tenantId] || {}), tagline };
+      const dir = path.dirname(this.metadataFilePath);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(this.metadataFilePath, JSON.stringify(data, null, 2), 'utf-8');
+    } catch (e) {
+      console.warn('[TenantsService] Error saving tenant metadata:', e);
+    }
+  }
+
+  private getTagline(tenantId: string): string | undefined {
+    try {
+      const data = this.loadMetadata();
+      return data[tenantId]?.tagline;
+    } catch (_) {
+      return undefined;
+    }
+  }
+
+  private saveTenantMetadata(tenantId: string, metadata: Record<string, any>) {
+    try {
+      const data = this.loadMetadata();
+      data[tenantId] = { ...(data[tenantId] || {}), ...metadata };
+      const dir = path.dirname(this.metadataFilePath);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(this.metadataFilePath, JSON.stringify(data, null, 2), 'utf-8');
+    } catch (e) {
+      console.warn('[TenantsService] Error saving tenant metadata:', e);
+    }
+  }
+
+  private getTenantMetadata(tenantId: string): Record<string, any> {
+    try {
+      const data = this.loadMetadata();
+      return data[tenantId] || {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  private mergeTenantWithMetadata(t: any): any {
+    if (!t) return t;
+    const meta = this.getTenantMetadata(t.id);
+    const exchangeRate = Number(t.exchange_rate ?? meta.exchange_rate ?? meta.currency_settings?.exchangeRate) || 45.50;
+    const baseCurrency = t.base_currency ?? meta.base_currency ?? meta.currency_settings?.baseCurrency ?? 'USD';
+    const displayMode = t.display_mode ?? meta.display_mode ?? meta.currency_settings?.displayMode ?? 'usd_and_bs';
+    const tagline = t.tagline ?? meta.tagline ?? '';
+
+    const currencySettings = {
+      baseCurrency,
+      displayMode,
+      exchangeRate,
+      lastRateUpdate: meta.currency_settings?.lastRateUpdate || new Date().toISOString()
+    };
+
+    return {
+      ...t,
+      tagline,
+      exchange_rate: exchangeRate,
+      base_currency: baseCurrency,
+      display_mode: displayMode,
+      currency_settings: currencySettings,
+      currencySettings,
+      branding: {
+        accentColor: t.accent_color || '#f97316',
+        logoUrl: t.logo_url || '',
+        bannerUrl: t.banner_url || ''
+      }
+    };
+  }
+
+  async findAll(includeInactive = false) {
+    let query = this.supabase.getClient().from('tenants').select('*, branches(*)').order('name');
+    if (!includeInactive) {
+      query = query.eq('is_active', true);
+    }
+    const { data, error } = await query;
+
+    if (error) {
+      throw new InternalServerErrorException(`Error fetching tenants: ${error.message}`);
+    }
+    return (data || []).map(t => this.mergeTenantWithMetadata(t));
+  }
+
+  async findBySlug(slug: string) {
+    const { data, error } = await this.supabase
+      .getClient()
+      .from('tenants')
+      .select('*, branches(*)')
+      .eq('slug', slug)
+      .single();
+
+    if (error || !data) {
+      throw new NotFoundException(`Tenant con slug '${slug}' no encontrado`);
+    }
+    return this.mergeTenantWithMetadata(data);
+  }
+
+  async findById(id: string) {
+    const { data, error } = await this.supabase
+      .getClient()
+      .from('tenants')
+      .select('*, branches(*)')
+      .eq('id', id)
+      .single();
+
+    if (error || !data) {
+      throw new NotFoundException(`Tenant con id '${id}' no encontrado`);
+    }
+    return this.mergeTenantWithMetadata(data);
+  }
+
+  async update(id: string, updateData: any) {
+    // 1. Guardar metadata local (tagline, moneda, tasa, modo, etc.)
+    const metaToSave: Record<string, any> = {};
+    if (updateData.tagline !== undefined) metaToSave.tagline = updateData.tagline;
+    if (updateData.exchange_rate !== undefined) metaToSave.exchange_rate = Number(updateData.exchange_rate);
+    if (updateData.base_currency !== undefined) metaToSave.base_currency = updateData.base_currency;
+    if (updateData.display_mode !== undefined) metaToSave.display_mode = updateData.display_mode;
+    if (updateData.currency_settings !== undefined || updateData.currencySettings !== undefined) {
+      metaToSave.currency_settings = updateData.currency_settings || updateData.currencySettings;
+      if (metaToSave.currency_settings?.exchangeRate) {
+        metaToSave.exchange_rate = Number(metaToSave.currency_settings.exchangeRate);
+      }
+      if (metaToSave.currency_settings?.baseCurrency) {
+        metaToSave.base_currency = metaToSave.currency_settings.baseCurrency;
+      }
+      if (metaToSave.currency_settings?.displayMode) {
+        metaToSave.display_mode = metaToSave.currency_settings.displayMode;
+      }
+    }
+    if (Object.keys(metaToSave).length > 0) {
+      this.saveTenantMetadata(id, metaToSave);
+    }
+
+    // 2. Filtrar únicamente las columnas válidas existentes en la tabla tenants de Supabase
+    const allowedColumns = new Set([
+      'name', 'slug', 'business_name', 'tax_id', 'phone', 'whatsapp_number',
+      'email', 'logo_url', 'banner_url', 'accent_color', 'address',
+      'latitude', 'longitude', 'delivery_radius_km', 'base_delivery_fee',
+      'min_order_amount', 'commission_percentage', 'is_active',
+      'subscription_plan_id', 'subscription_status'
+    ]);
+
+    const cleanPayload: any = { updated_at: new Date().toISOString() };
+    for (const [key, value] of Object.entries(updateData)) {
+      if (allowedColumns.has(key) && value !== undefined) {
+        cleanPayload[key] = value;
+      }
+    }
+
+    const { data, error } = await this.supabase
+      .getClient()
+      .from('tenants')
+      .update(cleanPayload)
+      .eq('id', id)
+      .select('*, branches(*)')
+      .single();
+
+    if (error) {
+      throw new InternalServerErrorException(`Error updating tenant: ${error.message}`);
+    }
+
+    // Sincronizar automáticamente la Sede Principal en la tabla branches si se modificó ubicación, dirección, radio o teléfono
+    try {
+      const branchUpdate: any = { updated_at: new Date().toISOString() };
+      if (updateData.name !== undefined) branchUpdate.name = `${updateData.name} (Sede Principal)`;
+      if (updateData.address !== undefined) branchUpdate.address = updateData.address;
+      if (updateData.latitude !== undefined) branchUpdate.latitude = Number(updateData.latitude);
+      if (updateData.longitude !== undefined) branchUpdate.longitude = Number(updateData.longitude);
+      if (updateData.delivery_radius_km !== undefined) branchUpdate.delivery_radius_km = Number(updateData.delivery_radius_km);
+      if (updateData.base_delivery_fee !== undefined) branchUpdate.base_delivery_fee = Number(updateData.base_delivery_fee);
+      if (updateData.phone !== undefined) branchUpdate.phone = updateData.phone;
+      if (updateData.whatsapp_number !== undefined) branchUpdate.whatsapp_number = updateData.whatsapp_number;
+
+      if (Object.keys(branchUpdate).length > 1) {
+        await this.supabase
+          .getClient()
+          .from('branches')
+          .update(branchUpdate)
+          .eq('company_id', id)
+          .or('is_main.eq.true,name.ilike.%principal%');
+      }
+    } catch (bErr) {
+      console.warn('[TenantsService] Error sincronizando sede principal en branches:', bErr);
+    }
+
+    return this.mergeTenantWithMetadata(data);
+  }
+
+  async create(payload: any) {
+    const name = payload.name?.trim();
+    if (!name) {
+      throw new InternalServerErrorException('El nombre del comercio es requerido');
+    }
+
+    const slug = (payload.slug || name.toLowerCase().replace(/[^a-z0-9]/g, '-') || `comercio-${Date.now()}`).trim();
+    const tenantId = payload.id || crypto.randomUUID();
+
+    // 1. Insertar el comercio en Supabase
+    const tenantRecord = {
+      id: tenantId,
+      slug,
+      name,
+      business_name: payload.business_name || name,
+      phone: payload.whatsapp || payload.phone || '+584120000000',
+      whatsapp_number: payload.whatsapp || payload.whatsapp_number || '+584120000000',
+      email: payload.owner_email || payload.email || `${slug}@deliveryhub.io`,
+      address: payload.address || 'Caracas, Venezuela',
+      latitude: payload.latitude || 10.4806,
+      longitude: payload.longitude || -66.9036,
+      base_delivery_fee: payload.delivery_fee || payload.deliveryFee || 2.50,
+      commission_percentage: payload.commission || payload.commission_percentage || 5.0,
+      is_active: true,
+      logo_url: payload.logo_url || 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=200&auto=format&fit=crop&q=80',
+      banner_url: payload.banner_url || 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1200&auto=format&fit=crop&q=80',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    const { data: createdTenant, error: tErr } = await this.supabase
+      .getClient()
+      .from('tenants')
+      .insert(tenantRecord)
+      .select()
+      .single();
+
+    if (tErr) {
+      throw new InternalServerErrorException(`Error creando comercio en base de datos: ${tErr.message}`);
+    }
+
+    // 1.1 Crear automáticamente la Sede Principal en la tabla branches
+    const mainBranchId = crypto.randomUUID();
+    const mainBranchRecord = {
+      id: mainBranchId,
+      company_id: tenantId,
+      name: `${name} (Sede Principal)`,
+      slug: `${slug}-sede-principal`,
+      phone: payload.whatsapp || payload.phone || '+584120000000',
+      whatsapp_number: payload.whatsapp || payload.whatsapp_number || '+584120000000',
+      address: payload.address || 'Sede Principal',
+      latitude: payload.latitude || 10.4806,
+      longitude: payload.longitude || -66.9036,
+      delivery_radius_km: payload.delivery_radius_km || 8.0,
+      base_delivery_fee: payload.delivery_fee || payload.deliveryFee || 2.50,
+      min_order_amount: payload.min_order_amount || 5.00,
+      status: 'active',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    try {
+      await this.supabase.getClient().from('branches').insert(mainBranchRecord);
+    } catch (bErr) {
+      console.warn('[TenantsService] Error creando sucursal principal:', bErr);
+    }
+
+    // 2. Crear automáticamente la cuenta del dueño en Supabase Auth (auth.users)
+    const ownerName = payload.owner_name?.trim() || `${name} (Dueño)`;
+    const ownerEmail = payload.owner_email?.trim().toLowerCase() || `${slug}@deliveryhub.io`;
+    const ownerPassword = payload.owner_password || '123456';
+    const ownerPhone = payload.owner_phone || tenantRecord.phone;
+
+    let authUserId: string | null = null;
+
+    // A. Intentar con clave administrativa si está configurada (service_role)
+    try {
+      const adminAuth = (this.supabase.getClient().auth as any)?.admin;
+      if (adminAuth && typeof adminAuth.createUser === 'function') {
+        const { data: adminData } = await adminAuth.createUser({
+          email: ownerEmail,
+          password: ownerPassword,
+          email_confirm: true,
+          user_metadata: {
+            full_name: ownerName,
+            role: 'MERCHANT_OWNER',
+            tenant_id: tenantId,
+            tenant_name: name
+          }
+        });
+        if (adminData?.user) {
+          authUserId = adminData.user.id;
+        }
+      }
+    } catch (_) {}
+
+    // B. Alternativa B: Registrar cuenta vía signUp de Supabase Auth
+    if (!authUserId) {
+      try {
+        const { data: suData } = await this.supabase.getClient().auth.signUp({
+          email: ownerEmail,
+          password: ownerPassword,
+          options: {
+            data: {
+              full_name: ownerName,
+              role: 'MERCHANT_OWNER',
+              tenant_id: tenantId,
+              tenant_name: name
+            }
+          }
+        });
+        if (suData?.user) {
+          authUserId = suData.user.id;
+        }
+      } catch (suErr) {
+        console.warn('[TenantsService] Error registrando en Supabase Auth:', suErr);
+      }
+    }
+
+    // 3. Crear registro en la tabla public.profiles
+    if (authUserId) {
+      try {
+        await this.supabase.getClient().from('profiles').upsert({
+          id: authUserId,
+          tenant_id: tenantId,
+          full_name: ownerName,
+          email: ownerEmail,
+          phone: ownerPhone,
+          role: 'MERCHANT_OWNER',
+          is_active: true,
+          updated_at: new Date().toISOString()
+        });
+      } catch (pErr) {
+        console.warn('[TenantsService] Error creando profile en Supabase:', pErr);
+      }
+    }
+
+    // 4. Crear registro en store_collaborators
+    const finalUserId = authUserId || crypto.randomUUID();
+    const ownerRecord = {
+      id: finalUserId,
+      tenant_id: tenantId,
+      branch_id: null,
+      name: ownerName,
+      email: ownerEmail,
+      phone: ownerPhone,
+      role: 'MERCHANT_OWNER',
+      password_hash: ownerPassword,
+      is_active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    try {
+      await this.supabase.getClient().from('store_collaborators').upsert(ownerRecord);
+    } catch (e) {
+      console.warn('[TenantsService] Error creando colaborador dueño:', e);
+    }
+
+    // 5. Guardar en almacenamiento local para acceso inmediato
+    try {
+      const usersPath = path.resolve(process.cwd(), 'data', 'users_storage.json');
+      let existingUsers: any[] = [];
+      if (fs.existsSync(usersPath)) {
+        existingUsers = JSON.parse(fs.readFileSync(usersPath, 'utf-8'));
+      }
+      existingUsers = existingUsers.filter((u: any) => u.email?.toLowerCase() !== ownerEmail);
+      existingUsers.push({
+        id: finalUserId,
+        tenant_id: tenantId,
+        branch_id: null,
+        branch_name: 'Todas las Sedes (Acceso Global)',
+        name: ownerName,
+        email: ownerEmail,
+        phone: ownerPhone,
+        role: 'MERCHANT_OWNER',
+        password: ownerPassword,
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+      fs.writeFileSync(usersPath, JSON.stringify(existingUsers, null, 2), 'utf-8');
+    } catch (storageErr) {
+      console.warn('[TenantsService] Error actualizando users_storage.json:', storageErr);
+    }
+
+    return {
+      tenant: createdTenant || tenantRecord,
+      owner: {
+        id: finalUserId,
+        name: ownerName,
+        email: ownerEmail,
+        password: ownerPassword,
+        role: 'MERCHANT_OWNER'
+      }
+    };
+  }
+}
+

@@ -1,0 +1,345 @@
+<div class="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-150">
+      
+      <!-- ================= STRIPE-STYLE MINIMALIST TOPBAR ================= -->
+      <nav class="bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+          
+          <!-- Logo & Brand Badge -->
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg bg-slate-900 p-1 flex items-center justify-center shadow-xs flex-shrink-0 border border-slate-200 dark:border-slate-800">
+              <img src="assets/logo.png" alt="Logo" class="w-full h-full object-contain" />
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-slate-900 dark:text-white tracking-tight text-base">DeliveryHub</span>
+              <span class="text-[11px] bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                Marketplace
+              </span>
+            </div>
+          </div>
+
+          <!-- Location Selector: Clean SaaS Pill -->
+          <div class="relative flex-1 max-w-xs hidden md:block">
+            <button (click)="isLocationDropdownOpen.set(!isLocationDropdownOpen())"
+                    class="w-full flex items-center justify-between gap-2 px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 text-xs font-medium text-slate-700 dark:text-slate-200 transition-colors">
+              <div class="flex items-center gap-2 truncate">
+                <app-icon name="map-pin" [size]="14" className="text-brand-500 flex-shrink-0"></app-icon>
+                <span class="truncate text-slate-900 dark:text-white font-semibold">{{ currentZone().name }}</span>
+              </div>
+              <app-icon name="chevron-down" [size]="13" className="text-slate-400 flex-shrink-0"></app-icon>
+            </button>
+
+            <!-- Dropdown Menu (Subtle 8px Corners, No neon) -->
+            @if (isLocationDropdownOpen()) {
+              <div class="absolute left-0 right-0 top-full mt-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-lg p-1.5 z-50 space-y-0.5">
+                <div class="px-2.5 py-1 text-[11px] font-semibold text-slate-400">
+                  Ubicación de Entrega
+                </div>
+
+                <button (click)="detectGpsLocation()"
+                        [disabled]="isDetectingGps()"
+                        class="w-full px-2.5 py-2 rounded-md bg-slate-50 dark:bg-slate-850 hover:bg-slate-100 dark:hover:bg-slate-800 text-brand-600 dark:text-brand-400 font-semibold text-xs flex items-center gap-2 transition-colors text-left">
+                  <app-icon name="navigation" [size]="14" [className]="isDetectingGps() ? 'animate-spin' : ''"></app-icon>
+                  <span>{{ isDetectingGps() ? 'Obteniendo GPS...' : 'Usar mi ubicación GPS actual' }}</span>
+                </button>
+
+                <div class="h-px bg-slate-100 dark:bg-slate-800 my-1"></div>
+
+                @for (zone of availableZones; track zone.id) {
+                  <button (click)="selectZone(zone)"
+                          [class.bg-slate-100]="currentZone().id === zone.id"
+                          [class.dark:bg-slate-800]="currentZone().id === zone.id"
+                          class="w-full px-2.5 py-1.5 rounded-md text-left text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-800/70 flex items-center justify-between text-slate-700 dark:text-slate-300 transition-colors">
+                    <span>{{ zone.name }}</span>
+                    @if (currentZone().id === zone.id) {
+                      <app-icon name="check" [size]="13" className="text-brand-500"></app-icon>
+                    }
+                  </button>
+                }
+              </div>
+            }
+          </div>
+
+          <!-- Utility Controls -->
+          <div class="flex items-center gap-2">
+            <!-- Theme Toggle -->
+            <button (click)="theme.toggleTheme()" 
+                    [title]="theme.isDark() ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'"
+                    class="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 transition-colors">
+              <app-icon [name]="theme.isDark() ? 'sun' : 'moon'" [size]="14" [className]="theme.isDark() ? 'text-amber-400' : 'text-slate-600'"></app-icon>
+            </button>
+
+            <!-- Language Switcher -->
+            <button (click)="i18n.toggleLang()" 
+                    class="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs transition-colors">
+              {{ i18n.lang() === 'es' ? 'ES' : 'EN' }}
+            </button>
+
+            <!-- Navigation Links -->
+            <a routerLink="/rider" 
+               class="hidden sm:inline-flex text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 transition-colors">
+              Riders
+            </a>
+
+            <a routerLink="/merchant-admin" 
+               class="hidden sm:inline-flex text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 transition-colors">
+              Comercios
+            </a>
+
+            <a routerLink="/login" 
+               class="bg-brand-500 hover:bg-brand-600 text-white font-semibold text-xs px-3.5 py-2 rounded-lg shadow-xs transition-colors">
+              Iniciar Sesión
+            </a>
+          </div>
+
+        </div>
+
+        <!-- Mobile Location Sub-bar -->
+        <div class="px-4 py-2 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 md:hidden flex items-center justify-between text-xs">
+          <div class="flex items-center gap-1.5 truncate text-slate-600 dark:text-slate-400 font-medium">
+            <app-icon name="map-pin" [size]="13" className="text-brand-500"></app-icon>
+            <span class="truncate">{{ currentZone().name }}</span>
+          </div>
+          <button (click)="detectGpsLocation()" class="text-brand-600 dark:text-brand-400 font-semibold text-xs flex-shrink-0">
+            Cambiar
+          </button>
+        </div>
+      </nav>
+
+      <!-- ================= CLEAN CORPORATE HERO (NO NEON, NO CYBERPUNK) ================= -->
+      <section class="bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 py-12 px-4 sm:px-6">
+        <div class="max-w-4xl mx-auto space-y-4 text-center sm:text-left">
+          
+          <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium">
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span>{{ filteredTenants().length }} restaurantes disponibles en tu zona</span>
+          </div>
+
+          <h1 class="text-2xl sm:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-tight">
+            Restaurantes seleccionados con entrega local directa.
+          </h1>
+
+          <p class="text-sm text-slate-500 dark:text-slate-400 max-w-2xl leading-relaxed">
+            Explora cartas digitales, consulta tiempos estimados de despacho y confirma pedidos directamente por WhatsApp o mediante la plataforma.
+          </p>
+
+          <!-- Minimalist Search Input (Linear/Stripe style) -->
+          <div class="pt-2 max-w-xl">
+            <div class="bg-slate-50 dark:bg-slate-900 rounded-lg p-1 flex items-center gap-2 border border-slate-300 dark:border-slate-700 focus-within:border-brand-500 focus-within:ring-1 focus-within:ring-brand-500 shadow-xs transition-all">
+              <span class="pl-2.5 text-slate-400 flex-shrink-0">
+                <app-icon name="search" [size]="16"></app-icon>
+              </span>
+              <input type="text" 
+                     [(ngModel)]="searchQuery" 
+                     placeholder="Buscar por restaurante, sushi, hamburguesas, pizzas..."
+                     class="w-full text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 bg-transparent focus:outline-none py-1.5" />
+              @if (searchQuery) {
+                <button (click)="searchQuery = ''" class="text-slate-400 hover:text-slate-600 px-2 text-xs font-bold">
+                  ✕
+                </button>
+              }
+              <button class="bg-brand-500 hover:bg-brand-600 text-white font-semibold text-xs px-4 py-2 rounded-md shadow-xs transition-colors flex-shrink-0">
+                Buscar
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ================= ACTIVE ORDER TOAST BAR ================= -->
+      @if (activeOrder(); as ord) {
+        <div class="bg-slate-900 dark:bg-slate-900 text-white border-b border-slate-800 px-4 py-2.5">
+          <div class="max-w-6xl mx-auto flex items-center justify-between text-xs gap-3">
+            <div class="flex items-center gap-2.5 truncate font-medium">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span class="truncate">
+                Pedido activo: <strong class="text-white">{{ ord.orderNumber }} • {{ ord.storeName }}</strong> (En camino a tu dirección)
+              </span>
+            </div>
+
+            <a [routerLink]="['/track', ord.id]" 
+               class="bg-brand-500 hover:bg-brand-600 text-white px-3 py-1 rounded-md text-xs font-semibold flex items-center gap-1.5 flex-shrink-0 transition-colors">
+              <span>Rastrear</span>
+              <app-icon name="chevron-right" [size]="12"></app-icon>
+            </a>
+          </div>
+        </div>
+      }
+
+      <!-- ================= MAIN CONTENT AREA ================= -->
+      <main class="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex-1 w-full space-y-6">
+        
+        <!-- Category Chips (Subtle 8px Border Radius) -->
+        <div class="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+          @for (cat of categories; track cat) {
+            <button (click)="selectedCategory.set(cat)"
+                    [class.bg-slate-900]="selectedCategory() === cat"
+                    [class.dark:bg-white]="selectedCategory() === cat"
+                    [class.text-white]="selectedCategory() === cat"
+                    [class.dark:text-slate-900]="selectedCategory() === cat"
+                    [class.border-slate-900]="selectedCategory() === cat"
+                    [class.dark:border-white]="selectedCategory() === cat"
+                    [class.bg-white]="selectedCategory() !== cat"
+                    [class.dark:bg-slate-900]="selectedCategory() !== cat"
+                    [class.text-slate-600]="selectedCategory() !== cat"
+                    [class.dark:text-slate-300]="selectedCategory() !== cat"
+                    [class.border-slate-200]="selectedCategory() !== cat"
+                    [class.dark:border-slate-800]="selectedCategory() !== cat"
+                    class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors flex-shrink-0">
+              <span>{{ cat }}</span>
+            </button>
+          }
+        </div>
+
+        <!-- Filter & Sorting Header -->
+        <div class="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-200 dark:border-slate-800">
+          <div>
+            <h2 class="text-base font-bold text-slate-900 dark:text-white">
+              Restaurantes Disponibles
+            </h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Distancias calculadas respecto a: <strong class="text-slate-700 dark:text-slate-300">{{ currentZone().name }}</strong>
+            </p>
+          </div>
+
+          <div class="flex items-center gap-2 text-xs">
+            <span class="text-slate-400">Ordenar por:</span>
+            <select [(ngModel)]="sortBy" 
+                    class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 focus:outline-none focus:border-brand-500 shadow-xs">
+              <option value="nearest">Menor Distancia</option>
+              <option value="fastest">Tiempo de Entrega</option>
+              <option value="rating">Calificación ★</option>
+              <option value="fee">Tarifa de Envío</option>
+            </select>
+          </div>
+            <!-- ================= RESTAURANTS GRID (8px subtle corners, clean cards) ================= -->
+        @if (filteredTenants().length === 0 && !isLoading()) {
+          <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 sm:p-12 text-center max-w-xl mx-auto space-y-4 my-6 shadow-xs">
+            <div class="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-500 mx-auto flex items-center justify-center">
+              <app-icon name="map-pin" [size]="28"></app-icon>
+            </div>
+            <div class="space-y-1.5">
+              <h3 class="text-base font-bold text-slate-900 dark:text-white">Sin comercios con cobertura directa</h3>
+              <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed max-w-md mx-auto">
+                Ningún comercio en la plataforma tiene radio de entrega que alcance tu ubicación actual seleccionada (<strong class="text-slate-800 dark:text-slate-200">{{ currentZone().name }}</strong>).
+              </p>
+            </div>
+            <div class="pt-2 flex flex-col sm:flex-row items-center justify-center gap-2.5">
+              <button (click)="detectGpsLocation()" 
+                      [disabled]="isDetectingGps()"
+                      class="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-semibold text-xs flex items-center justify-center gap-2 transition-all active:scale-95 shadow-xs cursor-pointer">
+                <app-icon name="navigation" [size]="14" [className]="isDetectingGps() ? 'animate-spin' : ''"></app-icon>
+                <span>{{ isDetectingGps() ? 'Detectando GPS...' : 'Usar mi GPS exacto' }}</span>
+              </button>
+              <button (click)="isLocationDropdownOpen.set(true)" 
+                      class="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs transition-colors cursor-pointer">
+                Cambiar de Zona
+              </button>
+            </div>
+          </div>
+        } @else {
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            @for (tenant of filteredTenants(); track tenant.id) {
+              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden shadow-xs hover:border-slate-300 dark:hover:border-slate-700 transition-colors flex flex-col justify-between">
+                
+                <!-- Image Banner with subtle 1px border -->
+                <div>
+                  <div class="relative h-40 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-800 overflow-hidden">
+                    <img [src]="tenant.bannerUrl" 
+                         [alt]="tenant.name"
+                         class="w-full h-full object-cover" />
+
+                    <!-- Badges (Subtle 4px / 6px radius) -->
+                    <div class="absolute bottom-2 left-2 flex items-center gap-1.5">
+                      <span class="px-2 py-0.5 rounded bg-slate-900/90 text-white text-[11px] font-medium flex items-center gap-1">
+                        <app-icon name="map-pin" [size]="11" className="text-brand-400"></app-icon>
+                        <span>{{ tenant.distanceKm.toFixed(1) }} km</span>
+                      </span>
+                      
+                      <span class="px-2 py-0.5 rounded bg-slate-900/90 text-white text-[11px] font-medium flex items-center gap-1">
+                        <app-icon name="clock" [size]="11" className="text-slate-300"></app-icon>
+                        <span>{{ tenant.deliveryMinutesMin }}-{{ tenant.deliveryMinutesMax }} min</span>
+                      </span>
+                    </div>
+
+                    <div class="absolute top-2 right-2 px-2 py-0.5 rounded bg-white/95 dark:bg-slate-900/95 text-slate-900 dark:text-white text-[11px] font-bold border border-slate-200 dark:border-slate-700 flex items-center gap-1">
+                      <span class="text-amber-500">★</span>
+                      <span>{{ tenant.rating.toFixed(1) }}</span>
+                    </div>
+                  </div>
+
+                  <!-- Card Body -->
+                  <div class="p-4 space-y-2">
+                    <div class="flex items-center gap-2.5">
+                      <img [src]="tenant.logoUrl" 
+                           [alt]="tenant.name"
+                           class="w-9 h-9 rounded-md object-cover border border-slate-200 dark:border-slate-700 flex-shrink-0" />
+                      <div class="min-w-0">
+                        <h3 class="font-bold text-sm text-slate-900 dark:text-white truncate">
+                          {{ tenant.name }}
+                        </h3>
+                        <div class="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                          {{ tenant.category }} • {{ tenant.contact.address }}
+                        </div>
+                      </div>
+                    </div>
+
+                    <p class="text-xs text-slate-600 dark:text-slate-300 line-clamp-2 leading-relaxed">
+                      {{ tenant.tagline }}
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Footer with Action Buttons -->
+                <div class="p-4 pt-0">
+                  <div class="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-3">
+                    <div class="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
+                      <span>Envío: <strong class="text-slate-900 dark:text-white">${{ tenant.deliverySettings.baseDeliveryFee.toFixed(2) }}</strong></span>
+                      @if (tenant.deliverySettings.freeDeliveryThreshold) {
+                        <span class="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+                          Gratis > ${{ tenant.deliverySettings.freeDeliveryThreshold }}
+                        </span>
+                      }
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                      <a [routerLink]="['/t', tenant.slug]"
+                         class="py-2 rounded-md bg-brand-500 hover:bg-brand-600 text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors">
+                        <app-icon name="utensils" [size]="13" className="text-white"></app-icon>
+                        <span>Ver Menú</span>
+                      </a>
+
+                      <a [href]="'https://wa.me/' + tenant.contact.whatsappNumber.replace('+', '') + '?text=' + encodeWhatsAppText(tenant.name)" 
+                         target="_blank"
+                         class="py-2 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs border border-slate-200 dark:border-slate-700 flex items-center justify-center gap-1.5 transition-colors">
+                        <app-icon name="message-circle" [size]="13"></app-icon>
+                        <span>WhatsApp</span>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            }
+          </div>
+        }
+        </div>
+
+      </main>
+
+      <!-- ================= FOOTER ================= -->
+      <footer class="bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 py-8 px-4 mt-12 text-xs text-slate-500 dark:text-slate-400">
+        <div class="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div class="flex items-center gap-2">
+            <span class="font-bold text-slate-900 dark:text-white">DeliveryHub</span>
+            <span>— Red descentralizada de comercio y logística</span>
+          </div>
+          <div class="flex items-center gap-4">
+            <a routerLink="/rider" class="hover:text-slate-900 dark:hover:text-white transition-colors">Portal Repartidores</a>
+            <a routerLink="/merchant-admin" class="hover:text-slate-900 dark:hover:text-white transition-colors">Portal Comercios</a>
+            <a routerLink="/super-admin" class="hover:text-slate-900 dark:hover:text-white transition-colors">SuperAdmin</a>
+          </div>
+        </div>
+      </footer>
+
+    </div>

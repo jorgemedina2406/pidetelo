@@ -1,0 +1,100 @@
+@if (cart.isSuccessModalOpen() && cart.completedOrder(); as order) {
+      <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in"
+           (click)="cart.closeSuccessModal()">
+        
+        <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col"
+             (click)="$event.stopPropagation()">
+          
+          <div class="p-6 text-center border-b border-slate-100 bg-emerald-50/50">
+            <div class="w-16 h-16 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-3xl mx-auto shadow-inner mb-3">
+              🎉
+            </div>
+            <h3 class="text-xl font-extrabold text-slate-900">¡Pedido Enviado!</h3>
+            <p class="text-xs text-slate-500 mt-1">
+              Referencia: <span class="font-bold text-slate-800">{{ order.orderNumber }}</span>
+            </p>
+          </div>
+
+          <div class="p-5 overflow-y-auto space-y-4">
+            
+            <!-- WhatsApp Action Reminder -->
+            <div class="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-900 space-y-2">
+              <div class="flex items-center gap-2 font-bold text-sm">
+                <span>💬</span>
+                <span>¿No se abrió WhatsApp automáticamente?</span>
+              </div>
+              <p class="text-xs text-emerald-800 leading-relaxed">
+                Haz clic en el siguiente botón para enviar el detalle de tu orden al comercio y confirmar la entrega:
+              </p>
+              <a [href]="getWhatsAppUrl(order)" 
+                 target="_blank"
+                 class="inline-flex w-full items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 px-4 rounded-xl shadow-md transition-all">
+                <span>Reenviar a WhatsApp</span>
+                <span>→</span>
+              </a>
+            </div>
+
+            <!-- Summary Card -->
+            <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-800 space-y-2 text-xs">
+              <div class="flex justify-between font-bold text-slate-800 dark:text-slate-100">
+                <span>{{ order.fulfillmentType === 'delivery' ? '🛵 Entrega a Domicilio' : '🛍️ Retiro en Tienda' }}</span>
+                <span class="text-brand-600 dark:text-brand-400 text-sm font-extrabold">${{ order.total.toFixed(2) }}</span>
+              </div>
+              <p class="text-slate-500 dark:text-slate-400 text-[11px]">
+                Tiempo estimado de preparación y despacho: <strong>30 - 45 min</strong>
+              </p>
+            </div>
+
+            <!-- Botón de Rastreo en Vivo -->
+            <a [routerLink]="['/track', order.orderNumber.replace('#', '')]"
+               (click)="cart.closeSuccessModal()"
+               class="flex items-center justify-between p-3.5 rounded-xl bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 text-orange-600 dark:text-orange-400 font-bold text-xs transition-all shadow-xs group">
+              <div class="flex items-center gap-2">
+                <span class="text-base">📍</span>
+                <span>Rastrear mi pedido en tiempo real (GPS)</span>
+              </div>
+              <span class="transform group-hover:translate-x-1 transition-transform">→</span>
+            </a>
+
+            <!-- 🚀 STRATEGIC NETWORK EFFECT BANNER (Fase 2) -->
+            <div class="p-4 rounded-2xl bg-gradient-to-br from-indigo-900 via-slate-900 to-brand-900 text-white space-y-3 relative overflow-hidden shadow-xl">
+              <div class="absolute -right-6 -bottom-6 w-24 h-24 rounded-full bg-brand-500/20 blur-xl"></div>
+              
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 rounded-full bg-brand-500 text-[10px] font-extrabold uppercase tracking-wider">
+                  Nuevo
+                </span>
+                <span class="text-xs font-semibold text-slate-200">Red Marketplace</span>
+              </div>
+
+              <h4 class="font-extrabold text-sm leading-snug">
+                ¿Quieres descubrir más restaurantes y comercios en tu zona?
+              </h4>
+
+              <p class="text-[11px] text-slate-300 leading-relaxed">
+                Pide en múltiples locales desde un solo lugar, rastrea a tu motorizado en vivo en el mapa y acumula puntos.
+              </p>
+
+              <div class="pt-1 flex gap-2">
+                <button (click)="goToMarketplace()" 
+                        class="flex-1 bg-white hover:bg-slate-100 text-slate-900 font-bold text-xs py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-sm">
+                  <span>🗺️ Explorar Comercios</span>
+                </button>
+                <button class="bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1">
+                  <span>📲 App Flutter</span>
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">
+            <button (click)="cart.closeSuccessModal()" 
+                    class="w-full text-slate-600 hover:text-slate-900 font-bold text-xs py-2.5 rounded-xl border border-slate-200 hover:bg-white transition-all">
+              Cerrar y volver a la tienda
+            </button>
+          </div>
+
+        </div>
+      </div>
+    }

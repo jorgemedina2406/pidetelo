@@ -1,0 +1,49 @@
+name: Build iOS IPAs
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  build:
+    name: Build iOS (${{ matrix.app }})
+    runs-on: macos-14
+    strategy:
+      matrix:
+        app: [rider_app, mobile_app]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.27.1'
+          channel: 'stable'
+          cache: true
+
+      - name: Install Dependencies
+        run: |
+          cd ${{ matrix.app }}
+          flutter pub get
+
+      - name: Build iOS (No Codesign)
+        run: |
+          cd ${{ matrix.app }}
+          flutter build ios --release --no-codesign
+
+      - name: Package IPA
+        run: |
+          cd ${{ matrix.app }}/build/ios/iphoneos
+          mkdir Payload
+          cp -r Runner.app Payload/
+          zip -r -q "${{ matrix.app }}.ipa" Payload
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.app }}-ipa
+          path: ${{ matrix.app }}/build/ios/iphoneos/${{ matrix.app }}.ipa

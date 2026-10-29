@@ -1,0 +1,115 @@
+@import "leaflet/dist/leaflet.css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  body {
+    @apply antialiased selection:bg-brand-500 selection:text-white min-h-screen overflow-x-hidden transition-colors duration-150;
+  }
+
+  html.dark body {
+    background-color: #0d131e !important;
+    color: #f1f5f9;
+  }
+
+  html.light body {
+    background-color: #f4f6fa !important;
+    color: #0f172a;
+  }
+}
+
+/* Micro-animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(-6px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slide-in {
+  animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Modern Card Utilities supporting Dark & Light */
+.card-adaptive {
+  @apply bg-white border border-slate-200/90 shadow-xs text-slate-900 
+         dark:bg-slate-900 dark:border-slate-800 dark:shadow-none dark:text-slate-100 
+         rounded-lg transition-all duration-150;
+}
+
+.sidebar-adaptive {
+  @apply bg-white border-r border-slate-200/90 shadow-xs
+         dark:bg-slate-950 dark:border-slate-800 dark:shadow-none
+         transition-all duration-200;
+}
+
+.topbar-adaptive {
+  @apply bg-white/95 backdrop-blur-md border-b border-slate-200/90 shadow-xs
+         dark:bg-slate-950/95 dark:border-slate-800
+         transition-colors duration-150;
+}
+
+/* Crisp technical scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.35);
+  border-radius: 4px;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.6);
+}
+
+/* Leaflet Custom Marker & Pulse Animations */
+.leaflet-container {
+  font-family: inherit;
+  z-index: 10;
+}
+
+.leaflet-rider-pulse {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.leaflet-rider-pulse::before {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 9999px;
+  background-color: rgba(249, 115, 22, 0.4);
+  animation: leafletPing 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes leafletPing {
+  75%, 100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+

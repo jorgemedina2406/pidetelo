@@ -1,0 +1,512 @@
+<div class="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col max-w-lg mx-auto border-x border-slate-200 dark:border-slate-800 font-sans transition-colors duration-150">
+      
+      <!-- ================= MINIMALIST TOPBAR ================= -->
+      <header class="bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 px-4 py-3 sticky top-0 z-30 flex items-center justify-between">
+        @if (order(); as ord) {
+          <a [routerLink]="ord.tenantSlug ? '/t/' + ord.tenantSlug : '/'" class="text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1 transition-colors">
+            <app-icon name="chevron-left" [size]="14"></app-icon>
+            <span>{{ ord.tenantName || 'Volver al Menú' }}</span>
+          </a>
+        } @else {
+          <div class="w-16"></div>
+        }
+
+        <div class="text-center">
+          <div class="font-bold text-sm text-slate-900 dark:text-white">Estado de la Entrega</div>
+          <div class="text-[11px] text-slate-500 font-mono">{{ order()?.orderNumber }}</div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button (click)="theme.toggleTheme()" 
+                  class="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300">
+            <app-icon [name]="theme.isDark() ? 'sun' : 'moon'" [size]="14"></app-icon>
+          </button>
+          
+          <a [href]="'https://wa.me/584129998877?text=Consulta%20pedido%20' + order()?.orderNumber" 
+             target="_blank" 
+             class="text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-2.5 py-1 rounded-md border border-slate-200 dark:border-slate-800 flex items-center gap-1 transition-colors">
+            <app-icon name="message-circle" [size]="13"></app-icon>
+            <span>Soporte</span>
+          </a>
+        </div>
+      </header>
+
+      @if (order(); as ord) {
+        <main class="p-4 space-y-4 flex-1">
+          
+          <!-- ================= STATUS SUMMARY CARD ================= -->
+          <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-xs space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full"
+                      [class.bg-brand-500]="ord.status === 'on_the_way'"
+                      [class.bg-emerald-500]="ord.status === 'delivered'"
+                      [class.bg-amber-500]="ord.status === 'received' || ord.status === 'in_kitchen'"
+                      [class.animate-pulse]="ord.status !== 'delivered'"></span>
+                <span class="text-xs font-bold uppercase tracking-wider"
+                      [class.text-brand-600]="ord.status === 'on_the_way'"
+                      [class.dark:text-brand-400]="ord.status === 'on_the_way'"
+                      [class.text-emerald-600]="ord.status === 'delivered'"
+                      [class.dark:text-emerald-400]="ord.status === 'delivered'"
+                      [class.text-amber-600]="ord.status === 'received' || ord.status === 'in_kitchen'"
+                      [class.dark:text-amber-400]="ord.status === 'received' || ord.status === 'in_kitchen'">
+                  {{ ord.status === 'on_the_way' ? 'Repartidor en Ruta' : ord.status === 'in_kitchen' ? 'En Cocina' : ord.status === 'delivered' ? 'Entregado' : 'Pedido Recibido' }}
+                </span>
+              </div>
+
+              <span class="text-xs font-semibold px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                @if (ord.status === 'delivered') {
+                  Entregado
+                } @else {
+                  Llegada estimada: ~{{ etaMinutes() }} min
+                }
+              </span>
+            </div>
+
+            <h2 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-snug">
+              @if (ord.status === 'on_the_way') {
+                El repartidor va en camino a tu dirección
+              } @else if (ord.status === 'in_kitchen') {
+                El restaurante está preparando tu pedido en cocina
+              } @else if (ord.status === 'delivered') {
+                ¡Tu pedido ha sido entregado con éxito!
+              } @else {
+                Pedido recibido, en espera de cocina
+              }
+            </h2>
+
+            <!-- Sleek Compact Stepper (Sobrio, sin degradados saturados ni cajas grandes) -->
+            <div class="pt-3 border-t border-slate-100 dark:border-slate-800">
+              <div class="relative flex items-center justify-between px-6">
+                <!-- Línea de fondo -->
+                <div class="absolute top-3 left-10 right-10 h-0.5 bg-slate-200 dark:bg-slate-800 z-0"></div>
+                <!-- Línea activa sobria -->
+                <div class="absolute top-3 left-10 h-0.5 bg-brand-500 transition-all duration-500 z-0"
+                     [style.width]="ord.status === 'received' ? '0%' : ord.status === 'in_kitchen' ? '50%' : 'calc(100% - 5rem)'"></div>
+
+                <!-- Paso 1: Confirmado -->
+                <div class="relative z-10 flex flex-col items-center">
+                  <div class="w-6 h-6 rounded-full bg-brand-500 text-white flex items-center justify-center text-[10px] font-bold shadow-xs">
+                    ✓
+                  </div>
+                  <span class="text-[11px] font-semibold text-slate-800 dark:text-slate-200 mt-1.5">Confirmado</span>
+                </div>
+
+                <!-- Paso 2: En Cocina -->
+                <div class="relative z-10 flex flex-col items-center">
+                  <div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-all shadow-xs"
+                       [class.bg-brand-500]="ord.status === 'in_kitchen' || ord.status === 'on_the_way' || ord.status === 'delivered'"
+                       [class.text-white]="ord.status === 'in_kitchen' || ord.status === 'on_the_way' || ord.status === 'delivered'"
+                       [class.ring-4]="ord.status === 'in_kitchen'"
+                       [class.ring-brand-500/20]="ord.status === 'in_kitchen'"
+                       [class.bg-slate-100]="ord.status === 'received'"
+                       [class.dark:bg-slate-800]="ord.status === 'received'"
+                       [class.border]="ord.status === 'received'"
+                       [class.border-slate-300]="ord.status === 'received'"
+                       [class.dark:border-slate-700]="ord.status === 'received'"
+                       [class.text-slate-400]="ord.status === 'received'">
+                    {{ ord.status === 'in_kitchen' || ord.status === 'on_the_way' || ord.status === 'delivered' ? '✓' : '2' }}
+                  </div>
+                  <span class="text-[11px] font-medium mt-1.5 transition-colors"
+                        [class.font-bold]="ord.status === 'in_kitchen'"
+                        [class.text-brand-600]="ord.status === 'in_kitchen'"
+                        [class.dark:text-brand-400]="ord.status === 'in_kitchen'"
+                        [class.text-slate-800]="ord.status === 'on_the_way' || ord.status === 'delivered'"
+                        [class.dark:text-slate-200]="ord.status === 'on_the_way' || ord.status === 'delivered'"
+                        [class.text-slate-400]="ord.status === 'received'">
+                    En Cocina
+                  </span>
+                </div>
+
+                <!-- Paso 3: En Camino -->
+                <div class="relative z-10 flex flex-col items-center">
+                  <div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-all shadow-xs"
+                       [class.bg-brand-500]="ord.status === 'on_the_way'"
+                       [class.bg-emerald-500]="ord.status === 'delivered'"
+                       [class.text-white]="ord.status === 'on_the_way' || ord.status === 'delivered'"
+                       [class.ring-4]="ord.status === 'on_the_way'"
+                       [class.ring-brand-500/20]="ord.status === 'on_the_way'"
+                       [class.bg-slate-100]="ord.status !== 'on_the_way' && ord.status !== 'delivered'"
+                       [class.dark:bg-slate-800]="ord.status !== 'on_the_way' && ord.status !== 'delivered'"
+                       [class.border]="ord.status !== 'on_the_way' && ord.status !== 'delivered'"
+                       [class.border-slate-300]="ord.status !== 'on_the_way' && ord.status !== 'delivered'"
+                       [class.dark:border-slate-700]="ord.status !== 'on_the_way' && ord.status !== 'delivered'"
+                       [class.text-slate-400]="ord.status !== 'on_the_way' && ord.status !== 'delivered'">
+                    @if (ord.status === 'on_the_way') {
+                      <app-icon name="bike" [size]="12"></app-icon>
+                    } @else if (ord.status === 'delivered') {
+                      ✓
+                    } @else {
+                      3
+                    }
+                  </div>
+                  <span class="text-[11px] font-medium mt-1.5 transition-colors"
+                        [class.font-bold]="ord.status === 'on_the_way'"
+                        [class.text-brand-600]="ord.status === 'on_the_way'"
+                        [class.dark:text-brand-400]="ord.status === 'on_the_way'"
+                        [class.text-emerald-600]="ord.status === 'delivered'"
+                        [class.dark:text-emerald-400]="ord.status === 'delivered'"
+                        [class.text-slate-400]="ord.status !== 'on_the_way' && ord.status !== 'delivered'">
+                    En Camino
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ================= REAL LEAFLET LIVE RADAR MAP (0$ GOOGLE MAPS) ================= -->
+          <div class="card-adaptive rounded-xl overflow-hidden relative h-72 border border-slate-200 dark:border-slate-800 shadow-xs">
+            
+            <!-- Leaflet Map Container -->
+            <div id="customer-leaflet-map" class="w-full h-full z-0"></div>
+
+            <!-- Top Header Status Badge -->
+            <div class="absolute top-3 left-3 z-[400] bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-800 text-[11px] font-bold text-slate-800 dark:text-slate-200 shadow-sm flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span>Ruta Vial Óptima (OpenStreetMap)</span>
+            </div>
+
+            <!-- Recenter Button -->
+            <button (click)="recenter()"
+                    title="Centrar mapa"
+                    class="absolute top-3 right-3 z-[400] p-1.5 rounded-lg bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:text-brand-500 shadow-sm transition-colors cursor-pointer">
+              <app-icon name="crosshair" [size]="14"></app-icon>
+            </button>
+
+            <!-- Bottom Floating Telemetry Overlay -->
+            <div class="absolute bottom-3 inset-x-3 z-[400] bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-800 shadow-md flex items-center justify-between text-xs">
+              @if (ord.status === 'on_the_way') {
+                <div class="flex items-center gap-2 font-bold text-slate-800 dark:text-slate-200">
+                  <div class="w-6 h-6 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center">
+                    <app-icon name="bike" [size]="14"></app-icon>
+                  </div>
+                  <span>{{ ord.driverName || 'Pepito Flores' }}</span>
+                </div>
+                <div class="flex items-center gap-2 font-semibold text-slate-600 dark:text-slate-400 text-[11px]">
+                  <span>{{ speedKmh() > 0 ? (speedKmh() + ' km/h') : 'En ruta' }}</span>
+                  <span>•</span>
+                  <span class="text-brand-600 dark:text-brand-400 font-bold">{{ distanceKm() }} km restantes</span>
+                </div>
+              } @else if (ord.status === 'in_kitchen') {
+                <div class="flex items-center gap-2 font-bold text-amber-600 dark:text-amber-400">
+                  <span>🍳</span>
+                  <span>En preparación en cocina</span>
+                </div>
+                <div class="font-semibold text-slate-600 dark:text-slate-400 text-[11px]">
+                  <span>Distancia de entrega: {{ distanceKm() }} km</span>
+                </div>
+              } @else if (ord.status === 'delivered') {
+                <div class="flex items-center gap-2 font-bold text-emerald-600 dark:text-emerald-400">
+                  <app-icon name="check" [size]="15" className="text-emerald-500"></app-icon>
+                  <span>Entregado en tu ubicación</span>
+                </div>
+                <div class="font-semibold text-slate-600 dark:text-slate-400 text-[11px]">
+                  <span>Completado</span>
+                </div>
+              } @else {
+                <div class="flex items-center gap-2 font-bold text-slate-800 dark:text-slate-200">
+                  <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
+                  <span>Esperando confirmación del restaurante</span>
+                </div>
+                <div class="font-semibold text-slate-600 dark:text-slate-400 text-[11px]">
+                  <span>Distancia estimada: {{ distanceKm() }} km</span>
+                </div>
+              }
+            </div>
+
+          </div>
+
+          <!-- ================= COURIER PROFILE ================= -->
+          @if (ord.driverId) {
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm space-y-3">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <img [src]="ord.driverAvatar || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80'" 
+                       class="w-12 h-12 rounded-xl object-cover border-2 border-emerald-500/30 shadow-xs" />
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <h4 class="font-bold text-sm text-slate-900 dark:text-white">
+                        {{ ord.driverName || 'Repartidor Asignado' }}
+                      </h4>
+                      <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-500/20">
+                        Motorizado Asignado
+                      </span>
+                    </div>
+                    <div class="text-xs text-slate-600 dark:text-slate-400 mt-0.5 font-medium">
+                      {{ ord.driverVehicle || 'Motocicleta' }}
+                    </div>
+                    <div class="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                      <span class="font-mono font-semibold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                        Placa: {{ ord.driverPlate || 'Identificada' }}
+                      </span>
+                      <span class="text-amber-500 font-bold">★ 5.0</span>
+                    </div>
+                  </div>
+                </div>
+
+                @if (ord.driverPhone) {
+                  <div class="hidden sm:block text-right">
+                    <span class="text-[10px] text-slate-400 uppercase font-semibold">Teléfono</span>
+                    <p class="text-xs font-mono font-bold text-slate-700 dark:text-slate-300">
+                      {{ getFormattedPhone(ord.driverPhone) }}
+                    </p>
+                  </div>
+                }
+              </div>
+
+              <!-- Contact Actions Row (WhatsApp & Direct Call) -->
+              <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <a [href]="getCleanWhatsAppUrl(ord.driverPhone || '41668416184', ord.orderNumber, ord.driverName || 'Pepito')" 
+                   target="_blank"
+                   class="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer">
+                  <app-icon name="message-circle" [size]="16"></app-icon>
+                  <span>Chatear por WhatsApp</span>
+                </a>
+
+                <a [href]="getCleanTelUrl(ord.driverPhone || '41668416184')"
+                   class="py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs border border-slate-200 dark:border-slate-700 flex items-center justify-center gap-2 transition-all cursor-pointer">
+                  <app-icon name="phone" [size]="16"></app-icon>
+                  <span>Llamar al Repartidor</span>
+                </a>
+              </div>
+            </div>
+          } @else {
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-xs flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400">
+                  <app-icon name="bike" [size]="22"></app-icon>
+                </div>
+                <div>
+                  <h4 class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                    <span>Motorizado</span>
+                    <span class="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold border border-amber-500/20">Por Asignar</span>
+                  </h4>
+                  <div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    El comercio asignará un repartidor cuando tu comida esté en preparación
+                  </div>
+                </div>
+              </div>
+              <div class="text-right">
+                <span class="text-xs font-semibold text-slate-400">En espera</span>
+              </div>
+            </div>
+          }
+
+          <!-- ================= SECURITY PIN (Sober Corporate Box) ================= -->
+          <div class="bg-slate-900 dark:bg-slate-850 text-white border border-slate-800 rounded-lg p-3.5 flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <app-icon name="shield-check" [size]="18" className="text-brand-400"></app-icon>
+              <div>
+                <div class="text-[11px] font-semibold text-slate-300">PIN de Recepción de Pedido</div>
+                <div class="text-[10px] text-slate-400">Compártelo con el motorizado al momento de la entrega</div>
+              </div>
+            </div>
+
+            <div class="bg-white text-slate-900 px-3 py-1 rounded font-mono font-bold text-base tracking-wider">
+              {{ ord.orderNumber.replace('#', '').slice(-4) }}
+            </div>
+          </div>
+
+          <!-- ================= APP DOWNLOAD TO DISCOVER MORE STORES ================= -->
+          <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-xs space-y-3">
+            <div class="flex items-start gap-3">
+              <div class="w-10 h-10 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 flex items-center justify-center flex-shrink-0">
+                <app-icon name="smartphone" [size]="20"></app-icon>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2">
+                  <h4 class="font-bold text-sm text-slate-900 dark:text-white">
+                    ¿Quieres pedir de otros comercios?
+                  </h4>
+                  <span class="text-[10px] px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 font-bold border border-brand-500/20">
+                    Solo en la App
+                  </span>
+                </div>
+                <p class="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
+                  Los demás restaurantes, farmacias y tiendas de tu zona están disponibles a través de nuestra App Móvil. Descárgala para explorar todo el catálogo y disfrutar de promociones.
+                </p>
+              </div>
+            </div>
+
+            <div class="pt-2 border-t border-slate-100 dark:border-slate-800">
+              <button (click)="showDownloadModal.set(true)" 
+                      type="button"
+                      class="w-full py-2.5 px-4 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs shadow-xs flex items-center justify-center gap-2 transition-colors cursor-pointer">
+                <app-icon name="smartphone" [size]="15"></app-icon>
+                <span>Descargar App Móvil para ver más Comercios</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- ================= CUSTOMER REGISTRATION / HISTORY ================= -->
+          @if (!auth.isCustomer()) {
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-xs space-y-3">
+              <div class="flex items-start gap-3">
+                <div class="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center justify-center flex-shrink-0">
+                  <app-icon name="user" [size]="18"></app-icon>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <h4 class="font-bold text-sm text-slate-900 dark:text-white">
+                    Mantén tu historial de pedidos
+                  </h4>
+                  <p class="text-xs text-slate-600 dark:text-slate-400 mt-0.5 leading-relaxed">
+                    Regístrate con tu correo para guardar tus pedidos, registrar tus direcciones favoritas y pedir más rápido.
+                  </p>
+                </div>
+              </div>
+
+              @if (registrationSuccess()) {
+                <div class="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs font-semibold flex items-center gap-2">
+                  <app-icon name="check" [size]="16"></app-icon>
+                  <span>¡Cuenta de cliente creada con éxito! Este pedido ha quedado guardado en tu historial.</span>
+                </div>
+              } @else {
+                <form (ngSubmit)="quickRegister()" class="space-y-2.5 pt-1">
+                  @if (registrationError()) {
+                    <div class="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-medium">
+                      {{ registrationError() }}
+                    </div>
+                  }
+
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                      <label class="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">Correo Electrónico</label>
+                      <input type="email" 
+                             [ngModel]="regEmail()" 
+                             (ngModelChange)="regEmail.set($event)"
+                             name="regEmail"
+                             placeholder="ejemplo@correo.com"
+                             class="w-full text-xs font-medium rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 shadow-xs focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500" />
+                    </div>
+                    <div>
+                      <label class="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">Contraseña</label>
+                      <input type="password" 
+                             [ngModel]="regPassword()" 
+                             (ngModelChange)="regPassword.set($event)"
+                             name="regPassword"
+                             placeholder="Mínimo 6 caracteres"
+                             class="w-full text-xs font-medium rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 shadow-xs focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500" />
+                    </div>
+                  </div>
+
+                  <div class="flex items-center justify-between gap-3 pt-1">
+                    <a routerLink="/login" class="text-[11px] text-slate-500 dark:text-slate-400 hover:text-brand-500 transition-colors">
+                      ¿Ya tienes cuenta? <b class="text-slate-700 dark:text-slate-300">Iniciar Sesión</b>
+                    </a>
+
+                    <button type="submit" 
+                            [disabled]="isRegistering()"
+                            class="px-4 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer">
+                      @if (isRegistering()) {
+                        <span class="inline-block animate-spin rounded-full h-3 w-3 border-2 border-white border-t-transparent"></span>
+                        <span>Guardando...</span>
+                      } @else {
+                        <span>Registrarme y Guardar</span>
+                      }
+                    </button>
+                  </div>
+                </form>
+              }
+            </div>
+          } @else {
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 flex items-center justify-between text-xs text-slate-700 dark:text-slate-300">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span>Sesión de Cliente: <b>{{ auth.currentUser()?.name || auth.currentUser()?.email }}</b></span>
+              </div>
+              <span class="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full font-bold">
+                Historial Guardado
+              </span>
+            </div>
+          }
+
+          <!-- ================= ORDER SUMMARY ================= -->
+          <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-xs space-y-3 text-xs">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div class="space-y-1">
+                <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Cliente</div>
+                <p class="font-bold text-slate-900 dark:text-white">{{ ord.customer.name || 'Cliente' }}</p>
+                @if (ord.customer.phone) {
+                  <p class="text-[11px] text-slate-500 dark:text-slate-400 font-mono">{{ ord.customer.phone }}</p>
+                }
+              </div>
+              <div class="space-y-1">
+                <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Dirección de Entrega</div>
+                <p class="font-bold text-slate-900 dark:text-white">{{ ord.customer.deliveryAddress }}</p>
+                @if (ord.customer.addressReference) {
+                  <p class="text-[11px] text-slate-500 dark:text-slate-400">Ref: {{ ord.customer.addressReference }}</p>
+                }
+              </div>
+            </div>
+
+            <div class="space-y-2">
+              <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Detalle del Pedido</div>
+              
+              @for (item of ord.items; track item.cartItemId) {
+                <div class="flex justify-between text-slate-700 dark:text-slate-300">
+                  <span>{{ item.quantity }}x {{ item.name }}</span>
+                  <span class="font-semibold text-slate-900 dark:text-white">${{ item.itemTotal.toFixed(2) }}</span>
+                </div>
+              }
+
+              <div class="flex justify-between text-slate-500 pt-1">
+                <span>Tarifa de Envío</span>
+                <span class="font-semibold text-slate-900 dark:text-white">${{ ord.deliveryFee.toFixed(2) }}</span>
+              </div>
+
+              <div class="flex justify-between pt-2 border-t border-slate-100 dark:border-slate-800 font-bold text-sm text-slate-900 dark:text-white">
+                <span>Total a Cobrar:</span>
+                <span class="text-brand-600 dark:text-brand-400">${{ ord.total.toFixed(2) }}</span>
+              </div>
+
+              <div class="text-[11px] text-slate-500 text-right">
+                Método: <strong>{{ ord.paymentMethod === 'cash_usd' ? 'Efectivo $ al recibir' : 'Pago Online Confirmado' }}</strong>
+              </div>
+            </div>
+          </div>
+
+        </main>
+      }
+
+      <!-- ================= MODAL DESCARGA DE LA APP ================= -->
+      @if (showDownloadModal()) {
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 max-w-sm w-full space-y-4 shadow-xl">
+            <div class="text-center space-y-2">
+              <div class="w-12 h-12 rounded-2xl bg-brand-500/10 text-brand-600 dark:text-brand-400 mx-auto flex items-center justify-center">
+                <app-icon name="smartphone" [size]="24"></app-icon>
+              </div>
+              <h3 class="font-bold text-base text-slate-900 dark:text-white">Descarga Delivery App</h3>
+              <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                Los comercios, restaurantes y promociones de tu zona están en nuestra App Móvil. ¡Pronto disponible en tiendas de aplicaciones!
+              </p>
+            </div>
+
+            <div class="space-y-2 pt-1">
+              <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 flex items-center gap-3">
+                <span class="text-xl">🤖</span>
+                <div class="flex-1 min-w-0">
+                  <div class="text-xs font-bold text-slate-900 dark:text-white">Google Play Store</div>
+                  <div class="text-[10px] text-brand-600 dark:text-brand-400 font-semibold">Próximamente disponible</div>
+                </div>
+              </div>
+
+              <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 flex items-center gap-3">
+                <span class="text-xl">🍏</span>
+                <div class="flex-1 min-w-0">
+                  <div class="text-xs font-bold text-slate-900 dark:text-white">Apple App Store</div>
+                  <div class="text-[10px] text-brand-600 dark:text-brand-400 font-semibold">Próximamente disponible</div>
+                </div>
+              </div>
+            </div>
+
+            <button (click)="showDownloadModal.set(false)"
+                    type="button"
+                    class="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 font-bold text-xs transition-colors cursor-pointer">
+              Entendido
+            </button>
+          </div>
+        </div>
+      }
+
+    </div>

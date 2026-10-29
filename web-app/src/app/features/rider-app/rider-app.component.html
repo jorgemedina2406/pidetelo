@@ -1,0 +1,1004 @@
+<div class="min-h-screen bg-slate-900 via-[#0b111e] to-[#060a12] bg-gradient-to-b text-slate-900 dark:text-slate-100 relative selection:bg-brand-500 selection:text-white transition-colors duration-200">
+  
+  <!-- Subtle Ambient Glows in Background -->
+  <div class="fixed inset-0 pointer-events-none overflow-hidden z-0 opacity-40">
+    <div class="absolute -top-32 left-1/2 -translate-x-1/2 w-[600px] h-[500px] bg-gradient-to-b from-brand-500/20 via-orange-500/10 to-transparent rounded-full blur-3xl"></div>
+    <div class="absolute bottom-10 left-1/4 w-[400px] h-[400px] bg-emerald-500/15 rounded-full blur-3xl"></div>
+  </div>
+
+  <!-- Mobile Frame Canvas -->
+  <div class="relative z-10 min-h-screen max-w-md mx-auto bg-gradient-to-b from-slate-100 via-slate-50 to-slate-100 dark:from-[#0d1627] dark:via-[#09101f] dark:to-[#060a14] border-x border-slate-200/90 dark:border-slate-800 shadow-2xl flex flex-col font-sans">
+    
+    <!-- Subtle Inner Ambient Mesh Glow -->
+    <div class="absolute inset-0 pointer-events-none overflow-hidden z-0 opacity-30 dark:opacity-40">
+      <div class="absolute -top-20 -right-20 w-64 h-64 bg-brand-500/20 rounded-full blur-3xl"></div>
+      <div class="absolute top-1/2 -left-20 w-64 h-64 bg-emerald-500/15 rounded-full blur-3xl"></div>
+    </div>
+    
+    <!-- Top Accent Stripe -->
+    <div class="h-1 w-full bg-gradient-to-r from-brand-500 via-amber-400 to-emerald-400 flex-shrink-0"></div>
+      
+      <!-- ================= TOP MOBILE RIDER HEADER ================= -->
+      <header class="bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 p-4 sticky top-0 z-30">
+        <div class="flex items-center justify-between">
+          
+          <!-- Rider Profile Info -->
+          <div class="flex items-center gap-3">
+            <div class="relative">
+              <div class="w-10 h-10 rounded-lg bg-slate-900 dark:bg-white text-white dark:text-slate-900 flex items-center justify-center font-bold text-base shadow-xs overflow-hidden">
+                @if (riderProfile().avatarUrl || currentRider()?.avatarUrl) {
+                  <img [src]="riderProfile().avatarUrl || currentRider()?.avatarUrl" alt="Avatar" class="w-full h-full object-cover" />
+                } @else {
+                  <app-icon name="bike" [size]="18"></app-icon>
+                }
+              </div>
+              <span class="w-3 h-3 rounded-full border-2 border-white dark:border-slate-950 absolute -bottom-0.5 -right-0.5"
+                    [class.bg-emerald-500]="isOnline()"
+                    [class.bg-slate-400]="!isOnline()"></span>
+            </div>
+            
+            <div class="leading-tight">
+              <div class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
+                <span>{{ currentRiderName() }}</span>
+                <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-500/20">
+                  Rider
+                </span>
+              </div>
+              <div class="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                {{ currentRiderVehicle() }} • {{ currentRiderPlate() }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Controls: Theme & Online/Offline -->
+          <div class="flex items-center gap-2">
+            <button (click)="theme.toggleTheme()" 
+                    [title]="theme.isDark() ? 'Modo Claro' : 'Modo Oscuro'"
+                    class="p-2 rounded-lg bg-slate-100 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300">
+              <app-icon [name]="theme.isDark() ? 'sun' : 'moon'" [size]="14"></app-icon>
+            </button>
+
+            <button (click)="logout()" 
+                    title="Cerrar Sesión"
+                    class="p-2 rounded-lg bg-slate-100 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors">
+              <app-icon name="log-out" [size]="14"></app-icon>
+            </button>
+
+            <button (click)="toggleOnlineStatus()"
+                    [class.bg-emerald-600]="isOnline()"
+                    [class.text-white]="isOnline()"
+                    [class.bg-slate-200]="!isOnline()"
+                    [class.dark:bg-slate-800]="!isOnline()"
+                    [class.text-slate-700]="!isOnline()"
+                    [class.dark:text-slate-300]="!isOnline()"
+                    class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full" [class.bg-white]="isOnline()" [class.bg-slate-400]="!isOnline()"></span>
+              <span>{{ isOnline() ? 'En Línea' : 'Pausa' }}</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Rider Metrics Bar (Tinted modern badges) -->
+        <div class="grid grid-cols-3 gap-2.5 mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 text-center">
+          <div class="bg-emerald-500/10 dark:bg-emerald-500/15 p-2 rounded-xl border border-emerald-500/30">
+            <div class="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider">Hoy</div>
+            <div class="font-extrabold text-emerald-600 dark:text-emerald-400 text-sm mt-0.5">${{ todayEarnings().toFixed(2) }}</div>
+          </div>
+          <div class="bg-blue-500/10 dark:bg-blue-500/15 p-2 rounded-xl border border-blue-500/30">
+            <div class="text-[10px] text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider">Entregas</div>
+            <div class="font-extrabold text-blue-600 dark:text-blue-400 text-sm mt-0.5">{{ completedDeliveriesCount() }}</div>
+          </div>
+          <div class="bg-amber-500/10 dark:bg-amber-500/15 p-2 rounded-xl border border-amber-500/30">
+            <div class="text-[10px] text-amber-600 dark:text-amber-400 font-bold uppercase tracking-wider">Propinas</div>
+            <div class="font-extrabold text-amber-600 dark:text-amber-400 text-sm mt-0.5">${{ todayTips().toFixed(2) }}</div>
+          </div>
+        </div>
+      </header>
+
+      <!-- ================= MAIN BODY ================= -->
+      <main class="flex-1 p-4 space-y-4 overflow-y-auto pb-32">
+        
+        <!-- GPS Real-Time Status Notification -->
+        @if (gpsStatus() === 'denied') {
+        <div class="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-xs flex items-center gap-2.5 shadow-xs">
+          <span class="text-base flex-shrink-0">⚠️</span>
+          <div class="leading-tight">
+            <strong>Permiso GPS desactivado:</strong> Habilita la ubicación satelital en tu navegador/móvil para que la tienda y clientes sigan tus entregas en tiempo real.
+          </div>
+        </div>
+        } @else if (currentGpsCoords(); as coords) {
+        <div class="p-2.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-800 dark:text-emerald-300 text-xs flex items-center justify-between shadow-xs">
+          <div class="flex items-center gap-2 font-bold">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>GPS Satelital Transmitiendo</span>
+          </div>
+          <span class="font-mono text-[11px] opacity-80">{{ coords.lat | number:'1.4-4' }}, {{ coords.lng | number:'1.4-4' }}</span>
+        </div>
+        }
+
+        <!-- ================= TAB 1: DESPACHOS ACTIVOS ================= -->
+        @if (activeTab() === 'deliveries') {
+
+          <!-- Quick Simulation Bar (Subtle & clean) -->
+          <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3 flex items-center justify-between gap-3 shadow-xs">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+              <div class="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate">
+                Radar de Despachos Activo
+              </div>
+            </div>
+
+            <button (click)="triggerIncomingOffer()"
+                    class="bg-brand-500 hover:bg-brand-600 text-white font-semibold text-xs px-3 py-1.5 rounded-md shadow-xs flex items-center gap-1.5 transition-colors flex-shrink-0">
+              <app-icon name="bell" [size]="13" className="text-white"></app-icon>
+              <span>Simular Nuevo Pedido</span>
+            </button>
+          </div>
+
+          <!-- Multi-Store Segmentation Tabs (Comercios Afiliados) -->
+          @if (tenantStores().length > 1) {
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 shadow-xs space-y-1.5">
+              <div class="text-[10px] uppercase font-bold tracking-wider text-slate-400 px-0.5 flex items-center justify-between">
+                <span>Comercios Asignados</span>
+                <span class="text-emerald-500 font-mono text-[9px]">{{ tenantStores().length }} restaurantes</span>
+              </div>
+              <div class="flex items-center gap-1.5 overflow-x-auto pb-1">
+                <button type="button"
+                        (click)="selectedTenantFilter.set('all')"
+                        [class.bg-slate-900]="selectedTenantFilter() === 'all'"
+                        [class.text-white]="selectedTenantFilter() === 'all'"
+                        [class.dark:bg-white]="selectedTenantFilter() === 'all'"
+                        [class.dark:text-slate-900]="selectedTenantFilter() === 'all'"
+                        [class.bg-slate-100]="selectedTenantFilter() !== 'all'"
+                        [class.dark:bg-slate-800]="selectedTenantFilter() !== 'all'"
+                        [class.text-slate-700]="selectedTenantFilter() !== 'all'"
+                        [class.dark:text-slate-300]="selectedTenantFilter() !== 'all'"
+                        class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all whitespace-nowrap">
+                  Todos ({{ activeJobs().length }})
+                </button>
+                @for (store of tenantStores(); track store.id) {
+                  <button type="button"
+                          (click)="selectedTenantFilter.set(store.id)"
+                          [class.ring-2]="selectedTenantFilter() === store.id"
+                          [class.ring-brand-500]="selectedTenantFilter() === store.id"
+                          [class.bg-brand-50]="selectedTenantFilter() === store.id"
+                          [class.dark:bg-brand-950/40]="selectedTenantFilter() === store.id"
+                          [class.bg-slate-100]="selectedTenantFilter() !== store.id"
+                          [class.dark:bg-slate-800]="selectedTenantFilter() !== store.id"
+                          class="px-2.5 py-1 rounded-lg text-xs font-semibold border border-slate-200 dark:border-slate-700 transition-all flex items-center gap-1.5 whitespace-nowrap text-slate-800 dark:text-slate-200">
+                    <span class="w-2 h-2 rounded-full" [style.backgroundColor]="store.color || '#f97316'"></span>
+                    <span>{{ store.name }}</span>
+                    <span class="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-200 dark:bg-slate-700 font-bold">
+                      {{ store.count }}
+                    </span>
+                  </button>
+                }
+              </div>
+            </div>
+          }
+
+          <!-- Offline Warning -->
+          @if (!isOnline()) {
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-6 text-center space-y-3 my-4 shadow-xs">
+              <div class="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto text-slate-500">
+                <app-icon name="moon" [size]="20"></app-icon>
+              </div>
+              <h3 class="font-bold text-slate-900 dark:text-white text-sm">Estás en Pausa</h3>
+              <p class="text-xs text-slate-500 dark:text-slate-400 max-w-xs mx-auto">
+                Pasa tu estado a "En Línea" para recibir asignaciones automáticas de pedidos cercanos.
+              </p>
+              <button (click)="isOnline.set(true)" 
+                      class="bg-brand-500 hover:bg-brand-600 text-white font-semibold text-xs px-4 py-2 rounded-md shadow-xs transition-colors">
+                Conectarme a la Red
+              </button>
+            </div>
+          } @else {
+
+            <!-- If NO active jobs -->
+            @if (filteredJobs().length === 0) {
+              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-7 text-center space-y-3 my-4 shadow-sm">
+                <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center mx-auto text-2xl shadow-inner">
+                  🛵
+                </div>
+                <h3 class="font-bold text-slate-900 dark:text-white text-sm">
+                  Sin pedidos asignados a tu cuenta
+                </h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 max-w-xs mx-auto leading-relaxed">
+                  Conectado como <b class="text-slate-800 dark:text-slate-200">{{ currentRiderName() }}</b> (<span class="font-mono text-emerald-500 font-semibold">{{ currentRiderPlate() }}</span>). Los pedidos que el comercio te asigne desde su panel aparecerán aquí automáticamente.
+                </p>
+                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                  <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                  <span>En línea para recibir pedidos</span>
+                </div>
+              </div>
+            }
+
+            <!-- Active Jobs (Subtle 8px border-radius) -->
+            @for (job of filteredJobs(); track job.orderId) {
+              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 shadow-xs space-y-4">
+                
+                <!-- Store Identification Header (Segmentación Clara por Comercio) -->
+                <div class="flex items-center justify-between pb-2.5 border-b border-slate-100 dark:border-slate-800">
+                  <div class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full" [style.backgroundColor]="job.storeColor || '#f97316'"></span>
+                    <div>
+                      <div class="text-xs font-extrabold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                        <span>{{ job.storeName }}</span>
+                      </div>
+                      <div class="text-[10px] text-slate-400 font-medium truncate max-w-[200px]">
+                        {{ job.storeAddress }}
+                      </div>
+                    </div>
+                  </div>
+
+                  <a [href]="'tel:' + (job.storePhone || '')" 
+                     title="Llamar a cocina"
+                     class="px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-[10px] font-bold flex items-center gap-1 hover:text-brand-500">
+                    <app-icon name="phone" [size]="10"></app-icon>
+                    <span>Tienda</span>
+                  </a>
+                </div>
+                
+                <!-- Order Header -->
+                <div class="flex items-start justify-between">
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <span class="text-brand-600 dark:text-brand-400 font-bold text-sm">{{ job.orderNumber }}</span>
+                      <span class="text-[10px] font-semibold px-2 py-0.5 rounded border"
+                            [class.bg-emerald-50]="job.paymentMethod === 'card_online'"
+                            [class.dark:bg-emerald-950/40]="job.paymentMethod === 'card_online'"
+                            [class.text-emerald-700]="job.paymentMethod === 'card_online'"
+                            [class.dark:text-emerald-400]="job.paymentMethod === 'card_online'"
+                            [class.border-emerald-200]="job.paymentMethod === 'card_online'"
+                            [class.dark:border-emerald-800]="job.paymentMethod === 'card_online'"
+                            [class.bg-amber-50]="job.paymentMethod === 'cash_usd'"
+                            [class.dark:bg-amber-950/40]="job.paymentMethod === 'cash_usd'"
+                            [class.text-amber-800]="job.paymentMethod === 'cash_usd'"
+                            [class.dark:text-amber-400]="job.paymentMethod === 'cash_usd'"
+                            [class.border-amber-200]="job.paymentMethod === 'cash_usd'"
+                            [class.dark:border-amber-800]="job.paymentMethod === 'cash_usd'">
+                        {{ job.paymentMethod === 'cash_usd' ? 'Cobrar Efectivo' : 'Pagado Online' }}
+                      </span>
+                    </div>
+                    <div class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                      {{ job.itemsSummary }}
+                    </div>
+                  </div>
+
+                  <div class="text-right">
+                    <div class="text-[10px] text-slate-400 font-semibold uppercase">Tu Ganancia</div>
+                    <div class="text-base font-bold text-emerald-600 dark:text-emerald-400">
+                      +${{ (job.deliveryFee + job.tip).toFixed(2) }}
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Multi-Step Track -->
+                <div class="bg-slate-50 dark:bg-slate-850 p-3 rounded-lg border border-slate-200 dark:border-slate-800 space-y-2">
+                  <div class="flex items-center justify-between text-xs font-semibold">
+                    <span [class.text-slate-900]="job.step === 'heading_to_store' || job.step === 'at_store'"
+                          [class.dark:text-white]="job.step === 'heading_to_store' || job.step === 'at_store'"
+                          [class.text-slate-400]="job.step !== 'heading_to_store' && job.step !== 'at_store'">
+                      1. Restaurante
+                    </span>
+                    <app-icon name="arrow-right" [size]="12" className="text-slate-400"></app-icon>
+                    <span [class.text-slate-900]="job.step === 'heading_to_customer'"
+                          [class.dark:text-white]="job.step === 'heading_to_customer'"
+                          [class.text-slate-400]="job.step !== 'heading_to_customer'">
+                      2. En Camino
+                    </span>
+                    <app-icon name="arrow-right" [size]="12" className="text-slate-400"></app-icon>
+                    <span [class.text-slate-900]="job.step === 'delivered'"
+                          [class.dark:text-white]="job.step === 'delivered'"
+                          [class.text-slate-400]="job.step !== 'delivered'">
+                      3. Entregado
+                    </span>
+                  </div>
+
+                  <div class="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
+                    <div class="bg-slate-900 dark:bg-white h-full transition-all duration-300"
+                         [style.width]="job.step === 'heading_to_store' ? '30%' : job.step === 'at_store' ? '50%' : job.step === 'heading_to_customer' ? '75%' : '100%'">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Step 1: Restaurant Pickup -->
+                @if (job.step === 'heading_to_store' || job.step === 'at_store') {
+                  <div class="bg-slate-50 dark:bg-slate-850 p-3 rounded-lg border border-slate-200 dark:border-slate-800 space-y-2">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center gap-2">
+                        <app-icon name="store" [size]="15" className="text-slate-500"></app-icon>
+                        <div>
+                          <div class="text-xs font-bold text-slate-900 dark:text-white">{{ job.storeName }}</div>
+                          <div class="text-[11px] text-slate-500 dark:text-slate-400">{{ job.storeAddress }}</div>
+                        </div>
+                      </div>
+                      
+                      <div class="flex items-center gap-1.5">
+                        <button (click)="openGpsNavigation(job.storeAddress)" 
+                                class="px-2 py-1 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center gap-1">
+                          <app-icon name="navigation" [size]="11"></app-icon>
+                          <span>Maps</span>
+                        </button>
+                        <button (click)="openWazeNavigation(job.storeAddress)" 
+                                class="px-2 py-1 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center gap-1">
+                          <app-icon name="navigation" [size]="11"></app-icon>
+                          <span>Waze</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    @if (job.step === 'heading_to_store') {
+                      <button (click)="advanceJobStep(job.orderId, 'at_store')"
+                              class="w-full mt-2 py-2.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-semibold text-xs rounded-md shadow-xs transition-colors flex items-center justify-center gap-1.5">
+                        <app-icon name="map-pin" [size]="14"></app-icon>
+                        <span>Confirmar Llegada al Restaurante</span>
+                      </button>
+                    } @else {
+                      <button (click)="advanceJobStep(job.orderId, 'heading_to_customer')"
+                              class="w-full mt-2 py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-semibold text-xs rounded-md shadow-xs transition-colors flex items-center justify-center gap-1.5">
+                        <app-icon name="bike" [size]="14" className="text-white"></app-icon>
+                        <span>Retiré el Pedido • En Ruta al Cliente</span>
+                      </button>
+                    }
+                  </div>
+                }
+
+                <!-- Step 2: Customer Delivery -->
+                @if (job.step === 'heading_to_customer') {
+                  <div class="bg-slate-50 dark:bg-slate-850 p-3 rounded-lg border border-slate-200 dark:border-slate-800 space-y-3">
+                    <div class="flex items-start gap-2.5">
+                      <app-icon name="map-pin" [size]="15" className="text-slate-500 flex-shrink-0 mt-0.5"></app-icon>
+                      <div>
+                        <div class="text-xs font-bold text-slate-900 dark:text-white">{{ job.customerName }}</div>
+                        <div class="text-xs text-slate-600 dark:text-slate-300 mt-0.5">{{ job.deliveryAddress }}</div>
+                        @if (job.deliveryReference) {
+                          <div class="text-[11px] text-amber-700 dark:text-amber-400 font-semibold mt-1">
+                            Ref: {{ job.deliveryReference }}
+                          </div>
+                        }
+                      </div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-2">
+                      <button (click)="openGpsNavigation(job.deliveryAddress)"
+                              class="py-1.5 px-2 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center justify-center gap-1">
+                        <app-icon name="navigation" [size]="12"></app-icon>
+                        <span>GPS</span>
+                      </button>
+
+                      <a [href]="'https://wa.me/' + job.customerPhone.replace('+', '')" target="_blank"
+                         class="py-1.5 px-2 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center justify-center gap-1">
+                        <app-icon name="message-circle" [size]="12"></app-icon>
+                        <span>WhatsApp</span>
+                      </a>
+
+                      <a [href]="'tel:' + job.customerPhone"
+                         class="py-1.5 px-2 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center justify-center gap-1">
+                        <app-icon name="phone" [size]="12"></app-icon>
+                        <span>Llamar</span>
+                      </a>
+                    </div>
+
+                    @if (job.paymentMethod === 'cash_usd') {
+                      <div class="p-2.5 rounded bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 flex items-center justify-between text-xs font-semibold text-amber-900 dark:text-amber-300">
+                        <span>Cobrar en efectivo:</span>
+                        <span class="text-sm font-bold">${{ job.orderTotal.toFixed(2) }}</span>
+                      </div>
+                    }
+
+                    <button (click)="openCompletionModal(job)"
+                            class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-md shadow-xs transition-colors flex items-center justify-center gap-1.5">
+                      <app-icon name="shield-check" [size]="14" className="text-white"></app-icon>
+                      <span>Confirmar Entrega al Cliente</span>
+                    </button>
+                  </div>
+                }
+
+              </div>
+            }
+
+          }
+
+        }
+
+        <!-- ================= TAB 2: MI BILLETERA / BALANCE ================= -->
+        @if (activeTab() === 'wallet') {
+          <div class="space-y-4">
+            
+            <!-- Balance Card (Clean SaaS Stripe style) -->
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-5 shadow-xs space-y-4">
+              <div class="flex items-center justify-between text-xs text-slate-500 font-semibold uppercase">
+                <span>Balance Disponible</span>
+                <span class="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                  Activo
+                </span>
+              </div>
+
+              <div class="text-3xl font-extrabold text-slate-900 dark:text-white">
+                ${{ (todayEarnings() + todayTips()).toFixed(2) }}
+              </div>
+
+              <div class="grid grid-cols-2 gap-3 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs">
+                <div>
+                  <div class="text-slate-400 text-[10px] uppercase font-semibold">Tarifas Despacho</div>
+                  <div class="font-bold text-slate-900 dark:text-white text-sm mt-0.5">${{ todayEarnings().toFixed(2) }}</div>
+                </div>
+                <div>
+                  <div class="text-slate-400 text-[10px] uppercase font-semibold">Propinas 100%</div>
+                  <div class="font-bold text-slate-900 dark:text-white text-sm mt-0.5">${{ todayTips().toFixed(2) }}</div>
+                </div>
+              </div>
+
+              <button (click)="requestWithdrawal()" 
+                      class="w-full py-2.5 rounded-md bg-brand-500 hover:bg-brand-600 text-white font-semibold text-xs shadow-xs transition-colors flex items-center justify-center gap-1.5">
+                <app-icon name="wallet" [size]="14" className="text-white"></app-icon>
+                <span>Solicitar Retiro a Cuenta / Pago Móvil</span>
+              </button>
+            </div>
+
+            <!-- Stats -->
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 shadow-xs space-y-2.5">
+              <h3 class="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                Métricas del Repartidor
+              </h3>
+
+              <div class="space-y-1.5 text-xs">
+                <div class="flex items-center justify-between p-2 rounded bg-slate-50 dark:bg-slate-850">
+                  <span class="text-slate-600 dark:text-slate-400">Estado de Operación</span>
+                  <span class="font-bold" [class.text-emerald-500]="isOnline()" [class.text-slate-400]="!isOnline()">
+                    {{ isOnline() ? 'En Línea (Disponible)' : 'Pausado' }}
+                  </span>
+                </div>
+
+                <div class="flex items-center justify-between p-2 rounded bg-slate-50 dark:bg-slate-850">
+                  <span class="text-slate-600 dark:text-slate-400">Despachos Completados Hoy</span>
+                  <span class="font-bold text-slate-900 dark:text-white">{{ completedDeliveriesCount() }} pedidos</span>
+                </div>
+
+                <div class="flex items-center justify-between p-2 rounded bg-slate-50 dark:bg-slate-850">
+                  <span class="text-slate-600 dark:text-slate-400">Calificación de Servicio</span>
+                  <span class="font-bold text-amber-500">5.0 ★ (Excelente)</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        }
+
+        <!-- ================= TAB 3: HISTORIAL ================= -->
+        @if (activeTab() === 'history') {
+          <div class="space-y-3">
+            <h3 class="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+              Últimas Entregas Realizadas
+            </h3>
+
+            @if (deliveryHistory().length === 0) {
+              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-8 text-center space-y-2">
+                <div class="text-3xl">📦</div>
+                <div class="font-bold text-sm text-slate-800 dark:text-slate-200">Sin entregas completadas hoy</div>
+                <div class="text-xs text-slate-500 dark:text-slate-400 max-w-xs mx-auto">
+                  Acepta y finaliza pedidos asignados a tu cuenta para registrar tus ganancias y métricas en tiempo real.
+                </div>
+              </div>
+            } @else {
+              @for (item of deliveryHistory(); track item.id) {
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3.5 shadow-xs space-y-2 text-xs">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <span class="font-bold text-slate-900 dark:text-white">{{ item.orderNumber }}</span>
+                    <span class="text-[11px] text-slate-400 font-mono">{{ item.timeAgo }}</span>
+                  </div>
+                  <div class="font-bold text-emerald-600 dark:text-emerald-400">
+                    +${{ (item.earnings + item.tip).toFixed(2) }}
+                  </div>
+                </div>
+
+                <div>
+                  <div class="font-semibold text-slate-800 dark:text-slate-200">{{ item.storeName }}</div>
+                  <div class="text-[11px] text-slate-500 dark:text-slate-400 truncate">{{ item.customerAddress }}</div>
+                </div>
+
+                <div class="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-500">
+                  <span>Tarifa: ${{ item.earnings.toFixed(2) }}</span>
+                  <span class="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                    <app-icon name="check" [size]="10"></app-icon> Completado
+                  </span>
+                </div>
+              </div>
+            }
+          }
+          </div>
+        }
+
+        <!-- ================= TAB 4: PERFIL DEL MOTORIZADO ================= -->
+        @if (activeTab() === 'profile') {
+          <div class="space-y-4 animate-fade-in relative z-10">
+            
+            <!-- Rider Identity Hero Card -->
+            <div class="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/90 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
+              <div class="flex items-center gap-4">
+                <div class="relative flex-shrink-0 group">
+                  <input type="file" #avatarInput class="hidden" accept="image/*" (change)="onAvatarSelected($event)" />
+                  <div (click)="avatarInput.click()" 
+                       title="Toca para subir o cambiar foto de perfil"
+                       class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-brand-500 to-orange-400 text-white flex items-center justify-center font-bold text-2xl shadow-lg shadow-brand-500/25 overflow-hidden cursor-pointer relative hover:opacity-90 transition-opacity">
+                    @if (riderProfile().avatarUrl) {
+                      <img [src]="riderProfile().avatarUrl" alt="Foto de perfil" class="w-full h-full object-cover" />
+                    } @else {
+                      <app-icon name="user" [size]="28" className="text-white"></app-icon>
+                    }
+                    <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                      <app-icon name="camera" [size]="18" className="text-white"></app-icon>
+                    </div>
+                  </div>
+                  <button type="button" (click)="avatarInput.click()" title="Subir foto de perfil"
+                          class="absolute -bottom-1 -right-1 p-1 rounded-full bg-brand-500 hover:bg-brand-600 text-white shadow-md border-2 border-white dark:border-slate-900 transition-transform hover:scale-110">
+                    <app-icon name="camera" [size]="11"></app-icon>
+                  </button>
+                </div>
+
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2">
+                    <h3 class="font-bold text-base text-slate-900 dark:text-white truncate">{{ riderProfile().fullName }}</h3>
+                    <span class="text-[10px] px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 font-extrabold border border-brand-500/20">PRO</span>
+                  </div>
+                  <p class="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">{{ riderProfile().plateNumber }} • {{ riderProfile().vehicleModel }}</p>
+                  
+                  <div class="flex items-center gap-3 mt-2 text-[11px] text-slate-600 dark:text-slate-300">
+                    <span class="flex items-center gap-1 font-bold text-amber-500">
+                      ★ 5.00
+                    </span>
+                    <span class="text-slate-400">•</span>
+                    <span>{{ completedDeliveriesCount() }} entregas</span>
+                    <span class="text-slate-400">•</span>
+                    <span class="text-emerald-500 font-semibold">{{ isOnline() ? 'En Línea' : 'Pausado' }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Form: Datos Personales & Vehículo -->
+            <form (submit)="saveProfile(); $event.preventDefault()" class="space-y-4">
+              
+              <!-- Personal Info Card -->
+              <div class="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/90 dark:border-slate-800 rounded-2xl p-4 shadow-sm space-y-3">
+                <div class="flex items-center gap-2 text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider pb-2 border-b border-slate-100 dark:border-slate-800">
+                  <app-icon name="user" [size]="14" className="text-brand-500"></app-icon>
+                  <span>Información Personal</span>
+                </div>
+
+                <div class="space-y-2.5 text-xs">
+                  <div>
+                    <label class="block text-slate-500 dark:text-slate-400 font-semibold mb-1">Nombre Completo</label>
+                    <input type="text" [(ngModel)]="riderProfile().fullName" name="fullName" required
+                           class="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-xl px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-2.5">
+                    <div>
+                      <label class="block text-slate-500 dark:text-slate-400 font-semibold mb-1">Teléfono / WhatsApp</label>
+                      <input type="tel" [(ngModel)]="riderProfile().phone" name="phone" required
+                             class="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-xl px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
+                    </div>
+                    <div>
+                      <label class="block text-slate-500 dark:text-slate-400 font-semibold mb-1">Cédula / DNI</label>
+                      <input type="text" [(ngModel)]="riderProfile().nationalId" name="nationalId" required
+                             class="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-xl px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label class="block text-slate-500 dark:text-slate-400 font-semibold mb-1">Correo Electrónico</label>
+                    <input type="email" [(ngModel)]="riderProfile().email" name="email" required
+                           class="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-xl px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Vehicle Info Card -->
+              <div class="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/90 dark:border-slate-800 rounded-2xl p-4 shadow-sm space-y-3">
+                <div class="flex items-center gap-2 text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider pb-2 border-b border-slate-100 dark:border-slate-800">
+                  <app-icon name="bike" [size]="14" className="text-brand-500"></app-icon>
+                  <span>Datos del Vehículo</span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2.5 text-xs">
+                  <div>
+                    <label class="block text-slate-500 dark:text-slate-400 font-semibold mb-1">Tipo de Vehículo</label>
+                    <select [(ngModel)]="riderProfile().vehicleType" name="vehicleType"
+                            class="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-xl px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-brand-500">
+                      <option value="moto">Motocicleta</option>
+                      <option value="bicicleta">Bicicleta</option>
+                      <option value="auto">Automóvil</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-slate-500 dark:text-slate-400 font-semibold mb-1">Placa / Matrícula</label>
+                    <input type="text" [(ngModel)]="riderProfile().plateNumber" name="plateNumber" required
+                           class="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-xl px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
+                  </div>
+                </div>
+
+                <div class="text-xs">
+                  <label class="block text-slate-500 dark:text-slate-400 font-semibold mb-1">Marca y Modelo</label>
+                  <input type="text" [(ngModel)]="riderProfile().vehicleModel" name="vehicleModel" required
+                         class="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-xl px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
+                </div>
+              </div>
+
+              <!-- Cuentas de Cobro Card (Multiple Accounts) -->
+              <div class="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/90 dark:border-slate-800 rounded-2xl p-4 shadow-sm space-y-3">
+                <div class="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+                  <div class="flex items-center gap-2 text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                    <app-icon name="wallet" [size]="14" className="text-emerald-500"></app-icon>
+                    <span>Cuentas de Cobro (Retiros)</span>
+                  </div>
+                  <button type="button" (click)="openAddAccountModal()" 
+                          class="text-[11px] font-bold text-brand-600 dark:text-brand-400 hover:text-brand-700 flex items-center gap-1 bg-brand-500/10 px-2.5 py-1 rounded-lg transition-colors">
+                    <app-icon name="plus" [size]="12"></app-icon>
+                    <span>Agregar Cuenta</span>
+                  </button>
+                </div>
+
+                <!-- Lista de cuentas guardadas -->
+                @if (riderProfile().paymentAccounts.length === 0) {
+                  <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 text-center space-y-2 border border-dashed border-slate-200 dark:border-slate-700">
+                    <div class="text-xs text-slate-500 dark:text-slate-400">No tienes cuentas de cobro registradas.</div>
+                    <button type="button" (click)="openAddAccountModal()" class="text-xs font-bold text-brand-500 hover:underline">
+                      + Registrar cuenta (Pago Móvil, Transferencia, Zelle o Binance)
+                    </button>
+                  </div>
+                } @else {
+                  <div class="space-y-2">
+                    @for (acc of riderProfile().paymentAccounts; track acc.id) {
+                      <div class="p-3 rounded-xl border transition-all flex items-center justify-between"
+                           [class.border-emerald-500]="acc.isDefault"
+                           [class.bg-emerald-500/5]="acc.isDefault"
+                           [class.border-slate-200]="!acc.isDefault"
+                           [class.dark:border-slate-700]="!acc.isDefault"
+                           [class.bg-slate-50]="!acc.isDefault"
+                           [class.dark:bg-slate-800/60]="!acc.isDefault">
+                        <div class="space-y-1 min-w-0 flex-1">
+                          <div class="flex items-center gap-2">
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase"
+                                  [class.bg-blue-500/10]="acc.type === 'pago_movil'"
+                                  [class.text-blue-600]="acc.type === 'pago_movil'"
+                                  [class.bg-purple-500/10]="acc.type === 'zelle'"
+                                  [class.text-purple-600]="acc.type === 'zelle'"
+                                  [class.bg-amber-500/10]="acc.type === 'binance'"
+                                  [class.text-amber-600]="acc.type === 'binance'"
+                                  [class.bg-slate-200]="acc.type === 'bank_transfer'"
+                                  [class.text-slate-700]="acc.type === 'bank_transfer'">
+                              {{ getAccountTypeLabel(acc.type) }}
+                            </span>
+                            <span class="text-xs font-bold text-slate-900 dark:text-white truncate">{{ acc.bankOrPlatform }}</span>
+                            @if (acc.isDefault) {
+                              <span class="text-[9px] bg-emerald-500 text-white font-extrabold px-1.5 py-0.5 rounded-full">
+                                Principal
+                              </span>
+                            }
+                          </div>
+                          <div class="text-xs font-mono text-slate-600 dark:text-slate-300">
+                            {{ acc.accountIdentifier }}
+                          </div>
+                          <div class="text-[11px] text-slate-400">
+                            Titular: {{ acc.holderName }} @if (acc.holderId) { • {{ acc.holderId }} }
+                          </div>
+                        </div>
+
+                        <div class="flex items-center gap-1.5 ml-2">
+                          @if (!acc.isDefault) {
+                            <button type="button" (click)="setDefaultAccount(acc.id)" title="Marcar como cuenta principal"
+                                    class="px-2 py-1 text-[10px] font-semibold rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-emerald-500 hover:text-white transition-colors">
+                              Principal
+                            </button>
+                          }
+                          <button type="button" (click)="removePaymentAccount(acc.id)" title="Eliminar cuenta"
+                                  class="p-1.5 text-slate-400 hover:text-rose-500 rounded-lg transition-colors">
+                            <app-icon name="trash" [size]="14"></app-icon>
+                          </button>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+
+              <!-- Preferences / Switches -->
+              <div class="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/90 dark:border-slate-800 rounded-2xl p-4 shadow-sm space-y-3 text-xs">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <div class="font-bold text-slate-900 dark:text-white">Aceptación Automática</div>
+                    <div class="text-[11px] text-slate-500 dark:text-slate-400">Acepta pedidos en tu ruta sin esperar conteo regresivo</div>
+                  </div>
+                  <input type="checkbox" [(ngModel)]="riderProfile().autoAcceptOrders" name="autoAccept"
+                         class="w-4 h-4 accent-brand-500 rounded cursor-pointer" />
+                </div>
+
+                <div class="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <div>
+                    <div class="font-bold text-slate-900 dark:text-white">Alertas Sonoras</div>
+                    <div class="text-[11px] text-slate-500 dark:text-slate-400">Sonido de timbre al recibir asignación de despacho</div>
+                  </div>
+                  <input type="checkbox" [(ngModel)]="riderProfile().soundNotifications" name="soundNotif"
+                         class="w-4 h-4 accent-brand-500 rounded cursor-pointer" />
+                </div>
+              </div>
+
+              <!-- Save Feedback & Action Button -->
+              @if (isProfileSaved()) {
+                <div class="p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-bold flex items-center justify-center gap-2 animate-fade-in">
+                  <app-icon name="check" [size]="14"></app-icon>
+                  <span>¡Perfil actualizado con éxito!</span>
+                </div>
+              }
+
+              <button type="submit"
+                      class="w-full py-3 rounded-xl bg-brand-500 hover:bg-brand-600 active:scale-98 text-white font-bold text-xs shadow-md shadow-brand-500/25 flex items-center justify-center gap-2 transition-all">
+                <app-icon name="check" [size]="16" className="text-white"></app-icon>
+                <span>Guardar Cambios de Perfil</span>
+              </button>
+            </form>
+
+          </div>
+        }
+
+      </main>
+
+      <!-- ================= INCOMING OFFER MODAL (Subtle 8px corners, SaaS style) ================= -->
+      @if (pendingOffer()) {
+        <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-5 w-full max-w-sm shadow-xl space-y-4">
+            
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">Nuevo Pedido Asignado</div>
+                <div class="text-xs text-slate-500 font-mono">{{ pendingOffer()!.orderNumber }}</div>
+              </div>
+
+              <div class="w-8 h-8 rounded border border-slate-300 dark:border-slate-700 flex items-center justify-center font-bold text-xs text-slate-900 dark:text-white">
+                {{ offerSecondsRemaining() }}s
+              </div>
+            </div>
+
+            <!-- Earnings SOBER Box -->
+            <div class="bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 p-3 rounded-lg text-center">
+              <div class="text-[11px] font-semibold text-slate-500 uppercase">Ganancia Estimada</div>
+              <div class="text-2xl font-bold text-slate-900 dark:text-white mt-0.5">
+                ${{ (pendingOffer()!.deliveryFee + pendingOffer()!.tip).toFixed(2) }}
+              </div>
+              <div class="text-[11px] text-slate-400 mt-0.5">
+                Tarifa: ${{ pendingOffer()!.deliveryFee.toFixed(2) }} • Propina: ${{ pendingOffer()!.tip.toFixed(2) }}
+              </div>
+            </div>
+
+            <!-- Route Details -->
+            <div class="space-y-2 text-xs">
+              <div class="flex items-start gap-2">
+                <app-icon name="store" [size]="14" className="text-slate-400 mt-0.5 flex-shrink-0"></app-icon>
+                <div>
+                  <div class="font-bold text-slate-900 dark:text-white">{{ pendingOffer()!.storeName }}</div>
+                  <div class="text-[11px] text-slate-500">{{ pendingOffer()!.storeAddress }}</div>
+                </div>
+              </div>
+
+              <div class="flex items-start gap-2">
+                <app-icon name="map-pin" [size]="14" className="text-slate-400 mt-0.5 flex-shrink-0"></app-icon>
+                <div>
+                  <div class="font-bold text-slate-900 dark:text-white">{{ pendingOffer()!.customerName }}</div>
+                  <div class="text-[11px] text-slate-500">{{ pendingOffer()!.deliveryAddress }}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Accept / Reject Buttons -->
+            <div class="space-y-2 pt-2">
+              <button (click)="acceptOffer()"
+                      class="w-full py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-semibold text-xs rounded-md shadow-xs transition-colors flex items-center justify-center gap-1.5">
+                <app-icon name="check" [size]="14" className="text-white"></app-icon>
+                <span>Aceptar Despacho (+${{ (pendingOffer()!.deliveryFee + pendingOffer()!.tip).toFixed(2) }})</span>
+              </button>
+
+              <button (click)="rejectOffer()"
+                      class="w-full py-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-medium text-xs transition-colors">
+                Rechazar
+              </button>
+            </div>
+
+          </div>
+        </div>
+      }
+
+      <!-- ================= CONFIRM DELIVERY MODAL ================= -->
+      @if (completingJob()) {
+        <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-5 w-full max-w-sm shadow-xl space-y-4">
+            
+            <div class="text-center space-y-1">
+              <h3 class="font-bold text-sm text-slate-900 dark:text-white">Confirmar Entrega</h3>
+              <p class="text-xs text-slate-500">
+                Pedido {{ completingJob()!.orderNumber }} para {{ completingJob()!.customerName }}
+              </p>
+            </div>
+
+            @if (completingJob()!.paymentMethod === 'cash_usd') {
+              <div class="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 text-center space-y-1">
+                <div class="text-xs font-semibold text-amber-900 dark:text-amber-300">Cobro en Efectivo Pendiente</div>
+                <div class="text-xl font-bold text-amber-800 dark:text-amber-400">${{ completingJob()!.orderTotal.toFixed(2) }}</div>
+              </div>
+            }
+
+            <div class="space-y-1">
+              <label class="text-xs font-semibold text-slate-700 dark:text-slate-300">PIN de Seguridad (Opcional):</label>
+              <input type="text" maxlength="4" placeholder="Ej: 4030" [(ngModel)]="enteredPin"
+                     class="w-full text-center tracking-widest text-base font-bold bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-md py-2 focus:border-brand-500 focus:outline-none" />
+            </div>
+
+            <div class="space-y-2 pt-2">
+              <button (click)="finalizeDelivery()"
+                      class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-md shadow-xs transition-colors flex items-center justify-center gap-1.5">
+                <app-icon name="check" [size]="14" className="text-white"></app-icon>
+                <span>Entrega Completada</span>
+              </button>
+
+              <button (click)="completingJob.set(null)"
+                      class="w-full py-1.5 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-medium text-xs transition-colors">
+                Cancelar
+              </button>
+            </div>
+
+          </div>
+        </div>
+      }
+
+      <!-- ================= MODAL: AGREGAR CUENTA DE COBRO ================= -->
+      @if (isAddAccountModalOpen()) {
+        <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-sm p-5 shadow-2xl space-y-4 animate-scale-up">
+            
+            <div class="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+              <div class="flex items-center gap-2">
+                <app-icon name="wallet" [size]="16" className="text-emerald-500"></app-icon>
+                <h3 class="font-bold text-sm text-slate-900 dark:text-white">Nueva Cuenta de Cobro</h3>
+              </div>
+              <button (click)="isAddAccountModalOpen.set(false)" class="text-slate-400 hover:text-slate-600 dark:hover:text-white">
+                <app-icon name="x" [size]="16"></app-icon>
+              </button>
+            </div>
+
+            <div class="space-y-3 text-xs">
+              <div>
+                <label class="block text-slate-500 dark:text-slate-400 font-semibold mb-1">Método / Tipo</label>
+                <select [(ngModel)]="newAccount.type" 
+                        class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-medium">
+                  <option value="pago_movil">Pago Móvil (Bolívares)</option>
+                  <option value="bank_transfer">Transferencia Bancaria (Bs)</option>
+                  <option value="zelle">Zelle (USD)</option>
+                  <option value="binance">Binance Pay / USDT</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-slate-500 dark:text-slate-400 font-semibold mb-1">
+                  {{ newAccount.type === 'binance' ? 'Plataforma / Red' : 'Banco o Entidad' }}
+                </label>
+                <input type="text" [(ngModel)]="newAccount.bankOrPlatform" 
+                       [placeholder]="newAccount.type === 'pago_movil' || newAccount.type === 'bank_transfer' ? 'Ej: Banesco, Banco de Venezuela, Mercantil' : newAccount.type === 'zelle' ? 'Ej: Wells Fargo, Bank of America, Chase' : 'Ej: Binance Pay ID / USDT TRC20'"
+                       class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
+              </div>
+
+              <div>
+                <label class="block text-slate-500 dark:text-slate-400 font-semibold mb-1">
+                  {{ newAccount.type === 'pago_movil' ? 'Teléfono Celular' : newAccount.type === 'zelle' ? 'Correo o Teléfono Zelle' : newAccount.type === 'binance' ? 'Binance Pay ID o Correo' : 'Número de Cuenta (20 dígitos)' }}
+                </label>
+                <input type="text" [(ngModel)]="newAccount.accountIdentifier" 
+                       [placeholder]="newAccount.type === 'pago_movil' ? 'Ej: 04141234567' : newAccount.type === 'zelle' ? 'Ej: correo@gmail.com' : newAccount.type === 'binance' ? 'Ej: 123456789' : '01020123456789012345'"
+                       class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-mono" />
+              </div>
+
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-slate-500 dark:text-slate-400 font-semibold mb-1">Cédula / RIF</label>
+                  <input type="text" [(ngModel)]="newAccount.holderId" placeholder="Ej: V-24.891.332"
+                         class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-mono" />
+                </div>
+                <div>
+                  <label class="block text-slate-500 dark:text-slate-400 font-semibold mb-1">Nombre Titular</label>
+                  <input type="text" [(ngModel)]="newAccount.holderName" placeholder="Nombre completo"
+                         class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
+                </div>
+              </div>
+
+              <label class="flex items-center gap-2 pt-1 cursor-pointer">
+                <input type="checkbox" [(ngModel)]="newAccount.isDefault" class="rounded text-brand-500 focus:ring-brand-500" />
+                <span class="text-slate-700 dark:text-slate-300 font-semibold">Cuenta principal para recibir pagos</span>
+              </label>
+            </div>
+
+            <div class="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <button type="button" (click)="saveNewPaymentAccount()"
+                      class="flex-1 py-2 bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1.5">
+                <app-icon name="check" [size]="14"></app-icon>
+                <span>Guardar Cuenta</span>
+              </button>
+              <button type="button" (click)="isAddAccountModalOpen.set(false)"
+                      class="px-3 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold text-xs rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                Cancelar
+              </button>
+            </div>
+
+          </div>
+        </div>
+      }
+
+      <!-- ================= FLOATING DOCK BOTTOM NAVIGATION ================= -->
+      <div class="fixed bottom-5 left-0 right-0 max-w-md mx-auto px-4 z-40 pointer-events-none">
+        <nav class="pointer-events-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200/90 dark:border-slate-700/80 shadow-2xl shadow-slate-900/20 dark:shadow-black/70 rounded-2xl px-3 py-2 flex items-center justify-around transition-all transform hover:scale-[1.01]">
+          
+          <!-- 1. Despachos -->
+          <button (click)="activeTab.set('deliveries')" 
+                  class="flex flex-col items-center gap-0.5 transition-all py-1 px-3 rounded-xl hover:scale-105 active:scale-95 relative"
+                  [class.text-brand-500]="activeTab() === 'deliveries'"
+                  [class.font-bold]="activeTab() === 'deliveries'"
+                  [class.text-slate-400]="activeTab() !== 'deliveries'">
+            <div [class.bg-brand-500/15]="activeTab() === 'deliveries'" 
+                 [class.text-brand-500]="activeTab() === 'deliveries'" 
+                 class="p-1 rounded-lg transition-colors">
+              <app-icon name="bike" [size]="18"></app-icon>
+            </div>
+            <span class="text-[10px]">Despachos</span>
+            @if (activeJobs().length > 0) {
+              <span class="absolute top-1 right-2.5 w-2 h-2 rounded-full bg-brand-500 animate-pulse"></span>
+            }
+          </button>
+
+          <!-- 2. Billetera -->
+          <button (click)="activeTab.set('wallet')" 
+                  class="flex flex-col items-center gap-0.5 transition-all py-1 px-3 rounded-xl hover:scale-105 active:scale-95"
+                  [class.text-brand-500]="activeTab() === 'wallet'"
+                  [class.font-bold]="activeTab() === 'wallet'"
+                  [class.text-slate-400]="activeTab() !== 'wallet'">
+            <div [class.bg-brand-500/15]="activeTab() === 'wallet'" 
+                 [class.text-brand-500]="activeTab() === 'wallet'" 
+                 class="p-1 rounded-lg transition-colors">
+              <app-icon name="wallet" [size]="18"></app-icon>
+            </div>
+            <span class="text-[10px]">Billetera</span>
+          </button>
+
+          <!-- 3. Historial -->
+          <button (click)="activeTab.set('history')" 
+                  class="flex flex-col items-center gap-0.5 transition-all py-1 px-3 rounded-xl hover:scale-105 active:scale-95"
+                  [class.text-brand-500]="activeTab() === 'history'"
+                  [class.font-bold]="activeTab() === 'history'"
+                  [class.text-slate-400]="activeTab() !== 'history'">
+            <div [class.bg-brand-500/15]="activeTab() === 'history'" 
+                 [class.text-brand-500]="activeTab() === 'history'" 
+                 class="p-1 rounded-lg transition-colors">
+              <app-icon name="clipboard-list" [size]="18"></app-icon>
+            </div>
+            <span class="text-[10px]">Historial</span>
+          </button>
+
+          <!-- 4. Perfil -->
+          <button (click)="activeTab.set('profile')" 
+                  class="flex flex-col items-center gap-0.5 transition-all py-1 px-3 rounded-xl hover:scale-105 active:scale-95"
+                  [class.text-brand-500]="activeTab() === 'profile'"
+                  [class.font-bold]="activeTab() === 'profile'"
+                  [class.text-slate-400]="activeTab() !== 'profile'">
+            <div [class.bg-brand-500/15]="activeTab() === 'profile'" 
+                 [class.text-brand-500]="activeTab() === 'profile'" 
+                 class="p-1 rounded-lg transition-colors">
+              <app-icon name="user" [size]="18"></app-icon>
+            </div>
+            <span class="text-[10px]">Perfil</span>
+          </button>
+
+        </nav>
+      </div>
+
+    </div>
+  </div>
+

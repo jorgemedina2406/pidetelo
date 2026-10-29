@@ -1,0 +1,88 @@
+import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { SubscriptionPlan } from '../../../core/models/branch.model';
+import { IconComponent } from '../../../shared/components/icon.component';
+
+@Component({
+  selector: 'app-plan-upgrade-modal',
+  standalone: true,
+  imports: [CommonModule, IconComponent],
+  template: `
+    @if (isOpen) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
+      (click)="close.emit()">
+      <div
+        class="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 w-full max-w-lg rounded-3xl shadow-2xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 space-y-6 text-center"
+        (click)="$event.stopPropagation()">
+
+        <div class="w-16 h-16 rounded-3xl bg-gradient-to-tr from-brand-500 to-amber-500 text-white mx-auto flex items-center justify-center shadow-lg shadow-brand-500/30">
+          <app-icon name="sparkles" [size]="32" className="text-white"></app-icon>
+        </div>
+
+        <div class="space-y-2">
+          <span class="text-[11px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-3 py-1 rounded-full border border-amber-200 dark:border-amber-800">
+            Límite de Sedes Alcanzado
+          </span>
+          <h3 class="text-2xl font-black">¡Llegaste al límite de tu {{ currentSubscriptionPlan?.name || 'Plan' }}!</h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400">
+            Tu cuenta tiene actualmente <strong>{{ activeBranchesCount }} sucursales activas</strong> de las {{ currentSubscriptionPlan?.maxBranches || 3 }} permitidas en este plan mensual.
+          </p>
+        </div>
+
+        <!-- Plan Corporativo Highlight -->
+        <div class="p-5 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-950 text-white text-left space-y-3 border border-brand-500/30 shadow-md">
+          <div class="flex items-center justify-between">
+            <div>
+              <span class="text-[10px] font-extrabold text-brand-400 uppercase tracking-wider">Plan Recomendado</span>
+              <h4 class="text-lg font-black">Plan Corporativo</h4>
+            </div>
+            <div class="text-right">
+              <span class="text-2xl font-black text-brand-400 font-mono">$119</span>
+              <span class="text-[10px] text-slate-400">/mes</span>
+            </div>
+          </div>
+
+          <ul class="text-xs text-slate-300 space-y-1.5 pt-2 border-t border-slate-800">
+            <li class="flex items-center gap-2">
+              <span class="text-emerald-400 font-bold">✓</span>
+              <span><strong>Sedes físicas ilimitadas</strong> en todo el país</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="text-emerald-400 font-bold">✓</span>
+              <span><strong>0% Comisiones</strong> sobre tus ventas</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="text-emerald-400 font-bold">✓</span>
+              <span>Cuentas de Pago Móvil / Zelle aisladas por sucursal</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="text-emerald-400 font-bold">✓</span>
+              <span>Despacho inteligente por geolocalización y radio 8 km</span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-3 pt-2">
+          <button (click)="close.emit()"
+            class="flex-1 py-3 rounded-xl border border-slate-300 dark:border-slate-700 font-bold text-xs hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer">
+            Cerrar
+          </button>
+          <a href="https://wa.me/584121234567?text=Hola,%20deseo%20actualizar%20mi%20cuenta%20al%20Plan%20Corporativo%20de%20sedes%20ilimitadas" target="_blank"
+            class="flex-1 py-3 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-extrabold text-xs shadow-md shadow-brand-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer">
+            <app-icon name="sparkles" [size]="14"></app-icon>
+            <span>Solicitar Plan Corporativo</span>
+          </a>
+        </div>
+
+      </div>
+    </div>
+    }
+  `
+})
+export class PlanUpgradeModalComponent {
+  @Input() isOpen = false;
+  @Input() currentSubscriptionPlan: SubscriptionPlan | null = null;
+  @Input() activeBranchesCount = 0;
+
+  @Output() close = new EventEmitter<void>();
+}

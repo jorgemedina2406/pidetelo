@@ -1,0 +1,67 @@
+export interface TenantBusinessHours {
+  open: string;  // e.g. "11:00"
+  close: string; // e.g. "23:00"
+  isOpenToday: boolean;
+}
+
+export interface TenantContact {
+  whatsappNumber: string; // e.g. "+584121234567"
+  phone?: string;
+  instagram?: string;
+  address: string;
+  coordinates?: {
+    lat: number;
+    lng: number;
+  };
+}
+
+export interface TenantDeliverySettings {
+  hasDelivery: boolean;
+  hasPickup: boolean;
+  baseDeliveryFee: number;
+  deliveryRadiusKm?: number;
+  estimatedDeliveryMinMinutes: number;
+  estimatedDeliveryMaxMinutes: number;
+  freeDeliveryThreshold?: number;
+  minOrderAmount: number;
+  currency: string;
+  currencySymbol: string;
+}
+
+export type CurrencyDisplayMode = 'usd_and_bs' | 'bs_and_usd' | 'only_usd' | 'only_bs';
+
+export interface TenantBranding {
+  accentColor: string; // Hex color e.g. '#f97316'
+  logoUrl: string;
+  bannerUrl: string;
+}
+
+export interface TenantCurrencySettings {
+  baseCurrency: 'USD' | 'VES';
+  displayMode: CurrencyDisplayMode;
+  exchangeRate: number; // e.g. 45.50 Bs por USD
+  lastRateUpdate?: string;
+}
+
+export interface Tenant {
+  id: string;
+  slug: string; // Unique URL identifier: /t/:slug (e.g., 'burger-lab', 'tokyo-sushi')
+  name: string;
+  tagline: string;
+  description: string;
+  logoUrl: string;
+  bannerUrl: string;
+  rating: number;
+  reviewCount: number;
+  category: string; // e.g. "Hamburguesas", "Sushi", "Pizzas"
+  isActive: boolean;
+  contact: TenantContact;
+  deliverySettings: TenantDeliverySettings;
+  businessHours: TenantBusinessHours;
+  branding: TenantBranding;
+  currencySettings: TenantCurrencySettings;
+  subscriptionPlanId?: 'EMPRENDEDOR' | 'COMERCIO' | 'CORPORATIVO';
+  commissionPercentage?: number;
+  branches?: any[];
+}
+

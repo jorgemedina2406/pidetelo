@@ -1,0 +1,61 @@
+import { Routes } from '@angular/router';
+import { superAdminGuard, merchantAdminGuard, riderGuard, guestGuard } from './core/guards/auth.guard';
+
+export const routes: Routes = [
+  {
+    path: '',
+    pathMatch: 'full',
+    redirectTo: 'explorar'
+  },
+  {
+    path: 'login',
+    canActivate: [guestGuard],
+    loadComponent: () => import('./features/auth/login/login.component').then(m => m.LoginComponent),
+    title: 'Iniciar Sesión | DeliveryHub'
+  },
+  {
+    path: 'super-admin',
+    canActivate: [superAdminGuard],
+    loadComponent: () => import('./features/super-admin/super-admin.component').then(m => m.SuperAdminComponent),
+    title: 'SuperAdmin | Panel Plataforma'
+  },
+  {
+    path: 'merchant-admin',
+    canActivate: [merchantAdminGuard],
+    loadComponent: () => import('./features/merchant-admin/merchant-admin.component').then(m => m.MerchantAdminComponent),
+    title: 'Panel Comercio | DeliveryHub'
+  },
+  {
+    path: 'rider',
+    canActivate: [riderGuard],
+    loadComponent: () => import('./features/rider-app/rider-app.component').then(m => m.RiderAppComponent),
+    title: 'App Motorizados | DeliveryHub'
+  },
+  {
+    path: 'track/:orderId',
+    loadComponent: () => import('./features/customer-tracking/customer-tracking.component').then(m => m.CustomerTrackingComponent),
+    title: 'Rastreo en Vivo de tu Pedido'
+  },
+  {
+    path: 't/:slug',
+    loadComponent: () => import('./features/tenant-store/pages/store-view/store-view.component').then(m => m.StoreViewComponent),
+    title: 'Menú Express WhatsApp | Pedido Online'
+  },
+  {
+    path: 'explorar',
+    loadComponent: () => import('./features/marketplace/pages/marketplace-home/marketplace-home.component').then(m => m.MarketplaceHomeComponent),
+    title: 'Marketplace | Restaurantes y Comercios Cercanos'
+  },
+  {
+    path: 'merchan-admin',
+    redirectTo: 'merchant-admin'
+  },
+  {
+    path: 'admin',
+    redirectTo: 'merchant-admin'
+  },
+  {
+    path: '**',
+    redirectTo: 'explorar'
+  }
+];

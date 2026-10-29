@@ -1,0 +1,2791 @@
+<div
+  class="h-screen max-h-screen w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex overflow-hidden selection:bg-brand-500 selection:text-white transition-colors duration-200 relative">
+
+  <!-- Mobile Backdrop Overlay -->
+  @if (isMobileMenuOpen()) {
+  <div (click)="isMobileMenuOpen.set(false)"
+    class="fixed inset-0 bg-black/60 backdrop-blur-xs z-40 lg:hidden animate-fade-in"></div>
+  }
+
+  <!-- ================= EXPANDABLE MODERN SIDEBAR ================= -->
+  <aside [class.w-64]="isSidebarExpanded()" [class.w-20]="!isSidebarExpanded()"
+    [class.translate-x-0]="isMobileMenuOpen()" [class.-translate-x-full]="!isMobileMenuOpen()"
+    class="sidebar-adaptive fixed inset-y-0 left-0 z-50 lg:static lg:translate-x-0 h-full max-h-screen flex flex-col justify-between transition-all duration-300 ease-in-out flex-shrink-0 select-none overflow-hidden">
+
+    <!-- Sleek Floating Edge Toggle Button (Never crowds or cuts off the logo) -->
+    <button (click)="isSidebarExpanded.set(!isSidebarExpanded())"
+      [title]="isSidebarExpanded() ? i18n.t('sb.collapse') : i18n.t('sb.expand')"
+      class="absolute -right-3.5 top-6 w-7 h-7 rounded-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 shadow-md flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-brand-500 dark:hover:text-brand-400 hover:border-brand-500 dark:hover:border-brand-500 hover:scale-110 active:scale-95 transition-all z-50 cursor-pointer">
+      <app-icon [name]="isSidebarExpanded() ? 'chevron-left' : 'chevron-right'" [size]="14"></app-icon>
+    </button>
+
+    <!-- Sidebar Brand Header (Fixed Top) -->
+    <div class="flex-shrink-0">
+      <div [class.px-5]="isSidebarExpanded()" [class.px-2]="!isSidebarExpanded()"
+        class="py-4 border-b border-slate-200 dark:border-slate-800 transition-all flex items-center"
+        [class.justify-start]="isSidebarExpanded()" [class.justify-center]="!isSidebarExpanded()">
+
+        <div class="flex items-center gap-3 min-w-0">
+          <!-- Striking Gradient Logo Badge (Always centered and unclipped) -->
+          <div
+            class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-500 via-orange-500 to-amber-500 text-white flex items-center justify-center shadow-md shadow-brand-500/25 flex-shrink-0 transition-transform hover:scale-105">
+            <app-icon name="store" [size]="20" className="text-white"></app-icon>
+          </div>
+
+          @if (isSidebarExpanded()) {
+          <div class="leading-tight truncate animate-fade-in">
+            <span class="font-extrabold text-base tracking-tight text-slate-900 dark:text-white truncate block">{{ currentTenant()?.name || auth.currentUser()?.tenantName || 'Mi Comercio' }}</span>
+            <div class="flex items-center gap-1.5 mt-0.5">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span class="text-[10px] font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                {{ i18n.t('ma.brandSubtitle') }}
+              </span>
+            </div>
+          </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- Scrollable Navigation Links (Middle Area) -->
+    <div class="flex-1 overflow-y-auto overflow-x-hidden min-h-0 py-1">
+      <!-- Section Label (Only in expanded mode) -->
+      @if (isSidebarExpanded()) {
+      <div
+        class="px-5 pt-3 pb-1 text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+        Gestión Restaurante
+      </div>
+      }
+
+      <!-- Navigation Links -->
+      <nav class="p-3 space-y-1.5">
+
+        <!-- Comandas en Vivo -->
+        <div class="relative group">
+          <button (click)="activeTab.set('orders')" [class.bg-brand-500]="activeTab() === 'orders'"
+            [class.text-white]="activeTab() === 'orders'" [class.shadow-md]="activeTab() === 'orders'"
+            [class.shadow-brand-500/25]="activeTab() === 'orders'" [class.text-slate-600]="activeTab() !== 'orders'"
+            [class.dark:text-slate-400]="activeTab() !== 'orders'" [class.hover:bg-slate-100]="activeTab() !== 'orders'"
+            [class.dark:hover:bg-slate-850]="activeTab() !== 'orders'" [class.justify-center]="!isSidebarExpanded()"
+            [class.w-12]="!isSidebarExpanded()" [class.h-12]="!isSidebarExpanded()"
+            [class.mx-auto]="!isSidebarExpanded()" [class.w-full]="isSidebarExpanded()"
+            [class.px-3]="isSidebarExpanded()" [class.py-2.5]="isSidebarExpanded()"
+            class="flex items-center gap-3 rounded-xl font-bold text-xs transition-all duration-150 active:scale-95">
+            <span class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
+              [class.bg-white/20]="activeTab() === 'orders'" [class.text-white]="activeTab() === 'orders'"
+              [class.bg-slate-100]="activeTab() !== 'orders'" [class.dark:bg-slate-800]="activeTab() !== 'orders'"
+              [class.text-slate-500]="activeTab() !== 'orders'" [class.dark:text-slate-400]="activeTab() !== 'orders'">
+              <app-icon name="clipboard-list" [size]="17"></app-icon>
+            </span>
+            @if (isSidebarExpanded()) {
+            <span class="truncate flex-1 text-left font-semibold">{{ i18n.t('ma.orders') }}</span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-black" [class.bg-white/30]="activeTab() === 'orders'"
+              [class.bg-slate-200]="activeTab() !== 'orders'" [class.dark:bg-slate-800]="activeTab() !== 'orders'">
+              {{ orders().length }}
+            </span>
+            }
+          </button>
+
+          @if (!isSidebarExpanded()) {
+          <div
+            class="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 flex items-center gap-2">
+            <span>{{ i18n.t('ma.orders') }}</span>
+            <span class="px-1.5 py-0.2 rounded-full bg-brand-500 text-white text-[10px]">{{ orders().length }}</span>
+          </div>
+          }
+        </div>
+
+        <!-- Catálogo & Extras -->
+        <div class="relative group">
+          <button (click)="activeTab.set('products')" [class.bg-brand-500]="activeTab() === 'products'"
+            [class.text-white]="activeTab() === 'products'" [class.shadow-md]="activeTab() === 'products'"
+            [class.shadow-brand-500/25]="activeTab() === 'products'" [class.text-slate-600]="activeTab() !== 'products'"
+            [class.dark:text-slate-400]="activeTab() !== 'products'"
+            [class.hover:bg-slate-100]="activeTab() !== 'products'"
+            [class.dark:hover:bg-slate-850]="activeTab() !== 'products'" [class.justify-center]="!isSidebarExpanded()"
+            [class.w-12]="!isSidebarExpanded()" [class.h-12]="!isSidebarExpanded()"
+            [class.mx-auto]="!isSidebarExpanded()" [class.w-full]="isSidebarExpanded()"
+            [class.px-3]="isSidebarExpanded()" [class.py-2.5]="isSidebarExpanded()"
+            class="flex items-center gap-3 rounded-xl font-bold text-xs transition-all duration-150 active:scale-95">
+            <span class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
+              [class.bg-white/20]="activeTab() === 'products'" [class.text-white]="activeTab() === 'products'"
+              [class.bg-slate-100]="activeTab() !== 'products'" [class.dark:bg-slate-800]="activeTab() !== 'products'"
+              [class.text-slate-500]="activeTab() !== 'products'"
+              [class.dark:text-slate-400]="activeTab() !== 'products'">
+              <app-icon name="utensils" [size]="17"></app-icon>
+            </span>
+            @if (isSidebarExpanded()) {
+            <span class="truncate flex-1 text-left font-semibold">{{ i18n.t('ma.catalog') }}</span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-black"
+              [class.bg-white/30]="activeTab() === 'products'" [class.bg-slate-200]="activeTab() !== 'products'"
+              [class.dark:bg-slate-800]="activeTab() !== 'products'">
+              {{ products().length }}
+            </span>
+            }
+          </button>
+
+          @if (!isSidebarExpanded()) {
+          <div
+            class="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 flex items-center gap-2">
+            <span>{{ i18n.t('ma.catalog') }}</span>
+            <span class="text-slate-400 text-[10px]">{{ products().length }}</span>
+          </div>
+          }
+        </div>
+
+        <!-- Mis Sucursales (Multi-Branch) -->
+        <div class="relative group">
+          <button (click)="activeTab.set('branches')" [class.bg-brand-500]="activeTab() === 'branches'"
+            [class.text-white]="activeTab() === 'branches'" [class.shadow-md]="activeTab() === 'branches'"
+            [class.shadow-brand-500/25]="activeTab() === 'branches'" [class.text-slate-600]="activeTab() !== 'branches'"
+            [class.dark:text-slate-400]="activeTab() !== 'branches'"
+            [class.hover:bg-slate-100]="activeTab() !== 'branches'"
+            [class.dark:hover:bg-slate-850]="activeTab() !== 'branches'" [class.justify-center]="!isSidebarExpanded()"
+            [class.w-12]="!isSidebarExpanded()" [class.h-12]="!isSidebarExpanded()"
+            [class.mx-auto]="!isSidebarExpanded()" [class.w-full]="isSidebarExpanded()"
+            [class.px-3]="isSidebarExpanded()" [class.py-2.5]="isSidebarExpanded()"
+            class="flex items-center gap-3 rounded-xl font-bold text-xs transition-all duration-150 active:scale-95">
+            <span class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
+              [class.bg-white/20]="activeTab() === 'branches'" [class.text-white]="activeTab() === 'branches'"
+              [class.bg-slate-100]="activeTab() !== 'branches'" [class.dark:bg-slate-800]="activeTab() !== 'branches'"
+              [class.text-slate-500]="activeTab() !== 'branches'"
+              [class.dark:text-slate-400]="activeTab() !== 'branches'">
+              <app-icon name="store" [size]="17"></app-icon>
+            </span>
+            @if (isSidebarExpanded()) {
+            <span class="truncate flex-1 text-left font-semibold">
+              {{ isBranchLocked() ? 'Mi Sucursal' : 'Mis Sucursales' }}
+            </span>
+            <div class="flex items-center gap-1">
+              @if (pendingBranchesCount() > 0) {
+              <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse" title="Sedes pendientes de aprobación"></span>
+              }
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-black"
+                [class.bg-white/30]="activeTab() === 'branches'" [class.bg-slate-200]="activeTab() !== 'branches'"
+                [class.dark:bg-slate-800]="activeTab() !== 'branches'">
+                {{ isBranchLocked() ? '1' : branches().length }}
+              </span>
+            </div>
+            }
+          </button>
+
+          @if (!isSidebarExpanded()) {
+          <div
+            class="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 flex items-center gap-2">
+            <span>{{ isBranchLocked() ? 'Mi Sucursal' : 'Mis Sucursales' }}</span>
+            <span class="text-slate-400 text-[10px]">{{ isBranchLocked() ? '1' : branches().length }}</span>
+          </div>
+          }
+        </div>
+
+        <!-- Flota de Repartidores -->
+        <div class="relative group">
+          <button (click)="activeTab.set('riders')" [class.bg-brand-500]="activeTab() === 'riders'"
+            [class.text-white]="activeTab() === 'riders'" [class.shadow-md]="activeTab() === 'riders'"
+            [class.shadow-brand-500/25]="activeTab() === 'riders'" [class.text-slate-600]="activeTab() !== 'riders'"
+            [class.dark:text-slate-400]="activeTab() !== 'riders'" [class.hover:bg-slate-100]="activeTab() !== 'riders'"
+            [class.dark:hover:bg-slate-850]="activeTab() !== 'riders'" [class.justify-center]="!isSidebarExpanded()"
+            [class.w-12]="!isSidebarExpanded()" [class.h-12]="!isSidebarExpanded()"
+            [class.mx-auto]="!isSidebarExpanded()" [class.w-full]="isSidebarExpanded()"
+            [class.px-3]="isSidebarExpanded()" [class.py-2.5]="isSidebarExpanded()"
+            class="flex items-center gap-3 rounded-xl font-bold text-xs transition-all duration-150 active:scale-95">
+            <span class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
+              [class.bg-white/20]="activeTab() === 'riders'" [class.text-white]="activeTab() === 'riders'"
+              [class.bg-slate-100]="activeTab() !== 'riders'" [class.dark:bg-slate-800]="activeTab() !== 'riders'"
+              [class.text-slate-500]="activeTab() !== 'riders'" [class.dark:text-slate-400]="activeTab() !== 'riders'">
+              <app-icon name="bike" [size]="17"></app-icon>
+            </span>
+            @if (isSidebarExpanded()) {
+            <span class="truncate flex-1 text-left font-semibold">{{ i18n.t('ma.riders') }}</span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-black" [class.bg-white/30]="activeTab() === 'riders'"
+              [class.bg-slate-200]="activeTab() !== 'riders'" [class.dark:bg-slate-800]="activeTab() !== 'riders'">
+              {{ filteredRiders().length }}
+            </span>
+            }
+          </button>
+
+          @if (!isSidebarExpanded()) {
+          <div
+            class="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 flex items-center gap-2">
+            <span>{{ i18n.t('ma.riders') }}</span>
+            <span class="px-1.5 py-0.2 rounded-full bg-brand-500 text-white text-[10px]">{{ filteredRiders().length }}</span>
+          </div>
+          }
+        </div>
+
+        <!-- Radar GPS en Vivo -->
+        <div class="relative group">
+          <button (click)="activeTab.set('gps_map')" [class.bg-brand-500]="activeTab() === 'gps_map'"
+            [class.text-white]="activeTab() === 'gps_map'" [class.shadow-md]="activeTab() === 'gps_map'"
+            [class.shadow-brand-500/25]="activeTab() === 'gps_map'" [class.text-slate-600]="activeTab() !== 'gps_map'"
+            [class.dark:text-slate-400]="activeTab() !== 'gps_map'"
+            [class.hover:bg-slate-100]="activeTab() !== 'gps_map'"
+            [class.dark:hover:bg-slate-850]="activeTab() !== 'gps_map'" [class.justify-center]="!isSidebarExpanded()"
+            [class.w-12]="!isSidebarExpanded()" [class.h-12]="!isSidebarExpanded()"
+            [class.mx-auto]="!isSidebarExpanded()" [class.w-full]="isSidebarExpanded()"
+            [class.px-3]="isSidebarExpanded()" [class.py-2.5]="isSidebarExpanded()"
+            class="flex items-center gap-3 rounded-xl font-bold text-xs transition-all duration-150 active:scale-95">
+            <span class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
+              [class.bg-white/20]="activeTab() === 'gps_map'" [class.text-white]="activeTab() === 'gps_map'"
+              [class.bg-slate-100]="activeTab() !== 'gps_map'" [class.dark:bg-slate-800]="activeTab() !== 'gps_map'"
+              [class.text-slate-500]="activeTab() !== 'gps_map'"
+              [class.dark:text-slate-400]="activeTab() !== 'gps_map'">
+              <app-icon name="map-pin" [size]="17"></app-icon>
+            </span>
+            @if (isSidebarExpanded()) {
+            <span class="truncate flex-1 text-left font-semibold">{{ i18n.t('ma.radar') }}</span>
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse flex-shrink-0"></span>
+            }
+          </button>
+
+          @if (!isSidebarExpanded()) {
+          <div
+            class="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
+            {{ i18n.t('ma.radar') }}
+          </div>
+          }
+        </div>
+
+        <!-- Equipo & Accesos -->
+        <div class="relative group">
+          <button (click)="activeTab.set('users')" [class.bg-brand-500]="activeTab() === 'users'"
+            [class.text-white]="activeTab() === 'users'" [class.shadow-md]="activeTab() === 'users'"
+            [class.shadow-brand-500/25]="activeTab() === 'users'" [class.text-slate-600]="activeTab() !== 'users'"
+            [class.dark:text-slate-400]="activeTab() !== 'users'" [class.hover:bg-slate-100]="activeTab() !== 'users'"
+            [class.dark:hover:bg-slate-850]="activeTab() !== 'users'" [class.justify-center]="!isSidebarExpanded()"
+            [class.w-12]="!isSidebarExpanded()" [class.h-12]="!isSidebarExpanded()"
+            [class.mx-auto]="!isSidebarExpanded()" [class.w-full]="isSidebarExpanded()"
+            [class.px-3]="isSidebarExpanded()" [class.py-2.5]="isSidebarExpanded()"
+            class="flex items-center gap-3 rounded-xl font-bold text-xs transition-all duration-150 active:scale-95">
+            <span class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
+              [class.bg-white/20]="activeTab() === 'users'" [class.text-white]="activeTab() === 'users'"
+              [class.bg-slate-100]="activeTab() !== 'users'" [class.dark:bg-slate-800]="activeTab() !== 'users'"
+              [class.text-slate-500]="activeTab() !== 'users'" [class.dark:text-slate-400]="activeTab() !== 'users'">
+              <app-icon name="users" [size]="17"></app-icon>
+            </span>
+            @if (isSidebarExpanded()) {
+            <span class="truncate flex-1 text-left font-semibold">{{ i18n.t('ma.team') }}</span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-black" [class.bg-white/30]="activeTab() === 'users'"
+              [class.bg-slate-200]="activeTab() !== 'users'" [class.dark:bg-slate-800]="activeTab() !== 'users'">
+              {{ storeUsers().length }}
+            </span>
+            }
+          </button>
+
+          @if (!isSidebarExpanded()) {
+          <div
+            class="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
+            {{ i18n.t('ma.team') }}
+          </div>
+          }
+        </div>
+
+        <!-- Marca & Moneda / Configuración -->
+        <div class="relative group">
+          <button (click)="activeTab.set('settings')" [class.bg-brand-500]="activeTab() === 'settings'"
+            [class.text-white]="activeTab() === 'settings'" [class.shadow-md]="activeTab() === 'settings'"
+            [class.shadow-brand-500/25]="activeTab() === 'settings'" [class.text-slate-600]="activeTab() !== 'settings'"
+            [class.dark:text-slate-400]="activeTab() !== 'settings'"
+            [class.hover:bg-slate-100]="activeTab() !== 'settings'"
+            [class.dark:hover:bg-slate-850]="activeTab() !== 'settings'" [class.justify-center]="!isSidebarExpanded()"
+            [class.w-12]="!isSidebarExpanded()" [class.h-12]="!isSidebarExpanded()"
+            [class.mx-auto]="!isSidebarExpanded()" [class.w-full]="isSidebarExpanded()"
+            [class.px-3]="isSidebarExpanded()" [class.py-2.5]="isSidebarExpanded()"
+            class="flex items-center gap-3 rounded-xl font-bold text-xs transition-all duration-150 active:scale-95">
+            <span class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
+              [class.bg-white/20]="activeTab() === 'settings'" [class.text-white]="activeTab() === 'settings'"
+              [class.bg-slate-100]="activeTab() !== 'settings'" [class.dark:bg-slate-800]="activeTab() !== 'settings'"
+              [class.text-slate-500]="activeTab() !== 'settings'"
+              [class.dark:text-slate-400]="activeTab() !== 'settings'">
+              <app-icon name="palette" [size]="17"></app-icon>
+            </span>
+            @if (isSidebarExpanded()) {
+            <span class="truncate flex-1 text-left font-semibold">Marca & Moneda</span>
+            }
+          </button>
+
+          @if (!isSidebarExpanded()) {
+          <div
+            class="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
+            Marca & Moneda
+          </div>
+          }
+        </div>
+
+      </nav>
+
+    </div>
+
+    <!-- Sidebar Bottom Footer (Always Visible Pinned to Bottom) -->
+    <div
+      class="flex-shrink-0 mt-auto p-2.5 border-t border-slate-200 dark:border-slate-800 space-y-2 bg-white dark:bg-slate-950">
+
+      <!-- Quick Environment Switcher -->
+      @if (isSidebarExpanded()) {
+      <div class="px-2 py-0.5 text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">
+        {{ i18n.t('sa.envEnvironments') }}
+      </div>
+      <div class="text-[11px]">
+        <a routerLink="/rider"
+          class="w-full p-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 hover:border-brand-500 text-slate-700 dark:text-slate-300 font-bold flex items-center justify-center gap-1.5 transition-colors">
+          <app-icon name="bike" [size]="13"></app-icon>
+          <span>{{ i18n.t('sb.envRider') }}</span>
+        </a>
+      </div>
+      }
+
+      <!-- Theme & Language Switchers -->
+      <div
+        class="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800"
+        [class.flex-col]="!isSidebarExpanded()">
+
+        <button (click)="theme.toggleTheme()"
+          [title]="theme.isDark() ? i18n.t('sb.themeLight') : i18n.t('sb.themeDark')"
+          [class.w-full]="isSidebarExpanded()" [class.w-8]="!isSidebarExpanded()" [class.h-8]="!isSidebarExpanded()"
+          class="py-1.5 px-2 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-brand-500 hover:bg-white dark:hover:bg-slate-800 flex items-center justify-center gap-1.5 transition-colors">
+          @if (theme.isDark()) {
+          <app-icon name="sun" [size]="15" className="text-amber-400"></app-icon>
+          @if (isSidebarExpanded()) {
+          <span>Light</span>
+          }
+          } @else {
+          <app-icon name="moon" [size]="15" className="text-slate-600"></app-icon>
+          @if (isSidebarExpanded()) {
+          <span>Dark</span>
+          }
+          }
+        </button>
+
+        @if (isSidebarExpanded()) {
+        <div class="w-px h-4 bg-slate-300 dark:bg-slate-800"></div>
+        }
+
+        <button (click)="i18n.toggleLang()" title="Switch Language" [class.w-full]="isSidebarExpanded()"
+          [class.w-8]="!isSidebarExpanded()" [class.h-8]="!isSidebarExpanded()"
+          class="py-1.5 px-2 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-brand-500 hover:bg-white dark:hover:bg-slate-800 flex items-center justify-center gap-1.5 transition-colors">
+          <app-icon name="globe" [size]="15"></app-icon>
+          @if (isSidebarExpanded()) {
+          <span>{{ i18n.lang() === 'es' ? 'ES' : 'EN' }}</span>
+          }
+        </button>
+      </div>
+
+      <!-- User Profile Pill -->
+      <div
+        class="p-2 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2"
+        [class.justify-center]="!isSidebarExpanded()">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div class="relative flex-shrink-0">
+            <img
+              [src]="auth.currentUser()?.avatarUrl || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100'"
+              class="w-8 h-8 rounded-xl object-cover border border-slate-300 dark:border-slate-700" />
+            <span
+              class="w-2.5 h-2.5 rounded-full bg-emerald-500 absolute -bottom-0.5 -right-0.5 ring-2 ring-white dark:ring-slate-900"></span>
+          </div>
+          @if (isSidebarExpanded()) {
+          <div class="truncate">
+            <div class="text-xs font-bold truncate">{{ auth.currentUser()?.name }}</div>
+            <div class="text-[10px] text-brand-600 dark:text-brand-400 truncate font-semibold">{{ currentTenant()?.name || auth.currentUser()?.tenantName || 'Comercio' }}</div>
+          </div>
+          }
+        </div>
+
+        @if (isSidebarExpanded()) {
+        <button (click)="logout()" [title]="i18n.t('sb.logout')"
+          class="text-slate-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors">
+          <app-icon name="log-out" [size]="16"></app-icon>
+        </button>
+        }
+      </div>
+
+    </div>
+
+  </aside>
+
+  <!-- ================= MAIN CONTENT WRAPPER ================= -->
+  <div class="flex-1 flex flex-col min-w-0 h-full max-h-screen overflow-hidden">
+
+    <!-- Top Sticky Header -->
+    <header class="topbar-adaptive px-4 sm:px-8 py-3.5 flex items-center justify-between flex-shrink-0 z-30">
+      <div class="flex items-center gap-3">
+        <!-- Mobile Menu Toggle Button -->
+        <button (click)="isMobileMenuOpen.set(!isMobileMenuOpen())"
+          class="lg:hidden p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:text-brand-500 transition-colors">
+          <app-icon name="menu" [size]="18"></app-icon>
+        </button>
+
+        <div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+          <span class="font-bold text-slate-900 dark:text-white">{{ currentTenant()?.name || auth.currentUser()?.tenantName || 'Mi Comercio' }}</span>
+          <span class="hidden sm:inline">/</span>
+          <span class="text-brand-500 font-semibold hidden sm:inline">
+            {{ activeTab() === 'orders' ? i18n.t('ma.orders') : activeTab() === 'products' ? i18n.t('ma.catalog') :
+            activeTab() === 'branches' ? 'Mis Sucursales' :
+            activeTab() === 'riders' ? i18n.t('ma.riders') : activeTab() === 'gps_map' ? i18n.t('ma.radar') :
+            i18n.t('ma.team') }}
+          </span>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 sm:gap-3">
+
+        <!-- Indicador y Control de Estado de la Sede Activa (Operación Exclusiva por Sede) -->
+        @if (activeBranch(); as currentB) {
+        <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2 border rounded-xl px-3 py-1.5 shadow-xs"
+            [class.bg-amber-500/10]="isBranchLocked()"
+            [class.dark:bg-amber-500/20]="isBranchLocked()"
+            [class.border-amber-500/30]="isBranchLocked()"
+            [class.bg-slate-100]="!isBranchLocked()"
+            [class.dark:bg-slate-900]="!isBranchLocked()"
+            [class.border-slate-200]="!isBranchLocked()"
+            [class.dark:border-slate-800]="!isBranchLocked()"
+            [title]="isBranchLocked() ? 'Sesión iniciada con credenciales exclusivas de esta sucursal' : 'Panel de operación exclusivo de la Sede Principal'">
+            <app-icon [name]="isBranchLocked() ? 'lock' : 'store'" [size]="13"
+              [className]="isBranchLocked() ? 'text-amber-600 dark:text-amber-400' : 'text-brand-500'"></app-icon>
+            <span class="text-xs font-black"
+              [class.text-amber-900]="isBranchLocked()"
+              [class.dark:text-amber-200]="isBranchLocked()"
+              [class.text-slate-800]="!isBranchLocked()"
+              [class.dark:text-slate-100]="!isBranchLocked()">
+              {{ currentB.name }}
+            </span>
+            <span class="text-[9px] font-bold px-1.5 py-0.5 rounded uppercase hidden sm:inline"
+              [class.bg-amber-500/20]="isBranchLocked()"
+              [class.text-amber-700]="isBranchLocked()"
+              [class.dark:text-amber-300]="isBranchLocked()"
+              [class.bg-brand-500/10]="!isBranchLocked()"
+              [class.text-brand-600]="!isBranchLocked()"
+              [class.dark:text-brand-400]="!isBranchLocked()">
+              {{ isBranchLocked() ? 'Acceso Sede' : 'Sede Principal' }}
+            </span>
+          </div>
+
+          <button (click)="toggleBranch(currentB)"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer"
+            [class.bg-emerald-50]="currentB.isOpenNow" [class.dark:bg-emerald-950/40]="currentB.isOpenNow"
+            [class.text-emerald-700]="currentB.isOpenNow" [class.dark:text-emerald-300]="currentB.isOpenNow"
+            [class.border-emerald-300]="currentB.isOpenNow" [class.dark:border-emerald-800]="currentB.isOpenNow"
+            [class.hover:bg-emerald-100]="currentB.isOpenNow"
+            [class.bg-amber-50]="!currentB.isOpenNow" [class.dark:bg-amber-950/40]="!currentB.isOpenNow"
+            [class.text-amber-800]="!currentB.isOpenNow" [class.dark:text-amber-300]="!currentB.isOpenNow"
+            [class.border-amber-300]="!currentB.isOpenNow" [class.dark:border-amber-800]="!currentB.isOpenNow"
+            [class.hover:bg-amber-100]="!currentB.isOpenNow"
+            [title]="currentB.isOpenNow ? 'Pausar temporalmente esta sede (dejar de recibir pedidos)' : 'Reactivar sede (comenzar a recibir pedidos)'">
+            <span class="w-2.5 h-2.5 rounded-full flex-shrink-0"
+              [class.bg-emerald-500]="currentB.isOpenNow" [class.bg-amber-500]="!currentB.isOpenNow"></span>
+            <span class="hidden md:inline">{{ currentB.isOpenNow ? 'Recibiendo Pedidos' : 'Sede Pausada' }}</span>
+            <span class="text-[10px] px-1.5 py-0.2 rounded font-mono font-black"
+              [class.bg-emerald-200/60]="currentB.isOpenNow" [class.dark:bg-emerald-900]="currentB.isOpenNow"
+              [class.bg-amber-200/60]="!currentB.isOpenNow" [class.dark:bg-amber-900]="!currentB.isOpenNow">
+              {{ currentB.isOpenNow ? 'Activa' : 'Pausada' }}
+            </span>
+          </button>
+        </div>
+        }
+      </div>
+    </header>
+
+    <!-- Main Workspace Body (Scrolls independently while sidebar remains locked) -->
+    <div class="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
+      <main class="p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-6 sm:space-y-8">
+
+        <!-- ================= TAB 1: COMANDAS KANBAN ================= -->
+        @if (activeTab() === 'orders') {
+        <div class="space-y-6">
+
+          <div class="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <div class="flex items-center gap-2">
+                <h2 class="text-2xl font-extrabold tracking-tight">{{ i18n.t('ma.orders') }}</h2>
+                @if (selectedBranch(); as sb) {
+                <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20">
+                  📍 Sede: {{ sb.name }}
+                </span>
+                }
+              </div>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Monitorea comandas de cocina en vivo y consulta el historial consolidado de despachos finalizados.
+              </p>
+            </div>
+
+            <!-- Sub-pestañas: Comandas Activas vs Historial de Pedidos -->
+            <div class="flex items-center gap-1.5 p-1 bg-slate-200/70 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-xl shadow-xs">
+              <button (click)="ordersSubTab.set('kanban')"
+                [class.bg-white]="ordersSubTab() === 'kanban'"
+                [class.dark:bg-slate-800]="ordersSubTab() === 'kanban'"
+                [class.text-brand-600]="ordersSubTab() === 'kanban'"
+                [class.dark:text-brand-400]="ordersSubTab() === 'kanban'"
+                [class.shadow-xs]="ordersSubTab() === 'kanban'"
+                [class.text-slate-600]="ordersSubTab() !== 'kanban'"
+                [class.dark:text-slate-400]="ordersSubTab() !== 'kanban'"
+                class="px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-2 cursor-pointer">
+                <app-icon name="clipboard-list" [size]="14"></app-icon>
+                <span>Comandas en Vivo</span>
+                <span class="px-2 py-0.2 rounded-full text-[10px] font-bold bg-brand-500/15 text-brand-700 dark:text-brand-300">
+                  {{ receivedOrders().length + kitchenOrders().length + transitOrders().length }}
+                </span>
+              </button>
+
+              <button (click)="ordersSubTab.set('history')"
+                [class.bg-white]="ordersSubTab() === 'history'"
+                [class.dark:bg-slate-800]="ordersSubTab() === 'history'"
+                [class.text-emerald-600]="ordersSubTab() === 'history'"
+                [class.dark:text-emerald-400]="ordersSubTab() === 'history'"
+                [class.shadow-xs]="ordersSubTab() === 'history'"
+                [class.text-slate-600]="ordersSubTab() !== 'history'"
+                [class.dark:text-slate-400]="ordersSubTab() !== 'history'"
+                class="px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-2 cursor-pointer">
+                <app-icon name="check" [size]="14"></app-icon>
+                <span>Historial de Pedidos</span>
+                <span class="px-2 py-0.2 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                  {{ completedOrders().length }}
+                </span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Alerta de Pedido Rechazado por Rider -->
+          @if (rejectedAlert(); as alert) {
+          <div class="bg-red-500/15 border-2 border-red-500/50 rounded-xl p-4 flex items-center justify-between gap-4 animate-bounce">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center text-white shrink-0">
+                <app-icon name="alert-triangle" [size]="20"></app-icon>
+              </div>
+              <div>
+                <h4 class="text-xs font-black uppercase text-red-600 dark:text-red-400 tracking-wider">¡Atención Comercio! Motorizado Rechazó Pedido</h4>
+                <p class="text-xs text-slate-700 dark:text-slate-200 font-medium">{{ alert.message }}</p>
+              </div>
+            </div>
+            <button (click)="rejectedAlert.set(null)" class="text-xs font-bold text-red-600 dark:text-red-400 hover:underline px-2 py-1">
+              Entendido
+            </button>
+          </div>
+          }
+
+          @if (ordersSubTab() === 'kanban') {
+          <!-- Kanban Columns -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-5 items-start">
+
+            <!-- 1. Recibidos -->
+            <div
+              class="bg-slate-200/60 dark:bg-slate-900 border border-slate-300/70 dark:border-slate-800 rounded-xl p-3.5 space-y-3">
+              <div
+                class="flex items-center justify-between px-2 pt-1 pb-2.5 border-b border-slate-300/70 dark:border-slate-800">
+                <div class="flex items-center gap-2 font-bold text-xs text-amber-600 dark:text-amber-400">
+                  <span class="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-sm shadow-amber-500/50"></span>
+                  <span>{{ i18n.t('ma.colNew') }}</span>
+                </div>
+                <span
+                  class="bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 px-2.5 py-0.5 rounded-full text-[11px] font-black">
+                  {{ receivedOrders().length }}
+                </span>
+              </div>
+
+              @for (o of receivedOrders(); track o.id) {
+              <div
+                class="bg-white dark:bg-slate-850 border border-slate-200/90 dark:border-slate-750 rounded-lg p-3 shadow-xs hover:shadow-md hover:border-amber-500/50 transition-all space-y-2.5">
+                <div class="flex items-start justify-between">
+                  <div>
+                    <span class="text-brand-500 font-bold text-[10px] font-mono">{{ o.orderNumber }}</span>
+                    <div class="font-bold text-xs mt-0.5 text-slate-900 dark:text-white">{{ o.customer.name }}</div>
+                  </div>
+                  <span
+                    class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                    <app-icon name="phone" [size]="9"></app-icon>
+                    <span>WhatsApp</span>
+                  </span>
+                </div>
+
+                <div class="text-[11px] space-y-0.5 py-0.5 text-slate-600 dark:text-slate-300">
+                  @for (item of o.items; track item.cartItemId) {
+                  <div class="flex justify-between">
+                    <span class="font-semibold">{{ item.quantity }}x {{ item.name }}</span>
+                    <span class="font-bold">${{ item.itemTotal.toFixed(2) }}</span>
+                  </div>
+                  @if (getModifiersText(item.selectedModifiers)) {
+                  <div class="text-[10px] text-amber-500 dark:text-amber-400 font-semibold pl-2">
+                    + {{ getModifiersText(item.selectedModifiers) }}
+                  </div>
+                  }
+                  }
+                </div>
+
+                <div
+                  class="text-[10px] text-slate-400 flex items-center gap-1 pt-1 border-t border-slate-100 dark:border-slate-800">
+                  <app-icon name="map-pin" [size]="11"></app-icon>
+                  <span class="truncate">{{ o.customer.deliveryAddress }}</span>
+                </div>
+
+                <div class="flex items-center justify-between pt-1">
+                  <span class="font-black text-sm text-slate-900 dark:text-white">${{ o.total.toFixed(2) }}</span>
+                  <button (click)="advanceOrderStatus(o.id, 'in_kitchen')"
+                    class="bg-amber-500 hover:bg-amber-600 text-white font-bold text-[11px] px-3 py-1 rounded-md shadow-xs transition-all active:scale-95">
+                    {{ i18n.t('ma.sendToKitchen') }}
+                  </button>
+                </div>
+              </div>
+              }
+
+              @if (receivedOrders().length === 0) {
+              <div
+                class="p-6 text-center text-[11px] text-slate-400 border border-dashed border-slate-300 dark:border-slate-800 rounded-lg bg-white/40 dark:bg-slate-950/40">
+                {{ i18n.t('ma.noNewOrders') }}
+              </div>
+              }
+            </div>
+
+            <!-- 2. En Cocina & Asignar Motorizado -->
+            <div
+              class="bg-slate-200/60 dark:bg-slate-900 border border-slate-300/70 dark:border-slate-800 rounded-xl p-3.5 space-y-3">
+              <div
+                class="flex items-center justify-between px-2 pt-1 pb-2.5 border-b border-slate-300/70 dark:border-slate-800">
+                <div class="flex items-center gap-2 font-bold text-xs text-blue-600 dark:text-blue-400">
+                  <span class="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-sm shadow-blue-500/50"></span>
+                  <span>{{ i18n.t('ma.colKitchen') }}</span>
+                </div>
+                <span
+                  class="bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 px-2.5 py-0.5 rounded-full text-[11px] font-black">
+                  {{ kitchenOrders().length }}
+                </span>
+              </div>
+
+              @for (o of kitchenOrders(); track o.id) {
+              <div
+                class="bg-white dark:bg-slate-850 border border-slate-200/90 dark:border-slate-750 rounded-lg p-3 shadow-xs hover:shadow-md hover:border-blue-500/50 transition-all space-y-2.5">
+                <div class="flex items-start justify-between">
+                  <div>
+                    <span class="text-brand-500 font-bold text-[10px] font-mono">{{ o.orderNumber }}</span>
+                    <div class="font-bold text-xs mt-0.5 text-slate-900 dark:text-white">{{ o.customer.name }}</div>
+                  </div>
+                  <span
+                    [class]="o.status === 'at_merchant' ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30' :
+                             o.status === 'picked_up' ? 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30' :
+                             o.status === 'assigned_driver' ? (o.riderAccepted ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30' : 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-500/30') :
+                             (o.riderRejected ? 'bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/30' : 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30')"
+                    class="text-[9px] font-bold px-2 py-0.5 rounded-full border">
+                    {{ o.status === 'at_merchant' ? 'Rider en Local' :
+                       o.status === 'picked_up' ? 'Rider Recogió' :
+                       o.status === 'assigned_driver' ? (o.riderAccepted ? '¡Rider Aceptó!' : 'Rider Notificado') :
+                       (o.riderRejected ? 'Rider Rechazó' : 'En Cocina') }}
+                  </span>
+                </div>
+
+                <div class="text-[11px] space-y-0.5 py-0.5 text-slate-600 dark:text-slate-300">
+                  @for (item of o.items; track item.cartItemId) {
+                  <div class="flex justify-between">
+                    <span class="font-semibold">{{ item.quantity }}x {{ item.name }}</span>
+                    <span class="font-bold">${{ item.itemTotal.toFixed(2) }}</span>
+                  </div>
+                  @if (getModifiersText(item.selectedModifiers)) {
+                  <div class="text-[10px] text-amber-500 dark:text-amber-400 font-semibold pl-2">
+                    + {{ getModifiersText(item.selectedModifiers) }}
+                  </div>
+                  }
+                  }
+                </div>
+
+                <!-- Rider Selector -->
+                <div
+                  class="bg-slate-50 dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 space-y-1">
+                  <div class="flex items-center justify-between">
+                    <label class="block text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      {{ i18n.t('ma.assignRider') }}
+                    </label>
+                    @if (o.driverId && o.status === 'at_merchant') {
+                      <span class="text-[9px] font-bold text-amber-600 dark:text-amber-400">¡Llegó al local!</span>
+                    } @else if (o.driverId && o.status === 'picked_up') {
+                      <span class="text-[9px] font-bold text-purple-600 dark:text-purple-400">Listo para despacho</span>
+                    } @else if (o.driverId && o.status === 'assigned_driver' && o.riderAccepted) {
+                      <span class="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                        En camino al local
+                      </span>
+                    } @else if (o.driverId && o.status === 'assigned_driver') {
+                      <span class="text-[9px] text-indigo-500 font-semibold">Esperando aceptación...</span>
+                    } @else if (o.riderRejected) {
+                      <span class="text-[9px] font-bold text-red-600 dark:text-red-400 flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                        Rechazado {{ o.rejectedRiderName ? 'por ' + o.rejectedRiderName : '' }}
+                      </span>
+                    }
+                  </div>
+                  <select [ngModel]="o.driverId" (ngModelChange)="assignRiderToOrder(o.id, $event)"
+                    class="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[11px] rounded p-1.5 focus:outline-none focus:border-brand-500">
+                    <option [value]="undefined">{{ i18n.t('ma.assignRider') }}</option>
+                    @for (r of getRidersForOrder(o); track r.id) {
+                    <option [value]="r.id">{{ r.name }} ({{ r.vehiclePlate }})</option>
+                    }
+                  </select>
+                </div>
+
+                <div class="flex items-center justify-between pt-1">
+                  <span class="font-black text-sm text-slate-900 dark:text-white">${{ o.total.toFixed(2) }}</span>
+                  <button (click)="advanceOrderStatus(o.id, 'on_the_way')"
+                    [disabled]="!o.driverId && o.fulfillmentType === 'delivery'"
+                    class="bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white font-bold text-[11px] px-3 py-1 rounded-md shadow-xs transition-all active:scale-95 flex items-center gap-1">
+                    <span>{{ o.status === 'picked_up' ? 'Confirmar Despacho' : i18n.t('ma.dispatch') }}</span>
+                    <app-icon name="bike" [size]="12"></app-icon>
+                  </button>
+                </div>
+              </div>
+              }
+
+              @if (kitchenOrders().length === 0) {
+              <div
+                class="p-6 text-center text-[11px] text-slate-400 border border-dashed border-slate-300 dark:border-slate-800 rounded-lg bg-white/40 dark:bg-slate-950/40">
+                {{ i18n.t('ma.kitchenDone') }}
+              </div>
+              }
+            </div>
+
+            <!-- 3. En Camino (GPS Activo) -->
+            <div
+              class="bg-slate-200/60 dark:bg-slate-900 border border-slate-300/70 dark:border-slate-800 rounded-xl p-3.5 space-y-3">
+              <div
+                class="flex items-center justify-between px-2 pt-1 pb-2.5 border-b border-slate-300/70 dark:border-slate-800">
+                <div class="flex items-center gap-2 font-bold text-xs text-emerald-600 dark:text-emerald-400">
+                  <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50"></span>
+                  <span>{{ i18n.t('ma.colTransit') }}</span>
+                </div>
+                <span
+                  class="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full text-[11px] font-black">
+                  {{ transitOrders().length }}
+                </span>
+              </div>
+
+              @for (o of transitOrders(); track o.id) {
+              <div
+                class="bg-white dark:bg-slate-850 border border-slate-200/90 dark:border-slate-750 rounded-lg p-3 shadow-xs hover:shadow-md hover:border-emerald-500/50 transition-all space-y-2.5">
+                <div class="flex items-start justify-between">
+                  <div>
+                    <span class="text-brand-500 font-bold text-[10px] font-mono">{{ o.orderNumber }}</span>
+                    <div class="font-bold text-xs mt-0.5 text-slate-900 dark:text-white">{{ o.customer.name }}</div>
+                  </div>
+                  <span
+                    class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                    <app-icon name="bike" [size]="11"></app-icon>
+                    <span>En Ruta</span>
+                  </span>
+                </div>
+
+                <div
+                  class="bg-slate-50 dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800 text-[11px] space-y-1">
+                  <div
+                    class="text-[10px] font-bold text-slate-500 dark:text-slate-400 flex items-center justify-between">
+                    <span>Repartidor:</span>
+                    <span class="text-slate-900 dark:text-white font-mono">{{ o.driverName || 'Asignado' }}</span>
+                  </div>
+                  <div class="text-[10px] text-slate-400 flex items-center justify-between">
+                    <span>Destino:</span>
+                    <span class="truncate max-w-[130px] text-right">{{ o.customer.deliveryAddress }}</span>
+                  </div>
+                </div>
+
+                <div class="flex items-center justify-between pt-1">
+                  <button (click)="openOrderRouteModal(o)"
+                    class="bg-brand-500/10 hover:bg-brand-500 hover:text-white text-brand-600 dark:text-brand-400 border border-brand-500/30 px-2.5 py-1 rounded-md text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer">
+                    <app-icon name="map-pin" [size]="12"></app-icon>
+                    <span>Ruta en Vivo</span>
+                  </button>
+
+                  <button (click)="advanceOrderStatus(o.id, 'delivered')"
+                    class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] px-3 py-1 rounded-md shadow-xs transition-all active:scale-95 flex items-center gap-1">
+                    <app-icon name="check" [size]="12"></app-icon>
+                    <span>{{ i18n.t('ma.delivered') }}</span>
+                  </button>
+                </div>
+              </div>
+              }
+
+              @if (transitOrders().length === 0) {
+              <div
+                class="p-6 text-center text-[11px] text-slate-400 border border-dashed border-slate-300 dark:border-slate-800 rounded-lg bg-white/40 dark:bg-slate-950/40">
+                {{ i18n.t('ma.noTransit') }}
+              </div>
+              }
+            </div>
+
+          </div>
+          } @else {
+          <!-- ================= VISTA HISTORIAL DE PEDIDOS COMPLETADOS ================= -->
+          <div class="space-y-6">
+
+            <!-- KPIs Finanzas & Despachos -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div class="card-adaptive p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-1">
+                <div class="text-[10px] font-black uppercase text-slate-400 tracking-wider">Total Facturado Exitoso</div>
+                <div class="text-xl font-black text-slate-900 dark:text-white font-mono">${{ completedRevenueUsd().toFixed(2) }}</div>
+                <div class="text-[11px] text-brand-600 dark:text-brand-400 font-semibold font-mono">
+                  ≈ Bs. {{ completedRevenueBs().toFixed(2) }}
+                </div>
+              </div>
+
+              <div class="card-adaptive p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-1">
+                <div class="text-[10px] font-black uppercase text-slate-400 tracking-wider">Entregas Exitosas</div>
+                <div class="text-xl font-black text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+                  <span>{{ deliveredCount() }}</span>
+                  <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 font-bold">100% OK</span>
+                </div>
+                <div class="text-[11px] text-slate-400 font-medium">Pedidos entregados al cliente</div>
+              </div>
+
+              <div class="card-adaptive p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-1">
+                <div class="text-[10px] font-black uppercase text-slate-400 tracking-wider">Cancelados / Rechazados</div>
+                <div class="text-xl font-black text-red-600 dark:text-red-400 flex items-center gap-2">
+                  <span>{{ cancelledCount() }}</span>
+                </div>
+                <div class="text-[11px] text-slate-400 font-medium">Anulados o no recibidos</div>
+              </div>
+
+              <div class="card-adaptive p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-1">
+                <div class="text-[10px] font-black uppercase text-slate-400 tracking-wider">Ticket Promedio</div>
+                <div class="text-xl font-black text-slate-900 dark:text-white font-mono">
+                  ${{ (deliveredCount() > 0 ? (completedRevenueUsd() / deliveredCount()).toFixed(2) : '0.00') }}
+                </div>
+                <div class="text-[11px] text-slate-400 font-medium">Por entrega completada</div>
+              </div>
+            </div>
+
+            <!-- Filtros & Buscador -->
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+              <div class="relative flex-1 max-w-md">
+                <app-icon name="search" [size]="16" className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></app-icon>
+                <input type="text" [ngModel]="historySearchQuery()" (ngModelChange)="historySearchQuery.set($event)"
+                  placeholder="Buscar por N° orden, cliente, teléfono o motorizado..."
+                  class="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700/80 rounded-xl text-xs font-semibold focus:outline-none focus:border-brand-500 text-slate-800 dark:text-slate-100 placeholder:text-slate-400" />
+              </div>
+
+              <div class="flex items-center gap-1.5 self-end sm:self-auto">
+                <button (click)="historyStatusFilter.set('all')"
+                  [class.bg-brand-500]="historyStatusFilter() === 'all'" [class.text-white]="historyStatusFilter() === 'all'"
+                  [class.bg-slate-100]="historyStatusFilter() !== 'all'" [class.dark:bg-slate-800]="historyStatusFilter() !== 'all'"
+                  [class.text-slate-600]="historyStatusFilter() !== 'all'" [class.dark:text-slate-300]="historyStatusFilter() !== 'all'"
+                  class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer">
+                  Todos ({{ filteredOrders().filter(o => o.status === 'delivered' || o.status === 'cancelled').length }})
+                </button>
+                <button (click)="historyStatusFilter.set('delivered')"
+                  [class.bg-emerald-600]="historyStatusFilter() === 'delivered'" [class.text-white]="historyStatusFilter() === 'delivered'"
+                  [class.bg-slate-100]="historyStatusFilter() !== 'delivered'" [class.dark:bg-slate-800]="historyStatusFilter() !== 'delivered'"
+                  [class.text-slate-600]="historyStatusFilter() !== 'delivered'" [class.dark:text-slate-300]="historyStatusFilter() !== 'delivered'"
+                  class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer">
+                  Entregados ({{ deliveredCount() }})
+                </button>
+                <button (click)="historyStatusFilter.set('cancelled')"
+                  [class.bg-red-600]="historyStatusFilter() === 'cancelled'" [class.text-white]="historyStatusFilter() === 'cancelled'"
+                  [class.bg-slate-100]="historyStatusFilter() !== 'cancelled'" [class.dark:bg-slate-800]="historyStatusFilter() !== 'cancelled'"
+                  [class.text-slate-600]="historyStatusFilter() !== 'cancelled'" [class.dark:text-slate-300]="historyStatusFilter() !== 'cancelled'"
+                  class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer">
+                  Cancelados ({{ cancelledCount() }})
+                </button>
+              </div>
+            </div>
+
+            <!-- Tabla de Pedidos -->
+            <div class="card-adaptive rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs">
+              @if (completedOrders().length === 0) {
+              <div class="py-16 px-6 text-center space-y-3">
+                <div class="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 mx-auto flex items-center justify-center">
+                  <app-icon name="clipboard-list" [size]="26"></app-icon>
+                </div>
+                <h4 class="text-sm font-bold text-slate-700 dark:text-slate-200">No hay pedidos en el historial</h4>
+                <p class="text-xs text-slate-400 max-w-sm mx-auto">
+                  Los pedidos finalizados o cancelados aparecerán registrados aquí automáticamente con todos sus detalles y rutas.
+                </p>
+              </div>
+              } @else {
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr class="bg-slate-50 dark:bg-slate-850/60 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 text-[10px] uppercase font-black tracking-wider">
+                      <th class="py-3 px-4">N° Orden / Fecha</th>
+                      <th class="py-3 px-4">Sucursal</th>
+                      <th class="py-3 px-4">Cliente / Contacto</th>
+                      <th class="py-3 px-4">Dirección Destino</th>
+                      <th class="py-3 px-4">Motorizado</th>
+                      <th class="py-3 px-4">Total</th>
+                      <th class="py-3 px-4">Estado</th>
+                      <th class="py-3 px-4 text-right">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                    @for (o of completedOrders(); track o.id) {
+                    <tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
+                      <td class="py-3.5 px-4">
+                        <div class="font-mono font-black text-brand-600 dark:text-brand-400">{{ o.orderNumber }}</div>
+                        <div class="text-[10px] text-slate-400 font-medium">
+                          {{ o.createdAt ? (o.createdAt | date:'short') : 'Hoy' }}
+                        </div>
+                      </td>
+                      <td class="py-3.5 px-4">
+                        <span class="inline-flex items-center gap-1 font-semibold text-slate-700 dark:text-slate-200">
+                          <span>🏪</span>
+                          <span>{{ o.branchName || 'Sede Principal' }}</span>
+                        </span>
+                      </td>
+                      <td class="py-3.5 px-4">
+                        <div class="font-bold text-slate-900 dark:text-white">{{ o.customer.name }}</div>
+                        <a [href]="'https://wa.me/' + o.customer.phone.replace(/[^0-9]/g, '')" target="_blank"
+                          class="text-[10px] text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 font-semibold">
+                          <app-icon name="phone" [size]="10"></app-icon>
+                          <span>{{ o.customer.phone }}</span>
+                        </a>
+                      </td>
+                      <td class="py-3.5 px-4 max-w-[200px]">
+                        <div class="truncate text-slate-600 dark:text-slate-300 font-medium" [title]="o.customer.deliveryAddress">
+                          {{ o.customer.deliveryAddress || 'Retiro en Sede' }}
+                        </div>
+                      </td>
+                      <td class="py-3.5 px-4">
+                        @if (o.driverName) {
+                        <div class="flex items-center gap-1.5">
+                          <app-icon name="bike" [size]="13" className="text-brand-500"></app-icon>
+                          <span class="font-bold text-slate-800 dark:text-slate-200">{{ o.driverName }}</span>
+                        </div>
+                        } @else {
+                        <span class="text-slate-400 italic text-[11px]">Sin asignar</span>
+                        }
+                      </td>
+                      <td class="py-3.5 px-4">
+                        <div class="font-mono font-black text-slate-900 dark:text-white">${{ o.total.toFixed(2) }}</div>
+                        <div class="text-[10px] text-slate-400 font-mono">
+                          Bs. {{ (o.total * activeExchangeRate()).toFixed(2) }}
+                        </div>
+                      </td>
+                      <td class="py-3.5 px-4">
+                        @if (o.status === 'delivered') {
+                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 flex items-center gap-1 w-max">
+                          <app-icon name="check" [size]="11"></app-icon>
+                          <span>Entregado</span>
+                        </span>
+                        } @else {
+                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-red-500/15 text-red-700 dark:text-red-300 border border-red-500/30 flex items-center gap-1 w-max">
+                          <app-icon name="x" [size]="11"></app-icon>
+                          <span>Cancelado</span>
+                        </span>
+                        }
+                      </td>
+                      <td class="py-3.5 px-4 text-right">
+                        <div class="flex items-center justify-end gap-1.5">
+                          <button (click)="openOrderRouteModal(o)" title="Ver recorrido satelital del pedido"
+                            class="px-2 py-1 bg-brand-500/10 hover:bg-brand-500 hover:text-white text-brand-600 dark:text-brand-400 font-bold text-[10px] rounded-lg transition-all flex items-center gap-1 cursor-pointer">
+                            <app-icon name="map-pin" [size]="11"></app-icon>
+                            <span>Ruta</span>
+                          </button>
+                          <button (click)="openOrderDetail(o)" title="Ver detalle y productos de la orden"
+                            class="px-2 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-[10px] rounded-lg transition-all flex items-center gap-1 cursor-pointer">
+                            <app-icon name="eye" [size]="11"></app-icon>
+                            <span>Detalle</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+              }
+            </div>
+
+          </div>
+          }
+
+        </div>
+        }
+
+        <!-- ================= TAB 2: CATALOGO & EXTRAS ================= -->
+        @if (activeTab() === 'products') {
+        <div class="space-y-5 pt-1">
+
+          <div class="flex flex-wrap items-center justify-between gap-3 pb-1">
+            <div>
+              <div class="flex items-center gap-2">
+                <h2 class="text-xl font-extrabold tracking-tight">{{ i18n.t('ma.catalog') }}</h2>
+                @if (selectedBranch(); as sb) {
+                <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20">
+                  📍 Sede: {{ sb.name }}
+                </span>
+                }
+              </div>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{{ i18n.t('ma.catalogDesc') }}</p>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <!-- View Switcher (Grid / List) -->
+              <div
+                class="flex items-center p-1 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg">
+                <button (click)="productViewMode.set('grid')" [class.bg-white]="productViewMode() === 'grid'"
+                  [class.dark:bg-slate-800]="productViewMode() === 'grid'"
+                  [class.text-brand-500]="productViewMode() === 'grid'" [class.shadow-xs]="productViewMode() === 'grid'"
+                  [class.text-slate-400]="productViewMode() !== 'grid'" title="Vista en Cuadrícula"
+                  class="p-1.5 rounded-md transition-all cursor-pointer">
+                  <app-icon name="grid" [size]="14"></app-icon>
+                </button>
+                <button (click)="productViewMode.set('list')" [class.bg-white]="productViewMode() === 'list'"
+                  [class.dark:bg-slate-800]="productViewMode() === 'list'"
+                  [class.text-brand-500]="productViewMode() === 'list'" [class.shadow-xs]="productViewMode() === 'list'"
+                  [class.text-slate-400]="productViewMode() !== 'list'" title="Vista en Lista"
+                  class="p-1.5 rounded-md transition-all cursor-pointer">
+                  <app-icon name="list" [size]="14"></app-icon>
+                </button>
+              </div>
+
+              <!-- Botón Importar Masivamente desde Excel / CSV -->
+              <button (click)="openBulkImportModal()"
+                class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer">
+                <app-icon name="file-text" [size]="14" className="text-white"></app-icon>
+                <span>Importar Excel / CSV</span>
+              </button>
+
+              <button (click)="openProductModal()"
+                class="bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer">
+                <app-icon name="plus" [size]="14" className="text-white"></app-icon>
+                <span>{{ i18n.t('ma.newProduct') }}</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Barra de Filtros por Categoría de Menú -->
+          @if (productCategories().length > 0) {
+          <div class="flex items-center gap-2 overflow-x-auto pb-1 pt-1 scrollbar-none animate-fade-in">
+            <button type="button" (click)="selectedCategoryFilter.set('all')"
+              class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5"
+              [class.bg-brand-500]="selectedCategoryFilter() === 'all'"
+              [class.text-white]="selectedCategoryFilter() === 'all'"
+              [class.shadow-sm]="selectedCategoryFilter() === 'all'"
+              [class.bg-slate-100]="selectedCategoryFilter() !== 'all'"
+              [class.dark:bg-slate-800]="selectedCategoryFilter() !== 'all'"
+              [class.text-slate-600]="selectedCategoryFilter() !== 'all'"
+              [class.dark:text-slate-300]="selectedCategoryFilter() !== 'all'">
+              <span>Todas las Categorías</span>
+              <span class="text-[10px] px-1.5 py-0.2 rounded-full font-mono"
+                [class.bg-white/20]="selectedCategoryFilter() === 'all'"
+                [class.bg-slate-200]="selectedCategoryFilter() !== 'all'"
+                [class.dark:bg-slate-700]="selectedCategoryFilter() !== 'all'">
+                {{ products().length }}
+              </span>
+            </button>
+
+            @for (cat of productCategories(); track cat.id) {
+            <button type="button" (click)="selectedCategoryFilter.set(cat.id)"
+              class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5"
+              [class.bg-brand-500]="selectedCategoryFilter() === cat.id"
+              [class.text-white]="selectedCategoryFilter() === cat.id"
+              [class.shadow-sm]="selectedCategoryFilter() === cat.id"
+              [class.bg-slate-100]="selectedCategoryFilter() !== cat.id"
+              [class.dark:bg-slate-800]="selectedCategoryFilter() !== cat.id"
+              [class.text-slate-600]="selectedCategoryFilter() !== cat.id"
+              [class.dark:text-slate-300]="selectedCategoryFilter() !== cat.id">
+              <span>📁 {{ cat.name }}</span>
+            </button>
+            }
+          </div>
+          }
+
+          @if (filteredProducts().length === 0) {
+          <!-- Empty state para la sede activa -->
+          <div class="card-adaptive rounded-2xl p-10 sm:p-12 text-center space-y-4 border border-dashed border-slate-300 dark:border-slate-800 animate-fade-in max-w-2xl mx-auto">
+            <div class="w-16 h-16 rounded-2xl bg-brand-500/10 text-brand-500 mx-auto flex items-center justify-center">
+              <app-icon name="sparkles" [size]="32"></app-icon>
+            </div>
+            <div class="space-y-1.5">
+              <span class="text-[11px] font-extrabold uppercase tracking-wider text-brand-600 dark:text-brand-400">
+                📍 {{ activeBranch()?.name || 'Sede Principal' }}
+              </span>
+              <h3 class="text-base font-extrabold text-slate-900 dark:text-white">Menú y Catálogo de Productos Vacío</h3>
+              <p class="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+                Esta sucursal cuenta con su catálogo independiente. Agrega tus artículos o importa masivamente desde un archivo Excel o CSV.
+              </p>
+            </div>
+            <div class="flex items-center justify-center gap-3 pt-2">
+              <button (click)="openBulkImportModal()"
+                class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm inline-flex items-center gap-2 cursor-pointer transition-all active:scale-95">
+                <app-icon name="file-text" [size]="15" className="text-white"></app-icon>
+                <span>Importar Excel / CSV</span>
+              </button>
+              <button (click)="openProductModal()"
+                class="px-4 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs shadow-sm inline-flex items-center gap-2 cursor-pointer transition-all active:scale-95">
+                <app-icon name="plus" [size]="15" className="text-white"></app-icon>
+                <span>Crear Producto</span>
+              </button>
+            </div>
+          </div>
+          } @else {
+          <!-- Product Grid (Smaller, Agile & Well-proportioned Cards) -->
+          @if (productViewMode() === 'grid') {
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 animate-fade-in">
+            @for (prod of filteredProducts(); track prod.id) {
+            <div
+              class="card-adaptive rounded-xl overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between group">
+              <div>
+                <div class="relative h-32 overflow-hidden bg-slate-200 dark:bg-slate-800">
+                  <img [src]="prod.imageUrl" [alt]="prod.name"
+                    class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  <span class="absolute top-2 right-2 px-2 py-0.5 rounded-full text-[9px] font-bold shadow-xs"
+                    [class.bg-emerald-500]="prod.isAvailable" [class.text-white]="prod.isAvailable"
+                    [class.bg-red-500]="!prod.isAvailable" [class.text-white]="!prod.isAvailable">
+                    {{ prod.isAvailable ? i18n.t('ma.inStock') : i18n.t('ma.outOfStock') }}
+                  </span>
+                </div>
+
+                <div class="p-3.5 space-y-1">
+                  <div class="flex items-start justify-between gap-1.5">
+                    <div class="min-w-0 flex-1">
+                      <h3 class="font-bold text-xs group-hover:text-brand-500 transition-colors truncate">{{ prod.name }}</h3>
+                      @if (getCategoryName(prod.categoryId); as cName) {
+                      <span class="inline-block mt-0.5 px-1.5 py-0.2 rounded text-[9px] font-semibold bg-brand-500/10 text-brand-600 dark:text-brand-400">
+                        📁 {{ cName }}
+                      </span>
+                      }
+                    </div>
+                    <div class="text-right flex-shrink-0">
+                      <span class="font-extrabold text-xs text-brand-500 block">
+                        ${{ (prod.currency === 'VES' ? prod.price / activeExchangeRate() :
+                        prod.price).toFixed(2) }}
+                      </span>
+                      <span class="text-[9px] font-bold text-slate-400 font-mono block">
+                        Bs. {{ ((prod.currency === 'VES' ? prod.price : prod.price *
+                        activeExchangeRate())).toLocaleString('es-VE', { minimumFractionDigits:
+                        2, maximumFractionDigits: 2 }) }}
+                      </span>
+                    </div>
+                  </div>
+
+                  <p class="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">{{
+                    prod.description }}</p>
+
+                  @if (prod.sku || prod.barcode) {
+                  <div class="flex flex-wrap items-center gap-1.5 pt-1 text-[9px] font-mono">
+                    @if (prod.sku) {
+                    <span class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 font-bold">
+                      SKU: {{ prod.sku }}
+                    </span>
+                    }
+                    @if (prod.barcode) {
+                    <span class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                      ||| {{ prod.barcode }}
+                    </span>
+                    }
+                  </div>
+                  }
+
+                  <!-- Modifiers Badge List -->
+                  @if (prod.modifierGroups && prod.modifierGroups.length > 0) {
+                  <div class="pt-1 flex flex-wrap gap-1">
+                    @for (g of prod.modifierGroups; track g.id) {
+                    <span
+                      class="px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[9px] text-slate-600 dark:text-slate-400 font-semibold">
+                      + {{ g.title }} ({{ g.options.length }})
+                    </span>
+                    }
+                  </div>
+                  }
+                </div>
+              </div>
+
+              <div
+                class="p-3 pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-1.5 mt-1">
+                <!-- Toggle Stock Button -->
+                <button (click)="toggleProductStock(prod.id)"
+                  class="text-[10px] font-semibold px-2 py-1 rounded-md border border-slate-200 dark:border-slate-800 hover:border-brand-500 transition-colors">
+                  {{ prod.isAvailable ? 'Agotado' : 'Reactivar' }}
+                </button>
+
+                <!-- Edit Extras Button -->
+                <button (click)="openProductModal(prod)"
+                  class="text-[10px] font-bold px-2 py-1 rounded-md bg-brand-500/10 text-brand-600 dark:text-brand-400 hover:bg-brand-500 hover:text-white transition-all flex items-center gap-1">
+                  <app-icon name="sparkles" [size]="12"></app-icon>
+                  <span>{{ i18n.t('ma.configModifiers') }}</span>
+                </button>
+              </div>
+
+            </div>
+            }
+          </div>
+          }
+
+          <!-- Product List View (Table / Row representation) -->
+          @if (productViewMode() === 'list') {
+          <div
+            class="card-adaptive rounded-xl overflow-hidden divide-y divide-slate-100 dark:divide-slate-800 shadow-xs animate-fade-in">
+            @for (prod of filteredProducts(); track prod.id) {
+            <div
+              class="p-3 sm:p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
+              <div class="flex items-center gap-3 min-w-0 flex-1">
+                <div class="relative w-12 h-12 rounded-lg overflow-hidden bg-slate-200 dark:bg-slate-800 flex-shrink-0">
+                  <img [src]="prod.imageUrl" [alt]="prod.name" class="w-full h-full object-cover" />
+                </div>
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center gap-2">
+                    <span class="font-bold text-xs text-slate-900 dark:text-white truncate">{{ prod.name }}</span>
+                    @if (getCategoryName(prod.categoryId); as cName) {
+                    <span class="px-1.5 py-0.2 rounded text-[9px] font-semibold bg-brand-500/10 text-brand-600 dark:text-brand-400">
+                      📁 {{ cName }}
+                    </span>
+                    }
+                    <span class="text-[9px] font-bold px-1.5 py-0.2 rounded"
+                      [class.bg-emerald-500/15]="prod.isAvailable" [class.text-emerald-600]="prod.isAvailable"
+                      [class.dark:text-emerald-400]="prod.isAvailable" [class.bg-red-500/15]="!prod.isAvailable"
+                      [class.text-red-500]="!prod.isAvailable">
+                      {{ prod.isAvailable ? 'En Stock' : 'Agotado' }}
+                    </span>
+                  </div>
+                  <p class="text-[10px] text-slate-500 dark:text-slate-400 truncate max-w-md mt-0.5">{{ prod.description
+                    }}</p>
+                  @if (prod.sku || prod.barcode) {
+                  <div class="flex items-center gap-1.5 mt-1 text-[9px] font-mono">
+                    @if (prod.sku) {
+                    <span class="px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 font-bold">
+                      SKU: {{ prod.sku }}
+                    </span>
+                    }
+                    @if (prod.barcode) {
+                    <span class="px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                      ||| {{ prod.barcode }}
+                    </span>
+                    }
+                  </div>
+                  }
+                  @if (prod.modifierGroups && prod.modifierGroups.length > 0) {
+                  <div class="flex items-center gap-1 mt-1">
+                    @for (g of prod.modifierGroups; track g.id) {
+                    <span
+                      class="text-[9px] px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-mono">
+                      + {{ g.title }} ({{ g.options.length }})
+                    </span>
+                    }
+                  </div>
+                  }
+                </div>
+              </div>
+
+              <div class="flex items-center gap-3 self-end sm:self-center flex-shrink-0">
+                <div class="text-right flex-shrink-0">
+                  <span class="font-black text-xs text-brand-500 block">
+                    ${{ (prod.currency === 'VES' ? prod.price / activeExchangeRate() :
+                    prod.price).toFixed(2) }}
+                  </span>
+                  <span class="text-[9px] font-bold text-slate-400 font-mono block">
+                    Bs. {{ ((prod.currency === 'VES' ? prod.price : prod.price *
+                    activeExchangeRate())).toLocaleString('es-VE', { minimumFractionDigits: 2,
+                    maximumFractionDigits: 2 }) }}
+                  </span>
+                </div>
+
+                <button (click)="toggleProductStock(prod.id)"
+                  class="text-[10px] font-semibold px-2 py-1 rounded-md border border-slate-200 dark:border-slate-800 hover:border-brand-500 transition-colors">
+                  {{ prod.isAvailable ? 'Agotado' : 'Reactivar' }}
+                </button>
+
+                <button (click)="openProductModal(prod)"
+                  class="text-[10px] font-bold px-2 py-1 rounded-md bg-brand-500/10 text-brand-600 dark:text-brand-400 hover:bg-brand-500 hover:text-white transition-all flex items-center gap-1">
+                  <app-icon name="sparkles" [size]="12"></app-icon>
+                  <span>Extras</span>
+                </button>
+              </div>
+            </div>
+            }
+          </div>
+          }
+          }
+
+        </div>
+        }
+
+        <!-- ================= TAB: MIS SUCURSALES (MULTI-BRANCH) ================= -->
+        @if (activeTab() === 'branches') {
+        <div class="space-y-6">
+
+          <!-- Header & Plan Limit Status Banner: Diferenciado entre Sede Principal y Sucursal Secundaria -->
+          @if (isBranchLocked()) {
+          <div class="card-adaptive rounded-2xl p-6 shadow-sm border border-amber-200 dark:border-amber-900/50 bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div class="space-y-2">
+                <div class="flex items-center gap-2.5 flex-wrap">
+                  <span class="px-2.5 py-1 rounded-full text-xs font-black tracking-wider uppercase bg-amber-500 text-white shadow-sm flex items-center gap-1.5">
+                    <app-icon name="lock" [size]="12"></app-icon>
+                    <span>Acceso Exclusivo de Sucursal</span>
+                  </span>
+                  <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20">
+                    Sede: {{ userAssignedBranch()?.name || auth.currentUser()?.branchName || 'Sucursal Asignada' }}
+                  </span>
+                </div>
+                <h2 class="text-2xl font-extrabold tracking-tight">Mi Sucursal</h2>
+                <p class="text-xs text-slate-600 dark:text-slate-300 max-w-2xl leading-relaxed">
+                  Has iniciado sesión con las credenciales independientes de esta sucursal. Esta cuenta solo opera los pedidos y catálogo local de esta sede física. <strong>La Sede Principal es la única encargada de llevar el conteo de la red y registrar nuevas sucursales.</strong>
+                </p>
+              </div>
+
+              <div class="bg-amber-500/10 dark:bg-amber-950/40 border border-amber-500/20 p-4 rounded-2xl text-center space-y-1 flex-shrink-0">
+                <span class="text-[10px] uppercase font-black tracking-wider text-amber-600 dark:text-amber-400 block">Rol Activo</span>
+                <span class="font-extrabold text-sm text-slate-800 dark:text-slate-100 block">Encargado de Sucursal</span>
+                <span class="text-[10px] text-slate-400 block">Acceso local protegido</span>
+              </div>
+            </div>
+          </div>
+          } @else {
+          <!-- Header & Plan Limit Status Banner para Sede Principal / Dueño -->
+          <div class="card-adaptive rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-800 bg-gradient-to-br from-white via-slate-50 to-orange-50/30 dark:from-slate-900 dark:via-slate-900 dark:to-orange-950/20">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              
+              <div class="space-y-2">
+                <div class="flex items-center gap-2.5 flex-wrap">
+                  <span class="px-2.5 py-1 rounded-full text-xs font-black tracking-wider uppercase bg-brand-500 text-white shadow-sm">
+                    {{ currentSubscriptionPlan().name }}
+                  </span>
+                  <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Sede Principal (Gestión y Creación de Sucursales)
+                  </span>
+                </div>
+                <h2 class="text-2xl font-extrabold tracking-tight">Gestión Multi-Sucursal</h2>
+                <p class="text-xs text-slate-500 dark:text-slate-400 max-w-2xl">
+                  Como <strong>Sede Principal</strong>, supervisas el conteo total de sucursales creadas en tu plan y eres la única autorizada para registrar nuevas sedes y asignarles sus propias credenciales de acceso independientes.
+                </p>
+              </div>
+
+              <!-- Cupo de Sedes Progress Card (Solo Sede Principal lleva el conteo) -->
+              <div class="bg-white dark:bg-slate-800/90 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-xs min-w-[220px] flex-shrink-0 space-y-2">
+                <div class="flex items-center justify-between text-xs font-bold">
+                  <span class="text-slate-500 dark:text-slate-400">Conteo de Sedes Creadas:</span>
+                  <span class="font-extrabold text-brand-600 dark:text-brand-400 font-mono text-sm">
+                    {{ activeBranchesCount() }} / {{ currentSubscriptionPlan().maxBranches }}
+                  </span>
+                </div>
+                <div class="w-full h-2 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
+                  <div class="h-full bg-gradient-to-r from-brand-500 to-amber-500 transition-all duration-300"
+                    [style.width.%]="Math.min(100, (activeBranchesCount() / currentSubscriptionPlan().maxBranches) * 100)">
+                  </div>
+                </div>
+                <span class="text-[10px] text-slate-400 block font-medium">
+                  {{ currentSubscriptionPlan().maxBranches - activeBranchesCount() }} cupo(s) disponible(s) en este plan
+                </span>
+              </div>
+
+            </div>
+          </div>
+          }
+
+          <!-- Dedicated Action Toolbar -->
+          <div class="flex flex-wrap items-center justify-between gap-4">
+            <!-- View Mode Switcher -->
+            <div class="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xs">
+              <button (click)="toggleBranchesView('grid')"
+                [class.bg-white]="branchesViewMode() === 'grid'"
+                [class.dark:bg-slate-800]="branchesViewMode() === 'grid'"
+                [class.text-brand-600]="branchesViewMode() === 'grid'"
+                [class.dark:text-brand-400]="branchesViewMode() === 'grid'"
+                [class.shadow-xs]="branchesViewMode() === 'grid'"
+                [class.text-slate-600]="branchesViewMode() !== 'grid'"
+                [class.dark:text-slate-400]="branchesViewMode() !== 'grid'"
+                class="px-3.5 py-2 rounded-lg text-xs font-black transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap">
+                <app-icon name="grid" [size]="14"></app-icon>
+                <span>Vista de Tarjetas</span>
+              </button>
+              <button (click)="toggleBranchesView('map')"
+                [class.bg-white]="branchesViewMode() === 'map'"
+                [class.dark:bg-slate-800]="branchesViewMode() === 'map'"
+                [class.text-brand-600]="branchesViewMode() === 'map'"
+                [class.dark:text-brand-400]="branchesViewMode() === 'map'"
+                [class.shadow-xs]="branchesViewMode() === 'map'"
+                [class.text-slate-600]="branchesViewMode() !== 'map'"
+                [class.dark:text-slate-400]="branchesViewMode() !== 'map'"
+                class="px-3.5 py-2 rounded-lg text-xs font-black transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap">
+                <app-icon name="map-pin" [size]="14"></app-icon>
+                <span>Mapa de Sedes</span>
+              </button>
+            </div>
+
+            <!-- New Branch Action Button: Visible SOLO para Sede Principal -->
+            @if (isMainBranchOrOwner()) {
+            <button (click)="openNewBranchModal()"
+              class="bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md shadow-brand-500/20 flex items-center gap-2 transition-all active:scale-95 flex-shrink-0 whitespace-nowrap cursor-pointer">
+              <app-icon name="plus" [size]="16" className="text-white"></app-icon>
+              <span>Registrar Nueva Sucursal</span>
+            </button>
+            } @else {
+            <div class="text-[11px] font-bold text-amber-700 dark:text-amber-300 bg-amber-500/10 border border-amber-500/20 px-3.5 py-2 rounded-xl flex items-center gap-2 shadow-xs">
+              <app-icon name="lock" [size]="13" className="text-amber-600"></app-icon>
+              <span>Solo la Sede Principal tiene permisos para crear sucursales</span>
+            </div>
+            }
+          </div>
+
+          <!-- Success Alert if Branch created -->
+          @if (isBranchSavedSuccess()) {
+          <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 flex items-center justify-between gap-3 text-emerald-700 dark:text-emerald-300 animate-fade-in">
+            <div class="flex items-center gap-3 text-xs font-semibold">
+              <span class="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center flex-shrink-0">✓</span>
+              <span>¡Sucursal registrada con éxito! Cuenta con sus propias credenciales de acceso independientes. Se activará en la app una vez aprobada.</span>
+            </div>
+            <button (click)="isBranchSavedSuccess.set(false)" class="text-xs font-bold hover:underline">Cerrar</button>
+          </div>
+          }
+
+          <!-- Branches Grid (Mantiene DOM vivo para evitar mapa en blanco al alternar) -->
+          <div [class.hidden]="branchesViewMode() !== 'grid'">
+          @if (visibleBranches().length === 0) {
+          <div class="card-adaptive rounded-2xl p-12 text-center space-y-4 border border-dashed border-slate-300 dark:border-slate-800 animate-fade-in">
+            <div class="w-16 h-16 rounded-2xl bg-brand-500/10 text-brand-500 mx-auto flex items-center justify-center">
+              <app-icon name="store" [size]="32"></app-icon>
+            </div>
+            <div class="space-y-1">
+              <h3 class="text-base font-extrabold text-slate-900 dark:text-white">Sin Sucursales Registradas</h3>
+              <p class="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+                Tu comercio aún no cuenta con sedes físicas o sucursales registradas. Registra tu primera sucursal para definir tu cobertura y comenzar a recibir comandas.
+              </p>
+            </div>
+            @if (isMainBranchOrOwner()) {
+            <button (click)="openNewBranchModal()"
+              class="px-4 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs shadow-sm inline-flex items-center gap-2 cursor-pointer transition-all active:scale-95">
+              <app-icon name="plus" [size]="15" className="text-white"></app-icon>
+              <span>Registrar Primera Sucursal</span>
+            </button>
+            }
+          </div>
+          } @else {
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            @for (branch of visibleBranches(); track branch.id) {
+            <div class="card-adaptive rounded-2xl p-5 shadow-sm space-y-4 border border-slate-200 dark:border-slate-800 transition-all hover:shadow-md relative overflow-hidden">
+
+              <!-- Status Header -->
+              <div class="flex items-start justify-between gap-2">
+                <div class="flex items-center gap-3">
+                  <div class="w-11 h-11 rounded-xl bg-brand-500/10 text-brand-500 flex items-center justify-center font-bold flex-shrink-0"
+                    [class.bg-emerald-500/10]="branch.isMain"
+                    [class.text-emerald-600]="branch.isMain">
+                    <app-icon name="store" [size]="22"></app-icon>
+                  </div>
+                  <div class="min-w-0">
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                      <h3 class="font-extrabold text-sm truncate" [title]="branch.name">{{ branch.name }}</h3>
+                      @if (branch.isMain) {
+                      <span class="px-1.5 py-0.2 rounded text-[9px] font-black uppercase tracking-wider bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30">
+                        Matriz
+                      </span>
+                      }
+                    </div>
+                    <p class="text-[11px] text-slate-400 font-mono flex items-center gap-1">
+                      <app-icon name="map-pin" [size]="11"></app-icon>
+                      <span class="truncate">{{ branch.latitude }}, {{ branch.longitude }}</span>
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Status Pill -->
+                @if (branch.status === 'active') {
+                  @if (branch.isOpenNow) {
+                  <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800 flex-shrink-0 flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                    <span>Activa / Abierta</span>
+                  </span>
+                  } @else {
+                  <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800 flex-shrink-0 flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                    <span>Pausada</span>
+                  </span>
+                  }
+                } @else if (branch.status === 'inactive') {
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800 flex-shrink-0 flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                  <span>Desactivada</span>
+                </span>
+                } @else if (branch.status === 'pending_approval') {
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-800 flex-shrink-0 flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping"></span>
+                  <span>En Verificación</span>
+                </span>
+                } @else {
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-red-50 text-red-700 border border-red-200 dark:bg-red-950/40 dark:text-red-400 flex-shrink-0">
+                  Rechazada
+                </span>
+                }
+              </div>
+
+              <!-- Address & Delivery Info -->
+              <div class="text-xs text-slate-600 dark:text-slate-400 space-y-1.5 bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+                <div class="flex items-start gap-1.5">
+                  <span class="font-bold text-slate-700 dark:text-slate-300 flex-shrink-0">Dirección:</span>
+                  <span class="truncate">{{ branch.address }}</span>
+                </div>
+                <div class="flex items-center justify-between text-[11px]">
+                  <span>Radio: <strong class="text-slate-900 dark:text-white">{{ branch.deliveryRadiusKm }} km</strong></span>
+                  <span>Envío: <strong class="text-brand-600 dark:text-brand-400">${{ branch.baseDeliveryFee.toFixed(2) }}</strong></span>
+                  <span>Horario: <strong class="text-slate-900 dark:text-white">{{ branch.openTime }} - {{ branch.closeTime }}</strong></span>
+                </div>
+              </div>
+
+              <!-- Credenciales de Acceso Propias de Esta Sucursal -->
+              <div class="p-3 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/60 dark:border-blue-900/40 space-y-1.5 text-xs">
+                <div class="flex items-center justify-between font-extrabold text-[11px] text-blue-700 dark:text-blue-300">
+                  <span class="flex items-center gap-1.5">
+                    <app-icon name="lock" [size]="12" className="text-blue-600 dark:text-blue-400"></app-icon>
+                    <span>Credenciales de Ingreso</span>
+                  </span>
+                  <span class="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded font-black"
+                    [class.bg-emerald-100]="branch.isMain"
+                    [class.text-emerald-800]="branch.isMain"
+                    [class.dark:bg-emerald-950]="branch.isMain"
+                    [class.dark:text-emerald-300]="branch.isMain"
+                    [class.bg-blue-100]="!branch.isMain"
+                    [class.text-blue-800]="!branch.isMain"
+                    [class.dark:bg-blue-900/60]="!branch.isMain"
+                    [class.dark:text-blue-300]="!branch.isMain">
+                    {{ branch.isMain ? 'Sede Matriz' : 'Acceso Aislado' }}
+                  </span>
+                </div>
+                <div class="text-[11px] space-y-0.5 font-mono">
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-500 font-sans text-[10px]">Correo:</span>
+                    <strong class="text-blue-700 dark:text-blue-300 select-all font-semibold">
+                      {{ branch.managerEmail || ('sede.' + branch.slug + '@' + (currentTenant().slug || 'comercio') + '.com') }}
+                    </strong>
+                  </div>
+                  @if (branch.managerName) {
+                  <div class="flex items-center justify-between text-[10px] font-sans text-slate-500">
+                    <span>Responsable:</span>
+                    <span class="font-semibold text-slate-700 dark:text-slate-300">{{ branch.managerName }}</span>
+                  </div>
+                  }
+                </div>
+              </div>
+
+              <!-- Direct Payment Credentials Card -->
+              <div class="p-3 rounded-xl bg-orange-50/50 dark:bg-orange-950/20 border border-orange-200/60 dark:border-orange-900/30 space-y-1 text-xs">
+                <div class="flex items-center justify-between font-extrabold text-[11px] text-orange-700 dark:text-orange-300">
+                  <span class="flex items-center gap-1">
+                    <app-icon name="wallet" [size]="12"></app-icon>
+                    Pago Móvil Directo (100% Comercio)
+                  </span>
+                  <span class="text-[9px] uppercase tracking-wider bg-orange-200/60 dark:bg-orange-900/50 px-1.5 py-0.2 rounded font-black">0% Comisión</span>
+                </div>
+                <div class="font-mono text-[11px] text-slate-700 dark:text-slate-300 leading-tight">
+                  <div><strong>Banco:</strong> {{ branch.paymentCredentials.pagoMovilBank }}</div>
+                  <div><strong>Teléfono:</strong> {{ branch.paymentCredentials.pagoMovilPhone }}</div>
+                  <div><strong>RIF/CI:</strong> {{ branch.paymentCredentials.pagoMovilIdNumber }} ({{ branch.paymentCredentials.pagoMovilAccountName }})</div>
+                  @if (branch.paymentCredentials.zelleEmail) {
+                  <div class="mt-1 pt-1 border-t border-orange-200/40 dark:border-orange-900/30 text-[10px]">
+                    <strong>Zelle:</strong> {{ branch.paymentCredentials.zelleEmail }}
+                  </div>
+                  }
+                </div>
+              </div>
+
+              <!-- Rejection Notice if any -->
+              @if (branch.status === 'rejected' && branch.rejectionReason) {
+              <div class="p-2.5 rounded-lg bg-red-500/10 border border-red-500/30 text-[11px] text-red-600 dark:text-red-400">
+                <strong>Motivo del rechazo:</strong> {{ branch.rejectionReason }}
+              </div>
+              }
+
+              <!-- Footer Actions / Open & Pause Toggle -->
+              <div class="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 flex-wrap">
+                @if (branch.status === 'active' || branch.status === 'inactive') {
+                  @if (canToggleBranch(branch)) {
+                  <button (click)="toggleBranch(branch)"
+                    class="text-xs font-bold flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border transition-all cursor-pointer active:scale-95"
+                    [class.text-emerald-700]="branch.isOpenNow" [class.dark:text-emerald-300]="branch.isOpenNow"
+                    [class.bg-emerald-50]="branch.isOpenNow" [class.dark:bg-emerald-950/40]="branch.isOpenNow"
+                    [class.border-emerald-200]="branch.isOpenNow" [class.dark:border-emerald-800]="branch.isOpenNow"
+                    [class.hover:bg-emerald-100]="branch.isOpenNow"
+                    [class.text-amber-800]="!branch.isOpenNow" [class.dark:text-amber-300]="!branch.isOpenNow"
+                    [class.bg-amber-50]="!branch.isOpenNow" [class.dark:bg-amber-950/40]="!branch.isOpenNow"
+                    [class.border-amber-200]="!branch.isOpenNow" [class.dark:border-amber-800]="!branch.isOpenNow"
+                    [class.hover:bg-amber-100]="!branch.isOpenNow"
+                    [title]="branch.isOpenNow ? 'Clic para pausar temporalmente la sucursal' : 'Clic para reactivar sucursal'">
+                    <span class="w-2 h-2 rounded-full" [class.bg-emerald-500]="branch.isOpenNow" [class.bg-amber-500]="!branch.isOpenNow"></span>
+                    <span>{{ branch.isOpenNow ? 'Abierta (Recibiendo pedidos)' : 'Desactivada temporalmente' }}</span>
+                    <span class="text-[9px] uppercase font-mono font-black ml-1 px-1 py-0.2 rounded"
+                      [class.bg-emerald-200/60]="branch.isOpenNow" [class.dark:bg-emerald-900]="branch.isOpenNow"
+                      [class.bg-amber-200/60]="!branch.isOpenNow" [class.dark:bg-amber-900]="!branch.isOpenNow">
+                      {{ branch.isOpenNow ? 'Pausar' : 'Reactivar' }}
+                    </span>
+                  </button>
+                  } @else {
+                  <div class="text-xs font-semibold flex items-center gap-1.5"
+                    [class.text-emerald-600]="branch.isOpenNow" [class.text-amber-600]="!branch.isOpenNow">
+                    <span class="w-2 h-2 rounded-full" [class.bg-emerald-500]="branch.isOpenNow" [class.bg-amber-500]="!branch.isOpenNow"></span>
+                    <span>{{ branch.isOpenNow ? 'Abierta' : 'Pausada' }}</span>
+                  </div>
+                  }
+                } @else {
+                <span class="text-[11px] text-slate-400 italic">En proceso de verificación satelital</span>
+                }
+
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <button (click)="openEditBranchModal(branch)" class="text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-brand-500 dark:hover:text-brand-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-lg flex items-center gap-1 cursor-pointer transition-colors">
+                    <app-icon name="edit" [size]="12"></app-icon>
+                    <span>Editar Sede</span>
+                  </button>
+                  @if (isMainBranchOrOwner() && !branch.isMain) {
+                  <button (click)="openDeleteBranchModal(branch)" class="text-xs font-bold text-red-600 dark:text-red-400 hover:text-white hover:bg-red-600 dark:hover:bg-red-600 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 px-2.5 py-1 rounded-lg flex items-center gap-1 cursor-pointer transition-all active:scale-95" title="Eliminar esta sucursal y todos sus datos">
+                    <app-icon name="trash" [size]="12"></app-icon>
+                    <span>Eliminar</span>
+                  </button>
+                  }
+                  <button (click)="focusBranchOnMap(branch)" class="text-xs font-bold text-brand-500 hover:underline flex items-center gap-1 cursor-pointer">
+                    <app-icon name="map-pin" [size]="13"></app-icon>
+                    <span>Ver en Mapa</span>
+                  </button>
+                </div>
+              </div>
+
+
+
+              <!-- Botón Copiar Enlace Directo para WhatsApp de esta Sede -->
+              <div class="pt-2 border-t border-slate-100 dark:border-slate-800">
+                <button (click)="copyBranchMenuLink(branch)"
+                  class="w-full py-1.5 px-3 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-bold text-[11px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  title="Copiar link de pedido directo para el WhatsApp de esta sucursal">
+                  <span>🔗</span>
+                  <span>Copiar Enlace WhatsApp de esta Sede</span>
+                </button>
+              </div>
+
+            </div>
+            }
+          </div>
+          }
+          </div>
+
+          <!-- ================= VISTA MAPA DE COBERTURA DE SUCURSALES ================= -->
+          <div [class.hidden]="branchesViewMode() !== 'map'" class="space-y-4">
+            
+            <!-- Floating Summary Bar -->
+            <div class="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+              <div class="flex items-center gap-4 flex-wrap">
+                <div class="flex items-center gap-2">
+                  <span class="w-3.5 h-3.5 rounded-lg bg-brand-500"></span>
+                  <span class="text-xs font-bold text-slate-800 dark:text-slate-200">Sedes Activas ({{ activeBranchesCount() }})</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="w-3.5 h-3.5 rounded-lg bg-amber-500"></span>
+                  <span class="text-xs font-bold text-slate-800 dark:text-slate-200">En Revisión ({{ pendingBranchesCount() }})</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="w-3.5 h-3.5 rounded-full border-2 border-dashed border-brand-500 bg-brand-500/10"></span>
+                  <span class="text-xs font-bold text-slate-500 dark:text-slate-400">Radios de Despacho (km)</span>
+                </div>
+              </div>
+
+              <!-- Sedes Shortcut Pills -->
+              <div class="flex items-center gap-1.5 overflow-x-auto max-w-full py-1">
+                @for (b of branches(); track b.id) {
+                <button (click)="focusBranchOnMap(b)"
+                  class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 dark:bg-slate-800 hover:bg-brand-500 hover:text-white text-slate-700 dark:text-slate-300 transition-colors flex items-center gap-1 cursor-pointer flex-shrink-0">
+                  <span>📍</span>
+                  <span>{{ b.name }}</span>
+                </button>
+                }
+              </div>
+            </div>
+
+            <!-- Leaflet Container for Branches Map -->
+            <div class="card-adaptive rounded-2xl overflow-hidden shadow-xs relative border border-slate-200 dark:border-slate-800">
+              <div id="branches-leaflet-map" class="w-full h-[520px] min-h-[520px] z-0"></div>
+
+              <!-- Map Overlay Legend -->
+              <div class="absolute bottom-4 left-4 z-[400] bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-md space-y-1 text-xs">
+                <div class="font-black text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <app-icon name="store" [size]="14" className="text-brand-500"></app-icon>
+                  <span>Red de Cobertura Física</span>
+                </div>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400">
+                  Haz clic en el pin de cualquier sede para consultar sus datos o seleccionarla.
+                </p>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+        }
+
+        <!-- ================= TAB 3: FLOTA DE REPARTIDORES ================= -->
+        @if (activeTab() === 'riders') {
+        <div class="space-y-6">
+
+          <div class="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <div class="flex items-center gap-2">
+                <h2 class="text-2xl font-extrabold tracking-tight">{{ i18n.t('ma.riders') }}</h2>
+                @if (selectedBranch(); as sb) {
+                <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20">
+                  📍 Sede: {{ sb.name }}
+                </span>
+                }
+              </div>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">{{ i18n.t('ma.ridersDesc') }}</p>
+            </div>
+
+            <button (click)="openNewRiderModal()"
+              class="bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm flex items-center gap-2 transition-all active:scale-95 cursor-pointer">
+              <app-icon name="plus" [size]="16" className="text-white"></app-icon>
+              <span>{{ i18n.t('ma.newRider') }}</span>
+            </button>
+          </div>
+
+          @if (filteredRiders().length === 0) {
+          <div class="card-adaptive rounded-2xl p-12 text-center space-y-4 border border-dashed border-slate-300 dark:border-slate-800 animate-fade-in">
+            <div class="w-16 h-16 rounded-2xl bg-brand-500/10 text-brand-500 mx-auto flex items-center justify-center">
+              <app-icon name="bike" [size]="32"></app-icon>
+            </div>
+            <div class="space-y-1">
+              <h3 class="text-base font-extrabold text-slate-900 dark:text-white">Sin Repartidores Registrados</h3>
+              <p class="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+                No hay repartidores registrados para esta sede. Agrega repartidores a tu flota para asignar y monitorear pedidos en tiempo real.
+              </p>
+            </div>
+            <button (click)="openNewRiderModal()"
+              class="px-4 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs shadow-sm inline-flex items-center gap-2 cursor-pointer transition-all active:scale-95">
+              <app-icon name="plus" [size]="15" className="text-white"></app-icon>
+              <span>Registrar Primer Repartidor</span>
+            </button>
+          </div>
+          } @else {
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            @for (r of filteredRiders(); track r.id) {
+            <div class="card-adaptive rounded-2xl p-5 shadow-sm space-y-4">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div
+                    class="w-11 h-11 rounded-xl bg-brand-500/10 text-brand-500 flex items-center justify-center font-bold">
+                    <app-icon name="bike" [size]="22"></app-icon>
+                  </div>
+                  <div>
+                    <div class="font-bold text-sm">{{ r.name }}</div>
+                    <div class="text-[11px] font-mono text-slate-400 uppercase">{{ r.vehiclePlate }} • {{ r.vehicleType }}</div>
+                  </div>
+                </div>
+
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold border"
+                  [class.bg-emerald-50]="r.status === 'available'" [class.text-emerald-700]="r.status === 'available'"
+                  [class.border-emerald-200]="r.status === 'available'"
+                  [class.dark:bg-emerald-950/40]="r.status === 'available'"
+                  [class.dark:text-emerald-400]="r.status === 'available'"
+                  [class.bg-blue-50]="r.status === 'delivering'" [class.text-blue-700]="r.status === 'delivering'"
+                  [class.border-blue-200]="r.status === 'delivering'">
+                  {{ r.status === 'available' ? 'Disponible' : 'En Reparto' }}
+                </span>
+              </div>
+
+              <div
+                class="text-xs text-slate-500 dark:text-slate-400 space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <div class="flex items-center justify-between">
+                  <span>Sede Asignada:</span>
+                  <span class="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1">
+                    <span>📍</span>
+                    <span>{{ r.branchName || getBranchName(r.branchId) }}</span>
+                  </span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span>Teléfono:</span>
+                  <span class="font-mono text-slate-900 dark:text-white font-semibold">{{ r.phone }}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span>Ubicación GPS:</span>
+                  <span class="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                    Transmitiendo
+                  </span>
+                </div>
+              </div>
+
+              <div class="pt-2 flex items-center justify-between border-t border-slate-100 dark:border-slate-800">
+                <button (click)="deleteRider(r)"
+                  class="text-xs font-bold text-red-500 hover:text-red-600 hover:underline flex items-center gap-1 transition-colors cursor-pointer"
+                  title="Eliminar motorizado">
+                  <app-icon name="trash" [size]="13"></app-icon>
+                  <span>Eliminar</span>
+                </button>
+                <button (click)="activeTab.set('gps_map'); flyToRider(r)"
+                  class="text-xs font-bold text-brand-500 hover:underline flex items-center gap-1 cursor-pointer">
+                  <app-icon name="map-pin" [size]="13"></app-icon>
+                  <span>Localizar en Mapa</span>
+                </button>
+              </div>
+            </div>
+            }
+          </div>
+          }
+
+        </div>
+        }
+
+        <!-- ================= TAB 4: RADAR GPS EN VIVO (FLOTA DE MOTORIZADOS) ================= -->
+        @if (activeTab() === 'gps_map') {
+        <div class="space-y-4">
+
+          <div class="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <div class="flex items-center gap-2">
+                <h2 class="text-2xl font-extrabold tracking-tight">Radar GPS en Vivo</h2>
+                <span
+                  class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  Flota en Servicio (OpenStreetMap)
+                </span>
+                @if (selectedBranch(); as sb) {
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20">
+                  📍 {{ sb.name }}
+                </span>
+                }
+              </div>
+
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Monitoreo satelital exclusivo de la ubicación de tus motorizados en tiempo real (0$ Costos de Google Maps).
+              </p>
+            </div>
+
+            <!-- Radar Controls & Filter Pills -->
+            <div class="flex items-center gap-2 flex-wrap">
+              <div class="bg-slate-100 dark:bg-slate-900 p-1 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center gap-1">
+                <button (click)="radarFilter.set('all'); updateFleetRiderMarkers()"
+                  [class.bg-white]="radarFilter() === 'all'" [class.dark:bg-slate-800]="radarFilter() === 'all'"
+                  [class.text-brand-600]="radarFilter() === 'all'" [class.shadow-xs]="radarFilter() === 'all'"
+                  class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer">
+                  Todos ({{ filteredRiders().length }})
+                </button>
+                <button (click)="radarFilter.set('available'); updateFleetRiderMarkers()"
+                  [class.bg-white]="radarFilter() === 'available'" [class.dark:bg-slate-800]="radarFilter() === 'available'"
+                  [class.text-emerald-600]="radarFilter() === 'available'" [class.shadow-xs]="radarFilter() === 'available'"
+                  class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                  <span>Disponibles</span>
+                </button>
+                <button (click)="radarFilter.set('delivering'); updateFleetRiderMarkers()"
+                  [class.bg-white]="radarFilter() === 'delivering'" [class.dark:bg-slate-800]="radarFilter() === 'delivering'"
+                  [class.text-blue-600]="radarFilter() === 'delivering'" [class.shadow-xs]="radarFilter() === 'delivering'"
+                  class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                  <span>En Reparto</span>
+                </button>
+              </div>
+
+              <button (click)="recenterFleetMap()" title="Centrar toda la flota"
+                class="px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:text-brand-500 hover:border-brand-500 shadow-xs text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer">
+                <app-icon name="crosshair" [size]="14"></app-icon>
+                <span>Centrar Flota</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Main Grid: Riders List Sidebar + Leaflet Map -->
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+            
+            <!-- Left Sidebar: Riders Card List (4 cols) -->
+            <div class="lg:col-span-4 space-y-3 max-h-[580px] overflow-y-auto pr-1">
+              <div class="text-[11px] font-black uppercase text-slate-400 tracking-wider px-1">
+                Motorizados en Flota ({{ filteredRiders().length }})
+              </div>
+
+              @for (r of filteredRiders(); track r.id) {
+              <div (click)="flyToRider(r)"
+                [class.border-brand-500]="selectedRadarRider()?.id === r.id"
+                [class.bg-brand-500/[0.04]]="selectedRadarRider()?.id === r.id"
+                [class.dark:bg-brand-500/[0.08]]="selectedRadarRider()?.id === r.id"
+                [class.shadow-md]="selectedRadarRider()?.id === r.id"
+                [class.shadow-brand-500/10]="selectedRadarRider()?.id === r.id"
+                [class.border-slate-200]="selectedRadarRider()?.id !== r.id"
+                [class.dark:border-slate-800]="selectedRadarRider()?.id !== r.id"
+                class="card-adaptive rounded-2xl p-3.5 shadow-xs border-2 transition-all cursor-pointer space-y-2.5 hover:border-brand-500/60">
+                
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-xl flex items-center justify-center font-bold relative"
+                      [class.bg-emerald-500/15]="r.status === 'available'" [class.text-emerald-600]="r.status === 'available'"
+                      [class.bg-blue-500/15]="r.status === 'delivering'" [class.text-blue-600]="r.status === 'delivering'"
+                      [class.bg-slate-200]="r.status === 'offline'" [class.text-slate-500]="r.status === 'offline'">
+                      <app-icon name="bike" [size]="18"></app-icon>
+                      <span class="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-slate-900"
+                        [class.bg-emerald-500]="r.status === 'available'"
+                        [class.bg-blue-500]="r.status === 'delivering'"
+                        [class.bg-slate-400]="r.status === 'offline'"></span>
+                    </div>
+
+                    <div>
+                      <div class="font-extrabold text-xs text-slate-900 dark:text-white">{{ r.name }}</div>
+                      <div class="text-[10px] font-mono text-slate-400 uppercase">{{ r.vehiclePlate }} • {{ r.vehicleType }}</div>
+                    </div>
+                  </div>
+
+                  <span class="px-2 py-0.5 rounded-full text-[9px] font-extrabold border"
+                    [class.bg-emerald-50]="r.status === 'available'" [class.text-emerald-700]="r.status === 'available'"
+                    [class.border-emerald-200]="r.status === 'available'"
+                    [class.dark:bg-emerald-950/40]="r.status === 'available'" [class.dark:text-emerald-400]="r.status === 'available'"
+                    [class.bg-blue-50]="r.status === 'delivering'" [class.text-blue-700]="r.status === 'delivering'"
+                    [class.border-blue-200]="r.status === 'delivering'">
+                    {{ r.status === 'available' ? 'Disponible' : r.status === 'delivering' ? 'En Reparto' : 'Desconectado' }}
+                  </span>
+                </div>
+
+                @if (r.branchName || r.branchId) {
+                <div class="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                  <span>🏢</span>
+                  <span>Sede: <strong>{{ r.branchName || getBranchName(r.branchId) }}</strong></span>
+                </div>
+                }
+
+                <!-- Estado satelital real del GPS del teléfono del motorizado -->
+                <div class="flex items-center justify-between text-[10px]">
+                  @if (r.currentLocation) {
+                  <span class="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span>GPS en Vivo ({{ r.currentLocation.lat | number:'1.4-4' }}, {{ r.currentLocation.lng | number:'1.4-4' }})</span>
+                  </span>
+                  } @else {
+                  <span class="text-amber-500 dark:text-amber-400 font-medium flex items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                    <span>Esperando señal GPS del móvil</span>
+                  </span>
+                  }
+                </div>
+
+                <!-- Action shortcuts -->
+                <div class="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
+                  <div class="flex items-center gap-1.5">
+                    <a [href]="'tel:' + r.phone" (click)="$event.stopPropagation()"
+                      class="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 transition-colors"
+                      title="Llamar al motorizado">
+                      <app-icon name="phone" [size]="12"></app-icon>
+                    </a>
+                    <a [href]="'https://wa.me/' + r.phone.replace('+', '')" target="_blank" (click)="$event.stopPropagation()"
+                      class="p-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 transition-colors"
+                      title="Escribir por WhatsApp">
+                      <app-icon name="message-circle" [size]="12"></app-icon>
+                    </a>
+                  </div>
+
+                  <button (click)="flyToRider(r); $event.stopPropagation()"
+                    class="text-brand-500 hover:text-brand-600 font-extrabold text-[11px] flex items-center gap-1">
+                    <app-icon name="crosshair" [size]="12"></app-icon>
+                    <span>Localizar</span>
+                  </button>
+                </div>
+
+              </div>
+              }
+
+              @if (filteredRiders().length === 0) {
+              <div class="p-8 text-center text-xs text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl">
+                No hay motorizados registrados para esta sede.
+              </div>
+              }
+            </div>
+
+            <!-- Right Map Container (8 cols) -->
+            <div class="lg:col-span-8">
+              <div class="card-adaptive rounded-2xl overflow-hidden shadow-xs relative border border-slate-200 dark:border-slate-800">
+                <div id="merchant-leaflet-map" class="w-full h-[580px] min-h-[580px] z-0"></div>
+
+                <!-- Floating Overlay Map Legend -->
+                <div class="absolute bottom-4 left-4 z-[400] bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-md space-y-1.5 text-xs">
+                  <div class="font-black text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <app-icon name="bike" [size]="14" className="text-brand-500"></app-icon>
+                    <span>Radar de Repartidores</span>
+                  </div>
+                  <div class="flex items-center gap-3 text-[11px]">
+                    <div class="flex items-center gap-1.5">
+                      <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                      <span class="text-slate-600 dark:text-slate-300">Disponible</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                      <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+                      <span class="text-slate-600 dark:text-slate-300">En Reparto</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                      <span class="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
+                      <span class="text-slate-600 dark:text-slate-300">Offline</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Floating Recenter Shortcut -->
+                <div class="absolute top-4 right-4 z-[400]">
+                  <button (click)="recenterFleetMap()"
+                    class="px-3 py-1.5 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-800 shadow-md text-slate-700 dark:text-slate-300 hover:text-brand-500 flex items-center gap-1.5 transition-colors cursor-pointer">
+                    <app-icon name="crosshair" [size]="14"></app-icon>
+                    <span>Re-centrar Flota</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+        }
+
+        <!-- ================= TAB 5: USUARIOS & ENCARGADOS DE SUCURSAL ================= -->
+        @if (activeTab() === 'users') {
+        <div class="space-y-6 animate-fade-in">
+
+          <!-- Header con Acción Principal -->
+          <div class="flex flex-wrap items-center justify-between gap-4 pb-2 border-b border-slate-200 dark:border-slate-800">
+            <div>
+              <div class="flex items-center gap-2">
+                <h2 class="text-2xl font-extrabold tracking-tight">Equipo & Encargados de Sucursal</h2>
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20">
+                  {{ filteredStoreUsers().length }} Colaborador{{ filteredStoreUsers().length === 1 ? '' : 'es' }}
+                </span>
+              </div>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Registra y asigna encargados de sede, cocineros y despachadores a cada sucursal física de tu comercio.
+              </p>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <button (click)="openCreateUserModal()"
+                class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white font-bold text-xs shadow-md shadow-brand-500/25 transition-all flex items-center gap-2 cursor-pointer active:scale-95">
+                <app-icon name="user-plus" [size]="15"></app-icon>
+                <span>+ Nuevo Colaborador</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Filtros de Rol y Ámbito de Sucursal -->
+          <div class="flex flex-wrap items-center justify-between gap-3 p-3 bg-slate-50 dark:bg-slate-850/60 rounded-2xl border border-slate-200/80 dark:border-slate-800">
+            <!-- Selector de Roles -->
+            <div class="flex flex-wrap items-center gap-1.5 text-xs">
+              <span class="text-slate-400 font-bold uppercase text-[10px] mr-1">Rol:</span>
+              <button (click)="userFilterRole.set('all')"
+                [class.bg-brand-500]="userFilterRole() === 'all'"
+                [class.text-white]="userFilterRole() === 'all'"
+                [class.shadow-sm]="userFilterRole() === 'all'"
+                class="px-3 py-1.5 rounded-lg font-semibold transition-all hover:bg-slate-200 dark:hover:bg-slate-800 cursor-pointer">
+                Todos
+              </button>
+              <button (click)="userFilterRole.set('MERCHANT_MANAGER')"
+                [class.bg-brand-500]="userFilterRole() === 'MERCHANT_MANAGER'"
+                [class.text-white]="userFilterRole() === 'MERCHANT_MANAGER'"
+                [class.shadow-sm]="userFilterRole() === 'MERCHANT_MANAGER'"
+                class="px-3 py-1.5 rounded-lg font-semibold transition-all hover:bg-slate-200 dark:hover:bg-slate-800 cursor-pointer flex items-center gap-1">
+                <span>🏢</span> Encargados de Sede
+              </button>
+              <button (click)="userFilterRole.set('MERCHANT_KITCHEN')"
+                [class.bg-brand-500]="userFilterRole() === 'MERCHANT_KITCHEN'"
+                [class.text-white]="userFilterRole() === 'MERCHANT_KITCHEN'"
+                [class.shadow-sm]="userFilterRole() === 'MERCHANT_KITCHEN'"
+                class="px-3 py-1.5 rounded-lg font-semibold transition-all hover:bg-slate-200 dark:hover:bg-slate-800 cursor-pointer flex items-center gap-1">
+                <span>👨‍🍳</span> Cocina
+              </button>
+              <button (click)="userFilterRole.set('MERCHANT_DISPATCH')"
+                [class.bg-brand-500]="userFilterRole() === 'MERCHANT_DISPATCH'"
+                [class.text-white]="userFilterRole() === 'MERCHANT_DISPATCH'"
+                [class.shadow-sm]="userFilterRole() === 'MERCHANT_DISPATCH'"
+                class="px-3 py-1.5 rounded-lg font-semibold transition-all hover:bg-slate-200 dark:hover:bg-slate-800 cursor-pointer flex items-center gap-1">
+                <span>📦</span> Despacho
+              </button>
+              <button (click)="userFilterRole.set('MERCHANT_OWNER')"
+                [class.bg-brand-500]="userFilterRole() === 'MERCHANT_OWNER'"
+                [class.text-white]="userFilterRole() === 'MERCHANT_OWNER'"
+                [class.shadow-sm]="userFilterRole() === 'MERCHANT_OWNER'"
+                class="px-3 py-1.5 rounded-lg font-semibold transition-all hover:bg-slate-200 dark:hover:bg-slate-800 cursor-pointer flex items-center gap-1">
+                <span>👑</span> Dueños / Socios
+              </button>
+            </div>
+
+            <!-- Indicador de Sucursal Activa -->
+            <div class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+              <span>Sede activa en panel:</span>
+              <span class="px-2 py-0.5 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold text-slate-800 dark:text-slate-200">
+                📍 {{ activeBranch()?.name || 'Sede Principal' }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Grid de Tarjetas de Colaboradores -->
+          @if (filteredStoreUsers().length > 0) {
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            @for (u of filteredStoreUsers(); track u.id) {
+            <div class="card-adaptive rounded-2xl p-5 shadow-sm border border-slate-200/80 dark:border-slate-800/80 flex flex-col justify-between gap-4 transition-all hover:shadow-md">
+              
+              <div class="space-y-3.5">
+                <!-- Header Usuario -->
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex items-center gap-3">
+                    <img [src]="u.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'"
+                      alt="Avatar"
+                      class="w-11 h-11 rounded-xl object-cover border border-slate-200 dark:border-slate-700 shadow-sm shrink-0" />
+                    <div>
+                      <div class="font-extrabold text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
+                        <span>{{ u.name }}</span>
+                        @if (u.role === 'MERCHANT_OWNER') {
+                        <span title="Dueño de la cuenta" class="text-amber-500 text-xs">👑</span>
+                        }
+                      </div>
+                      <div class="text-[11px] text-slate-400 truncate">{{ u.email }}</div>
+                    </div>
+                  </div>
+
+                  <!-- Toggle Estado Activo -->
+                  <button (click)="toggleStoreUserStatus(u)"
+                    [title]="u.isActive ? 'Desactivar usuario' : 'Activar usuario'"
+                    class="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 transition-all cursor-pointer"
+                    [class.bg-emerald-500/10]="u.isActive"
+                    [class.text-emerald-600]="u.isActive"
+                    [class.dark:text-emerald-400]="u.isActive"
+                    [class.border]="true"
+                    [class.border-emerald-500/20]="u.isActive"
+                    [class.bg-slate-100]="!u.isActive"
+                    [class.text-slate-400]="!u.isActive"
+                    [class.dark:bg-slate-800]="!u.isActive">
+                    <span class="w-1.5 h-1.5 rounded-full" [class.bg-emerald-500]="u.isActive" [class.bg-slate-400]="!u.isActive"></span>
+                    {{ u.isActive ? 'Activo' : 'Inactivo' }}
+                  </button>
+                </div>
+
+                <!-- Detalle de Sucursal Asignada -->
+                <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-850/80 border border-slate-100 dark:border-slate-800 space-y-1">
+                  <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                    <app-icon name="map-pin" [size]="11"></app-icon>
+                    <span>Sucursal Asignada:</span>
+                  </div>
+                  <div class="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-brand-500"></span>
+                    <span>{{ u.branchName || activeBranch()?.name || 'Sede Principal' }}</span>
+                  </div>
+                </div>
+
+                <!-- Teléfono si está registrado -->
+                @if (u.phone) {
+                <div class="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                  <app-icon name="phone" [size]="12" class="text-slate-400"></app-icon>
+                  <span>{{ u.phone }}</span>
+                </div>
+                }
+              </div>
+
+              <!-- Footer de Tarjeta con Rol y Acciones -->
+              <div class="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+                <!-- Badge de Rol -->
+                @if (u.role === 'MERCHANT_MANAGER') {
+                <span class="text-[10px] px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-extrabold border border-indigo-200 dark:border-indigo-800/60 flex items-center gap-1">
+                  <span>🏢</span> Encargado de Sede
+                </span>
+                } @else if (u.role === 'MERCHANT_KITCHEN') {
+                <span class="text-[10px] px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 font-extrabold border border-amber-200 dark:border-amber-800/60 flex items-center gap-1">
+                  <span>👨‍🍳</span> Cocina / KDS
+                </span>
+                } @else if (u.role === 'MERCHANT_DISPATCH') {
+                <span class="text-[10px] px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 font-extrabold border border-blue-200 dark:border-blue-800/60 flex items-center gap-1">
+                  <span>📦</span> Despacho
+                </span>
+                } @else if (u.role === 'MERCHANT_OWNER') {
+                <span class="text-[10px] px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-extrabold border border-emerald-200 dark:border-emerald-800/60 flex items-center gap-1">
+                  <span>👑</span> Propietario
+                </span>
+                } @else {
+                <span class="text-[10px] px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold">
+                  {{ u.role }}
+                </span>
+                }
+
+                <!-- Botones de Acción -->
+                <div class="flex items-center gap-1">
+                  <button (click)="openEditUserModal(u)"
+                    title="Editar colaborador"
+                    class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all cursor-pointer">
+                    <app-icon name="edit" [size]="13"></app-icon>
+                  </button>
+                  @if (u.role !== 'MERCHANT_OWNER') {
+                  <button (click)="deleteStoreUser(u)"
+                    title="Eliminar colaborador"
+                    class="w-7 h-7 rounded-lg bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 flex items-center justify-center transition-all cursor-pointer">
+                    <app-icon name="trash" [size]="13"></app-icon>
+                  </button>
+                  }
+                </div>
+              </div>
+
+            </div>
+            }
+          </div>
+          } @else {
+          <!-- Empty State -->
+          <div class="p-12 text-center card-adaptive rounded-3xl border border-dashed border-slate-300 dark:border-slate-800 space-y-4">
+            <div class="w-14 h-14 mx-auto rounded-2xl bg-brand-500/10 text-brand-500 flex items-center justify-center text-2xl font-bold">
+              👥
+            </div>
+            <div>
+              <h3 class="text-base font-extrabold text-slate-900 dark:text-white">No se encontraron colaboradores</h3>
+              <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                No hay usuarios que coincidan con la sucursal o el rol seleccionado. Registra al primer encargado de sede.
+              </p>
+            </div>
+            <button (click)="openCreateUserModal()"
+              class="px-5 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs shadow-md transition-all cursor-pointer">
+              + Registrar Primer Colaborador
+            </button>
+          </div>
+          }
+
+        </div>
+        }
+
+        <!-- ================= TAB 6: MARCA & MONEDA (CONFIGURACIÓN) ================= -->
+        @if (activeTab() === 'settings') {
+        <div class="space-y-6 animate-fade-in">
+
+          <!-- Settings Header -->
+          <div
+            class="flex flex-wrap items-center justify-between gap-4 pb-2 border-b border-slate-200 dark:border-slate-800">
+            <div>
+              <div class="flex items-center gap-2">
+                <h2 class="text-2xl font-extrabold tracking-tight">Marca & Configuración Monetaria</h2>
+                <span
+                  class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20">
+                  Personalización de Tienda
+                </span>
+              </div>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Define la paleta de colores de tu comercio, logo, banner, número de WhatsApp para pedidos y la tasa de
+                cambio en Bolívares.
+              </p>
+            </div>
+
+            <div class="flex items-center gap-2">
+              @if (isSavedNotificationVisible()) {
+              <span
+                class="px-3 py-1.5 rounded-xl bg-emerald-500 text-white text-xs font-bold shadow-sm animate-fade-in flex items-center gap-1.5">
+                <app-icon name="check" [size]="14" className="text-white"></app-icon>
+                <span>¡Guardado con éxito!</span>
+              </span>
+              }
+
+              <button (click)="saveSettings()"
+                class="bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm flex items-center gap-2 transition-all active:scale-95 cursor-pointer">
+                <app-icon name="check" [size]="16" className="text-white"></app-icon>
+                <span>Guardar Cambios</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Main Grid of Settings Cards -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            <!-- PANEL 1: CONFIGURACIÓN MONETARIA Y TASA DE CAMBIO -->
+            <div
+              class="card-adaptive rounded-2xl p-5 shadow-xs space-y-5 border border-slate-200 dark:border-slate-800">
+              <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div class="flex items-center gap-2.5">
+                  <div
+                    class="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+                    <app-icon name="dollar" [size]="18"></app-icon>
+                  </div>
+                  <div>
+                    <h3 class="font-extrabold text-sm text-slate-900 dark:text-white">Moneda & Tasa de Cambio</h3>
+                    <p class="text-[11px] text-slate-500">Manejo simultáneo de precios en USD y Bolívares (Bs.)</p>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                  <button (click)="fetchOfficialBcvRate('oficial')" [disabled]="isFetchingBcv()"
+                    title="Sincronizar tasa oficial BCV desde dolarapi.com"
+                    class="text-[11px] font-bold px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-xs">
+                    @if (isFetchingBcv() && bcvRateSource() === 'oficial') {
+                    <span class="animate-spin text-xs">⏳</span>
+                    } @else {
+                    <app-icon name="refresh-cw" [size]="12"></app-icon>
+                    }
+                    <span>Oficial BCV</span>
+                  </button>
+
+                  <button (click)="fetchOfficialBcvRate('paralelo')" [disabled]="isFetchingBcv()"
+                    title="Sincronizar tasa paralela desde dolarapi.com"
+                    class="text-[11px] font-bold px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 hover:bg-slate-200 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50">
+                    @if (isFetchingBcv() && bcvRateSource() === 'paralelo') {
+                    <span class="animate-spin text-xs">⏳</span>
+                    } @else {
+                    <span>⚡</span>
+                    }
+                    <span>Paralelo</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- API Status Banner -->
+              <div
+                class="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 dark:text-emerald-200 text-xs flex flex-wrap items-center justify-between gap-2">
+                <div class="flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span class="font-bold">API Conectada:</span>
+                  <span
+                    class="font-mono text-[11px] bg-white/50 dark:bg-slate-900/50 px-2 py-0.5 rounded border border-emerald-500/30">ve.dolarapi.com</span>
+                </div>
+                @if (bcvLastUpdated()) {
+                <span class="text-[10px] text-slate-600 dark:text-slate-400">
+                  Última cotización: {{ bcvLastUpdated() | date:'short' }} ({{ bcvRateSource() | uppercase }})
+                </span>
+                }
+              </div>
+
+              <!-- Tasa del Día Input -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-bold mb-1.5 text-slate-700 dark:text-slate-300">
+                    Tasa de Cambio del Día (Bs / USD)
+                  </label>
+                  <div class="relative">
+                    <span
+                      class="absolute inset-y-0 left-0 pl-3 flex items-center text-xs font-bold text-slate-400">Bs.</span>
+                    <input type="number" step="0.05" [(ngModel)]="brandingForm.exchangeRate"
+                      class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-3 py-2 text-sm font-extrabold text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
+                  </div>
+                  <span class="text-[10px] text-slate-400 mt-1 block">
+                    Tasa aplicada: <strong>{{ brandingForm.exchangeRate }} Bs/$</strong> (fuente: dolarapi.com).
+                  </span>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-bold mb-1.5 text-slate-700 dark:text-slate-300">
+                    Moneda Base de Registro
+                  </label>
+                  <select [(ngModel)]="brandingForm.baseCurrency"
+                    class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-brand-500">
+                    <option value="USD">Dólares Americanos ($ USD)</option>
+                    <option value="VES">Bolívares Digitales (Bs. VES)</option>
+                  </select>
+                  <span class="text-[10px] text-slate-400 mt-1 block">Moneda en que cargas tus costos y
+                    platillos.</span>
+                </div>
+              </div>
+
+              <!-- Modo de visualización para el cliente -->
+              <div class="space-y-2 pt-2">
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                  ¿Cómo verá el cliente los precios en tu menú público?
+                </label>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <!-- Opción 1: USD + Bs -->
+                  <label (click)="brandingForm.displayMode = 'usd_and_bs'"
+                    [class.border-brand-500]="brandingForm.displayMode === 'usd_and_bs'"
+                    [class.bg-brand-50/40]="brandingForm.displayMode === 'usd_and_bs'"
+                    [class.dark:bg-brand-950/20]="brandingForm.displayMode === 'usd_and_bs'"
+                    class="p-3 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer transition-all flex items-start gap-2.5">
+                    <input type="radio" name="displayMode" value="usd_and_bs" [(ngModel)]="brandingForm.displayMode"
+                      class="mt-0.5 text-brand-500" />
+                    <div>
+                      <div class="font-bold text-xs text-slate-800 dark:text-white">$ USD con equivalente en Bs.</div>
+                      <div class="text-[10px] text-slate-500 font-mono mt-0.5">$9.99 (Bs. 454.55)</div>
+                    </div>
+                  </label>
+
+                  <!-- Opción 2: Bs + USD -->
+                  <label (click)="brandingForm.displayMode = 'bs_and_usd'"
+                    [class.border-brand-500]="brandingForm.displayMode === 'bs_and_usd'"
+                    [class.bg-brand-50/40]="brandingForm.displayMode === 'bs_and_usd'"
+                    [class.dark:bg-brand-950/20]="brandingForm.displayMode === 'bs_and_usd'"
+                    class="p-3 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer transition-all flex items-start gap-2.5">
+                    <input type="radio" name="displayMode" value="bs_and_usd" [(ngModel)]="brandingForm.displayMode"
+                      class="mt-0.5 text-brand-500" />
+                    <div>
+                      <div class="font-bold text-xs text-slate-800 dark:text-white">Bs. con equivalente en $ USD</div>
+                      <div class="text-[10px] text-slate-500 font-mono mt-0.5">Bs. 454.55 ($9.99)</div>
+                    </div>
+                  </label>
+
+                  <!-- Opción 3: Solo USD -->
+                  <label (click)="brandingForm.displayMode = 'only_usd'"
+                    [class.border-brand-500]="brandingForm.displayMode === 'only_usd'"
+                    [class.bg-brand-50/40]="brandingForm.displayMode === 'only_usd'"
+                    [class.dark:bg-brand-950/20]="brandingForm.displayMode === 'only_usd'"
+                    class="p-3 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer transition-all flex items-start gap-2.5">
+                    <input type="radio" name="displayMode" value="only_usd" [(ngModel)]="brandingForm.displayMode"
+                      class="mt-0.5 text-brand-500" />
+                    <div>
+                      <div class="font-bold text-xs text-slate-800 dark:text-white">Únicamente USD</div>
+                      <div class="text-[10px] text-slate-500 font-mono mt-0.5">$9.99</div>
+                    </div>
+                  </label>
+
+                  <!-- Opción 4: Solo Bs -->
+                  <label (click)="brandingForm.displayMode = 'only_bs'"
+                    [class.border-brand-500]="brandingForm.displayMode === 'only_bs'"
+                    [class.bg-brand-50/40]="brandingForm.displayMode === 'only_bs'"
+                    [class.dark:bg-brand-950/20]="brandingForm.displayMode === 'only_bs'"
+                    class="p-3 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer transition-all flex items-start gap-2.5">
+                    <input type="radio" name="displayMode" value="only_bs" [(ngModel)]="brandingForm.displayMode"
+                      class="mt-0.5 text-brand-500" />
+                    <div>
+                      <div class="font-bold text-xs text-slate-800 dark:text-white">Únicamente Bolívares</div>
+                      <div class="text-[10px] text-slate-500 font-mono mt-0.5">Bs. 454.55</div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Previsualización en Vivo de Precio -->
+              <div
+                class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                <div>
+                  <span class="text-[10px] uppercase font-bold text-slate-400 block">Previsualización en Tarjeta de
+                    Menú</span>
+                  <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">Ejemplo: Combo Smash Burger
+                    ($9.99)</span>
+                </div>
+
+                <div class="text-right">
+                  @if (brandingForm.displayMode === 'usd_and_bs') {
+                  <div class="font-extrabold text-base text-brand-500">$9.99</div>
+                  <div class="text-[11px] font-bold text-slate-400 font-mono">
+                    Bs. {{ (9.99 * brandingForm.exchangeRate).toLocaleString('es-VE', { minimumFractionDigits: 2,
+                    maximumFractionDigits: 2 }) }}
+                  </div>
+                  } @else if (brandingForm.displayMode === 'bs_and_usd') {
+                  <div class="font-extrabold text-base text-brand-500 font-mono">
+                    Bs. {{ (9.99 * brandingForm.exchangeRate).toLocaleString('es-VE', { minimumFractionDigits: 2,
+                    maximumFractionDigits: 2 }) }}
+                  </div>
+                  <div class="text-[11px] font-bold text-slate-400">$9.99</div>
+                  } @else if (brandingForm.displayMode === 'only_usd') {
+                  <div class="font-extrabold text-base text-brand-500">$9.99</div>
+                  } @else {
+                  <div class="font-extrabold text-base text-brand-500 font-mono">
+                    Bs. {{ (9.99 * brandingForm.exchangeRate).toLocaleString('es-VE', { minimumFractionDigits: 2,
+                    maximumFractionDigits: 2 }) }}
+                  </div>
+                  }
+                </div>
+              </div>
+
+            </div>
+
+            <!-- PANEL 2: PALETA DE COLORES E IDENTIDAD DE MARCA -->
+            <div
+              class="card-adaptive rounded-2xl p-5 shadow-xs space-y-5 border border-slate-200 dark:border-slate-800">
+              <div class="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div
+                  class="w-9 h-9 rounded-xl bg-orange-500/10 text-brand-500 flex items-center justify-center font-bold">
+                  <app-icon name="palette" [size]="18"></app-icon>
+                </div>
+                <div>
+                  <h3 class="font-extrabold text-sm text-slate-900 dark:text-white">Identidad Visual & Color de Marca
+                  </h3>
+                  <p class="text-[11px] text-slate-500">Personaliza cómo lucirá tu tienda web para tus clientes</p>
+                </div>
+              </div>
+
+              <!-- Selector de Color de Acento -->
+              <div class="space-y-3">
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Color de Acento Principal (Botones, Destacados y Carrito)
+                </label>
+
+                <div class="flex items-center gap-2.5 flex-wrap">
+                  @for (c of colorPresets; track c.hex) {
+                  <button type="button" (click)="selectColorPreset(c.hex)" [title]="c.name"
+                    [style.backgroundColor]="c.hex"
+                    class="w-9 h-9 rounded-xl flex items-center justify-center text-white shadow-sm hover:scale-110 active:scale-95 transition-transform cursor-pointer relative"
+                    [class.ring-3]="brandingForm.accentColor === c.hex"
+                    [class.ring-offset-2]="brandingForm.accentColor === c.hex">
+                    @if (brandingForm.accentColor === c.hex) {
+                    <app-icon name="check" [size]="16" className="text-white drop-shadow"></app-icon>
+                    }
+                  </button>
+                  }
+
+                  <!-- Custom Color Hex Input -->
+                  <div class="flex items-center gap-2 ml-auto">
+                    <input type="color" [(ngModel)]="brandingForm.accentColor"
+                      class="w-9 h-9 rounded-xl cursor-pointer border-0 bg-transparent" />
+                    <input type="text" [(ngModel)]="brandingForm.accentColor"
+                      class="w-24 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1.5 text-xs font-mono font-bold uppercase text-slate-900 dark:text-white" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Logo & Portada URLs -->
+              <div class="space-y-3 pt-2">
+                <div>
+                  <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">
+                    URL del Logo del Comercio
+                  </label>
+                  <input type="url" [(ngModel)]="brandingForm.logoUrl"
+                    class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-mono" />
+                </div>
+
+                <div>
+                  <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">
+                    URL de Portada / Banner Hero
+                  </label>
+                  <input type="url" [(ngModel)]="brandingForm.bannerUrl"
+                    class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-mono" />
+                </div>
+              </div>
+
+              <!-- Mini Live Mockup de Cabecera de la Tienda -->
+              <div class="pt-2">
+                <span class="text-[10px] uppercase font-bold text-slate-400 block mb-2">Vista Previa de tu Cabecera
+                  Web</span>
+                <div
+                  class="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-sm relative h-32 flex items-end p-3 bg-slate-900">
+                  <img [src]="brandingForm.bannerUrl" class="absolute inset-0 w-full h-full object-cover opacity-60" />
+                  <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent"></div>
+
+                  <div class="relative z-10 flex items-center gap-3">
+                    <img [src]="brandingForm.logoUrl"
+                      class="w-12 h-12 rounded-xl object-cover border-2 border-white shadow-md bg-white flex-shrink-0" />
+                    <div>
+                      <div class="font-extrabold text-sm text-white leading-tight">{{ brandingForm.name }}</div>
+                      <div class="text-[10px] text-slate-200 line-clamp-1">{{ brandingForm.tagline }}</div>
+                      <div
+                        class="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold text-white shadow-xs"
+                        [style.backgroundColor]="brandingForm.accentColor">
+                        Abierto ahora • Delivery Express
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- PANEL 3: INFORMACIÓN DE CONTACTO & WHATSAPP PARA PEDIDOS -->
+            <div
+              class="card-adaptive rounded-2xl p-5 shadow-xs space-y-4 border border-slate-200 dark:border-slate-800">
+              <div class="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div
+                  class="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+                  <app-icon name="message-circle" [size]="18"></app-icon>
+                </div>
+                <div>
+                  <h3 class="font-extrabold text-sm text-slate-900 dark:text-white">Contacto & WhatsApp de Pedidos</h3>
+                  <p class="text-[11px] text-slate-500">A este número recibirás los pedidos automáticos del cliente</p>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">
+                    Número de WhatsApp (con código de país)
+                  </label>
+                  <input type="text" [(ngModel)]="brandingForm.whatsappNumber" placeholder="+584121234567"
+                    class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-mono" />
+                </div>
+
+                <div>
+                  <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">
+                    Teléfono Secundario / Local
+                  </label>
+                  <input type="text" [(ngModel)]="brandingForm.phone" placeholder="+582121234567"
+                    class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-mono" />
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">
+                  Dirección Física del Local
+                </label>
+                <input type="text" [(ngModel)]="brandingForm.address"
+                  class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
+              </div>
+            </div>
+
+            <!-- PANEL 4: TARIFAS DE DELIVERY & COBERTURA -->
+            <div
+              class="card-adaptive rounded-2xl p-5 shadow-xs space-y-4 border border-slate-200 dark:border-slate-800">
+              <div class="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div
+                  class="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
+                  <app-icon name="bike" [size]="18"></app-icon>
+                </div>
+                <div>
+                  <h3 class="font-extrabold text-sm text-slate-900 dark:text-white">Delivery & Despacho</h3>
+                  <p class="text-[11px] text-slate-500">Parámetros de envío para el cálculo en el checkout</p>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">
+                    Tarifa Base de Envío ($ USD)
+                  </label>
+                  <div class="relative">
+                    <span
+                      class="absolute inset-y-0 left-0 pl-3 flex items-center text-xs font-bold text-slate-400">$</span>
+                    <input type="number" step="0.5" [(ngModel)]="brandingForm.baseDeliveryFee"
+                      class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl pl-8 pr-3 py-2 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
+                  </div>
+                  <span class="text-[10px] text-slate-400 mt-1 block">
+                    Equivalente: Bs. {{ (brandingForm.baseDeliveryFee * brandingForm.exchangeRate).toFixed(2) }}
+                  </span>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">
+                    Radio Máximo de Cobertura (km)
+                  </label>
+                  <input type="number" step="1" [(ngModel)]="brandingForm.deliveryRadiusKm"
+                    class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
+                </div>
+              </div>
+
+              <!-- Coordenadas GPS del Comercio -->
+              <div class="border-t border-slate-100 dark:border-slate-800 pt-3 space-y-2">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                      Coordenadas GPS del Local (Origen de Rutas)
+                    </label>
+                    <span class="text-[10px] text-slate-400">Punto de partida para el cálculo de distancia y ruta de entrega</span>
+                  </div>
+
+                  <button type="button" (click)="captureStoreGps()" [disabled]="isDetectingStoreGps()"
+                          class="text-[11px] font-bold text-brand-600 dark:text-brand-400 hover:text-brand-700 flex items-center gap-1.5 bg-brand-500/10 hover:bg-brand-500/20 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer disabled:opacity-50">
+                    @if (isDetectingStoreGps()) {
+                      <span class="animate-spin text-xs">⏳</span>
+                      <span>Detectando GPS...</span>
+                    } @else {
+                      <span>📍 Capturar GPS Actual</span>
+                    }
+                  </button>
+                </div>
+
+                @if (storeGpsMessage()) {
+                  <div class="text-[11px] font-medium px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5">
+                    <span>🛰️</span>
+                    <span>{{ storeGpsMessage() }}</span>
+                  </div>
+                }
+
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-[11px] font-semibold text-slate-500 mb-1">Latitud</label>
+                    <input type="number" step="0.000001" [(ngModel)]="brandingForm.latitude"
+                           placeholder="Ej: 10.4820"
+                           class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
+                  </div>
+                  <div>
+                    <label class="block text-[11px] font-semibold text-slate-500 mb-1">Longitud</label>
+                    <input type="number" step="0.000001" [(ngModel)]="brandingForm.longitude"
+                           placeholder="Ej: -66.8610"
+                           class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+        }
+
+      </main>
+
+    </div>
+
+  </div>
+
+  <!-- ================= MODALES MODULARES EXTRAÍDOS ================= -->
+  <!-- MODAL: PRODUCTO Y VARIANTES -->
+  <app-product-form-modal
+    [isOpen]="isProductModalOpen()"
+    [product]="currentEditingProduct"
+    [categories]="productCategories()"
+    [branches]="branches()"
+    [activeBranch]="activeBranch()"
+    [activeExchangeRate]="activeExchangeRate()"
+    [tenantId]="currentTenant().id || auth.currentUser()?.tenantId || ''"
+    (close)="isProductModalOpen.set(false)"
+    (save)="onSaveProductFromModal($event)"
+    (categoryCreated)="onCategoryCreatedFromModal($event)">
+  </app-product-form-modal>
+
+  <!-- MODAL: IMPORTACIÓN MASIVA EXCEL / CSV -->
+  <app-bulk-import-modal
+    [isOpen]="isBulkImportModalOpen()"
+    [activeBranch]="activeBranch()"
+    [tenantId]="currentTenant().id || auth.currentUser()?.tenantId || ''"
+    (close)="closeBulkImportModal()"
+    (importCompleted)="onBulkImportCompleted()">
+  </app-bulk-import-modal>
+
+  <!-- MODAL: REGISTRAR MOTORIZADO -->
+  <app-rider-form-modal
+    [isOpen]="isRiderModalOpen()"
+    [activeBranch]="activeBranch()"
+    (close)="isRiderModalOpen.set(false)"
+    (save)="onSaveRiderFromModal($event)">
+  </app-rider-form-modal>
+
+  <!-- MODALES: NUEVA SUCURSAL & EDITAR SUCURSAL -->
+  <app-branch-form-modal
+    [isOpen]="isNewBranchModalOpen()"
+    mode="create"
+    [tenantId]="currentTenant().id || ''"
+    [tenantName]="currentTenant().name || ''"
+    [isMainBranchOrOwner]="isMainBranchOrOwner()"
+    [creatorRole]="auth.currentUser()?.role"
+    [creatorBranchId]="auth.currentUser()?.branchId"
+    (close)="isNewBranchModalOpen.set(false)"
+    (branchSaved)="onBranchSaved()">
+  </app-branch-form-modal>
+
+  <app-branch-form-modal
+    [isOpen]="isEditBranchModalOpen()"
+    mode="edit"
+    [branch]="editingBranch()"
+    [tenantId]="currentTenant().id || ''"
+    [tenantName]="currentTenant().name || ''"
+    [isMainBranchOrOwner]="isMainBranchOrOwner()"
+    (close)="isEditBranchModalOpen.set(false)"
+    (branchSaved)="onBranchSaved()"
+    (deleteRequested)="openDeleteBranchModal($event)">
+  </app-branch-form-modal>
+
+  <!-- MODAL: CONFIRMAR ELIMINACIÓN DE SUCURSAL -->
+  <app-delete-branch-modal
+    [isOpen]="isDeleteBranchModalOpen()"
+    [branch]="branchToDelete()"
+    [isDeleting]="isDeletingBranch()"
+    [errorMessage]="deleteBranchErrorMessage()"
+    (close)="closeDeleteBranchModal()"
+    (confirm)="confirmDeleteBranch()">
+  </app-delete-branch-modal>
+
+  <!-- MODAL: UPGRADE A PLAN CORPORATIVO -->
+  <app-plan-upgrade-modal
+    [isOpen]="isUpgradePlanModalOpen()"
+    [currentSubscriptionPlan]="currentSubscriptionPlan()"
+    [activeBranchesCount]="activeBranchesCount()"
+    (close)="isUpgradePlanModalOpen.set(false)">
+  </app-plan-upgrade-modal>
+
+  <!-- MODAL: SEGUIMIENTO DE RUTA POR PEDIDO -->
+  <app-order-route-modal
+    [isOpen]="isOrderRouteModalOpen()"
+    [order]="selectedRouteOrder()"
+    [branch]="activeBranch()"
+    [rider]="getRiderById(selectedRouteOrder()?.driverId)"
+    [activeExchangeRate]="activeExchangeRate()"
+    [fallbackStoreName]="brandingForm.name"
+    (close)="closeOrderRouteModal()">
+  </app-order-route-modal>
+
+  <!-- MODAL: DETALLE COMPLETO DE PEDIDO -->
+  <app-order-detail-modal
+    [isOpen]="isOrderDetailModalOpen()"
+    [order]="selectedOrderDetail()"
+    [activeExchangeRate]="activeExchangeRate()"
+    (close)="closeOrderDetail()"
+    (viewRoute)="onViewOrderRoute($event)">
+  </app-order-detail-modal>
+
+  <!-- MODAL: CREAR / EDITAR COLABORADOR & CONFLICTO DE CORREO -->
+  <app-user-form-modal
+    [isOpen]="isUserModalOpen()"
+    [isEditing]="isEditingUser()"
+    [userForm]="userForm"
+    [formError]="userFormError()"
+    [isSaving]="isSavingUser()"
+    [activeBranch]="activeBranch()"
+    [conflictData]="conflictModalData()"
+    (close)="closeUserModal()"
+    (save)="saveStoreUser()"
+    (closeConflict)="closeConflictModal()">
+  </app-user-form-modal>
+
+
+</div>
+

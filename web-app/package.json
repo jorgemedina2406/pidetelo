@@ -1,0 +1,46 @@
+{
+  "name": "web-app",
+  "version": "0.0.0",
+  "scripts": {
+    "ng": "node ./node_modules/@angular/cli/bin/ng.js",
+    "start": "node ./node_modules/@angular/cli/bin/ng.js serve --port 4200",
+    "build": "cross-env NG_BUILD_OPTIMIZE_CHUNKS=false node ./node_modules/@angular/cli/bin/ng.js build",
+    "build:prod": "cross-env NG_BUILD_OPTIMIZE_CHUNKS=false node ./node_modules/@angular/cli/bin/ng.js build --configuration production",
+    "watch": "ng build --watch --configuration development",
+    "test": "ng test"
+  },
+  "private": true,
+  "packageManager": "npm@10.5.0",
+  "dependencies": {
+    "@angular/common": "^22.0.0",
+    "@angular/compiler": "^22.0.0",
+    "@angular/core": "^22.0.0",
+    "@angular/forms": "^22.0.0",
+    "@angular/platform-browser": "^22.0.0",
+    "@angular/router": "^22.0.0",
+    "@ngrx/signals": "^22.0.1",
+    "@supabase/supabase-js": "^2.118.0",
+    "@types/leaflet": "^1.9.22",
+    "leaflet": "^1.9.4",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@angular/build": "^22.2.2",
+    "@angular/cli": "^22.0.5",
+    "@angular/compiler-cli": "^22.0.0",
+    "autoprefixer": "^10.6.1",
+    "cross-env": "^7.0.3",
+    "jsdom": "^28.0.0",
+    "postcss": "^8.5.30",
+    "prettier": "^3.8.1",
+    "tailwindcss": "^3.4.19",
+    "typescript": "~6.0.2",
+    "vitest": "^4.0.8"
+  },
+  "overrides": {
+    "rolldown": "^1.2.14",
+    "@rolldown/binding-win32-x64-msvc": "^1.2.14"
+  }
+}

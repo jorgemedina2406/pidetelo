@@ -1,0 +1,142 @@
+@if (product) {
+      <div class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in"
+           (click)="closeModal()">
+        
+        <div class="bg-white w-full max-w-lg rounded-t-3xl sm:rounded-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-slide-up"
+             (click)="$event.stopPropagation()">
+          
+          <!-- Product Image Banner -->
+          <div class="relative h-56 sm:h-64 w-full bg-slate-100 flex-shrink-0">
+            <img [src]="product.imageUrl" [alt]="product.name" class="w-full h-full object-cover" />
+            <button (click)="closeModal()" 
+                    class="absolute top-4 right-4 w-9 h-9 rounded-full bg-slate-900/50 hover:bg-slate-900/70 text-white flex items-center justify-center backdrop-blur-md transition-all">
+              ✕
+            </button>
+            @if (product.tags?.length) {
+              <div class="absolute bottom-3 left-4 flex gap-1.5">
+                @for (tag of product.tags; track tag) {
+                  <span class="px-2.5 py-1 text-xs font-bold rounded-full bg-brand-500 text-white shadow-sm">
+                    {{ tag }}
+                  </span>
+                }
+              </div>
+            }
+          </div>
+
+          <!-- Body Scrollable Content -->
+          <div class="p-5 overflow-y-auto flex-1 space-y-6">
+            <div>
+              <div class="flex items-start justify-between gap-4">
+                <h3 class="text-xl font-bold text-slate-900">{{ product.name }}</h3>
+                <div class="text-right">
+                  <span class="text-xl font-extrabold text-brand-600 block">
+                    ${{ product.price.toFixed(2) }}
+                  </span>
+                  <span class="text-xs font-semibold text-slate-500 block">
+                    ≈ Bs. {{ (product.price * cart.exchangeRate()).toFixed(2) }}
+                  </span>
+                </div>
+              </div>
+              <p class="mt-2 text-sm text-slate-600 leading-relaxed">
+                {{ product.description }}
+              </p>
+            </div>
+
+            <!-- Modifiers Groups -->
+            @for (group of product.modifierGroups; track group.id) {
+              <div class="border-t border-slate-100 pt-4">
+                <div class="flex items-center justify-between mb-3">
+                  <div>
+                    <h4 class="font-bold text-slate-900 text-sm">{{ group.title }}</h4>
+                    @if (group.minSelections === 1 && group.maxSelections === 1) {
+                      <span class="text-xs text-brand-600 font-semibold">Obligatorio (Elige 1)</span>
+                    } @else if (group.minSelections === 0) {
+                      <span class="text-xs text-slate-500 font-medium">Opcional (Hasta {{ group.maxSelections }} extras)</span>
+                    } @else if (group.minSelections > 0 && group.minSelections === group.maxSelections) {
+                      <span class="text-xs text-brand-600 font-semibold">Obligatorio (Elige exactamente {{ group.minSelections }})</span>
+                    } @else {
+                      <span class="text-xs text-brand-600 font-semibold">Obligatorio (Elige al menos {{ group.minSelections }} de {{ group.options.length }})</span>
+                    }
+                  </div>
+
+                  <div>
+                    @if (isGroupComplete(group)) {
+                      <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 flex items-center gap-1">
+                        <span>✓ Listo</span>
+                        @if (group.maxSelections > 1) {
+                          <span>({{ getSelectedCountInGroup(group.id) }}/{{ group.maxSelections }})</span>
+                        }
+                      </span>
+                    } @else {
+                      <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
+                        Faltan {{ getMissingCount(group) }} requeridos
+                      </span>
+                    }
+                  </div>
+                </div>
+
+                <div class="space-y-2">
+                  @for (option of group.options; track option.id) {
+                    <label class="flex items-center justify-between p-3 rounded-xl border border-slate-200/80 hover:border-brand-500/50 hover:bg-brand-50/20 cursor-pointer transition-all"
+                           [class.border-brand-500]="isOptionSelected(group.id, option.id)"
+                           [class.bg-brand-50]="isOptionSelected(group.id, option.id)">
+                      <div class="flex items-center gap-3">
+                        <input [type]="group.maxSelections === 1 ? 'radio' : 'checkbox'" 
+                               [name]="group.id"
+                               [checked]="isOptionSelected(group.id, option.id)"
+                               (change)="toggleModifier(group, option)"
+                               class="accent-brand-500 w-4 h-4 cursor-pointer" />
+                        <span class="text-sm font-medium text-slate-800">{{ option.name }}</span>
+                      </div>
+                      <span class="text-xs font-bold text-slate-600">
+                        {{ option.priceDelta > 0 ? '+\$' + option.priceDelta.toFixed(2) : 'Incluido' }}
+                      </span>
+                    </label>
+                  }
+                </div>
+              </div>
+            }
+
+            <!-- Special instructions -->
+            <div class="border-t border-slate-100 dark:border-slate-800 pt-4">
+              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
+                Instrucciones especiales para cocina
+              </label>
+              <textarea [(ngModel)]="notes" 
+                        placeholder="Ej: Sin cebolla, salsas aparte, etc."
+                        rows="2"
+                        class="w-full text-sm font-medium rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 p-3 shadow-xs focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500 transition-colors"></textarea>
+            </div>
+          </div>
+
+          <!-- Bottom Add to Cart Bar -->
+          <div class="p-4 bg-slate-50 border-t border-slate-200/80 flex items-center justify-between gap-4">
+            <!-- Quantity Counter -->
+            <div class="flex items-center bg-white border border-slate-200 rounded-xl px-2 py-1 shadow-sm">
+              <button (click)="decreaseQuantity()" 
+                      [disabled]="quantity() <= 1"
+                      class="w-8 h-8 flex items-center justify-center font-bold text-slate-600 hover:text-brand-600 disabled:opacity-30">
+                -
+              </button>
+              <span class="w-8 text-center font-bold text-slate-800 text-sm">{{ quantity() }}</span>
+              <button (click)="increaseQuantity()" 
+                      class="w-8 h-8 flex items-center justify-center font-bold text-slate-600 hover:text-brand-600">
+                +
+              </button>
+            </div>
+
+            <!-- Submit Button with Dynamic Total -->
+            <button (click)="confirmAdd()"
+                    [disabled]="!isValidSelection()"
+                    class="flex-1 bg-brand-500 hover:bg-brand-600 active:scale-[0.99] disabled:opacity-50 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-brand-500/25 flex items-center justify-between transition-all cursor-pointer">
+              <span>{{ isValidSelection() ? 'Agregar al Pedido' : 'Completa las opciones requeridas' }}</span>
+              <div class="bg-black/20 px-2.5 py-1 rounded-lg text-right">
+                <span class="text-sm font-extrabold block leading-tight">${{ calculatedTotal().toFixed(2) }}</span>
+                <span class="text-[10px] text-white/80 block leading-tight">≈ {{ calculatedTotalVes() }} Bs.</span>
+              </div>
+            </button>
+          </div>
+
+        </div>
+      </div>
+    }
