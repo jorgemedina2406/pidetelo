@@ -51,6 +51,8 @@ export interface TenantCurrencySettings {
   lastRateUpdate?: string;
 }
 
+export type CurrencySettings = TenantCurrencySettings;
+
 export interface Tenant {
   id: string;
   slug: string; // Unique URL identifier: /t/:slug (e.g., 'burger-lab', 'tokyo-sushi')

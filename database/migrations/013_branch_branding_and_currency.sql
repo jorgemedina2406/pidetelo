@@ -22,3 +22,4 @@ COMMENT ON COLUMN public.branches.base_currency IS 'Moneda base de registro de l
 COMMENT ON COLUMN public.branches.display_mode IS 'Modo de visualización de precios para los clientes de esta sucursal';
 COMMENT ON COLUMN public.branches.currency_settings IS 'Configuración monetaria completa de la sucursal';
 COMMENT ON COLUMN public.branches.delivery_tiers IS 'Escalas de kilometraje y tarifas de envío específicas de la sucursal';
+
