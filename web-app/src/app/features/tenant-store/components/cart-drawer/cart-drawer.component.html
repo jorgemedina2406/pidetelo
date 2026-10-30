@@ -137,11 +137,22 @@
                   <div class="flex justify-between items-center">
                     <span>Delivery</span>
                     <div class="text-right">
-                      <span class="font-bold" [class.text-emerald-600]="cart.deliveryFee() === 0">
-                        {{ cart.deliveryFee() === 0 ? 'GRATIS' : '$' + cart.deliveryFee().toFixed(2) }}
-                      </span>
-                      @if (cart.deliveryFee() > 0) {
-                        <span class="text-[10px] text-slate-500 block">≈ Bs. {{ cart.deliveryFeeVes().toFixed(2) }}</span>
+                      @if (cart.fulfillmentType() === 'pickup') {
+                        <span class="font-bold text-emerald-600">GRATIS (Retiro)</span>
+                      } @else if (cart.isOutOfCoverage()) {
+                        <span class="font-bold text-rose-500 text-xs">Fuera de Cobertura ({{ cart.customerDistanceKm() }} km)</span>
+                      } @else if (cart.isLocationRequired()) {
+                        <span class="font-medium text-amber-600 text-xs">Calculando vía GPS...</span>
+                      } @else {
+                        <span class="font-bold" [class.text-emerald-600]="cart.deliveryFee() === 0">
+                          {{ cart.deliveryFee() === 0 ? 'GRATIS' : '$' + cart.deliveryFee().toFixed(2) }}
+                        </span>
+                        @if (cart.customerDistanceKm() !== null) {
+                          <span class="text-[10px] text-slate-400 block font-normal">{{ cart.customerDistanceKm() }} km</span>
+                        }
+                        @if (cart.deliveryFee() > 0) {
+                          <span class="text-[10px] text-slate-500 block">≈ Bs. {{ cart.deliveryFeeVes().toFixed(2) }}</span>
+                        }
                       }
                     </div>
                   </div>
@@ -159,12 +170,18 @@
 
                 @if (!cart.meetsMinOrder()) {
                   <p class="text-xs text-amber-600 font-semibold bg-amber-50 p-2 rounded-lg text-center">
-                    ⚠️ El pedido mínimo es de \${{ cart.activeTenant()?.deliverySettings?.minOrderAmount?.toFixed(2) }}
+                    ⚠️ El pedido mínimo es de ${{ cart.activeTenant()?.deliverySettings?.minOrderAmount?.toFixed(2) }}
+                  </p>
+                }
+
+                @if (cart.isOutOfCoverage()) {
+                  <p class="text-xs text-rose-700 bg-rose-50 border border-rose-200 p-2 rounded-lg text-center font-medium">
+                    🚫 Tu ubicación está a <strong>{{ cart.customerDistanceKm() }} km</strong> (máx. permitido {{ cart.maxCoverageRadiusKm() }} km). Cambia a "Retiro en Tienda" para continuar.
                   </p>
                 }
 
                 <button (click)="cart.openCheckout()"
-                        [disabled]="!cart.meetsMinOrder()"
+                        [disabled]="!cart.meetsMinOrder() || cart.isOutOfCoverage()"
                         class="w-full bg-brand-500 hover:bg-brand-600 active:scale-[0.99] disabled:opacity-50 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2 transition-all">
                   <span>Pedir Ahora</span>
                   <span class="font-normal text-xs opacity-80">(Paso rápido)</span>

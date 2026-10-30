@@ -1,3 +1,5 @@
+import { DeliveryTier } from './tenant.model';
+
 export type BranchStatus = 'pending_approval' | 'active' | 'inactive' | 'rejected';
 
 export interface BranchPaymentCredentials {
@@ -23,6 +25,7 @@ export interface Branch {
   longitude: number;
   deliveryRadiusKm: number;      // e.g. 8.0 km
   baseDeliveryFee: number;       // e.g. 2.50 USD
+  deliveryTiers?: DeliveryTier[];
   status: BranchStatus;
   phone?: string;
   whatsapp?: string;

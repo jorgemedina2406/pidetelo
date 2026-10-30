@@ -2,8 +2,17 @@ import { computed } from '@angular/core';
 import { signalStore, withState, withComputed, withMethods, patchState } from '@ngrx/signals';
 import { CartItem, CustomerInfo, FulfillmentType, Order, PaymentMethod, SelectedModifier } from '../../../core/models/order.model';
 import { Product } from '../../../core/models/product.model';
-import { Tenant } from '../../../core/models/tenant.model';
+import { Tenant, DeliveryTier } from '../../../core/models/tenant.model';
 import { Branch } from '../../../core/models/branch.model';
+
+export function calculateHaversineDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const p = 0.017453292519943295; // Math.PI / 180
+  const c = Math.cos;
+  const a = 0.5 - c((lat2 - lat1) * p) / 2 +
+            c(lat1 * p) * c(lat2 * p) *
+            (1 - c((lon2 - lon1) * p)) / 2;
+  return 12742 * Math.asin(Math.sqrt(Math.max(0, a)));
+}
 
 export interface CartState {
   items: CartItem[];
@@ -49,16 +58,95 @@ export const CartStore = signalStore(
       return Number(store.items().reduce((acc, item) => acc + item.itemTotal, 0).toFixed(2));
     });
 
-    const deliveryFee = computed(() => {
+    const storeCoordinates = computed(() => {
+      const branch = store.selectedBranch();
+      if (branch && branch.latitude && branch.longitude && !isNaN(Number(branch.latitude))) {
+        return { lat: Number(branch.latitude), lng: Number(branch.longitude) };
+      }
+      const tenant = store.activeTenant();
+      const tLat = Number((tenant as any)?.latitude ?? tenant?.contact?.coordinates?.lat);
+      const tLng = Number((tenant as any)?.longitude ?? tenant?.contact?.coordinates?.lng);
+      if (!isNaN(tLat) && !isNaN(tLng) && tLat !== 0 && tLng !== 0) {
+        return { lat: tLat, lng: tLng };
+      }
+      return null;
+    });
+
+    const customerCoordinates = computed(() => {
+      const c = store.customer();
+      if (c.deliveryLat && c.deliveryLng && !isNaN(Number(c.deliveryLat)) && !isNaN(Number(c.deliveryLng))) {
+        return { lat: Number(c.deliveryLat), lng: Number(c.deliveryLng) };
+      }
+      return null;
+    });
+
+    const customerDistanceKm = computed<number | null>(() => {
+      const s = storeCoordinates();
+      const c = customerCoordinates();
+      if (!s || !c) return null;
+      return Number(calculateHaversineDistanceKm(s.lat, s.lng, c.lat, c.lng).toFixed(1));
+    });
+
+    const maxCoverageRadiusKm = computed<number>(() => {
+      const branch = store.selectedBranch();
+      if (branch?.deliveryRadiusKm) return Number(branch.deliveryRadiusKm);
+      const tenant = store.activeTenant();
+      return Number(tenant?.deliverySettings?.deliveryRadiusKm) || 8.0;
+    });
+
+    const isOutOfCoverage = computed<boolean>(() => {
+      if (store.fulfillmentType() !== 'delivery') return false;
+      const dist = customerDistanceKm();
+      if (dist === null) return false;
+      return dist > maxCoverageRadiusKm();
+    });
+
+    const isLocationRequired = computed<boolean>(() => {
+      return store.fulfillmentType() === 'delivery' && !customerCoordinates();
+    });
+
+    const deliveryTiers = computed<DeliveryTier[]>(() => {
+      const branchTiers = store.selectedBranch()?.deliveryTiers;
+      if (Array.isArray(branchTiers) && branchTiers.length > 0) return branchTiers;
+      const tenantTiers = store.activeTenant()?.deliverySettings?.deliveryTiers || (store.activeTenant() as any)?.delivery_tiers;
+      if (Array.isArray(tenantTiers) && tenantTiers.length > 0) return tenantTiers;
+      return [
+        { id: 'tier_1', minKm: 0, maxKm: 2, price: 1.50 },
+        { id: 'tier_2', minKm: 2, maxKm: 5, price: 3.00 },
+        { id: 'tier_3', minKm: 5, maxKm: 8, price: 4.50 }
+      ];
+    });
+
+    const appliedDeliveryTier = computed<DeliveryTier | null>(() => {
+      const dist = customerDistanceKm();
+      if (dist === null) return null;
+      const tiers = deliveryTiers();
+      const match = tiers.find(t => dist >= t.minKm && dist <= t.maxKm);
+      if (match) return match;
+      if (tiers.length > 0) {
+        const maxTier = tiers.reduce((prev, curr) => (curr.maxKm > prev.maxKm ? curr : prev), tiers[0]);
+        if (dist > maxTier.maxKm) return maxTier;
+      }
+      return null;
+    });
+
+    const deliveryFee = computed<number>(() => {
       const tenant = store.activeTenant();
       if (!tenant || store.fulfillmentType() === 'pickup') {
         return 0;
       }
       const settings = tenant.deliverySettings;
-      if (settings.freeDeliveryThreshold && subtotal() >= settings.freeDeliveryThreshold) {
+      if (settings?.freeDeliveryThreshold && subtotal() >= settings.freeDeliveryThreshold) {
         return 0;
       }
-      return settings.baseDeliveryFee;
+      if (isOutOfCoverage()) {
+        return 0;
+      }
+      const tier = appliedDeliveryTier();
+      if (tier) {
+        return Number(tier.price.toFixed(2));
+      }
+      return settings?.baseDeliveryFee ?? 2.50;
     });
 
     const total = computed(() => {
@@ -66,7 +154,7 @@ export const CartStore = signalStore(
     });
 
     const meetsMinOrder = computed(() => {
-      const minAmount = store.activeTenant()?.deliverySettings.minOrderAmount ?? 0;
+      const minAmount = store.activeTenant()?.deliverySettings?.minOrderAmount ?? 0;
       return subtotal() >= minAmount;
     });
 
@@ -74,7 +162,12 @@ export const CartStore = signalStore(
       const c = store.customer();
       const hasBasic = c.name.trim().length >= 2 && c.phone.trim().length >= 7;
       if (store.fulfillmentType() === 'delivery') {
-        return hasBasic && (c.deliveryAddress?.trim().length ?? 0) >= 5;
+        return (
+          hasBasic &&
+          (c.deliveryAddress?.trim().length ?? 0) >= 5 &&
+          Boolean(c.deliveryLat && c.deliveryLng) &&
+          !isOutOfCoverage()
+        );
       }
       return hasBasic;
     });
@@ -98,6 +191,14 @@ export const CartStore = signalStore(
     return {
       totalItemsCount,
       subtotal,
+      storeCoordinates,
+      customerCoordinates,
+      customerDistanceKm,
+      maxCoverageRadiusKm,
+      isOutOfCoverage,
+      isLocationRequired,
+      deliveryTiers,
+      appliedDeliveryTier,
       deliveryFee,
       total,
       meetsMinOrder,
@@ -110,7 +211,24 @@ export const CartStore = signalStore(
   }),
   withMethods((store) => ({
     setTenant(tenant: Tenant): void {
-      patchState(store, { activeTenant: tenant });
+      let cust = store.customer();
+      if ((!cust.deliveryLat || !cust.deliveryLng) && typeof window !== 'undefined') {
+        try {
+          const savedZone = localStorage.getItem('deliveryhub_customer_zone');
+          if (savedZone) {
+            const z = JSON.parse(savedZone);
+            if (z.lat && z.lng) {
+              cust = {
+                ...cust,
+                deliveryLat: Number(z.lat),
+                deliveryLng: Number(z.lng),
+                deliveryAddress: cust.deliveryAddress || z.name || ''
+              };
+            }
+          }
+        } catch (_) {}
+      }
+      patchState(store, { activeTenant: tenant, customer: cust });
     },
 
     addItem(product: Product, quantity: number, selectedModifiers: SelectedModifier[], notes?: string): void {

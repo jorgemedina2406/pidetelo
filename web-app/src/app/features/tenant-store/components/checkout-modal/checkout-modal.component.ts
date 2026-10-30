@@ -41,6 +41,16 @@ export class CheckoutModalComponent {
           this.isDetectingGps.set(false);
           this.gpsStatusMessage.set(`Ubicación GPS fijada (${lat}, ${lng})`);
 
+          try {
+            localStorage.setItem('deliveryhub_customer_zone', JSON.stringify({
+              id: 'gps-custom',
+              name: 'Mi Ubicación GPS',
+              lat,
+              lng,
+              isGps: true
+            }));
+          } catch (_) {}
+
           // Geocodificación inversa con OpenStreetMap Nominatim
           fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
             .then(res => res.json())

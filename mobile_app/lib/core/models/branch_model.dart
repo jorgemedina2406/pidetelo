@@ -1,5 +1,33 @@
 import 'dart:math' as math;
 
+class DeliveryTier {
+  final String id;
+  final double minKm;
+  final double maxKm;
+  final double price;
+
+  const DeliveryTier({
+    required this.id,
+    required this.minKm,
+    required this.maxKm,
+    required this.price,
+  });
+
+  factory DeliveryTier.fromJson(Map<String, dynamic> json) => DeliveryTier(
+    id: json['id']?.toString() ?? '',
+    minKm: (json['minKm'] as num?)?.toDouble() ?? (json['min_km'] as num?)?.toDouble() ?? 0.0,
+    maxKm: (json['maxKm'] as num?)?.toDouble() ?? (json['max_km'] as num?)?.toDouble() ?? 5.0,
+    price: (json['price'] as num?)?.toDouble() ?? 2.50,
+  );
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'minKm': minKm,
+    'maxKm': maxKm,
+    'price': price,
+  };
+}
+
 class BranchPaymentCredentials {
   final String pagoMovilBank;
   final String pagoMovilPhone;
@@ -60,6 +88,7 @@ class Branch {
   final double longitude;
   final double deliveryRadiusKm;
   final double baseDeliveryFee;
+  final List<DeliveryTier> deliveryTiers;
   final String status; // 'active', 'pending_approval', 'inactive', 'rejected'
   final String? phone;
   final String? whatsapp;
@@ -79,6 +108,11 @@ class Branch {
     required this.longitude,
     this.deliveryRadiusKm = 8.0,
     this.baseDeliveryFee = 2.50,
+    this.deliveryTiers = const [
+      DeliveryTier(id: 'tier_1', minKm: 0, maxKm: 2, price: 1.50),
+      DeliveryTier(id: 'tier_2', minKm: 2, maxKm: 5, price: 3.00),
+      DeliveryTier(id: 'tier_3', minKm: 5, maxKm: 8, price: 4.50),
+    ],
     this.status = 'active',
     this.phone,
     this.whatsapp,
@@ -146,6 +180,15 @@ class Branch {
                 zelleAccountName: null,
               );
 
+    final rawTiers = json['delivery_tiers'] ?? json['deliveryTiers'];
+    final List<DeliveryTier> parsedTiers = (rawTiers is List && rawTiers.isNotEmpty)
+        ? rawTiers.map((t) => DeliveryTier.fromJson(Map<String, dynamic>.from(t as Map))).toList()
+        : const [
+            DeliveryTier(id: 'tier_1', minKm: 0, maxKm: 2, price: 1.50),
+            DeliveryTier(id: 'tier_2', minKm: 2, maxKm: 5, price: 3.00),
+            DeliveryTier(id: 'tier_3', minKm: 5, maxKm: 8, price: 4.50),
+          ];
+
     return Branch(
       id: json['id'] ?? '',
       companyId: json['company_id'] ?? json['companyId'] ?? '',
@@ -161,6 +204,7 @@ class Branch {
       baseDeliveryFee: (json['base_delivery_fee'] as num?)?.toDouble() ??
           (json['baseDeliveryFee'] as num?)?.toDouble() ??
           2.50,
+      deliveryTiers: parsedTiers,
       status: json['status'] ?? 'active',
       phone: json['phone'],
       whatsapp: json['whatsapp'],

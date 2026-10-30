@@ -554,6 +554,9 @@ export class ApiService {
           if (updateData.longitude !== undefined) supabasePayload.longitude = Number(updateData.longitude);
           if (updateData.delivery_radius_km !== undefined) supabasePayload.delivery_radius_km = Number(updateData.delivery_radius_km);
           if (updateData.base_delivery_fee !== undefined) supabasePayload.base_delivery_fee = Number(updateData.base_delivery_fee);
+          if (updateData.delivery_tiers !== undefined || updateData.deliveryTiers !== undefined) {
+            supabasePayload.delivery_tiers = updateData.delivery_tiers || updateData.deliveryTiers;
+          }
 
           const { data } = await client.from('tenants').update(supabasePayload).eq('id', id).select('*').maybeSingle();
           return data;
@@ -693,6 +696,11 @@ export class ApiService {
         hasPickup: true,
         deliveryRadiusKm: Number(row.delivery_radius_km ?? row.deliveryRadiusKm ?? row.delivery_radius) || 8.0,
         baseDeliveryFee: Number(row.base_delivery_fee) || 2.50,
+        deliveryTiers: (Array.isArray(row.delivery_tiers) ? row.delivery_tiers : (Array.isArray(row.deliveryTiers) ? row.deliveryTiers : null)) || [
+          { id: 'tier_1', minKm: 0, maxKm: 2, price: 1.50 },
+          { id: 'tier_2', minKm: 2, maxKm: 5, price: 3.00 },
+          { id: 'tier_3', minKm: 5, maxKm: 8, price: 4.50 }
+        ],
         estimatedDeliveryMinMinutes: 30,
         estimatedDeliveryMaxMinutes: 45,
         freeDeliveryThreshold: 25.00,
@@ -1214,6 +1222,11 @@ export class ApiService {
       longitude: Number(r.longitude),
       deliveryRadiusKm: Number(r.delivery_radius_km || r.deliveryRadiusKm) || 8.0,
       baseDeliveryFee: Number(r.base_delivery_fee || r.baseDeliveryFee) || 2.50,
+      deliveryTiers: (Array.isArray(r.delivery_tiers) ? r.delivery_tiers : (Array.isArray(r.deliveryTiers) ? r.deliveryTiers : null)) || [
+        { id: 'tier_1', minKm: 0, maxKm: 2, price: 1.50 },
+        { id: 'tier_2', minKm: 2, maxKm: 5, price: 3.00 },
+        { id: 'tier_3', minKm: 5, maxKm: 8, price: 4.50 }
+      ],
       status: r.status,
       rejectionReason: r.rejection_reason || r.rejectionReason,
       phone: r.phone,

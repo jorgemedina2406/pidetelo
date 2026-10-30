@@ -82,6 +82,41 @@
               </button>
             </div>
 
+            <!-- Location & Coverage Status Feedbacks -->
+            @if (cart.isLocationRequired()) {
+              <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 text-xs flex items-start gap-2">
+                <span class="text-base flex-shrink-0">📍</span>
+                <div>
+                  <strong class="font-bold block">Ubicación Requerida para Delivery</strong>
+                  <span>Para calcular la tarifa exacta por kilometraje y verificar la cobertura de entrega, presiona <strong>"Compartir mi GPS"</strong>.</span>
+                </div>
+              </div>
+            } @else if (cart.isOutOfCoverage()) {
+              <div class="p-3 rounded-xl bg-rose-500/10 border border-rose-500/25 text-rose-700 dark:text-rose-300 text-xs flex items-start gap-2">
+                <span class="text-base flex-shrink-0">🚫</span>
+                <div>
+                  <strong class="font-bold block">Fuera de Zona de Cobertura</strong>
+                  <span>Tu ubicación está a <strong>{{ cart.customerDistanceKm() }} km</strong> del comercio. El radio máximo de entrega es de <strong>{{ cart.maxCoverageRadiusKm() }} km</strong>.</span>
+                  <div class="mt-1 font-semibold text-rose-800 dark:text-rose-200">
+                    Cambia a "Retiro en Tienda" (Pickup) o indica otra dirección.
+                  </div>
+                </div>
+              </div>
+            } @else if (cart.customerDistanceKm() !== null) {
+              <div class="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 dark:text-emerald-200 text-xs flex items-center justify-between flex-wrap gap-2">
+                <div class="flex items-center gap-1.5 font-bold">
+                  <span>🛵</span>
+                  <span>Distancia: {{ cart.customerDistanceKm() }} km</span>
+                  <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-mono">
+                    Rango {{ cart.appliedDeliveryTier()?.minKm }} - {{ cart.appliedDeliveryTier()?.maxKm }} km
+                  </span>
+                </div>
+                <span class="font-extrabold text-brand-600 dark:text-brand-400">
+                  Tarifa: ${{ cart.deliveryFee().toFixed(2) }}
+                </span>
+              </div>
+            }
+
             @if (gpsStatusMessage()) {
               <div class="text-[11px] font-medium px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5">
                 <span>🛰️</span>
@@ -156,15 +191,41 @@
       </div>
 
       <!-- Bottom Confirm Button -->
-      <div class="p-4 bg-slate-50 dark:bg-slate-850 border-t border-slate-200/80 dark:border-slate-800">
-        <div class="flex items-center justify-between text-xs text-slate-600 dark:text-slate-300 mb-3">
-          <div>
-            <span class="font-medium text-slate-700 dark:text-slate-200 block">Total a confirmar:</span>
-            <span class="text-[10px] text-slate-400 dark:text-slate-500">Tasa del día: {{ cart.exchangeRate() }} Bs/$</span>
+      <div class="p-4 bg-slate-50 dark:bg-slate-850 border-t border-slate-200/80 dark:border-slate-800 space-y-3">
+        <!-- Breakdown Summary -->
+        <div class="space-y-1 text-xs text-slate-600 dark:text-slate-300">
+          <div class="flex justify-between items-center">
+            <span>Subtotal:</span>
+            <span class="font-bold text-slate-800 dark:text-white">${{ cart.subtotal().toFixed(2) }}</span>
           </div>
-          <div class="text-right">
-            <span class="text-base font-extrabold text-brand-600 dark:text-brand-400 block">${{ cart.total().toFixed(2) }}</span>
-            <span class="text-xs font-bold text-slate-700 dark:text-slate-200 block">≈ Bs. {{ cart.totalVes().toFixed(2) }}</span>
+
+          <div class="flex justify-between items-center">
+            <span>Costo de Delivery:</span>
+            @if (cart.fulfillmentType() === 'pickup') {
+              <span class="font-bold text-emerald-600">GRATIS (Retiro)</span>
+            } @else if (cart.isOutOfCoverage()) {
+              <span class="font-bold text-rose-500">Fuera de Cobertura</span>
+            } @else if (cart.isLocationRequired()) {
+              <span class="font-bold text-amber-500">Pendiente de GPS</span>
+            } @else {
+              <span class="font-bold text-slate-800 dark:text-white">
+                ${{ cart.deliveryFee().toFixed(2) }}
+                @if (cart.customerDistanceKm() !== null) {
+                  <span class="text-[10px] text-slate-400 font-normal">({{ cart.customerDistanceKm() }} km)</span>
+                }
+              </span>
+            }
+          </div>
+
+          <div class="flex items-center justify-between pt-1 border-t border-slate-200 dark:border-slate-700 font-bold">
+            <div>
+              <span class="text-sm font-extrabold text-slate-900 dark:text-white block">Total a Pagar:</span>
+              <span class="text-[10px] text-slate-400 dark:text-slate-500 font-normal">Tasa del día: {{ cart.exchangeRate() }} Bs/$</span>
+            </div>
+            <div class="text-right">
+              <span class="text-base font-extrabold text-brand-600 dark:text-brand-400 block">${{ cart.total().toFixed(2) }}</span>
+              <span class="text-xs font-bold text-slate-700 dark:text-slate-200 block">≈ Bs. {{ cart.totalVes().toFixed(2) }}</span>
+            </div>
           </div>
         </div>
 
@@ -174,6 +235,10 @@
           @if (isSubmitting()) {
             <span class="inline-block animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></span>
             <span>Registrando pedido...</span>
+          } @else if (cart.fulfillmentType() === 'delivery' && cart.isLocationRequired()) {
+            <span>📍 Fija tu ubicación GPS para continuar</span>
+          } @else if (cart.fulfillmentType() === 'delivery' && cart.isOutOfCoverage()) {
+            <span>🚫 Fuera de Cobertura para Delivery</span>
           } @else {
             <span>💬 Confirmar Pedido por WhatsApp</span>
           }

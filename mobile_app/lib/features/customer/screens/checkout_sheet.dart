@@ -132,6 +132,16 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
   void _confirmOrder(BuildContext context, CartService cart) {
     if (cart.items.isEmpty) return;
 
+    if (cart.isOutOfCoverage) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Tu dirección está a ${cart.distanceToCurrentBranchKm ?? 0} km, fuera de la zona de cobertura.'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
     String paymentLabel = 'Pago Móvil';
     if (_selectedPayment == 'efectivo') {
       paymentLabel = _cashAmountController.text.isNotEmpty
@@ -740,7 +750,11 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                                 const SizedBox(height: 8),
                                 _buildPriceRow(
                                   'Costo de envío',
-                                  '\$${cart.deliveryFee.toStringAsFixed(2)}',
+                                  cart.isOutOfCoverage
+                                      ? 'Fuera de Cobertura'
+                                      : (cart.distanceToCurrentBranchKm != null
+                                          ? '\$${cart.deliveryFee.toStringAsFixed(2)} (${cart.distanceToCurrentBranchKm} km)'
+                                          : '\$${cart.deliveryFee.toStringAsFixed(2)}'),
                                 ),
                                 const Divider(color: Colors.white12, height: 16),
                                 _buildPriceRow(
@@ -784,18 +798,18 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
                   child: ElevatedButton(
-                    onPressed: () => _confirmOrder(context, cart),
+                    onPressed: cart.isOutOfCoverage ? null : () => _confirmOrder(context, cart),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primary,
+                      backgroundColor: cart.isOutOfCoverage ? Colors.grey : AppTheme.primary,
                       minimumSize: const Size(double.infinity, 54),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      elevation: 4,
+                      elevation: cart.isOutOfCoverage ? 0 : 4,
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Confirmar Pedido',
+                          cart.isOutOfCoverage ? 'Fuera de Cobertura' : 'Confirmar Pedido',
                           style: GoogleFonts.outfit(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,

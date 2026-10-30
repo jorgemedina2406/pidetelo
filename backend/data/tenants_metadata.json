@@ -1,5 +1,14 @@
 {
   "0cefc844-f2f2-4fd6-ac8f-aefcd83dd91d": {
-    "tagline": ""
+    "tagline": "A la parrila sabe mejor",
+    "exchange_rate": 45.5,
+    "base_currency": "USD",
+    "display_mode": "usd_and_bs",
+    "currency_settings": {
+      "baseCurrency": "USD",
+      "displayMode": "usd_and_bs",
+      "exchangeRate": 45.5,
+      "lastRateUpdate": "2026-10-30T00:01:31.910Z"
+    }
   }
 }

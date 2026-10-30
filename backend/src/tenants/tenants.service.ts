@@ -76,6 +76,13 @@ export class TenantsService {
       lastRateUpdate: meta.currency_settings?.lastRateUpdate || new Date().toISOString()
     };
 
+    const defaultDeliveryTiers = [
+      { id: 'tier_1', minKm: 0, maxKm: 2, price: 1.50 },
+      { id: 'tier_2', minKm: 2, maxKm: 5, price: 3.00 },
+      { id: 'tier_3', minKm: 5, maxKm: 8, price: 4.50 }
+    ];
+    const deliveryTiers = t.delivery_tiers ?? meta.delivery_tiers ?? meta.deliveryTiers ?? defaultDeliveryTiers;
+
     return {
       ...t,
       tagline,
@@ -84,6 +91,8 @@ export class TenantsService {
       display_mode: displayMode,
       currency_settings: currencySettings,
       currencySettings,
+      delivery_tiers: deliveryTiers,
+      deliveryTiers,
       branding: {
         accentColor: t.accent_color || '#f97316',
         logoUrl: t.logo_url || '',
@@ -140,6 +149,9 @@ export class TenantsService {
     if (updateData.exchange_rate !== undefined) metaToSave.exchange_rate = Number(updateData.exchange_rate);
     if (updateData.base_currency !== undefined) metaToSave.base_currency = updateData.base_currency;
     if (updateData.display_mode !== undefined) metaToSave.display_mode = updateData.display_mode;
+    if (updateData.delivery_tiers !== undefined || updateData.deliveryTiers !== undefined) {
+      metaToSave.delivery_tiers = updateData.delivery_tiers || updateData.deliveryTiers;
+    }
     if (updateData.currency_settings !== undefined || updateData.currencySettings !== undefined) {
       metaToSave.currency_settings = updateData.currency_settings || updateData.currencySettings;
       if (metaToSave.currency_settings?.exchangeRate) {
@@ -161,7 +173,7 @@ export class TenantsService {
       'name', 'slug', 'business_name', 'tax_id', 'phone', 'whatsapp_number',
       'email', 'logo_url', 'banner_url', 'accent_color', 'address',
       'latitude', 'longitude', 'delivery_radius_km', 'base_delivery_fee',
-      'min_order_amount', 'commission_percentage', 'is_active',
+      'delivery_tiers', 'min_order_amount', 'commission_percentage', 'is_active',
       'subscription_plan_id', 'subscription_status'
     ]);
 
@@ -170,6 +182,9 @@ export class TenantsService {
       if (allowedColumns.has(key) && value !== undefined) {
         cleanPayload[key] = value;
       }
+    }
+    if (updateData.deliveryTiers !== undefined && cleanPayload.delivery_tiers === undefined) {
+      cleanPayload.delivery_tiers = updateData.deliveryTiers;
     }
 
     const { data, error } = await this.supabase
@@ -195,6 +210,9 @@ export class TenantsService {
       if (updateData.base_delivery_fee !== undefined) branchUpdate.base_delivery_fee = Number(updateData.base_delivery_fee);
       if (updateData.phone !== undefined) branchUpdate.phone = updateData.phone;
       if (updateData.whatsapp_number !== undefined) branchUpdate.whatsapp_number = updateData.whatsapp_number;
+      if (updateData.delivery_tiers !== undefined || updateData.deliveryTiers !== undefined) {
+        branchUpdate.delivery_tiers = updateData.delivery_tiers || updateData.deliveryTiers;
+      }
 
       if (Object.keys(branchUpdate).length > 1) {
         await this.supabase

@@ -9,7 +9,7 @@ import { I18nService } from '../../core/services/i18n.service';
 import { Product, ProductModifierGroup, ProductCategory } from '../../core/models/product.model';
 import { Order, OrderStatus } from '../../core/models/order.model';
 import { AppUser, UserRole } from '../../core/models/user.model';
-import { Tenant, CurrencyDisplayMode } from '../../core/models/tenant.model';
+import { Tenant, CurrencyDisplayMode, DeliveryTier } from '../../core/models/tenant.model';
 import { Branch, SubscriptionPlan } from '../../core/models/branch.model';
 import { IconComponent } from '../../shared/components/icon.component';
 import { CARACAS_DELIVERY_ROUTE } from '../../core/constants/street-route.data';
@@ -242,10 +242,43 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     longitude: -69.248200,
     baseDeliveryFee: 2.50,
     deliveryRadiusKm: 8.0,
+    deliveryTiers: [
+      { id: 'tier_1', minKm: 0, maxKm: 2, price: 1.50 },
+      { id: 'tier_2', minKm: 2, maxKm: 5, price: 3.00 },
+      { id: 'tier_3', minKm: 5, maxKm: 8, price: 4.50 }
+    ] as DeliveryTier[],
     baseCurrency: 'USD' as 'USD' | 'VES',
     displayMode: 'usd_and_bs' as CurrencyDisplayMode,
     exchangeRate: 45.50
   };
+
+  addDeliveryTier(): void {
+    const tiers = this.brandingForm.deliveryTiers;
+    const lastTier = tiers.length > 0 ? tiers[tiers.length - 1] : null;
+    const nextMin = lastTier ? Number(lastTier.maxKm) : 0;
+    const nextMax = nextMin + 3;
+    const nextPrice = lastTier ? Number((lastTier.price + 1.50).toFixed(2)) : 2.50;
+    const newTier: DeliveryTier = {
+      id: 'tier_' + Date.now(),
+      minKm: nextMin,
+      maxKm: nextMax,
+      price: nextPrice
+    };
+    this.brandingForm.deliveryTiers = [...tiers, newTier];
+    if (this.brandingForm.deliveryRadiusKm < nextMax) {
+      this.brandingForm.deliveryRadiusKm = nextMax;
+    }
+  }
+
+  removeDeliveryTier(index: number): void {
+    if (this.brandingForm.deliveryTiers.length <= 1) {
+      alert('Debes mantener al menos un rango de tarifa de delivery.');
+      return;
+    }
+    const updated = [...this.brandingForm.deliveryTiers];
+    updated.splice(index, 1);
+    this.brandingForm.deliveryTiers = updated;
+  }
 
   readonly isDetectingStoreGps = signal(false);
   readonly storeGpsMessage = signal<string | null>(null);
@@ -656,6 +689,11 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
           if (parsed.exchangeRate) this.brandingForm.exchangeRate = parsed.exchangeRate;
           if (parsed.baseCurrency) this.brandingForm.baseCurrency = parsed.baseCurrency;
           if (parsed.displayMode) this.brandingForm.displayMode = parsed.displayMode;
+          if (Array.isArray(parsed.deliveryTiers) && parsed.deliveryTiers.length > 0) {
+            this.brandingForm.deliveryTiers = parsed.deliveryTiers;
+          }
+          if (parsed.deliveryRadiusKm) this.brandingForm.deliveryRadiusKm = Number(parsed.deliveryRadiusKm);
+          if (parsed.baseDeliveryFee) this.brandingForm.baseDeliveryFee = Number(parsed.baseDeliveryFee);
         }
       } catch (_) {}
 
@@ -685,6 +723,10 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
             this.brandingForm.deliveryRadiusKm = tenant.deliverySettings.deliveryRadiusKm;
           }
           this.brandingForm.baseDeliveryFee = tenant.deliverySettings?.baseDeliveryFee ?? 2.50;
+          const tiers = tenant.deliverySettings?.deliveryTiers || (tenant as any).delivery_tiers;
+          if (Array.isArray(tiers) && tiers.length > 0) {
+            this.brandingForm.deliveryTiers = tiers;
+          }
           const curr = tenant.currencySettings || (tenant as any).currency_settings;
           if (curr?.exchangeRate || (tenant as any).exchange_rate) {
             this.brandingForm.exchangeRate = Number(curr?.exchangeRate ?? (tenant as any).exchange_rate);
@@ -1925,7 +1967,8 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       deliverySettings: {
         ...prev.deliverySettings,
         baseDeliveryFee: Number(this.brandingForm.baseDeliveryFee),
-        deliveryRadiusKm: Number(this.brandingForm.deliveryRadiusKm)
+        deliveryRadiusKm: Number(this.brandingForm.deliveryRadiusKm),
+        deliveryTiers: this.brandingForm.deliveryTiers
       }
     }));
 
@@ -1939,6 +1982,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
           longitude: Number(this.brandingForm.longitude),
           deliveryRadiusKm: Number(this.brandingForm.deliveryRadiusKm),
           baseDeliveryFee: Number(this.brandingForm.baseDeliveryFee),
+          deliveryTiers: this.brandingForm.deliveryTiers,
           phone: this.brandingForm.phone,
           whatsapp: this.brandingForm.whatsappNumber
         };
@@ -1960,6 +2004,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       longitude: Number(this.brandingForm.longitude),
       delivery_radius_km: Number(this.brandingForm.deliveryRadiusKm),
       base_delivery_fee: Number(this.brandingForm.baseDeliveryFee),
+      delivery_tiers: this.brandingForm.deliveryTiers,
       exchange_rate: Number(this.brandingForm.exchangeRate),
       base_currency: this.brandingForm.baseCurrency,
       display_mode: this.brandingForm.displayMode,

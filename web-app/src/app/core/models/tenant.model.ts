@@ -15,11 +15,19 @@ export interface TenantContact {
   };
 }
 
+export interface DeliveryTier {
+  id: string;
+  minKm: number;
+  maxKm: number;
+  price: number;
+}
+
 export interface TenantDeliverySettings {
   hasDelivery: boolean;
   hasPickup: boolean;
   baseDeliveryFee: number;
   deliveryRadiusKm?: number;
+  deliveryTiers?: DeliveryTier[];
   estimatedDeliveryMinMinutes: number;
   estimatedDeliveryMaxMinutes: number;
   freeDeliveryThreshold?: number;
@@ -60,6 +68,7 @@ export interface Tenant {
   businessHours: TenantBusinessHours;
   branding: TenantBranding;
   currencySettings: TenantCurrencySettings;
+  deliveryTiers?: DeliveryTier[];
   subscriptionPlanId?: 'EMPRENDEDOR' | 'COMERCIO' | 'CORPORATIVO';
   commissionPercentage?: number;
   branches?: any[];

@@ -21,6 +21,7 @@ export interface TenantWithDistance extends Tenant {
   deliveryMinutesMin: number;
   deliveryMinutesMax: number;
   isWithinRange: boolean;
+  computedDeliveryFee: number;
 }
 
 @Component({
@@ -103,13 +104,26 @@ export class MarketplaceHomeComponent implements OnInit {
       const minMinutes = Math.max(15, Math.round((tenant.deliverySettings?.estimatedDeliveryMinMinutes || 25) + distance * 2.5));
       const maxMinutes = minMinutes + 15;
 
+      let computedFee = tenant.deliverySettings?.baseDeliveryFee || 2.50;
+      const tiers = tenant.deliverySettings?.deliveryTiers;
+      if (Array.isArray(tiers) && tiers.length > 0) {
+        const matchingTier = tiers.find(t => distance >= t.minKm && distance <= t.maxKm);
+        if (matchingTier) {
+          computedFee = matchingTier.price;
+        } else {
+          const maxTier = tiers.reduce((p, c) => (c.maxKm > p.maxKm ? c : p), tiers[0]);
+          if (distance > maxTier.maxKm) computedFee = maxTier.price;
+        }
+      }
+
       return {
         ...tenant,
         branches,
         distanceKm: distance,
         deliveryMinutesMin: minMinutes,
         deliveryMinutesMax: maxMinutes,
-        isWithinRange
+        isWithinRange,
+        computedDeliveryFee: Number(computedFee.toFixed(2))
       };
     });
   });
@@ -139,7 +153,7 @@ export class MarketplaceHomeComponent implements OnInit {
       if (this.sortBy === 'nearest') return a.distanceKm - b.distanceKm;
       if (this.sortBy === 'fastest') return a.deliveryMinutesMin - b.deliveryMinutesMin;
       if (this.sortBy === 'rating') return b.rating - a.rating;
-      if (this.sortBy === 'fee') return a.deliverySettings.baseDeliveryFee - b.deliverySettings.baseDeliveryFee;
+      if (this.sortBy === 'fee') return a.computedDeliveryFee - b.computedDeliveryFee;
       return 0;
     });
   });

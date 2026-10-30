@@ -660,6 +660,18 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 const SizedBox(height: 12),
 
                 ..._stores.where((store) {
+                  // Validación de radio de cobertura del comercio respecto a la ubicación del cliente
+                  final selectedAddr = CartService().selectedAddress;
+                  final storeLat = (store['lat'] as num?)?.toDouble() ?? (store['latitude'] as num?)?.toDouble();
+                  final storeLng = (store['lng'] as num?)?.toDouble() ?? (store['longitude'] as num?)?.toDouble();
+                  final maxRadius = (store['delivery_radius_km'] as num?)?.toDouble() ?? (store['deliveryRadiusKm'] as num?)?.toDouble() ?? 8.0;
+                  if (storeLat != null && storeLng != null && storeLat != 0 && storeLng != 0) {
+                    final dist = ApiService.calculateDistanceKm(storeLat, storeLng, selectedAddr.latitude, selectedAddr.longitude);
+                    if (dist > maxRadius) {
+                      return false; // Fuera del radio máximo de cobertura
+                    }
+                  }
+
                   if (_selectedCategory == 'Todos') return true;
                   final storeCat = (store['category'] ?? '').toString().toLowerCase();
                   final storeName = (store['name'] ?? '').toString().toLowerCase();
@@ -700,6 +712,25 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                     selectedAddr.latitude,
                     selectedAddr.longitude,
                   );
+
+                  final sLat = (store['lat'] as num?)?.toDouble() ?? (store['latitude'] as num?)?.toDouble();
+                  final sLng = (store['lng'] as num?)?.toDouble() ?? (store['longitude'] as num?)?.toDouble();
+                  final storeDist = (sLat != null && sLng != null && sLat != 0 && sLng != 0)
+                      ? ApiService.calculateDistanceKm(sLat, sLng, selectedAddr.latitude, selectedAddr.longitude)
+                      : null;
+                  double storeComputedFee = (store['base_delivery_fee'] as num?)?.toDouble() ?? (store['baseDeliveryFee'] as num?)?.toDouble() ?? 2.50;
+                  final rawTiers = store['delivery_tiers'] ?? store['deliveryTiers'];
+                  if (storeDist != null && rawTiers is List && rawTiers.isNotEmpty) {
+                    for (final t in rawTiers) {
+                      final minK = (t['minKm'] as num?)?.toDouble() ?? (t['min_km'] as num?)?.toDouble() ?? 0.0;
+                      final maxK = (t['maxKm'] as num?)?.toDouble() ?? (t['max_km'] as num?)?.toDouble() ?? 5.0;
+                      final p = (t['price'] as num?)?.toDouble() ?? 2.50;
+                      if (storeDist >= minK && storeDist <= maxK) {
+                        storeComputedFee = p;
+                        break;
+                      }
+                    }
+                  }
 
                   return Container(
                     margin: const EdgeInsets.only(bottom: 14),
@@ -886,7 +917,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                                       const Icon(Icons.delivery_dining_rounded, size: 15, color: Colors.grey),
                                       const SizedBox(width: 4),
                                       Text(
-                                        'Envío: ${store['fee'] ?? "\$2.50"}',
+                                        'Envío: \$${storeComputedFee.toStringAsFixed(2)}${storeDist != null ? " (${storeDist.toStringAsFixed(1)} km)" : ""}',
                                         style: GoogleFonts.outfit(fontSize: 11.5, color: Colors.grey),
                                       ),
                                       if (store['branches'] is List && (store['branches'] as List).length > 1) ...[

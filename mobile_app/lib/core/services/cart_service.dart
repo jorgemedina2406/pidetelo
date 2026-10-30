@@ -109,12 +109,43 @@ class CartService extends ChangeNotifier {
 
   int get totalItemCount => _items.fold(0, (sum, item) => sum + item.quantity);
   double get subtotal => _items.fold(0.0, (sum, item) => sum + item.totalPrice);
+
+  double? get distanceToCurrentBranchKm {
+    if (_currentBranch == null) return null;
+    return double.parse(_currentBranch!.distanceKmTo(_selectedAddress.latitude, _selectedAddress.longitude).toStringAsFixed(1));
+  }
+
+  bool get isOutOfCoverage {
+    if (_currentBranch == null) return false;
+    final dist = distanceToCurrentBranchKm;
+    if (dist == null) return false;
+    return dist > _currentBranch!.deliveryRadiusKm;
+  }
+
+  DeliveryTier? get appliedDeliveryTier {
+    final dist = distanceToCurrentBranchKm;
+    if (dist == null || _currentBranch == null) return null;
+    for (final tier in _currentBranch!.deliveryTiers) {
+      if (dist >= tier.minKm && dist <= tier.maxKm) {
+        return tier;
+      }
+    }
+    if (_currentBranch!.deliveryTiers.isNotEmpty) {
+      final maxTier = _currentBranch!.deliveryTiers.reduce((a, b) => a.maxKm > b.maxKm ? a : b);
+      if (dist > maxTier.maxKm) return maxTier;
+    }
+    return null;
+  }
+
   double get deliveryFee {
     if (_items.isEmpty) return 0.0;
+    if (isOutOfCoverage) return 0.0;
+    final tier = appliedDeliveryTier;
+    if (tier != null) {
+      return tier.price;
+    }
     if (_currentBranch != null) {
-      final dist = _currentBranch!.distanceKmTo(_selectedAddress.latitude, _selectedAddress.longitude);
-      final extraKm = (dist - 3.0) > 0 ? (dist - 3.0) : 0.0;
-      return double.parse((_currentBranch!.baseDeliveryFee + (extraKm * 0.35)).toStringAsFixed(2));
+      return _currentBranch!.baseDeliveryFee;
     }
     if (_currentStoreBaseDeliveryFee != null && _currentStoreBaseDeliveryFee! > 0) {
       return _currentStoreBaseDeliveryFee!;
