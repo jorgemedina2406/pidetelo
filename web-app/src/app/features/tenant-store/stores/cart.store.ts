@@ -100,9 +100,20 @@ export const CartStore = signalStore(
 
     const deliveryTiers = computed<DeliveryTier[]>(() => {
       const branchTiers = store.selectedBranch()?.deliveryTiers;
-      if (Array.isArray(branchTiers) && branchTiers.length > 0) return branchTiers;
       const tenantTiers = store.activeTenant()?.deliverySettings?.deliveryTiers || (store.activeTenant() as any)?.delivery_tiers;
-      if (Array.isArray(tenantTiers) && tenantTiers.length > 0) return tenantTiers;
+      
+      const bLen = Array.isArray(branchTiers) ? branchTiers.length : 0;
+      const tLen = Array.isArray(tenantTiers) ? tenantTiers.length : 0;
+
+      if (bLen > 0 && bLen >= tLen) {
+        return branchTiers!;
+      }
+      if (tLen > 0) {
+        return tenantTiers!;
+      }
+      if (bLen > 0) {
+        return branchTiers!;
+      }
       return [
         { id: 'tier_1', minKm: 0, maxKm: 2, price: 1.50 },
         { id: 'tier_2', minKm: 2, maxKm: 5, price: 3.00 },

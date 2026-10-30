@@ -51,9 +51,22 @@ export class StoreViewComponent implements OnInit {
   }
 
   selectBranch(branch: Branch): void {
-    this.cart.setBranch(branch);
-    this.isBranchModalOpen.set(false);
     const t = this.tenant();
+    const effectiveRadius = t?.deliverySettings?.deliveryRadiusKm
+      ? Math.max(Number(branch.deliveryRadiusKm) || 0, Number(t.deliverySettings.deliveryRadiusKm))
+      : Number(branch.deliveryRadiusKm) || 8.0;
+    const effectiveTiers = (Array.isArray(t?.deliverySettings?.deliveryTiers) && t.deliverySettings.deliveryTiers.length > 0)
+      ? t.deliverySettings.deliveryTiers
+      : branch.deliveryTiers;
+
+    const enrichedBranch: Branch = {
+      ...branch,
+      deliveryRadiusKm: effectiveRadius,
+      deliveryTiers: effectiveTiers
+    };
+
+    this.cart.setBranch(enrichedBranch);
+    this.isBranchModalOpen.set(false);
     if (t) {
       this.isLoading.set(true);
       this.api.getProducts(t.id, branch.id, true).subscribe(prods => {
@@ -75,15 +88,9 @@ export class StoreViewComponent implements OnInit {
       
       this.api.getTenantBySlug(slug).subscribe(storeData => {
         if (storeData) {
-          // Filtrar únicamente sucursales activas y operativas para el cliente (nunca inactivas o pendientes)
-          const activeBranches: Branch[] = (storeData.branches || []).filter((b: Branch) => {
-            return b.status === 'active';
-          });
-
-          // Sanitizar storeData para que la plantilla solo conozca sucursales activas
           const cleanStoreData: Tenant = {
             ...storeData,
-            branches: activeBranches
+            deliverySettings: { ...storeData.deliverySettings }
           };
 
           try {
@@ -103,6 +110,25 @@ export class StoreViewComponent implements OnInit {
             }
           } catch (_) {}
 
+          // Filtrar únicamente sucursales activas y enriquecer con cobertura y tarifas del comercio
+          const globalRadius = Number(cleanStoreData.deliverySettings?.deliveryRadiusKm) || 8.0;
+          const globalTiers = cleanStoreData.deliverySettings?.deliveryTiers || [];
+
+          const activeBranches: Branch[] = (storeData.branches || []).filter((b: Branch) => {
+            return b.status === 'active';
+          }).map((b: Branch) => {
+            const bRadius = Math.max(Number(b.deliveryRadiusKm) || 0, globalRadius);
+            const bTiers = (Array.isArray(b.deliveryTiers) && b.deliveryTiers.length >= globalTiers.length)
+              ? b.deliveryTiers
+              : (globalTiers.length > 0 ? globalTiers : b.deliveryTiers);
+            return {
+              ...b,
+              deliveryRadiusKm: bRadius > 0 ? bRadius : globalRadius,
+              deliveryTiers: bTiers
+            };
+          });
+
+          cleanStoreData.branches = activeBranches;
           this.tenant.set(cleanStoreData);
           this.cart.setTenant(cleanStoreData);
 

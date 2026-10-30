@@ -115,11 +115,22 @@ class CartService extends ChangeNotifier {
     return double.parse(_currentBranch!.distanceKmTo(_selectedAddress.latitude, _selectedAddress.longitude).toStringAsFixed(1));
   }
 
+  double get maxCoverageRadiusKm {
+    if (_currentBranch == null) return 8.0;
+    double maxRadius = _currentBranch!.deliveryRadiusKm;
+    for (final tier in _currentBranch!.deliveryTiers) {
+      if (tier.maxKm > maxRadius) {
+        maxRadius = tier.maxKm;
+      }
+    }
+    return maxRadius > 0 ? maxRadius : 8.0;
+  }
+
   bool get isOutOfCoverage {
     if (_currentBranch == null) return false;
     final dist = distanceToCurrentBranchKm;
     if (dist == null) return false;
-    return dist > _currentBranch!.deliveryRadiusKm;
+    return dist > maxCoverageRadiusKm;
   }
 
   DeliveryTier? get appliedDeliveryTier {

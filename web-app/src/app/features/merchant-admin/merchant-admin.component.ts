@@ -1974,20 +1974,20 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
 
     // Actualizar sede principal y sucursales localmente de inmediato
     this.branches.update(list => list.map(b => {
-      if (list.length === 1 || b.isMain || b.name.toLowerCase().includes('principal') || b.id === this.userAssignedBranch()?.id) {
-        return {
-          ...b,
+      const isTargetBranch = list.length === 1 || b.isMain || b.name.toLowerCase().includes('principal') || b.id === this.userAssignedBranch()?.id;
+      return {
+        ...b,
+        deliveryRadiusKm: Number(this.brandingForm.deliveryRadiusKm),
+        baseDeliveryFee: Number(this.brandingForm.baseDeliveryFee),
+        deliveryTiers: this.brandingForm.deliveryTiers,
+        ...(isTargetBranch ? {
           address: this.brandingForm.address,
           latitude: Number(this.brandingForm.latitude),
           longitude: Number(this.brandingForm.longitude),
-          deliveryRadiusKm: Number(this.brandingForm.deliveryRadiusKm),
-          baseDeliveryFee: Number(this.brandingForm.baseDeliveryFee),
-          deliveryTiers: this.brandingForm.deliveryTiers,
           phone: this.brandingForm.phone,
           whatsapp: this.brandingForm.whatsappNumber
-        };
-      }
-      return b;
+        } : {})
+      };
     }));
 
     // Backend sync

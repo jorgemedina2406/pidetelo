@@ -560,14 +560,11 @@ export class ApiService {
 
           const { data } = await client.from('tenants').update(supabasePayload).eq('id', id).select('*').maybeSingle();
 
-          // Sincronizar sucursales de la empresa
+          // Sincronizar cobertura y tarifas de entrega en todas las sucursales de la empresa
           try {
             const branchPayload: any = { updated_at: new Date().toISOString() };
             if (updateData.delivery_radius_km !== undefined) branchPayload.delivery_radius_km = Number(updateData.delivery_radius_km);
             if (updateData.base_delivery_fee !== undefined) branchPayload.base_delivery_fee = Number(updateData.base_delivery_fee);
-            if (updateData.address !== undefined) branchPayload.address = updateData.address;
-            if (updateData.latitude !== undefined) branchPayload.latitude = Number(updateData.latitude);
-            if (updateData.longitude !== undefined) branchPayload.longitude = Number(updateData.longitude);
             if (updateData.delivery_tiers !== undefined || updateData.deliveryTiers !== undefined) {
               branchPayload.delivery_tiers = updateData.delivery_tiers || updateData.deliveryTiers;
             }

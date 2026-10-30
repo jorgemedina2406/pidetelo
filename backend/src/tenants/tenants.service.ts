@@ -199,40 +199,43 @@ export class TenantsService {
       throw new InternalServerErrorException(`Error updating tenant: ${error.message}`);
     }
 
-    // Sincronizar automáticamente la Sede Principal en la tabla branches si se modificó ubicación, dirección, radio o teléfono
+    // Sincronizar automáticamente sucursales en la tabla branches si se modificó radio, tarifas, ubicación o teléfono
     try {
-      const branchUpdate: any = { updated_at: new Date().toISOString() };
-      if (updateData.name !== undefined) branchUpdate.name = `${updateData.name} (Sede Principal)`;
-      if (updateData.address !== undefined) branchUpdate.address = updateData.address;
-      if (updateData.latitude !== undefined) branchUpdate.latitude = Number(updateData.latitude);
-      if (updateData.longitude !== undefined) branchUpdate.longitude = Number(updateData.longitude);
-      if (updateData.delivery_radius_km !== undefined) branchUpdate.delivery_radius_km = Number(updateData.delivery_radius_km);
-      if (updateData.base_delivery_fee !== undefined) branchUpdate.base_delivery_fee = Number(updateData.base_delivery_fee);
-      if (updateData.phone !== undefined) branchUpdate.phone = updateData.phone;
-      if (updateData.whatsapp_number !== undefined) branchUpdate.whatsapp_number = updateData.whatsapp_number;
+      // 1. Parámetros de cobertura y tarifas que aplican a todas las sucursales de la empresa
+      const globalDeliveryUpdate: any = { updated_at: new Date().toISOString() };
+      if (updateData.delivery_radius_km !== undefined) globalDeliveryUpdate.delivery_radius_km = Number(updateData.delivery_radius_km);
+      if (updateData.base_delivery_fee !== undefined) globalDeliveryUpdate.base_delivery_fee = Number(updateData.base_delivery_fee);
       if (updateData.delivery_tiers !== undefined || updateData.deliveryTiers !== undefined) {
-        branchUpdate.delivery_tiers = updateData.delivery_tiers || updateData.deliveryTiers;
+        globalDeliveryUpdate.delivery_tiers = updateData.delivery_tiers || updateData.deliveryTiers;
       }
 
-      if (Object.keys(branchUpdate).length > 1) {
-        const { data: updatedBranches } = await this.supabase
+      if (Object.keys(globalDeliveryUpdate).length > 1) {
+        await this.supabase
           .getClient()
           .from('branches')
-          .update(branchUpdate)
-          .eq('company_id', id)
-          .or('is_main.eq.true,name.ilike.%principal%')
-          .select('id');
+          .update(globalDeliveryUpdate)
+          .eq('company_id', id);
+      }
 
-        if (!updatedBranches || updatedBranches.length === 0) {
-          await this.supabase
-            .getClient()
-            .from('branches')
-            .update(branchUpdate)
-            .eq('company_id', id);
-        }
+      // 2. Parámetros específicos de la sede principal (contacto, dirección y coordenadas matriz)
+      const mainBranchUpdate: any = { updated_at: new Date().toISOString() };
+      if (updateData.name !== undefined) mainBranchUpdate.name = `${updateData.name} (Sede Principal)`;
+      if (updateData.address !== undefined) mainBranchUpdate.address = updateData.address;
+      if (updateData.latitude !== undefined) mainBranchUpdate.latitude = Number(updateData.latitude);
+      if (updateData.longitude !== undefined) mainBranchUpdate.longitude = Number(updateData.longitude);
+      if (updateData.phone !== undefined) mainBranchUpdate.phone = updateData.phone;
+      if (updateData.whatsapp_number !== undefined) mainBranchUpdate.whatsapp_number = updateData.whatsapp_number;
+
+      if (Object.keys(mainBranchUpdate).length > 1) {
+        await this.supabase
+          .getClient()
+          .from('branches')
+          .update(mainBranchUpdate)
+          .eq('company_id', id)
+          .or('is_main.eq.true,name.ilike.%principal%');
       }
     } catch (bErr) {
-      console.warn('[TenantsService] Error sincronizando sede principal en branches:', bErr);
+      console.warn('[TenantsService] Error sincronizando sucursales en branches:', bErr);
     }
 
     return this.mergeTenantWithMetadata(data);
