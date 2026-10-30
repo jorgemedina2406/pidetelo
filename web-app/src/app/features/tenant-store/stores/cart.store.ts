@@ -446,7 +446,9 @@ export const CartStore = signalStore(
         online: 'Pago Online'
       };
 
-      const rate = store.activeTenant()?.currencySettings?.exchangeRate || 45.5;
+      const rate = store.selectedBranch()?.currencySettings?.exchangeRate ||
+                   store.selectedBranch()?.exchangeRate ||
+                   store.activeTenant()?.currencySettings?.exchangeRate || 45.5;
       const totalBs = (order.total * rate).toFixed(2);
       const subtotalBs = (order.subtotal * rate).toFixed(2);
       const deliveryBs = (order.deliveryFee * rate).toFixed(2);

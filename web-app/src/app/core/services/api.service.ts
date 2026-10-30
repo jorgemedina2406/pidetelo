@@ -1090,7 +1090,7 @@ export class ApiService {
     );
   }
 
-  updateBranch(branchId: string, branchData: Partial<Branch>): Observable<any> {
+  updateBranch(branchId: string, branchData: Partial<Branch> | any): Observable<any> {
     return this.http.patch<any>(`${this.baseUrl}/branches/${branchId}`, branchData).pipe(
       map(row => (row ? this.mapBranch(row) : null)),
       catchError(async () => {
@@ -1099,14 +1099,39 @@ export class ApiService {
           const updateData: any = { updated_at: new Date().toISOString() };
           if (branchData.name) updateData.name = branchData.name;
           if (branchData.address) updateData.address = branchData.address;
-          if (branchData.latitude) updateData.latitude = branchData.latitude;
-          if (branchData.longitude) updateData.longitude = branchData.longitude;
-          if (branchData.deliveryRadiusKm) updateData.delivery_radius_km = branchData.deliveryRadiusKm;
-          if (branchData.baseDeliveryFee) updateData.base_delivery_fee = branchData.baseDeliveryFee;
+          if (branchData.latitude !== undefined) updateData.latitude = branchData.latitude;
+          if (branchData.longitude !== undefined) updateData.longitude = branchData.longitude;
+          if (branchData.deliveryRadiusKm !== undefined) updateData.delivery_radius_km = branchData.deliveryRadiusKm;
+          if (branchData.baseDeliveryFee !== undefined) updateData.base_delivery_fee = branchData.baseDeliveryFee;
           if (branchData.phone) updateData.phone = branchData.phone;
           if (branchData.whatsapp) updateData.whatsapp_number = branchData.whatsapp;
           if (branchData.managerEmail) updateData.email = branchData.managerEmail.trim().toLowerCase();
           if (branchData.managerName) updateData.manager_name = branchData.managerName.trim();
+          if (branchData.deliveryTiers || branchData.delivery_tiers) {
+            updateData.delivery_tiers = branchData.deliveryTiers || branchData.delivery_tiers;
+          }
+          if (branchData.tagline !== undefined) updateData.tagline = branchData.tagline;
+          if (branchData.accentColor || branchData.accent_color) {
+            updateData.accent_color = branchData.accentColor || branchData.accent_color;
+          }
+          if (branchData.logoUrl || branchData.logo_url) {
+            updateData.logo_url = branchData.logoUrl || branchData.logo_url;
+          }
+          if (branchData.bannerUrl || branchData.banner_url) {
+            updateData.banner_url = branchData.bannerUrl || branchData.banner_url;
+          }
+          if (branchData.exchangeRate !== undefined || branchData.exchange_rate !== undefined) {
+            updateData.exchange_rate = Number(branchData.exchangeRate ?? branchData.exchange_rate);
+          }
+          if (branchData.baseCurrency || branchData.base_currency) {
+            updateData.base_currency = branchData.baseCurrency || branchData.base_currency;
+          }
+          if (branchData.displayMode || branchData.display_mode) {
+            updateData.display_mode = branchData.displayMode || branchData.display_mode;
+          }
+          if (branchData.currencySettings || branchData.currency_settings) {
+            updateData.currency_settings = branchData.currencySettings || branchData.currency_settings;
+          }
 
           const { data, error } = await client.from('branches').update(updateData).eq('id', branchId).select().single();
           if (!error && data) {
@@ -1225,6 +1250,21 @@ export class ApiService {
   }
 
   private mapBranch(r: any): Branch {
+    const accentColor = r.accent_color || r.accentColor || r.branding?.accentColor || r.tenants?.accent_color || '#f97316';
+    const logoUrl = r.logo_url || r.logoUrl || r.branding?.logoUrl || r.tenants?.logo_url || '';
+    const bannerUrl = r.banner_url || r.bannerUrl || r.branding?.bannerUrl || r.tenants?.banner_url || '';
+    const tagline = r.tagline || r.tenants?.tagline || '';
+    const exchangeRate = Number(r.exchange_rate ?? r.exchangeRate ?? r.currency_settings?.exchangeRate ?? r.currencySettings?.exchangeRate ?? r.tenants?.exchange_rate ?? 45.50);
+    const baseCurrency = (r.base_currency || r.baseCurrency || r.currency_settings?.baseCurrency || r.currencySettings?.baseCurrency || r.tenants?.base_currency || 'USD') as 'USD' | 'VES';
+    const displayMode = (r.display_mode || r.displayMode || r.currency_settings?.displayMode || r.currencySettings?.displayMode || r.tenants?.display_mode || 'usd_and_bs') as 'usd_and_bs' | 'bs_and_usd' | 'only_usd' | 'only_bs';
+
+    const currencySettings = r.currency_settings || r.currencySettings || {
+      baseCurrency,
+      displayMode,
+      exchangeRate,
+      lastRateUpdate: new Date().toISOString()
+    };
+
     return {
       id: r.id,
       companyId: r.company_id || r.companyId,
@@ -1241,6 +1281,19 @@ export class ApiService {
         { id: 'tier_2', minKm: 2, maxKm: 5, price: 3.00 },
         { id: 'tier_3', minKm: 5, maxKm: 8, price: 4.50 }
       ],
+      tagline,
+      accentColor,
+      logoUrl,
+      bannerUrl,
+      exchangeRate,
+      baseCurrency,
+      displayMode,
+      currencySettings,
+      branding: {
+        accentColor,
+        logoUrl,
+        bannerUrl
+      },
       status: r.status,
       rejectionReason: r.rejection_reason || r.rejectionReason,
       phone: r.phone,

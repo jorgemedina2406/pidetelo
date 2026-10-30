@@ -6,10 +6,98 @@ import { UsersService } from '../users/users.service.js';
 
 @Injectable()
 export class BranchesService {
+  private metadataFilePath = path.join(process.cwd(), 'data', 'branch_metadata.json');
+
   constructor(
     private supabase: SupabaseService,
     private usersService: UsersService,
   ) {}
+
+  private loadMetadata(): Record<string, any> {
+    try {
+      if (fs.existsSync(this.metadataFilePath)) {
+        const raw = fs.readFileSync(this.metadataFilePath, 'utf-8');
+        return JSON.parse(raw);
+      }
+    } catch (_) {}
+    return {};
+  }
+
+  private saveBranchMetadata(branchId: string, metadata: Record<string, any>) {
+    try {
+      const data = this.loadMetadata();
+      data[branchId] = { ...(data[branchId] || {}), ...metadata };
+      const dir = path.dirname(this.metadataFilePath);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(this.metadataFilePath, JSON.stringify(data, null, 2), 'utf-8');
+    } catch (e) {
+      console.warn('[BranchesService] Error saving branch metadata:', e);
+    }
+  }
+
+  private getBranchMetadata(branchId: string): Record<string, any> {
+    try {
+      const data = this.loadMetadata();
+      return data[branchId] || {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  private mergeBranchWithMetadata(branch: any, parentTenant?: any): any {
+    if (!branch) return branch;
+    const meta = this.getBranchMetadata(branch.id);
+    const tenant = parentTenant || branch.tenants || {};
+
+    const exchangeRate = Number(branch.exchange_rate ?? meta.exchange_rate ?? meta.currency_settings?.exchangeRate ?? tenant.exchange_rate ?? 45.50);
+    const baseCurrency = branch.base_currency ?? meta.base_currency ?? meta.currency_settings?.baseCurrency ?? tenant.base_currency ?? 'USD';
+    const displayMode = branch.display_mode ?? meta.display_mode ?? meta.currency_settings?.displayMode ?? tenant.display_mode ?? 'usd_and_bs';
+    const tagline = branch.tagline ?? meta.tagline ?? tenant.tagline ?? '';
+    const accentColor = branch.accent_color ?? meta.accent_color ?? tenant.accent_color ?? '#f97316';
+    const logoUrl = branch.logo_url ?? meta.logo_url ?? tenant.logo_url ?? '';
+    const bannerUrl = branch.banner_url ?? meta.banner_url ?? tenant.banner_url ?? '';
+
+    const currencySettings = {
+      baseCurrency,
+      displayMode,
+      exchangeRate,
+      lastRateUpdate: meta.currency_settings?.lastRateUpdate || new Date().toISOString()
+    };
+
+    const defaultDeliveryTiers = [
+      { id: 'tier_1', minKm: 0, maxKm: 2, price: 1.50 },
+      { id: 'tier_2', minKm: 2, maxKm: 5, price: 3.00 },
+      { id: 'tier_3', minKm: 5, maxKm: 8, price: 4.50 }
+    ];
+
+    const deliveryTiers = branch.delivery_tiers ?? meta.delivery_tiers ?? meta.deliveryTiers ?? tenant.delivery_tiers ?? defaultDeliveryTiers;
+
+    return {
+      ...branch,
+      tagline,
+      accent_color: accentColor,
+      accentColor,
+      logo_url: logoUrl,
+      logoUrl,
+      banner_url: bannerUrl,
+      bannerUrl,
+      exchange_rate: exchangeRate,
+      exchangeRate,
+      base_currency: baseCurrency,
+      baseCurrency,
+      display_mode: displayMode,
+      displayMode,
+      currency_settings: currencySettings,
+      currencySettings,
+      delivery_tiers: deliveryTiers,
+      deliveryTiers,
+      branding: {
+        accentColor,
+        logoUrl,
+        bannerUrl
+      }
+    };
+  }
 
   async findAll(companyId?: string, onlyActive = false) {
     const client = this.supabase.getClient();
@@ -32,21 +120,22 @@ export class BranchesService {
     }
     const branchList = data || [];
 
-    // Enriquecer cada sucursal con las credenciales aisladas desde store_collaborators / usersService
+    // Enriquecer cada sucursal con las credenciales aisladas y su metadata personalizada
     try {
       const allUsers = await this.usersService.findAll(companyId);
       return branchList.map((branch: any) => {
         const isMain = branch.is_main || branch.name?.toLowerCase().includes('principal') || false;
         const assignedCollab = allUsers.find((u: any) => u.branch_id === branch.id);
-        return {
+        const enriched = {
           ...branch,
           is_main: isMain,
           manager_email: branch.email || assignedCollab?.email || null,
           manager_name: branch.manager_name || assignedCollab?.name || null,
         };
+        return this.mergeBranchWithMetadata(enriched, branch.tenants);
       });
     } catch (_) {
-      return branchList;
+      return branchList.map(b => this.mergeBranchWithMetadata(b, b.tenants));
     }
   }
 
@@ -61,7 +150,7 @@ export class BranchesService {
     if (error) {
       throw new InternalServerErrorException(`Error fetching pending branches: ${error.message}`);
     }
-    return data || [];
+    return (data || []).map(b => this.mergeBranchWithMetadata(b, b.tenants));
   }
 
   async findById(id: string) {
@@ -79,14 +168,16 @@ export class BranchesService {
     try {
       const allUsers = await this.usersService.findAll(data.company_id);
       const assignedCollab = allUsers.find((u: any) => u.branch_id === data.id);
-      return {
+      const isMain = data.is_main || data.name?.toLowerCase().includes('principal') || false;
+      const enriched = {
         ...data,
-        is_main: data.is_main || data.name?.toLowerCase().includes('principal') || false,
+        is_main: isMain,
         manager_email: data.email || assignedCollab?.email || null,
         manager_name: data.manager_name || assignedCollab?.name || null,
       };
+      return this.mergeBranchWithMetadata(enriched, data.tenants);
     } catch (_) {
-      return data;
+      return this.mergeBranchWithMetadata(data, data.tenants);
     }
   }
 
@@ -220,6 +311,39 @@ export class BranchesService {
 
   async update(id: string, branchPayload: any) {
     const client = this.supabase.getClient();
+
+    // 1. Guardar metadata local de la sucursal (marca, monedas, tasas, tiers)
+    const metaToSave: Record<string, any> = {};
+    if (branchPayload.tagline !== undefined) metaToSave.tagline = branchPayload.tagline;
+    if (branchPayload.accentColor !== undefined || branchPayload.accent_color !== undefined) {
+      metaToSave.accent_color = branchPayload.accentColor || branchPayload.accent_color;
+    }
+    if (branchPayload.logoUrl !== undefined || branchPayload.logo_url !== undefined) {
+      metaToSave.logo_url = branchPayload.logoUrl || branchPayload.logo_url;
+    }
+    if (branchPayload.bannerUrl !== undefined || branchPayload.banner_url !== undefined) {
+      metaToSave.banner_url = branchPayload.bannerUrl || branchPayload.banner_url;
+    }
+    if (branchPayload.exchangeRate !== undefined || branchPayload.exchange_rate !== undefined) {
+      metaToSave.exchange_rate = Number(branchPayload.exchangeRate ?? branchPayload.exchange_rate);
+    }
+    if (branchPayload.baseCurrency !== undefined || branchPayload.base_currency !== undefined) {
+      metaToSave.base_currency = branchPayload.baseCurrency || branchPayload.base_currency;
+    }
+    if (branchPayload.displayMode !== undefined || branchPayload.display_mode !== undefined) {
+      metaToSave.display_mode = branchPayload.displayMode || branchPayload.display_mode;
+    }
+    if (branchPayload.currencySettings !== undefined || branchPayload.currency_settings !== undefined) {
+      metaToSave.currency_settings = branchPayload.currencySettings || branchPayload.currency_settings;
+    }
+    if (branchPayload.deliveryTiers !== undefined || branchPayload.delivery_tiers !== undefined) {
+      metaToSave.delivery_tiers = branchPayload.deliveryTiers || branchPayload.delivery_tiers;
+    }
+
+    if (Object.keys(metaToSave).length > 0) {
+      this.saveBranchMetadata(id, metaToSave);
+    }
+
     const updateData: any = { updated_at: new Date().toISOString() };
 
     if (branchPayload.name !== undefined) updateData.name = branchPayload.name.trim();
@@ -239,6 +363,18 @@ export class BranchesService {
     if (branchPayload.minOrderAmount !== undefined || branchPayload.min_order_amount !== undefined) {
       updateData.min_order_amount = Number(branchPayload.minOrderAmount || branchPayload.min_order_amount);
     }
+    if (branchPayload.deliveryTiers !== undefined || branchPayload.delivery_tiers !== undefined) {
+      updateData.delivery_tiers = branchPayload.deliveryTiers || branchPayload.delivery_tiers;
+    }
+    if (metaToSave.accent_color !== undefined) updateData.accent_color = metaToSave.accent_color;
+    if (metaToSave.logo_url !== undefined) updateData.logo_url = metaToSave.logo_url;
+    if (metaToSave.banner_url !== undefined) updateData.banner_url = metaToSave.banner_url;
+    if (metaToSave.tagline !== undefined) updateData.tagline = metaToSave.tagline;
+    if (metaToSave.exchange_rate !== undefined) updateData.exchange_rate = metaToSave.exchange_rate;
+    if (metaToSave.base_currency !== undefined) updateData.base_currency = metaToSave.base_currency;
+    if (metaToSave.display_mode !== undefined) updateData.display_mode = metaToSave.display_mode;
+    if (metaToSave.currency_settings !== undefined) updateData.currency_settings = metaToSave.currency_settings;
+
     if (branchPayload.openTime || branchPayload.closeTime) {
       updateData.business_hours = {
         open: branchPayload.openTime || '11:00',
@@ -251,7 +387,8 @@ export class BranchesService {
     if (managerEmail !== undefined) updateData.email = managerEmail;
     if (branchPayload.managerName !== undefined) updateData.manager_name = branchPayload.managerName.trim();
 
-    const { data: updatedBranch, error } = await client
+    let updatedBranch: any = null;
+    const { data: updateRes, error } = await client
       .from('branches')
       .update(updateData)
       .eq('id', id)
@@ -259,7 +396,24 @@ export class BranchesService {
       .single();
 
     if (error) {
-      throw new InternalServerErrorException(`Error updating branch: ${error.message}`);
+      console.warn(`[BranchesService] Fallback de actualización en branches (posibles columnas pendientes): ${error.message}`);
+      const basicData: any = { updated_at: new Date().toISOString() };
+      const basicCols = ['name', 'address', 'phone', 'whatsapp_number', 'latitude', 'longitude', 'delivery_radius_km', 'base_delivery_fee', 'min_order_amount', 'business_hours', 'email', 'manager_name'];
+      for (const col of basicCols) {
+        if (updateData[col] !== undefined) basicData[col] = updateData[col];
+      }
+      const { data: fallbackData, error: fbError } = await client
+        .from('branches')
+        .update(basicData)
+        .eq('id', id)
+        .select()
+        .single();
+      if (fbError) {
+        throw new InternalServerErrorException(`Error updating branch: ${fbError.message}`);
+      }
+      updatedBranch = fallbackData;
+    } else {
+      updatedBranch = updateRes;
     }
 
     // Si viene actualización de credenciales de usuario para esta sede

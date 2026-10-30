@@ -46,8 +46,15 @@ export class StoreViewComponent implements OnInit {
   
   readonly activeModalProduct = signal<Product | null>(null);
 
+  readonly activeBranchRate = computed(() => {
+    return this.cart.selectedBranch()?.currencySettings?.exchangeRate ||
+           this.cart.selectedBranch()?.exchangeRate ||
+           this.tenant()?.currencySettings?.exchangeRate || 45.50;
+  });
+
   formatPrice(price: number, itemCurrency: 'USD' | 'VES' = 'USD') {
-    return this.currency.formatPrice(price, itemCurrency, this.tenant()?.currencySettings);
+    const branchCurr = this.cart.selectedBranch()?.currencySettings;
+    return this.currency.formatPrice(price, itemCurrency, branchCurr || this.tenant()?.currencySettings);
   }
 
   selectBranch(branch: Branch): void {

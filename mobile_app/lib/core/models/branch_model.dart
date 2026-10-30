@@ -96,6 +96,13 @@ class Branch {
   final String closeTime;
   final bool isOpenNow;
   final BranchPaymentCredentials paymentCredentials;
+  final String? tagline;
+  final String? accentColor;
+  final String? logoUrl;
+  final String? bannerUrl;
+  final double? exchangeRate;
+  final String? baseCurrency;
+  final String? displayMode;
 
   const Branch({
     required this.id,
@@ -120,6 +127,13 @@ class Branch {
     this.closeTime = '23:00',
     this.isOpenNow = true,
     required this.paymentCredentials,
+    this.tagline,
+    this.accentColor,
+    this.logoUrl,
+    this.bannerUrl,
+    this.exchangeRate,
+    this.baseCurrency,
+    this.displayMode,
   });
 
   /// Real distance in km using Haversine
@@ -214,6 +228,13 @@ class Branch {
       closeTime: json['close_time'] ?? json['closeTime'] ?? '23:00',
       isOpenNow: json['is_open_now'] ?? json['isOpenNow'] ?? true,
       paymentCredentials: credentials,
+      tagline: json['tagline']?.toString(),
+      accentColor: json['accent_color']?.toString() ?? json['accentColor']?.toString(),
+      logoUrl: json['logo_url']?.toString() ?? json['logoUrl']?.toString(),
+      bannerUrl: json['banner_url']?.toString() ?? json['bannerUrl']?.toString(),
+      exchangeRate: (json['exchange_rate'] as num?)?.toDouble() ?? (json['exchangeRate'] as num?)?.toDouble(),
+      baseCurrency: json['base_currency']?.toString() ?? json['baseCurrency']?.toString(),
+      displayMode: json['display_mode']?.toString() ?? json['displayMode']?.toString(),
     );
   }
 }

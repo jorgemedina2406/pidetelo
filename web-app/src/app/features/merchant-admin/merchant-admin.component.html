@@ -2234,12 +2234,11 @@
                 <h2 class="text-2xl font-extrabold tracking-tight">Marca & Configuración Monetaria</h2>
                 <span
                   class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20">
-                  Personalización de Tienda
+                  Por Sucursal
                 </span>
               </div>
               <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                Define la paleta de colores de tu comercio, logo, banner, número de WhatsApp para pedidos y la tasa de
-                cambio en Bolívares.
+                Configura la identidad visual, logotipo, número de WhatsApp para pedidos, tasa de cambio y escalas de delivery de cada sede de forma independiente.
               </p>
             </div>
 
@@ -2262,6 +2261,41 @@
                   <span>Guardar Cambios</span>
                 }
               </button>
+            </div>
+          </div>
+
+          <!-- Barra de Selección de Sucursal / Sede a Configurar -->
+          <div class="flex flex-wrap items-center justify-between gap-3 p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center font-bold">
+                <app-icon name="store" [size]="20"></app-icon>
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-white">Sucursal en Configuración:</span>
+                  @if (isBranchLocked()) {
+                    <span class="text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-md border border-amber-300/40">
+                      🔒 Sede Asignada
+                    </span>
+                  }
+                </div>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400">
+                  Estás editando la identidad visual, tasa, WhatsApp, radio y tarifas de delivery para esta sede específica.
+                </p>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <label class="text-xs font-bold text-slate-600 dark:text-slate-400 hidden sm:inline">Cambiar Sede:</label>
+              <select [ngModel]="selectedConfigBranchId()" (ngModelChange)="onConfigBranchChange($event)"
+                      [disabled]="isBranchLocked()"
+                      class="bg-white dark:bg-slate-800 border-2 border-brand-500/30 hover:border-brand-500 rounded-xl px-3.5 py-2 text-xs font-extrabold text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 shadow-sm transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-60">
+                @for (b of visibleBranches(); track b.id) {
+                  <option [value]="b.id">
+                    {{ b.name }} {{ b.isMain ? '★ (Sede Principal)' : '' }}
+                  </option>
+                }
+              </select>
             </div>
           </div>
 
@@ -2475,9 +2509,9 @@
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
                   <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">
-                    Nombre Comercial de la Marca
+                    Nombre de la Sucursal / Sede
                   </label>
-                  <input type="text" [(ngModel)]="brandingForm.name" placeholder="Ej: Burger King"
+                  <input type="text" [(ngModel)]="brandingForm.name" placeholder="Ej: Burger King Trinitarias"
                     class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
                 </div>
                 <div>

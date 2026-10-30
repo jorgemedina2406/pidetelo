@@ -1,4 +1,4 @@
-import { DeliveryTier } from './tenant.model';
+import { DeliveryTier, CurrencySettings } from './tenant.model';
 
 export type BranchStatus = 'pending_approval' | 'active' | 'inactive' | 'rejected';
 
@@ -26,6 +26,19 @@ export interface Branch {
   deliveryRadiusKm: number;      // e.g. 8.0 km
   baseDeliveryFee: number;       // e.g. 2.50 USD
   deliveryTiers?: DeliveryTier[];
+  tagline?: string;
+  accentColor?: string;
+  logoUrl?: string;
+  bannerUrl?: string;
+  exchangeRate?: number;
+  baseCurrency?: 'USD' | 'VES';
+  displayMode?: 'usd_and_bs' | 'bs_and_usd' | 'only_usd' | 'only_bs';
+  currencySettings?: CurrencySettings;
+  branding?: {
+    accentColor: string;
+    logoUrl: string;
+    bannerUrl: string;
+  };
   status: BranchStatus;
   phone?: string;
   whatsapp?: string;

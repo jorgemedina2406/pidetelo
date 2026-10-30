@@ -150,6 +150,20 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
   // Compatibilidad con templates y referencias existentes
   readonly selectedBranchId = computed<string>(() => this.activeBranchId());
   readonly selectedBranch = computed<Branch | null>(() => this.activeBranch());
+
+  // Sucursal seleccionada para la configuración de Marca, Moneda y Cobertura (personalizable por sede)
+  readonly selectedConfigBranchId = signal<string>('');
+  readonly currentConfigBranch = computed<Branch | null>(() => {
+    const list = this.branches();
+    if (list.length === 0) return null;
+    const sel = this.selectedConfigBranchId();
+    if (sel) {
+      const match = list.find(b => b.id === sel);
+      if (match) return match;
+    }
+    return this.activeBranch() || list[0] || null;
+  });
+
   readonly subscriptionPlans = signal<SubscriptionPlan[]>([]);
   readonly isNewBranchModalOpen = signal(false);
   readonly isEditBranchModalOpen = signal(false);
@@ -278,6 +292,58 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     const updated = [...this.brandingForm.deliveryTiers];
     updated.splice(index, 1);
     this.brandingForm.deliveryTiers = updated;
+  }
+
+  loadBrandingForBranch(branch: Branch): void {
+    if (!branch) return;
+    this.selectedConfigBranchId.set(branch.id);
+    const tenant = this.currentTenant();
+
+    let cached: any = null;
+    try {
+      const raw = localStorage.getItem('deliveryhub_branch_branding_' + branch.id);
+      if (raw) cached = JSON.parse(raw);
+    } catch (_) {}
+
+    this.brandingForm.name = branch.name || cached?.name || tenant.name || '';
+    this.brandingForm.tagline = branch.tagline || cached?.tagline || tenant.tagline || '';
+    this.brandingForm.accentColor = branch.accentColor || cached?.accentColor || tenant.branding?.accentColor || '#f97316';
+    this.brandingForm.logoUrl = branch.logoUrl || cached?.logoUrl || tenant.branding?.logoUrl || '';
+    this.brandingForm.bannerUrl = branch.bannerUrl || cached?.bannerUrl || tenant.branding?.bannerUrl || '';
+    this.brandingForm.whatsappNumber = branch.whatsapp || cached?.whatsappNumber || branch.phone || tenant.contact?.whatsappNumber || '';
+    this.brandingForm.phone = branch.phone || cached?.phone || tenant.contact?.phone || '';
+    this.brandingForm.address = branch.address || cached?.address || tenant.contact?.address || '';
+    this.brandingForm.latitude = branch.latitude ?? cached?.latitude ?? 10.077715;
+    this.brandingForm.longitude = branch.longitude ?? cached?.longitude ?? -69.2812938;
+    this.brandingForm.deliveryRadiusKm = Number(branch.deliveryRadiusKm ?? cached?.deliveryRadiusKm ?? 8.0);
+    this.brandingForm.baseDeliveryFee = Number(branch.baseDeliveryFee ?? cached?.baseDeliveryFee ?? 2.50);
+
+    const branchTiers = (Array.isArray(branch.deliveryTiers) && branch.deliveryTiers.length > 0)
+      ? branch.deliveryTiers
+      : (Array.isArray(cached?.deliveryTiers) && cached.deliveryTiers.length > 0 ? cached.deliveryTiers : tenant.deliverySettings?.deliveryTiers);
+
+    if (Array.isArray(branchTiers) && branchTiers.length > 0) {
+      this.brandingForm.deliveryTiers = JSON.parse(JSON.stringify(branchTiers));
+    } else {
+      this.brandingForm.deliveryTiers = [
+        { id: 'tier_1', minKm: 0, maxKm: 2, price: 1.50 },
+        { id: 'tier_2', minKm: 2, maxKm: 5, price: 3.00 },
+        { id: 'tier_3', minKm: 5, maxKm: 8, price: 4.50 }
+      ];
+    }
+
+    const curr = branch.currencySettings || (branch as any).currency_settings;
+    this.brandingForm.exchangeRate = Number(branch.exchangeRate ?? curr?.exchangeRate ?? cached?.exchangeRate ?? tenant.currencySettings?.exchangeRate ?? 45.50);
+    this.brandingForm.baseCurrency = (branch.baseCurrency || curr?.baseCurrency || cached?.baseCurrency || tenant.currencySettings?.baseCurrency || 'USD') as 'USD' | 'VES';
+    this.brandingForm.displayMode = (branch.displayMode || curr?.displayMode || cached?.displayMode || tenant.currencySettings?.displayMode || 'usd_and_bs') as CurrencyDisplayMode;
+  }
+
+  onConfigBranchChange(branchId: string): void {
+    this.selectedConfigBranchId.set(branchId);
+    const branch = this.branches().find(b => b.id === branchId);
+    if (branch) {
+      this.loadBrandingForBranch(branch);
+    }
   }
 
   readonly isDetectingStoreGps = signal(false);
@@ -1933,109 +1999,169 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     if (e) e.preventDefault();
     this.isSavingBranding.set(true);
 
+    const targetBranch = this.currentConfigBranch();
     const activeTenantId = this.currentTenant().id || this.auth.currentUser()?.tenantId || '';
+
+    if (targetBranch) {
+      try {
+        localStorage.setItem('deliveryhub_branch_branding_' + targetBranch.id, JSON.stringify(this.brandingForm));
+      } catch (_) {}
+    }
     if (activeTenantId && typeof window !== 'undefined') {
       try {
         localStorage.setItem('deliveryhub_branding_' + activeTenantId, JSON.stringify(this.brandingForm));
       } catch (_) {}
     }
 
-    this.currentTenant.update(prev => ({
-      ...prev,
+    const branchPayload: any = {
       name: this.brandingForm.name,
       tagline: this.brandingForm.tagline,
-      branding: {
-        accentColor: this.brandingForm.accentColor,
-        logoUrl: this.brandingForm.logoUrl,
-        bannerUrl: this.brandingForm.bannerUrl
-      },
+      accentColor: this.brandingForm.accentColor,
+      accent_color: this.brandingForm.accentColor,
+      logoUrl: this.brandingForm.logoUrl,
+      logo_url: this.brandingForm.logoUrl,
+      bannerUrl: this.brandingForm.bannerUrl,
+      banner_url: this.brandingForm.bannerUrl,
+      whatsapp: this.brandingForm.whatsappNumber,
+      whatsapp_number: this.brandingForm.whatsappNumber,
+      phone: this.brandingForm.phone,
+      address: this.brandingForm.address,
+      latitude: Number(this.brandingForm.latitude),
+      longitude: Number(this.brandingForm.longitude),
+      deliveryRadiusKm: Number(this.brandingForm.deliveryRadiusKm),
+      delivery_radius_km: Number(this.brandingForm.deliveryRadiusKm),
+      baseDeliveryFee: Number(this.brandingForm.baseDeliveryFee),
+      base_delivery_fee: Number(this.brandingForm.baseDeliveryFee),
+      deliveryTiers: this.brandingForm.deliveryTiers,
+      delivery_tiers: this.brandingForm.deliveryTiers,
+      exchangeRate: Number(this.brandingForm.exchangeRate),
+      exchange_rate: Number(this.brandingForm.exchangeRate),
+      baseCurrency: this.brandingForm.baseCurrency,
+      base_currency: this.brandingForm.baseCurrency,
+      displayMode: this.brandingForm.displayMode,
+      display_mode: this.brandingForm.displayMode,
       currencySettings: {
         baseCurrency: this.brandingForm.baseCurrency,
         displayMode: this.brandingForm.displayMode,
         exchangeRate: Number(this.brandingForm.exchangeRate),
         lastRateUpdate: new Date().toISOString()
       },
-      contact: {
-        whatsappNumber: this.brandingForm.whatsappNumber,
-        phone: this.brandingForm.phone,
-        address: this.brandingForm.address,
-        coordinates: {
-          lat: Number(this.brandingForm.latitude),
-          lng: Number(this.brandingForm.longitude)
-        }
-      },
-      deliverySettings: {
-        ...prev.deliverySettings,
-        baseDeliveryFee: Number(this.brandingForm.baseDeliveryFee),
-        deliveryRadiusKm: Number(this.brandingForm.deliveryRadiusKm),
-        deliveryTiers: this.brandingForm.deliveryTiers
-      }
-    }));
-
-    // Actualizar sede principal y sucursales localmente de inmediato
-    this.branches.update(list => list.map(b => {
-      const isTargetBranch = list.length === 1 || b.isMain || b.name.toLowerCase().includes('principal') || b.id === this.userAssignedBranch()?.id;
-      return {
-        ...b,
-        deliveryRadiusKm: Number(this.brandingForm.deliveryRadiusKm),
-        baseDeliveryFee: Number(this.brandingForm.baseDeliveryFee),
-        deliveryTiers: this.brandingForm.deliveryTiers,
-        ...(isTargetBranch ? {
-          address: this.brandingForm.address,
-          latitude: Number(this.brandingForm.latitude),
-          longitude: Number(this.brandingForm.longitude),
-          phone: this.brandingForm.phone,
-          whatsapp: this.brandingForm.whatsappNumber
-        } : {})
-      };
-    }));
-
-    // Backend sync
-    this.api.updateTenant(this.currentTenant().id, {
-      name: this.brandingForm.name,
-      tagline: this.brandingForm.tagline,
-      accent_color: this.brandingForm.accentColor,
-      logo_url: this.brandingForm.logoUrl,
-      banner_url: this.brandingForm.bannerUrl,
-      whatsapp_number: this.brandingForm.whatsappNumber,
-      phone: this.brandingForm.phone,
-      address: this.brandingForm.address,
-      latitude: Number(this.brandingForm.latitude),
-      longitude: Number(this.brandingForm.longitude),
-      delivery_radius_km: Number(this.brandingForm.deliveryRadiusKm),
-      base_delivery_fee: Number(this.brandingForm.baseDeliveryFee),
-      delivery_tiers: this.brandingForm.deliveryTiers,
-      exchange_rate: Number(this.brandingForm.exchangeRate),
-      base_currency: this.brandingForm.baseCurrency,
-      display_mode: this.brandingForm.displayMode,
       currency_settings: {
         baseCurrency: this.brandingForm.baseCurrency,
         displayMode: this.brandingForm.displayMode,
         exchangeRate: Number(this.brandingForm.exchangeRate),
         lastRateUpdate: new Date().toISOString()
       }
-    }).subscribe({
-      next: (updatedTenant) => {
-        this.isSavingBranding.set(false);
-        console.log('[MerchantAdmin] Configuración guardada en backend');
-        if (updatedTenant) {
-          this.currentTenant.set(updatedTenant);
-        }
-        this.loadBranches();
-        setTimeout(() => {
-          if (this.branchesMap) {
-            this.initBranchesMap();
-          }
-        }, 250);
-      },
-      error: (err) => {
-        this.isSavingBranding.set(false);
-        console.warn('[MerchantAdmin] Error sincronizando configuración en backend:', err);
-      }
-    });
+    };
 
-    this.isSavedNotificationVisible.set(true);
-    setTimeout(() => this.isSavedNotificationVisible.set(false), 3000);
+    // Actualizar la sucursal localmente de inmediato
+    if (targetBranch) {
+      this.branches.update(list => list.map(b => {
+        if (b.id === targetBranch.id) {
+          return {
+            ...b,
+            ...branchPayload,
+            deliveryRadiusKm: Number(this.brandingForm.deliveryRadiusKm),
+            baseDeliveryFee: Number(this.brandingForm.baseDeliveryFee),
+            deliveryTiers: this.brandingForm.deliveryTiers,
+            branding: {
+              accentColor: this.brandingForm.accentColor,
+              logoUrl: this.brandingForm.logoUrl,
+              bannerUrl: this.brandingForm.bannerUrl
+            }
+          };
+        }
+        return b;
+      }));
+    }
+
+    // Si es la sede principal o no hay sucursal específica, actualizar también el tenant global
+    if (!targetBranch || targetBranch.isMain || targetBranch.name.toLowerCase().includes('principal')) {
+      this.currentTenant.update(prev => ({
+        ...prev,
+        name: this.brandingForm.name,
+        tagline: this.brandingForm.tagline,
+        branding: {
+          accentColor: this.brandingForm.accentColor,
+          logoUrl: this.brandingForm.logoUrl,
+          bannerUrl: this.brandingForm.bannerUrl
+        },
+        currencySettings: {
+          baseCurrency: this.brandingForm.baseCurrency,
+          displayMode: this.brandingForm.displayMode,
+          exchangeRate: Number(this.brandingForm.exchangeRate),
+          lastRateUpdate: new Date().toISOString()
+        },
+        contact: {
+          whatsappNumber: this.brandingForm.whatsappNumber,
+          phone: this.brandingForm.phone,
+          address: this.brandingForm.address,
+          coordinates: {
+            lat: Number(this.brandingForm.latitude),
+            lng: Number(this.brandingForm.longitude)
+          }
+        },
+        deliverySettings: {
+          ...prev.deliverySettings,
+          baseDeliveryFee: Number(this.brandingForm.baseDeliveryFee),
+          deliveryRadiusKm: Number(this.brandingForm.deliveryRadiusKm),
+          deliveryTiers: this.brandingForm.deliveryTiers
+        }
+      }));
+
+      this.api.updateTenant(this.currentTenant().id, {
+        name: this.brandingForm.name,
+        tagline: this.brandingForm.tagline,
+        accent_color: this.brandingForm.accentColor,
+        logo_url: this.brandingForm.logoUrl,
+        banner_url: this.brandingForm.bannerUrl,
+        whatsapp_number: this.brandingForm.whatsappNumber,
+        phone: this.brandingForm.phone,
+        address: this.brandingForm.address,
+        latitude: Number(this.brandingForm.latitude),
+        longitude: Number(this.brandingForm.longitude),
+        delivery_radius_km: Number(this.brandingForm.deliveryRadiusKm),
+        base_delivery_fee: Number(this.brandingForm.baseDeliveryFee),
+        delivery_tiers: this.brandingForm.deliveryTiers,
+        exchange_rate: Number(this.brandingForm.exchangeRate),
+        base_currency: this.brandingForm.baseCurrency,
+        display_mode: this.brandingForm.displayMode,
+        currency_settings: {
+          baseCurrency: this.brandingForm.baseCurrency,
+          displayMode: this.brandingForm.displayMode,
+          exchangeRate: Number(this.brandingForm.exchangeRate),
+          lastRateUpdate: new Date().toISOString()
+        }
+      }).subscribe({ error: (err) => console.warn('[MerchantAdmin] Sync tenant warning:', err) });
+    }
+
+    // Guardar específicamente la sucursal seleccionada en el backend
+    if (targetBranch) {
+      this.api.updateBranch(targetBranch.id, branchPayload).subscribe({
+        next: (updatedBranch) => {
+          this.isSavingBranding.set(false);
+          this.isSavedNotificationVisible.set(true);
+          setTimeout(() => this.isSavedNotificationVisible.set(false), 3000);
+          console.log('[MerchantAdmin] Configuración guardada para sucursal:', updatedBranch?.name || targetBranch.name);
+          if (updatedBranch) {
+            this.branches.update(list => list.map(b => b.id === updatedBranch.id ? { ...b, ...updatedBranch } : b));
+          }
+          setTimeout(() => {
+            if (this.branchesMap) {
+              this.initBranchesMap();
+            }
+          }, 250);
+        },
+        error: (err) => {
+          this.isSavingBranding.set(false);
+          console.warn('[MerchantAdmin] Error al guardar sucursal:', err);
+        }
+      });
+    } else {
+      this.isSavingBranding.set(false);
+      this.isSavedNotificationVisible.set(true);
+      setTimeout(() => this.isSavedNotificationVisible.set(false), 3000);
+    }
   }
 
   // --- MULTI-SUCURSAL ACTIONS ---
@@ -2049,6 +2175,13 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       const list = branches || [];
       this.branches.set(list);
       const bFilter = this.activeBranchId();
+
+      if (!this.selectedConfigBranchId()) {
+        const target = this.currentConfigBranch();
+        if (target) {
+          this.loadBrandingForBranch(target);
+        }
+      }
 
       this.refreshRidersLocation();
       this.loadStoreUsers();
