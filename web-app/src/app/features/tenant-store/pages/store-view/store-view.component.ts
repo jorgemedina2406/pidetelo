@@ -86,6 +86,23 @@ export class StoreViewComponent implements OnInit {
             branches: activeBranches
           };
 
+          try {
+            const cached = localStorage.getItem('deliveryhub_branding_' + storeData.id);
+            if (cached) {
+              const parsed = JSON.parse(cached);
+              if (parsed.deliveryRadiusKm) {
+                cleanStoreData.deliverySettings.deliveryRadiusKm = Number(parsed.deliveryRadiusKm);
+              }
+              if (parsed.baseDeliveryFee) {
+                cleanStoreData.deliverySettings.baseDeliveryFee = Number(parsed.baseDeliveryFee);
+              }
+              if (Array.isArray(parsed.deliveryTiers) && parsed.deliveryTiers.length > 0) {
+                cleanStoreData.deliverySettings.deliveryTiers = parsed.deliveryTiers;
+                cleanStoreData.deliveryTiers = parsed.deliveryTiers;
+              }
+            }
+          } catch (_) {}
+
           this.tenant.set(cleanStoreData);
           this.cart.setTenant(cleanStoreData);
 
@@ -110,6 +127,18 @@ export class StoreViewComponent implements OnInit {
           }
 
           if (assignedBranch) {
+            const effectiveRadius = cleanStoreData.deliverySettings?.deliveryRadiusKm
+              ? Math.max(Number(assignedBranch.deliveryRadiusKm) || 0, Number(cleanStoreData.deliverySettings.deliveryRadiusKm))
+              : Number(assignedBranch.deliveryRadiusKm) || 8.0;
+            const effectiveTiers = (Array.isArray(cleanStoreData.deliverySettings?.deliveryTiers) && cleanStoreData.deliverySettings.deliveryTiers.length > 0)
+              ? cleanStoreData.deliverySettings.deliveryTiers
+              : assignedBranch.deliveryTiers;
+
+            assignedBranch = {
+              ...assignedBranch,
+              deliveryRadiusKm: effectiveRadius,
+              deliveryTiers: effectiveTiers
+            };
             this.cart.setBranch(assignedBranch);
           }
 

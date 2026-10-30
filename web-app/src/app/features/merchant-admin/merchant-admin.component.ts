@@ -1972,9 +1972,9 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       }
     }));
 
-    // Actualizar sede principal localmente de inmediato
+    // Actualizar sede principal y sucursales localmente de inmediato
     this.branches.update(list => list.map(b => {
-      if (b.name.toLowerCase().includes('principal')) {
+      if (list.length === 1 || b.isMain || b.name.toLowerCase().includes('principal') || b.id === this.userAssignedBranch()?.id) {
         return {
           ...b,
           address: this.brandingForm.address,

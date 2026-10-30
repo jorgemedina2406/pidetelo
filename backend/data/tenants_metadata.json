@@ -8,7 +8,33 @@
       "baseCurrency": "USD",
       "displayMode": "usd_and_bs",
       "exchangeRate": 45.5,
-      "lastRateUpdate": "2026-10-30T00:01:31.910Z"
-    }
+      "lastRateUpdate": "2026-10-30T01:41:29.729Z"
+    },
+    "delivery_tiers": [
+      {
+        "id": "tier_1",
+        "minKm": 0,
+        "maxKm": 2,
+        "price": 1.5
+      },
+      {
+        "id": "tier_2",
+        "minKm": 2,
+        "maxKm": 5,
+        "price": 3
+      },
+      {
+        "id": "tier_3",
+        "minKm": 5,
+        "maxKm": 8,
+        "price": 4.5
+      },
+      {
+        "id": "tier_1793322556067",
+        "minKm": 8,
+        "maxKm": 20,
+        "price": 6
+      }
+    ]
   }
 }

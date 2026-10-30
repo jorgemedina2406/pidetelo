@@ -94,20 +94,6 @@ export const CartStore = signalStore(
       return Number((straight * 1.28).toFixed(1));
     });
 
-    const maxCoverageRadiusKm = computed<number>(() => {
-      const branch = store.selectedBranch();
-      if (branch?.deliveryRadiusKm) return Number(branch.deliveryRadiusKm);
-      const tenant = store.activeTenant();
-      return Number(tenant?.deliverySettings?.deliveryRadiusKm) || 8.0;
-    });
-
-    const isOutOfCoverage = computed<boolean>(() => {
-      if (store.fulfillmentType() !== 'delivery') return false;
-      const dist = customerDistanceKm();
-      if (dist === null) return false;
-      return dist > maxCoverageRadiusKm();
-    });
-
     const isLocationRequired = computed<boolean>(() => {
       return store.fulfillmentType() === 'delivery' && !customerCoordinates();
     });
@@ -122,6 +108,23 @@ export const CartStore = signalStore(
         { id: 'tier_2', minKm: 2, maxKm: 5, price: 3.00 },
         { id: 'tier_3', minKm: 5, maxKm: 8, price: 4.50 }
       ];
+    });
+
+    const maxCoverageRadiusKm = computed<number>(() => {
+      const tenantRadius = Number(store.activeTenant()?.deliverySettings?.deliveryRadiusKm);
+      const branchRadius = Number(store.selectedBranch()?.deliveryRadiusKm);
+      const tiers = deliveryTiers();
+      const maxTierKm = tiers.length > 0 ? Math.max(...tiers.map(t => Number(t.maxKm) || 0)) : 0;
+
+      const computedMax = Math.max(tenantRadius || 0, branchRadius || 0, maxTierKm);
+      return computedMax > 0 ? computedMax : 8.0;
+    });
+
+    const isOutOfCoverage = computed<boolean>(() => {
+      if (store.fulfillmentType() !== 'delivery') return false;
+      const dist = customerDistanceKm();
+      if (dist === null) return false;
+      return dist > maxCoverageRadiusKm();
     });
 
     const appliedDeliveryTier = computed<DeliveryTier | null>(() => {

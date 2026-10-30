@@ -215,12 +215,21 @@ export class TenantsService {
       }
 
       if (Object.keys(branchUpdate).length > 1) {
-        await this.supabase
+        const { data: updatedBranches } = await this.supabase
           .getClient()
           .from('branches')
           .update(branchUpdate)
           .eq('company_id', id)
-          .or('is_main.eq.true,name.ilike.%principal%');
+          .or('is_main.eq.true,name.ilike.%principal%')
+          .select('id');
+
+        if (!updatedBranches || updatedBranches.length === 0) {
+          await this.supabase
+            .getClient()
+            .from('branches')
+            .update(branchUpdate)
+            .eq('company_id', id);
+        }
       }
     } catch (bErr) {
       console.warn('[TenantsService] Error sincronizando sede principal en branches:', bErr);

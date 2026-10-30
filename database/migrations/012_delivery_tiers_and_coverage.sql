@@ -17,3 +17,4 @@ ALTER TABLE public.branches
 
 COMMENT ON COLUMN public.tenants.delivery_tiers IS 'Rangos de cobro por kilometraje configurados por el comercio [{minKm, maxKm, price}]';
 COMMENT ON COLUMN public.branches.delivery_tiers IS 'Rangos de cobro por kilometraje específicos por sucursal [{minKm, maxKm, price}]';
+
