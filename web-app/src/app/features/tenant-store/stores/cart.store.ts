@@ -142,6 +142,9 @@ export const CartStore = signalStore(
       if (isOutOfCoverage()) {
         return 0;
       }
+      if (isLocationRequired()) {
+        return 0; // La tarifa exacta se determinará al fijar el GPS
+      }
       const tier = appliedDeliveryTier();
       if (tier) {
         return Number(tier.price.toFixed(2));
