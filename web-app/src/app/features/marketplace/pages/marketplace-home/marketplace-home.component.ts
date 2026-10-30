@@ -238,7 +238,9 @@ export class MarketplaceHomeComponent implements OnInit {
       Math.cos(this.deg2rad(lat1)) * Math.cos(this.deg2rad(lat2)) *
       Math.sin(dLon / 2) * Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
+    // Factor de sinuosidad vial urbana (1.28x sobre distancia euclidiana en línea recta)
+    // para reflejar el kilometraje real de calles, avenidas y giros (coincidente con Google Maps)
+    return (R * c) * 1.28;
   }
 
   private deg2rad(deg: number): number {

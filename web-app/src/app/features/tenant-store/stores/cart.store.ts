@@ -25,6 +25,7 @@ export interface CartState {
   isCheckoutModalOpen: boolean;
   isSuccessModalOpen: boolean;
   completedOrder: Order | null;
+  realRoadDistanceKm: number | null;
 }
 
 const initialState: CartState = {
@@ -43,7 +44,8 @@ const initialState: CartState = {
   isCartDrawerOpen: false,
   isCheckoutModalOpen: false,
   isSuccessModalOpen: false,
-  completedOrder: null
+  completedOrder: null,
+  realRoadDistanceKm: null
 };
 
 export const CartStore = signalStore(
@@ -84,7 +86,12 @@ export const CartStore = signalStore(
       const s = storeCoordinates();
       const c = customerCoordinates();
       if (!s || !c) return null;
-      return Number(calculateHaversineDistanceKm(s.lat, s.lng, c.lat, c.lng).toFixed(1));
+      if (store.realRoadDistanceKm() !== null) {
+        return store.realRoadDistanceKm();
+      }
+      // Distancia vial real por carretera/calle (Google Maps / factor de sinuosidad vial 1.28x sobre Haversine)
+      const straight = calculateHaversineDistanceKm(s.lat, s.lng, c.lat, c.lng);
+      return Number((straight * 1.28).toFixed(1));
     });
 
     const maxCoverageRadiusKm = computed<number>(() => {
@@ -319,6 +326,25 @@ export const CartStore = signalStore(
       patchState(store, {
         customer: { ...store.customer(), ...customerData }
       });
+
+      if (customerData.deliveryLat && customerData.deliveryLng) {
+        const branch = store.selectedBranch();
+        const tenant = store.activeTenant();
+        const sLat = branch?.latitude || Number((tenant as any)?.latitude ?? tenant?.contact?.coordinates?.lat);
+        const sLng = branch?.longitude || Number((tenant as any)?.longitude ?? tenant?.contact?.coordinates?.lng);
+        if (sLat && sLng && typeof window !== 'undefined') {
+          const url = `https://router.project-osrm.org/route/v1/driving/${sLng},${sLat};${customerData.deliveryLng},${customerData.deliveryLat}?overview=false`;
+          fetch(url)
+            .then(res => res.json())
+            .then(data => {
+              if (data && data.routes && data.routes.length > 0 && data.routes[0].distance) {
+                const roadKm = Number((data.routes[0].distance / 1000).toFixed(1));
+                patchState(store, { realRoadDistanceKm: roadKm });
+              }
+            })
+            .catch(() => {});
+        }
+      }
     },
 
     openCart(): void {

@@ -131,7 +131,9 @@ class Branch {
             math.cos(userLat * p) *
             (1 - math.cos((userLng - longitude) * p)) /
             2;
-    return 12742 * math.asin(math.sqrt(a));
+    final straight = 12742 * math.asin(math.sqrt(a));
+    // Factor de ruta vial urbana terrestre (1.28x) para reflejar calles y avenidas reales
+    return straight * 1.28;
   }
 
   /// Estimated delivery time dynamically computed from distance

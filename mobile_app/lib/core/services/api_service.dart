@@ -305,7 +305,9 @@ class ApiService {
     final double a = 0.5 -
         math.cos((lat2 - lat1) * p) / 2 +
         math.cos(lat1 * p) * math.cos(lat2 * p) * (1 - math.cos((lon2 - lon1) * p)) / 2;
-    return 12742 * math.asin(math.sqrt(a));
+    final straight = 12742 * math.asin(math.sqrt(a));
+    // Factor de ruta vial terrestre (1.28x) para reflejar calles y retornos reales
+    return straight * 1.28;
   }
 
   /// Compute realistic delivery time dynamically based on distance
