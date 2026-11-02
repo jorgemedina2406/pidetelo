@@ -569,10 +569,18 @@ class ApiService {
           .eq('is_available', true);
 
       if (branchId != null && branchId.trim().isNotEmpty && branchId != 'all') {
-        query = query.eq('branch_id', branchId.trim());
+        query = query.or('branch_id.eq.${branchId.trim()},branch_id.is.null');
       }
 
-      final data = await query.order('sort_order', ascending: true);
+      var data = await query.order('sort_order', ascending: true);
+      if ((data as List).isEmpty && branchId != null && branchId != 'all') {
+        final fallbackQ = supabase
+            .from('products')
+            .select('*, categories(name), modifier_groups(*, modifier_options(*))')
+            .eq('tenant_id', tenantId)
+            .eq('is_available', true);
+        data = await fallbackQ.order('sort_order', ascending: true);
+      }
       return (data as List).map((item) {
         final rawModGroups = item['modifier_groups'] ?? [];
         final modGroups = (rawModGroups as List)

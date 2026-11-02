@@ -174,8 +174,11 @@ export class MarketplaceHomeComponent implements OnInit {
     const cat = this.selectedCategory();
     const sub = this.selectedSubcategory();
 
-    // Requisito 3: Si el cliente está fuera del radio máximo de cobertura, NO debe aparecer en el listado
-    list = list.filter(t => t.isWithinRange);
+    // Mostrar comercios en rango de cobertura preferente (si ninguno está en rango exacto, mostrar disponibles para explorar)
+    const inRange = list.filter(t => t.isWithinRange);
+    if (inRange.length > 0) {
+      list = inRange;
+    }
 
     if (cat !== 'Todos') {
       list = list.filter(t => {

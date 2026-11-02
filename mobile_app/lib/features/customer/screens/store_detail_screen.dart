@@ -138,7 +138,10 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
         _isLoadingProducts = true;
       });
     }
-    final prods = await ApiService().fetchProductsByTenant(tenantId, branchId: branchId);
+    var prods = await ApiService().fetchProductsByTenant(tenantId, branchId: branchId);
+    if (prods.isEmpty && branchId != null) {
+      prods = await ApiService().fetchProductsByTenant(tenantId, branchId: null);
+    }
     if (mounted) {
       setState(() {
         _products = prods;

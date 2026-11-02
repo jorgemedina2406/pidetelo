@@ -66,34 +66,35 @@ export class ProductsService {
       .eq('tenant_id', tenantId);
 
     if (branchId && branchId !== 'all') {
-      try {
-        const { data: branch } = await this.supabase
-          .getClient()
-          .from('branches')
-          .select('is_main, name')
-          .eq('id', branchId)
-          .maybeSingle();
-
-        const isMain = branch?.is_main || branch?.name?.toLowerCase().includes('principal');
-        if (isMain) {
-          query = query.or(`branch_id.eq.${branchId},branch_id.is.null`);
-        } else {
-          query = query.eq('branch_id', branchId);
-        }
-      } catch (_) {
-        query = query.eq('branch_id', branchId);
-      }
+      query = query.or(`branch_id.eq.${branchId},branch_id.is.null`);
     }
 
     if (onlyAvailable) {
       query = query.eq('is_available', true);
     }
 
-    const { data, error } = await query.order('sort_order', { ascending: true });
+    let { data, error } = await query.order('sort_order', { ascending: true });
 
     if (error) {
-      throw new InternalServerErrorException(`Error fetching products: ${error.message}`);
+      console.warn(`[ProductsService] Error fetching products: ${error.message}`);
     }
+
+    // Fallback: Si la sucursal específica no tiene productos aún, traer todos los del comercio
+    if ((!data || data.length === 0) && branchId && branchId !== 'all') {
+      let fallbackQuery = this.supabase
+        .getClient()
+        .from('products')
+        .select('*, categories(id, name), modifier_groups(*, modifier_options(*))')
+        .eq('tenant_id', tenantId);
+      if (onlyAvailable) {
+        fallbackQuery = fallbackQuery.eq('is_available', true);
+      }
+      const { data: fallbackData } = await fallbackQuery.order('sort_order', { ascending: true });
+      if (fallbackData && fallbackData.length > 0) {
+        data = fallbackData;
+      }
+    }
+
     return (data || []).map(p => this.mergeProductWithMetadata(p));
   }
 

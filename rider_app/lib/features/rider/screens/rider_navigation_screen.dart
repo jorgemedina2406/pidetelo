@@ -298,7 +298,7 @@ class _RiderNavigationScreenState extends State<RiderNavigationScreen>
   Future<void> _launchWhatsApp() async {
     final phone = _order.customerPhone.replaceAll('+', '').replaceAll(' ', '');
     final message = Uri.encodeComponent(
-      '¡Hola ${_order.customerName}! Soy tu repartidor ${_order.riderName} de DeliveryHub. Voy en camino con tu pedido ${_order.orderNumber} 🛵',
+      '¡Hola ${_order.customerName}! Soy tu repartidor ${_order.riderName} de Pídetelo. Voy en camino con tu pedido ${_order.orderNumber} 🛵',
     );
     final url = Uri.parse('https://wa.me/$phone?text=$message');
     try {

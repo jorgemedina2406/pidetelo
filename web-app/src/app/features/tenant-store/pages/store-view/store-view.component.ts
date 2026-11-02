@@ -255,9 +255,17 @@ export class StoreViewComponent implements OnInit {
 
           const branchIdToLoad = assignedBranch?.id;
           this.api.getProducts(storeData.id, branchIdToLoad, true).subscribe(prods => {
-            this.products.set(prods);
-            this.cart.setStoreProducts(prods);
-            this.isLoading.set(false);
+            if (!prods || prods.length === 0) {
+              this.api.getProducts(storeData.id, undefined, true).subscribe(allProds => {
+                this.products.set(allProds || []);
+                this.cart.setStoreProducts(allProds || []);
+                this.isLoading.set(false);
+              });
+            } else {
+              this.products.set(prods);
+              this.cart.setStoreProducts(prods);
+              this.isLoading.set(false);
+            }
           });
 
           // Fetch live official BCV rate from dolarapi.com

@@ -2,24 +2,26 @@ name: Build iOS IPAs (Cliente & Rider)
 
 on:
   workflow_dispatch:
+    inputs:
+      target_app:
+        description: 'Aplicación a compilar'
+        required: true
+        default: 'ambas'
+        type: choice
+        options:
+          - ambas
+          - cliente
+          - rider
   push:
     branches:
       - main
       - master
 
 jobs:
-  build:
-    name: Build iOS (${{ matrix.app }})
+  build-cliente:
+    name: Build iOS (Cliente)
     runs-on: macos-latest
-    strategy:
-      fail-fast: false
-      max-parallel: 1
-      matrix:
-        include:
-          - app: mobile_app
-            output_name: Pidetelo-Cliente-iOS
-          - app: rider_app
-            output_name: Pidetelo-Rider-iOS
+    if: github.event_name == 'push' || github.event.inputs.target_app == 'ambas' || github.event.inputs.target_app == 'cliente'
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -33,23 +35,62 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          cd ${{ matrix.app }}
+          cd mobile_app
           flutter pub get
 
       - name: Build iOS (No Codesign)
         run: |
-          cd ${{ matrix.app }}
+          cd mobile_app
           flutter build ios --release --no-codesign
 
       - name: Package IPA
         run: |
-          cd ${{ matrix.app }}/build/ios/iphoneos
+          cd mobile_app/build/ios/iphoneos
           mkdir -p Payload
           cp -r Runner.app Payload/
-          zip -r -q "${{ matrix.output_name }}.ipa" Payload
+          zip -r -q "Pidetelo-Cliente-iOS.ipa" Payload
 
       - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.output_name }}-ipa
-          path: ${{ matrix.app }}/build/ios/iphoneos/${{ matrix.output_name }}.ipa
+          name: Pidetelo-Cliente-iOS-ipa
+          path: mobile_app/build/ios/iphoneos/Pidetelo-Cliente-iOS.ipa
+
+  build-rider:
+    name: Build iOS (Rider)
+    runs-on: macos-latest
+    needs: [build-cliente]
+    if: always() && (github.event_name == 'push' || github.event.inputs.target_app == 'ambas' || github.event.inputs.target_app == 'rider')
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.27.1'
+          channel: 'stable'
+          cache: true
+
+      - name: Install Dependencies
+        run: |
+          cd rider_app
+          flutter pub get
+
+      - name: Build iOS (No Codesign)
+        run: |
+          cd rider_app
+          flutter build ios --release --no-codesign
+
+      - name: Package IPA
+        run: |
+          cd rider_app/build/ios/iphoneos
+          mkdir -p Payload
+          cp -r Runner.app Payload/
+          zip -r -q "Pidetelo-Rider-iOS.ipa" Payload
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Pidetelo-Rider-iOS-ipa
+          path: rider_app/build/ios/iphoneos/Pidetelo-Rider-iOS.ipa

@@ -180,7 +180,7 @@ class BackgroundOrderService {
 
       await FlutterForegroundTask.startService(
         serviceId: 256,
-        notificationTitle: 'DeliveryHub Repartidor Activo',
+        notificationTitle: 'Pídetelo Repartidor Activo',
         notificationText: 'Escuchando nuevos pedidos en segundo plano...',
         callback: startForegroundOrderListenerCallback,
       );

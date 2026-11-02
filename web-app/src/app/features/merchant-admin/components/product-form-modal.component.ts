@@ -14,491 +14,432 @@ import { CurrencyService } from '../../../core/services/currency.service';
   imports: [CommonModule, FormsModule, IconComponent],
   template: `
     @if (isOpen) {
-    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/60 backdrop-blur-sm animate-fade-in"
       (click)="close.emit()">
       <div
-        class="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 w-full max-w-xl rounded-2xl shadow-xl p-6 overflow-hidden max-h-[90vh] flex flex-col border border-slate-200 dark:border-slate-800"
+        class="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 w-full max-w-5xl rounded-3xl shadow-2xl p-5 sm:p-7 overflow-hidden max-h-[94vh] flex flex-col border border-slate-200 dark:border-slate-800"
         (click)="$event.stopPropagation()">
 
-        <div class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
-          <div>
-            <div class="flex items-center gap-2">
-              <h3 class="text-base font-bold">Configuración de Producto / Artículo & Variantes</h3>
-              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20">
-                📍 {{ activeBranch?.name || 'Sede Principal' }}
-              </span>
+        <!-- Header -->
+        <div class="flex items-center justify-between pb-3.5 border-b border-slate-200 dark:border-slate-800">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center text-lg">
+              🍔
             </div>
-            <p class="text-[11px] text-slate-500 dark:text-slate-400">
-              Apto para cualquier tipo de comercio (Comida, Farmacias, Markets, Repuestos, Juguetes, etc.)
-            </p>
+            <div>
+              <div class="flex items-center gap-2">
+                <h3 class="text-base sm:text-lg font-extrabold tracking-tight">
+                  {{ editingProduct.id ? 'Editar Producto o Artículo' : 'Nuevo Producto o Artículo' }}
+                </h3>
+                <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20">
+                  📍 {{ activeBranch?.name || 'Sede Principal' }}
+                </span>
+              </div>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400">
+                Apto para cualquier categoría: Comida, Farmacias, Markets, Repuestos, Licores, etc.
+              </p>
+            </div>
           </div>
-          <button (click)="close.emit()" class="text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer">
+          <button (click)="close.emit()" class="w-8 h-8 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors cursor-pointer">
             <app-icon name="x" [size]="18"></app-icon>
           </button>
         </div>
 
-        <form (submit)="onSubmit($event)" class="overflow-y-auto flex-1 py-4 space-y-4 text-xs">
+        <!-- Scrollable Form Body -->
+        <form (submit)="onSubmit($event)" class="overflow-y-auto flex-1 py-4 pr-1 text-xs">
+          
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
 
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div class="sm:col-span-2">
-              <label class="block font-semibold mb-1">Nombre del Producto o Artículo</label>
-              <input type="text" [(ngModel)]="editingProduct.name" name="prodName" required
-                placeholder="Ej: Hamburguesa Especial, Acetaminofén 500mg, Pack Arroz 1kg, Pastillas de Freno..."
-                class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 focus:outline-none focus:border-brand-500 font-semibold" />
-            </div>
-            <div>
-              <label class="block font-semibold mb-1">Moneda del Precio</label>
-              <select [(ngModel)]="editingProduct.currency" name="prodCurrency"
-                class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 font-bold focus:outline-none focus:border-brand-500">
-                <option value="USD">Dólares ($ USD)</option>
-                <option value="VES">Bolívares (Bs. VES)</option>
-              </select>
-            </div>
-          </div>
+            <!-- ================= COLUMNA IZQUIERDA (7 COLS): Datos Principales, Foto & Variantes ================= -->
+            <div class="lg:col-span-7 space-y-4">
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
-            <div>
-              <label class="block font-semibold mb-1">
-                Precio ({{ editingProduct.currency === 'VES' ? 'Bs.' : '$ USD' }})
-              </label>
-              <input type="number" step="0.25" [(ngModel)]="editingProduct.price" name="prodPrice" required
-                class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 font-extrabold text-sm focus:outline-none focus:border-brand-500" />
-            </div>
-
-            <div class="p-2.5 rounded-xl bg-brand-50 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-800">
-              <div class="flex items-center justify-between mb-1">
-                <span class="text-slate-500 dark:text-slate-400 block text-[10px] font-bold uppercase tracking-wider">
-                  Equivalente al cambio ({{ effectiveRate().toFixed(2) }} Bs/$):
-                </span>
-                <button type="button" (click)="fetchLiveRate()" [disabled]="isFetchingRate()" title="Actualizar desde DolarApi Oficial (BCV)"
-                  class="text-[10px] font-semibold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1 cursor-pointer">
-                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500" [class.animate-pulse]="isFetchingRate()"></span>
-                  <span>{{ isFetchingRate() ? 'Consultando BCV...' : 'DolarApi Oficial' }}</span>
-                  <app-icon name="refresh-cw" [size]="10"></app-icon>
-                </button>
-              </div>
-              @if (editingProduct.currency === 'VES') {
-              <span class="font-extrabold text-brand-600 dark:text-brand-400 text-sm">
-                ~\${{ (editingProduct.price / effectiveRate()).toFixed(2) }} USD
-              </span>
-              } @else {
-              <span class="font-extrabold text-brand-600 dark:text-brand-400 text-sm font-mono">
-                ~Bs. {{ ((editingProduct.price || 0) * effectiveRate()).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
-              </span>
-              }
-            </div>
-          </div>
-
-          <!-- Configuración de Promociones y Destacados -->
-          <div class="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3">
-            <span class="font-bold text-xs block text-slate-800 dark:text-slate-200">Visibilidad & Promociones</span>
-            
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <!-- Destacado / Popular Switch -->
-              <label class="flex items-center gap-2 p-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 cursor-pointer">
-                <input type="checkbox" [(ngModel)]="editingProduct.isPopular" name="prodIsPopular" class="rounded text-brand-500 focus:ring-brand-500 w-4 h-4" />
-                <div>
-                  <span class="font-bold text-xs block text-slate-800 dark:text-slate-200">⭐ Producto Destacado</span>
-                  <span class="text-[10px] text-slate-400 block">Mostrar badge de recomendado en el menú</span>
+              <!-- Nombre y Descripción -->
+              <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+                <div class="flex items-center justify-between">
+                  <span class="font-extrabold text-xs text-slate-800 dark:text-slate-200">Información del Producto</span>
+                  <span class="text-[10px] text-slate-400">Visible para clientes</span>
                 </div>
-              </label>
 
-              <!-- Oferta Switch -->
-              <label class="flex items-center gap-2 p-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 cursor-pointer">
-                <input type="checkbox" [(ngModel)]="editingProduct.isOnSale" name="prodIsOnSale" class="rounded text-rose-500 focus:ring-rose-500 w-4 h-4" />
                 <div>
-                  <span class="font-bold text-xs block text-slate-800 dark:text-slate-200">🔥 En Oferta / Descuento</span>
-                  <span class="text-[10px] text-slate-400 block">Mostrar badge de promoción y precio tachado</span>
+                  <label class="block font-semibold mb-1 text-slate-700 dark:text-slate-300">Nombre del Producto o Artículo *</label>
+                  <input type="text" [(ngModel)]="editingProduct.name" name="prodName" required
+                    placeholder="Ej: Hamburguesa Bacon Doble Especial, Acetaminofén 500mg, Sushi Roll..."
+                    class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-3 focus:outline-none focus:border-brand-500 font-bold text-sm text-slate-900 dark:text-white shadow-xs" />
                 </div>
-              </label>
-            </div>
 
-            @if (editingProduct.isOnSale) {
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
                 <div>
-                  <label class="block font-semibold mb-1 text-[11px]">Precio Original Anterior (Tachado)</label>
-                  <input type="number" step="0.25" [(ngModel)]="editingProduct.compareAtPrice" (input)="onCompareAtPriceChange()" name="prodCompareAtPrice" placeholder="Ej: 15.00"
-                         class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 font-mono text-xs focus:outline-none focus:border-rose-500" />
-                </div>
-                <div>
-                  <label class="block font-semibold mb-1 text-[11px]">% de Descuento (Opcional)</label>
-                  <input type="number" [(ngModel)]="editingProduct.discountPercentage" (input)="onDiscountPercentageChange()" name="prodDiscountPercentage" placeholder="Ej: 20"
-                         class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 font-mono text-xs focus:outline-none focus:border-rose-500" />
+                  <label class="block font-semibold mb-1 text-slate-700 dark:text-slate-300">Descripción o Especificaciones del Producto</label>
+                  <textarea rows="3" [(ngModel)]="editingProduct.description" name="prodDesc"
+                    placeholder="Describe los ingredientes, contenido, presentación, especificaciones o detalles para que el cliente conozca tu producto..."
+                    class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 focus:outline-none focus:border-brand-500 text-xs text-slate-800 dark:text-slate-200 leading-relaxed"></textarea>
                 </div>
               </div>
-            }
-          </div>
 
-          <!-- Identificadores opcionales: SKU y Código de Barra -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-800">
-            <div>
-              <div class="flex items-center justify-between mb-1">
-                <label class="font-semibold text-slate-700 dark:text-slate-300">SKU (Código de Inventario)</label>
-                <span class="text-[10px] text-slate-400 font-normal">Opcional</span>
-              </div>
-              <input type="text" [(ngModel)]="editingProduct.sku" name="prodSku"
-                placeholder="Ej: HAM-SMASH-01, FAR-500MG..."
-                class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 font-mono text-xs uppercase focus:outline-none focus:border-brand-500" />
-            </div>
-
-            <div>
-              <div class="flex items-center justify-between mb-1">
-                <label class="font-semibold text-slate-700 dark:text-slate-300">Código de Barra (Barcode)</label>
-                <span class="text-[10px] text-slate-400 font-normal">Opcional</span>
-              </div>
-              <input type="text" [(ngModel)]="editingProduct.barcode" name="prodBarcode"
-                placeholder="Ej: 7591234567890 (Lector láser / EAN)"
-                class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 font-mono text-xs focus:outline-none focus:border-brand-500" />
-            </div>
-          </div>
-
-          <!-- Control de Inventario / Stock Real -->
-          <div class="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3">
-            <div class="flex items-center justify-between">
-              <div>
-                <span class="font-bold text-xs block text-slate-800 dark:text-slate-200">📦 Control de Inventario / Stock</span>
-                <span class="text-[10px] text-slate-500">Limita las compras según las existencias disponibles y registra auditoría</span>
-              </div>
-              <label class="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" [(ngModel)]="editingProduct.trackStock" name="prodTrackStock" class="sr-only peer" />
-                <div class="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
-              </label>
-            </div>
-
-            @if (editingProduct.trackStock) {
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-200/60 dark:border-slate-700/60 animate-fade-in">
-                <div>
-                  <label class="block font-semibold mb-1 text-[11px]">Cantidad en Stock Actual</label>
-                  <input type="number" min="0" [(ngModel)]="editingProduct.stockQuantity" name="prodStockQuantity"
-                         placeholder="Ej: 50"
-                         class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 font-mono text-xs font-bold focus:outline-none focus:border-brand-500" />
+              <!-- Foto del Producto con carga desde PC o URL -->
+              <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <span class="font-extrabold text-xs block text-slate-800 dark:text-slate-200">🖼️ Imagen o Fotografía del Producto</span>
+                    <span class="text-[10px] text-slate-500">Sube una foto atractiva para incrementar tus ventas</span>
+                  </div>
+                  <button type="button" (click)="imageMode = imageMode === 'upload' ? 'url' : 'upload'"
+                    class="text-[11px] font-bold text-brand-600 dark:text-brand-400 hover:underline cursor-pointer">
+                    {{ imageMode === 'upload' ? '🔗 Pegar Enlace URL' : '📁 Subir desde mi PC' }}
+                  </button>
                 </div>
-                <div class="p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex flex-col justify-center">
-                  <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Historial / Stock Previo:</span>
-                  <div class="flex items-center gap-2 mt-0.5">
-                    <span class="font-bold text-xs text-slate-700 dark:text-slate-300">
-                      {{ editingProduct.previousStock !== undefined && editingProduct.previousStock !== null ? (editingProduct.previousStock + ' unidades') : 'Sin registro previo' }}
+
+                @if (editingProduct.imageUrl) {
+                <div class="flex flex-col sm:flex-row items-center gap-3.5 p-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xs">
+                  <img [src]="editingProduct.imageUrl" alt="Preview"
+                    class="w-full sm:w-28 h-24 rounded-xl object-cover border border-slate-200 dark:border-slate-700 shadow-xs bg-slate-100 dark:bg-slate-800 flex-shrink-0" />
+                  <div class="min-w-0 flex-1 w-full text-center sm:text-left">
+                    <span class="text-xs font-bold text-slate-800 dark:text-slate-200 block truncate">
+                      {{ imageFileName || 'Imagen asignada' }}
                     </span>
-                    @if (editingProduct.previousStock !== undefined && editingProduct.previousStock !== null && editingProduct.stockQuantity !== editingProduct.previousStock) {
-                      <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-                        → Actualiza a {{ editingProduct.stockQuantity }}
+                    <span class="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold block mt-0.5">
+                      ✓ Lista para mostrar en catálogo y app móvil
+                    </span>
+                    <div class="flex items-center justify-center sm:justify-start gap-2.5 mt-2">
+                      <button type="button" (click)="pcFileInput.click()"
+                        class="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-brand-500/10 text-brand-600 dark:text-brand-400 hover:bg-brand-500 hover:text-white transition-all cursor-pointer">
+                        Cambiar foto
+                      </button>
+                      <button type="button" (click)="clearProductImage()"
+                        class="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500 hover:text-white transition-all cursor-pointer">
+                        Quitar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                }
+
+                <input type="file" #pcFileInput (change)="onFileSelected($event)" accept="image/*" class="hidden" />
+
+                @if (imageMode === 'upload') {
+                <div (click)="pcFileInput.click()"
+                  class="border-2 border-dashed border-brand-300 dark:border-brand-800 hover:border-brand-500 rounded-2xl p-5 text-center cursor-pointer transition-all bg-white/70 dark:bg-slate-900/70 hover:bg-brand-50/50 dark:hover:bg-brand-950/20 group">
+                  <div class="flex flex-col items-center justify-center gap-2">
+                    <div class="w-12 h-12 rounded-2xl bg-brand-500/10 text-brand-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <app-icon name="upload" [size]="24"></app-icon>
+                    </div>
+                    <div>
+                      <span class="font-extrabold text-xs text-slate-800 dark:text-slate-100 block">
+                        {{ isUploadingImage() ? 'Optimizando foto para catálogo...' : 'Haz clic aquí para seleccionar imagen desde tu Computadora' }}
                       </span>
-                    }
+                      <span class="text-[10px] text-slate-400 block mt-0.5">
+                        Admite JPG, PNG o WEBP. Se ajusta y comprime automáticamente.
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            }
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
-            <div>
-              <div class="flex items-center justify-between mb-1.5">
-                <label class="font-semibold text-slate-700 dark:text-slate-300">
-                  Categoría del Menú
-                </label>
-                <button type="button" (click)="toggleInlineCategoryCreation()"
-                  class="text-[11px] font-bold text-brand-500 hover:text-brand-600 dark:hover:text-brand-400 flex items-center gap-1 cursor-pointer transition-colors">
-                  <app-icon [name]="isCreatingCategoryInline() ? 'x' : 'plus'" [size]="12"></app-icon>
-                  <span>{{ isCreatingCategoryInline() ? 'Cancelar' : 'Nueva Categoría' }}</span>
-                </button>
-              </div>
-
-              @if (isCreatingCategoryInline()) {
-              <div class="flex items-center gap-1.5 animate-fade-in">
-                <input type="text" [(ngModel)]="newCategoryName" name="newCatNameInput"
-                  placeholder="Nombre (ej: Hamburguesas, Bebidas)"
-                  (keyup.enter)="saveInlineCategory()"
-                  class="flex-1 bg-white dark:bg-slate-800 border-2 border-brand-500 rounded-xl p-2.5 text-xs font-semibold focus:outline-none text-slate-900 dark:text-white" />
-                <button type="button" (click)="saveInlineCategory()" [disabled]="!newCategoryName.trim() || isSavingCategory()"
-                  class="px-3.5 py-2.5 bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white font-bold text-xs rounded-xl cursor-pointer whitespace-nowrap shadow-sm transition-all">
-                  {{ isSavingCategory() ? '...' : 'Crear' }}
-                </button>
-                <button type="button" (click)="toggleInlineCategoryCreation()" title="Cancelar"
-                  class="p-2.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 text-xs rounded-xl cursor-pointer transition-all">
-                  ✕
-                </button>
-              </div>
-              <p class="text-[10px] text-brand-600 dark:text-brand-400 mt-1 font-medium">
-                Escribe el nombre y presiona Crear o Enter
-              </p>
-              } @else {
-              <select [(ngModel)]="editingProduct.categoryId" (change)="onCategorySelectChange($event)" name="prodCat"
-                class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 font-semibold focus:outline-none focus:border-brand-500">
-                <option value="">-- Sin categoría asignada (General) --</option>
-                @for (cat of categories; track cat.id) {
-                <option [value]="cat.id">📁 {{ cat.name }}</option>
+                } @else {
+                <div>
+                  <input type="text" [(ngModel)]="editingProduct.imageUrl" name="prodImage"
+                    placeholder="https://images.unsplash.com/... o enlace de tu imagen"
+                    class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs focus:outline-none focus:border-brand-500 font-mono" />
+                </div>
                 }
-                <option value="__NEW__">➕ + Crear nueva categoría...</option>
-              </select>
-              @if (categories.length === 0) {
-              <p class="text-[10px] text-slate-400 mt-1">
-                Sin categorías en tu menú. Haz clic en "Nueva Categoría" para crear una.
-              </p>
-              }
-              }
-            </div>
-
-            <div>
-              <div class="flex items-center justify-between mb-1.5">
-                <label class="font-semibold text-slate-700 dark:text-slate-300">Sucursal / Sede Asignada</label>
-              </div>
-              <select [(ngModel)]="editingProduct.branchId" name="prodBranch" required
-                class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 font-bold focus:outline-none focus:border-brand-500">
-                @for (b of branches; track b.id) {
-                <option [value]="b.id">📍 {{ b.name }}</option>
-                }
-              </select>
-              <p class="text-[10px] text-slate-400 mt-1">
-                Cada sucursal gestiona su catálogo y stock de forma 100% independiente.
-              </p>
-            </div>
-          </div>
-
-          <!-- Imagen del Producto: Subida desde PC o URL -->
-          <div class="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2.5">
-            <div class="flex items-center justify-between">
-              <label class="block font-semibold text-slate-800 dark:text-slate-200">
-                🖼️ Imagen del Producto o Artículo
-              </label>
-              <div class="flex items-center gap-2">
-                <button type="button" (click)="imageMode = imageMode === 'upload' ? 'url' : 'upload'"
-                  class="text-[11px] font-bold text-brand-600 dark:text-brand-400 hover:underline cursor-pointer">
-                  {{ imageMode === 'upload' ? 'Ingresar URL de Internet' : 'Subir desde la Computadora' }}
-                </button>
-              </div>
-            </div>
-
-            <!-- Previsualización y acciones -->
-            @if (editingProduct.imageUrl) {
-            <div class="flex items-center gap-3 p-2 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700">
-              <img [src]="editingProduct.imageUrl" alt="Preview"
-                class="w-16 h-16 rounded-lg object-cover border border-slate-200 dark:border-slate-700 shadow-xs flex-shrink-0 bg-slate-100 dark:bg-slate-800" />
-              <div class="min-w-0 flex-1">
-                <span class="text-xs font-bold text-slate-800 dark:text-slate-200 block truncate">
-                  {{ imageFileName || 'Imagen asignada' }}
-                </span>
-                <span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold block">
-                  ✓ Lista para mostrar en el catálogo
-                </span>
-                <div class="flex items-center gap-2 mt-1">
-                  <button type="button" (click)="pcFileInput.click()"
-                    class="text-[11px] font-bold text-brand-500 hover:text-brand-600 cursor-pointer">
-                    Cambiar imagen
-                  </button>
-                  <span class="text-slate-300 dark:text-slate-700">•</span>
-                  <button type="button" (click)="clearProductImage()"
-                    class="text-[11px] font-bold text-rose-500 hover:text-rose-600 cursor-pointer">
-                    Eliminar
-                  </button>
-                </div>
-              </div>
-            </div>
-            }
-
-            <input type="file" #pcFileInput (change)="onFileSelected($event)" accept="image/*" class="hidden" />
-
-            @if (imageMode === 'upload') {
-            <div (click)="pcFileInput.click()"
-              class="border-2 border-dashed border-brand-300 dark:border-brand-800 hover:border-brand-500 rounded-xl p-4 text-center cursor-pointer transition-all bg-white/50 dark:bg-slate-900/50 hover:bg-brand-50/50 dark:hover:bg-brand-950/20">
-              <div class="flex flex-col items-center justify-center gap-1.5">
-                <div class="w-10 h-10 rounded-full bg-brand-500/10 text-brand-500 flex items-center justify-center">
-                  <app-icon name="upload" [size]="20"></app-icon>
-                </div>
-                <span class="font-bold text-xs text-slate-700 dark:text-slate-200">
-                  {{ isUploadingImage() ? 'Cargando y optimizando imagen...' : 'Haz clic para seleccionar foto desde tu PC' }}
-                </span>
-                <span class="text-[10px] text-slate-400">
-                  Formatos JPG, PNG, WEBP (se ajusta automáticamente para catálogo)
-                </span>
-              </div>
-            </div>
-            } @else {
-            <div>
-              <input type="text" [(ngModel)]="editingProduct.imageUrl" name="prodImage"
-                placeholder="https://images.unsplash.com/... o enlace directo de la imagen"
-                class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs focus:outline-none focus:border-brand-500" />
-            </div>
-            }
-          </div>
-
-          <div>
-            <label class="block font-semibold mb-1">Descripción o Especificaciones del Producto</label>
-            <textarea rows="2" [(ngModel)]="editingProduct.description" name="prodDesc"
-              placeholder="Especificaciones, ingredientes, compatibilidad, garantía o detalles del artículo..."
-              class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 focus:outline-none focus:border-brand-500"></textarea>
-          </div>
-
-          <!-- Modifiers / Variants Configuration Section -->
-          <div class="space-y-3.5 pt-3 border-t border-slate-200 dark:border-slate-800">
-            <div class="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <span class="font-bold text-sm block">Grupos de Variantes, Ingredientes o Extras</span>
-                <span class="text-[10px] text-slate-500">
-                  Opciones obligatorias (1 requerida), extras libres (0 requeridas) o selección con cantidad requerida (ej: 6 ingredientes, 2 obligatorios).
-                </span>
-              </div>
-              
-              <div class="flex items-center gap-1.5 flex-wrap">
-                <button type="button" (click)="addModifierGroup('single')"
-                  class="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-orange-500/10 text-orange-600 dark:text-orange-400 hover:bg-orange-500 hover:text-white transition-all flex items-center gap-1 cursor-pointer">
-                  <span>+ Opción Única</span>
-                </button>
-                <button type="button" (click)="addModifierGroup('optional_extras')"
-                  class="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all flex items-center gap-1 cursor-pointer">
-                  <span>+ Extras Libres</span>
-                </button>
-                <button type="button" (click)="addModifierGroup('multiple_required')"
-                  class="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500 hover:text-white transition-all flex items-center gap-1 cursor-pointer">
-                  <span>+ Múltiple con Requeridos</span>
-                </button>
-              </div>
-            </div>
-
-            @if (!editingProduct.modifierGroups || editingProduct.modifierGroups.length === 0) {
-            <div class="p-4 rounded-xl border border-dashed border-slate-300 dark:border-slate-800 text-center text-slate-400 text-xs">
-              Sin grupos de variantes aún. Usa los botones superiores para agregar opciones obligatorias, extras opcionales o ingredientes con cantidad requerida.
-            </div>
-            }
-
-            @for (group of editingProduct.modifierGroups; track group.id; let gIndex = $index) {
-            <div class="p-3.5 rounded-xl border-2 transition-all space-y-3"
-              [class.border-orange-500/40]="getModifierGroupMode(group) === 'single'"
-              [class.bg-orange-500/[0.02]]="getModifierGroupMode(group) === 'single'"
-              [class.border-emerald-500/40]="getModifierGroupMode(group) === 'optional_extras'"
-              [class.bg-emerald-500/[0.02]]="getModifierGroupMode(group) === 'optional_extras'"
-              [class.border-blue-500/40]="getModifierGroupMode(group) === 'multiple_required'"
-              [class.bg-blue-500/[0.02]]="getModifierGroupMode(group) === 'multiple_required'">
-              
-              <div class="flex items-center justify-between gap-2">
-                <div class="flex items-center gap-2 flex-1">
-                  <span class="text-xs font-black text-slate-400">#{{ gIndex + 1 }}</span>
-                  <input type="text" [(ngModel)]="group.title" [name]="'groupTitle_' + gIndex"
-                    placeholder="Título del grupo (ej: Tipo de Pan / Extras / Ingredientes a Elegir)"
-                    class="bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-xs font-bold flex-1" />
-                </div>
-                <button type="button" (click)="removeModifierGroup(gIndex)"
-                  class="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 p-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer">
-                  Eliminar Grupo
-                </button>
               </div>
 
-              <!-- Selection Mode Switcher -->
-              <div class="p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2">
-                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Comportamiento de Selección del Cliente:</div>
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <!-- Modifiers / Variants Configuration Section -->
+              <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3.5">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <span class="font-extrabold text-xs block text-slate-800 dark:text-slate-200">Grupos de Variantes, Ingredientes o Extras</span>
+                    <span class="text-[10px] text-slate-500">
+                      Opciones obligatorias (1 requerida), extras libres (0) o selección de ingredientes (ej: 2 obligatorios).
+                    </span>
+                  </div>
                   
-                  <button type="button" (click)="setModifierGroupMode(group, 'single')"
-                    [class.bg-orange-500]="getModifierGroupMode(group) === 'single'"
-                    [class.text-white]="getModifierGroupMode(group) === 'single'"
-                    [class.bg-slate-100]="getModifierGroupMode(group) !== 'single'"
-                    [class.dark:bg-slate-800]="getModifierGroupMode(group) !== 'single'"
-                    [class.text-slate-700]="getModifierGroupMode(group) !== 'single'"
-                    [class.dark:text-slate-300]="getModifierGroupMode(group) !== 'single'"
-                    class="p-2 rounded-lg text-[11px] font-bold text-left flex items-center gap-1.5 transition-all cursor-pointer">
-                    <span>🔘</span>
-                    <div>
-                      <div class="leading-tight">Opción Única</div>
-                      <div class="text-[9px] opacity-80 font-normal">1 Requerido (Obligatorio)</div>
-                    </div>
-                  </button>
-
-                  <button type="button" (click)="setModifierGroupMode(group, 'optional_extras')"
-                    [class.bg-emerald-600]="getModifierGroupMode(group) === 'optional_extras'"
-                    [class.text-white]="getModifierGroupMode(group) === 'optional_extras'"
-                    [class.bg-slate-100]="getModifierGroupMode(group) !== 'optional_extras'"
-                    [class.dark:bg-slate-800]="getModifierGroupMode(group) !== 'optional_extras'"
-                    [class.text-slate-700]="getModifierGroupMode(group) !== 'optional_extras'"
-                    [class.dark:text-slate-300]="getModifierGroupMode(group) !== 'optional_extras'"
-                    class="p-2 rounded-lg text-[11px] font-bold text-left flex items-center gap-1.5 transition-all cursor-pointer">
-                    <span>🟩</span>
-                    <div>
-                      <div class="leading-tight">Extras Opcionales</div>
-                      <div class="text-[9px] opacity-80 font-normal">Sin requeridos (0 a N)</div>
-                    </div>
-                  </button>
-
-                  <button type="button" (click)="setModifierGroupMode(group, 'multiple_required')"
-                    [class.bg-blue-600]="getModifierGroupMode(group) === 'multiple_required'"
-                    [class.text-white]="getModifierGroupMode(group) === 'multiple_required'"
-                    [class.bg-slate-100]="getModifierGroupMode(group) !== 'multiple_required'"
-                    [class.dark:bg-slate-800]="getModifierGroupMode(group) !== 'multiple_required'"
-                    [class.text-slate-700]="getModifierGroupMode(group) !== 'multiple_required'"
-                    [class.dark:text-slate-300]="getModifierGroupMode(group) !== 'multiple_required'"
-                    class="p-2 rounded-lg text-[11px] font-bold text-left flex items-center gap-1.5 transition-all cursor-pointer">
-                    <span>🔢</span>
-                    <div>
-                      <div class="leading-tight">Múltiple con Requeridos</div>
-                      <div class="text-[9px] opacity-80 font-normal">Ej: 6 opciones, 2 obligatorias</div>
-                    </div>
-                  </button>
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    <button type="button" (click)="addModifierGroup('single')"
+                      class="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-orange-500/10 text-orange-600 dark:text-orange-400 hover:bg-orange-500 hover:text-white transition-all flex items-center gap-1 cursor-pointer">
+                      <span>+ Opción Única</span>
+                    </button>
+                    <button type="button" (click)="addModifierGroup('optional_extras')"
+                      class="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all flex items-center gap-1 cursor-pointer">
+                      <span>+ Extras Libres</span>
+                    </button>
+                    <button type="button" (click)="addModifierGroup('multiple_required')"
+                      class="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500 hover:text-white transition-all flex items-center gap-1 cursor-pointer">
+                      <span>+ Múltiple Obligatorio</span>
+                    </button>
+                  </div>
                 </div>
 
-                @if (getModifierGroupMode(group) === 'multiple_required') {
-                <div class="flex flex-wrap items-center gap-4 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px]">
-                  <div class="flex items-center gap-2">
-                    <span class="font-bold text-blue-600 dark:text-blue-400">Requeridos obligatorios (Mínimo):</span>
-                    <input type="number" min="1" [max]="group.maxSelections" [(ngModel)]="group.minSelections" [name]="'minSel_' + gIndex"
-                      class="w-16 bg-white dark:bg-slate-800 border border-blue-400 rounded p-1 text-center font-bold" />
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <span class="font-bold text-slate-600 dark:text-slate-400">Máximo permitido:</span>
-                    <input type="number" [min]="group.minSelections" [(ngModel)]="group.maxSelections" [name]="'maxSel_' + gIndex"
-                      class="w-16 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded p-1 text-center font-bold" />
-                  </div>
-                  <span class="text-[10px] text-slate-400 italic">El cliente DEBE elegir {{ group.minSelections }} de las {{ group.options.length }} opciones para ordenar.</span>
+                @if (!editingProduct.modifierGroups || editingProduct.modifierGroups.length === 0) {
+                <div class="p-4 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 text-center text-slate-400 text-xs bg-white/40 dark:bg-slate-900/40">
+                  Sin variantes o extras configurados. Agrega opciones con los botones superiores si tu producto ofrece salsas, tamaños, términos de cocción o acompañantes.
                 </div>
                 }
 
-                @if (getModifierGroupMode(group) === 'optional_extras') {
-                <div class="flex items-center gap-3 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px]">
-                  <span class="font-bold text-emerald-600 dark:text-emerald-400">Máximo de extras que puede elegir:</span>
-                  <input type="number" min="1" [(ngModel)]="group.maxSelections" [name]="'maxSelOpt_' + gIndex"
-                    class="w-16 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded p-1 text-center font-bold" />
-                  <span class="text-[10px] text-slate-400 italic">(0 requeridos obligatorios. El cliente puede ordenar sin extras o añadir hasta {{ group.maxSelections }}).</span>
+                @for (group of editingProduct.modifierGroups; track group.id; let gIndex = $index) {
+                <div class="p-3.5 rounded-2xl border-2 transition-all space-y-3 bg-white dark:bg-slate-900"
+                  [class.border-orange-500/40]="getModifierGroupMode(group) === 'single'"
+                  [class.border-emerald-500/40]="getModifierGroupMode(group) === 'optional_extras'"
+                  [class.border-blue-500/40]="getModifierGroupMode(group) === 'multiple_required'">
+
+                  <div class="flex items-center justify-between gap-2">
+                    <input type="text" [(ngModel)]="group.title" [name]="'groupTitle_' + gIndex"
+                      placeholder="Título del grupo (ej: Elige tu Proteína, Extras Opcionales)"
+                      class="font-bold text-xs bg-transparent border-b border-dashed border-slate-300 dark:border-slate-700 pb-1 flex-1 focus:outline-none focus:border-brand-500 text-slate-900 dark:text-white" />
+
+                    <div class="flex items-center gap-1.5">
+                      <select [value]="getModifierGroupMode(group)" (change)="setModifierGroupMode(group, $any($event.target).value)"
+                        class="text-[10px] bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 font-bold">
+                        <option value="single">Obligatorio (1)</option>
+                        <option value="optional_extras">Libres (0 a N)</option>
+                        <option value="multiple_required">Múltiple Requerido</option>
+                      </select>
+
+                      <button type="button" (click)="removeModifierGroup(gIndex)"
+                        class="text-rose-500 hover:text-rose-700 p-1 cursor-pointer" title="Eliminar grupo">
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Options list inside group -->
+                  <div class="space-y-2 pt-1">
+                    @for (opt of group.options; track opt.id; let optIndex = $index) {
+                    <div class="flex items-center gap-2">
+                      <input type="text" [(ngModel)]="opt.name" [name]="'optName_' + gIndex + '_' + optIndex"
+                        placeholder="Nombre de la opción (ej: Tocineta, Salsa Tártara, Grande)"
+                        class="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-xs focus:outline-none focus:border-brand-500 font-medium" />
+                      <div class="flex items-center gap-1 text-slate-500 text-xs">
+                        <span>+$</span>
+                        <input type="number" step="0.25" [(ngModel)]="opt.priceDelta"
+                          [name]="'optPrice_' + gIndex + '_' + optIndex"
+                          placeholder="0.00"
+                          class="w-16 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-center font-bold" />
+                      </div>
+                      <button type="button" (click)="group.options.splice(optIndex, 1)"
+                        class="text-slate-400 hover:text-rose-500 p-1 transition-colors cursor-pointer" title="Eliminar opción">
+                        ✕
+                      </button>
+                    </div>
+                    }
+                    <button type="button" (click)="addOptionToGroup(group)"
+                      class="text-[11px] text-brand-500 hover:underline font-bold pt-1 block cursor-pointer">
+                      + Agregar otra opción a este grupo
+                    </button>
+                  </div>
                 </div>
                 }
               </div>
 
-              <!-- Options list for this group -->
-              <div class="space-y-2 pl-2">
-                <div class="text-[11px] font-bold text-slate-600 dark:text-slate-400">Opciones disponibles en este grupo:</div>
-                @for (opt of group.options; track opt.id; let optIndex = $index) {
-                <div class="flex items-center gap-2">
-                  <input type="text" [(ngModel)]="opt.name" [name]="'optName_' + gIndex + '_' + optIndex"
-                    placeholder="Opción (ej: Extra Queso, Brioche, Cebolla, Talla M)"
-                    class="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded p-2 text-xs" />
-                  <div class="flex items-center gap-1 text-slate-500 text-xs">
-                    <span>+$</span>
-                    <input type="number" step="0.25" [(ngModel)]="opt.priceDelta"
-                      [name]="'optPrice_' + gIndex + '_' + optIndex"
-                      placeholder="0.00"
-                      class="w-16 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded p-2 text-center font-bold" />
-                  </div>
-                  <button type="button" (click)="group.options.splice(optIndex, 1)"
-                    class="text-slate-400 hover:text-red-500 p-1 transition-colors cursor-pointer" title="Eliminar opción">
-                    ✕
-                  </button>
-                </div>
-                }
-                <button type="button" (click)="addOptionToGroup(group)"
-                  class="text-[11px] text-brand-500 hover:underline font-bold pt-1 block cursor-pointer">
-                  + Agregar otra opción a este grupo
-                </button>
-              </div>
             </div>
-            }
+
+            <!-- ================= COLUMNA DERECHA (5 COLS): Precios, Descuentos, Stock, Categorías ================= -->
+            <div class="lg:col-span-5 space-y-4">
+
+              <!-- Precio y Tasa de Cambio Oficial (DolarApi) -->
+              <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+                <span class="font-extrabold text-xs block text-slate-800 dark:text-slate-200">Fijación de Precio</span>
+
+                <div class="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label class="block font-semibold mb-1 text-slate-700 dark:text-slate-300">Moneda Base</label>
+                    <select [(ngModel)]="editingProduct.currency" name="prodCurrency"
+                      class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 font-bold focus:outline-none focus:border-brand-500">
+                      <option value="USD">Dólares ($ USD)</option>
+                      <option value="VES">Bolívares (Bs. VES)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
+                      Precio ({{ editingProduct.currency === 'VES' ? 'Bs.' : '$ USD' }}) *
+                    </label>
+                    <input type="number" step="0.25" [(ngModel)]="editingProduct.price" name="prodPrice" required
+                      class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 font-black text-base focus:outline-none focus:border-brand-500 text-brand-600 dark:text-brand-400" />
+                  </div>
+                </div>
+
+                <!-- Tarjeta de Equivalencia BCV en Vivo -->
+                <div class="p-3 rounded-xl bg-brand-500/10 border border-brand-500/20">
+                  <div class="flex items-center justify-between mb-1">
+                    <span class="text-slate-500 dark:text-slate-400 block text-[10px] font-bold uppercase tracking-wider">
+                      Equivalente al cambio ({{ effectiveRate().toFixed(2) }} Bs/$):
+                    </span>
+                    <button type="button" (click)="fetchLiveRate()" [disabled]="isFetchingRate()" title="Actualizar desde DolarApi Oficial (BCV)"
+                      class="text-[10px] font-semibold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1 cursor-pointer">
+                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-500" [class.animate-pulse]="isFetchingRate()"></span>
+                      <span>{{ isFetchingRate() ? 'Consultando...' : 'DolarApi Oficial' }}</span>
+                      <app-icon name="refresh-cw" [size]="10"></app-icon>
+                    </button>
+                  </div>
+                  @if (editingProduct.currency === 'VES') {
+                  <span class="font-extrabold text-brand-600 dark:text-brand-400 text-sm">
+                    ~${{ (editingProduct.price / effectiveRate()).toFixed(2) }} USD
+                  </span>
+                  } @else {
+                  <span class="font-extrabold text-brand-600 dark:text-brand-400 text-sm font-mono">
+                    ~Bs. {{ ((editingProduct.price || 0) * effectiveRate()).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+                  </span>
+                  }
+                </div>
+              </div>
+
+              <!-- Promociones y Descuentos -->
+              <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+                <span class="font-extrabold text-xs block text-slate-800 dark:text-slate-200">Visibilidad & Ofertas</span>
+                
+                <div class="space-y-2">
+                  <label class="flex items-center gap-2.5 p-2.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer hover:border-brand-500 transition-colors">
+                    <input type="checkbox" [(ngModel)]="editingProduct.isPopular" name="prodIsPopular" class="rounded text-brand-500 focus:ring-brand-500 w-4 h-4" />
+                    <div>
+                      <span class="font-bold text-xs block text-slate-800 dark:text-slate-200">⭐ Producto Destacado</span>
+                      <span class="text-[10px] text-slate-400 block">Mostrar badge de recomendado en el menú</span>
+                    </div>
+                  </label>
+
+                  <label class="flex items-center gap-2.5 p-2.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer hover:border-rose-500 transition-colors">
+                    <input type="checkbox" [(ngModel)]="editingProduct.isOnSale" name="prodIsOnSale" class="rounded text-rose-500 focus:ring-rose-500 w-4 h-4" />
+                    <div>
+                      <span class="font-bold text-xs block text-slate-800 dark:text-slate-200">🔥 En Oferta / Descuento</span>
+                      <span class="text-[10px] text-slate-400 block">Mostrar badge de promoción y precio tachado</span>
+                    </div>
+                  </label>
+                </div>
+
+                @if (editingProduct.isOnSale) {
+                  <div class="grid grid-cols-2 gap-2.5 pt-2 border-t border-slate-200 dark:border-slate-700">
+                    <div>
+                      <label class="block font-semibold mb-1 text-[10px]">Precio Anterior (Tachado)</label>
+                      <input type="number" step="0.25" [(ngModel)]="editingProduct.compareAtPrice" (input)="onCompareAtPriceChange()" name="prodCompareAtPrice" placeholder="Ej: 15.00"
+                             class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-2 font-mono text-xs focus:outline-none focus:border-rose-500" />
+                    </div>
+                    <div>
+                      <label class="block font-semibold mb-1 text-[10px]">% Descuento Calculado</label>
+                      <input type="number" [(ngModel)]="editingProduct.discountPercentage" (input)="onDiscountPercentageChange()" name="prodDiscountPercentage" placeholder="Ej: 20"
+                             class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-2 font-mono text-xs focus:outline-none focus:border-rose-500" />
+                    </div>
+                  </div>
+                }
+              </div>
+
+              <!-- Control de Inventario / Stock -->
+              <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <span class="font-extrabold text-xs block text-slate-800 dark:text-slate-200">📦 Control de Inventario / Stock</span>
+                    <span class="text-[10px] text-slate-500">Limita compras según stock real disponible</span>
+                  </div>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" [(ngModel)]="editingProduct.trackStock" name="prodTrackStock" class="sr-only peer" />
+                    <div class="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+                  </label>
+                </div>
+
+                @if (editingProduct.trackStock) {
+                  <div class="grid grid-cols-2 gap-2.5 pt-2 border-t border-slate-200 dark:border-slate-700">
+                    <div>
+                      <label class="block font-semibold mb-1 text-[10px]">Cantidad Disponible</label>
+                      <input type="number" min="0" [(ngModel)]="editingProduct.stockQuantity" name="prodStockQuantity"
+                             placeholder="Ej: 50"
+                             class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-2 font-mono text-xs font-bold focus:outline-none focus:border-brand-500" />
+                    </div>
+                    <div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex flex-col justify-center">
+                      <span class="text-[9px] text-slate-400 font-bold uppercase">Stock Previo:</span>
+                      <span class="font-bold text-xs text-slate-700 dark:text-slate-300 truncate">
+                        {{ editingProduct.previousStock !== undefined && editingProduct.previousStock !== null ? (editingProduct.previousStock + ' uds') : 'Sin registro' }}
+                      </span>
+                    </div>
+                  </div>
+                }
+              </div>
+
+              <!-- Categoría y Sucursal -->
+              <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+                <span class="font-extrabold text-xs block text-slate-800 dark:text-slate-200">Asignación & Catálogo</span>
+
+                <div>
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="font-semibold text-slate-700 dark:text-slate-300 text-[11px]">Categoría del Menú</label>
+                    <button type="button" (click)="toggleInlineCategoryCreation()"
+                      class="text-[10px] font-bold text-brand-500 hover:text-brand-600 flex items-center gap-1 cursor-pointer">
+                      <app-icon [name]="isCreatingCategoryInline() ? 'x' : 'plus'" [size]="11"></app-icon>
+                      <span>{{ isCreatingCategoryInline() ? 'Cancelar' : 'Nueva Categoría' }}</span>
+                    </button>
+                  </div>
+
+                  @if (isCreatingCategoryInline()) {
+                  <div class="flex items-center gap-1.5">
+                    <input type="text" [(ngModel)]="newCategoryName" name="newCatNameInput"
+                      placeholder="Nombre categoría"
+                      (keyup.enter)="saveInlineCategory()"
+                      class="flex-1 bg-white dark:bg-slate-900 border-2 border-brand-500 rounded-xl p-2 text-xs font-semibold focus:outline-none text-slate-900 dark:text-white" />
+                    <button type="button" (click)="saveInlineCategory()" [disabled]="!newCategoryName.trim() || isSavingCategory()"
+                      class="px-3 py-2 bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white font-bold text-xs rounded-xl cursor-pointer">
+                      {{ isSavingCategory() ? '...' : 'Crear' }}
+                    </button>
+                  </div>
+                  } @else {
+                  <select [(ngModel)]="editingProduct.categoryId" (change)="onCategorySelectChange($event)" name="prodCat"
+                    class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 font-semibold focus:outline-none focus:border-brand-500">
+                    <option value="">-- Sin categoría asignada (General) --</option>
+                    @for (cat of categories; track cat.id) {
+                    <option [value]="cat.id">📁 {{ cat.name }}</option>
+                    }
+                    <option value="__NEW__">➕ + Crear nueva categoría...</option>
+                  </select>
+                  }
+                </div>
+
+                <div>
+                  <label class="block font-semibold mb-1 text-slate-700 dark:text-slate-300 text-[11px]">Sucursal Asignada</label>
+                  <select [(ngModel)]="editingProduct.branchId" name="prodBranch" required
+                    class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 font-bold focus:outline-none focus:border-brand-500">
+                    @for (b of branches; track b.id) {
+                    <option [value]="b.id">📍 {{ b.name }}</option>
+                    }
+                  </select>
+                </div>
+              </div>
+
+              <!-- SKU y Código de Barra -->
+              <div class="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-800 grid grid-cols-2 gap-2.5">
+                <div>
+                  <label class="font-semibold text-slate-700 dark:text-slate-300 text-[10px] block mb-1">SKU (Inventario)</label>
+                  <input type="text" [(ngModel)]="editingProduct.sku" name="prodSku"
+                    placeholder="HAM-01"
+                    class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 font-mono text-[11px] uppercase focus:outline-none focus:border-brand-500" />
+                </div>
+                <div>
+                  <label class="font-semibold text-slate-700 dark:text-slate-300 text-[10px] block mb-1">Código de Barra</label>
+                  <input type="text" [(ngModel)]="editingProduct.barcode" name="prodBarcode"
+                    placeholder="759123456"
+                    class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 font-mono text-[11px] focus:outline-none focus:border-brand-500" />
+                </div>
+              </div>
+
+            </div>
+
           </div>
 
-          <div class="pt-3 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-3">
-            <button type="button" (click)="close.emit()"
-              class="px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">
-              {{ i18n.t('common.cancel') }}
-            </button>
-            <button type="submit"
-              class="px-5 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold shadow-sm cursor-pointer">
-              {{ i18n.t('common.save') }}
-            </button>
+          <!-- Sticky Bottom Action Footer -->
+          <div class="pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-4 mt-3">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold text-slate-500 hidden sm:inline">Precio configurado:</span>
+              <span class="text-sm font-extrabold text-brand-600 dark:text-brand-400">
+                ${{ editingProduct.price || 0 }} {{ editingProduct.currency }}
+              </span>
+              <span class="text-xs text-slate-400 font-mono">
+                (~Bs. {{ ((editingProduct.price || 0) * effectiveRate()).toFixed(2) }})
+              </span>
+            </div>
+            <div class="flex items-center gap-3">
+              <button type="button" (click)="close.emit()"
+                class="px-5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors">
+                {{ i18n.t('common.cancel') }}
+              </button>
+              <button type="submit"
+                class="px-6 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-extrabold shadow-md cursor-pointer transition-all active:scale-95">
+                {{ i18n.t('common.save') }}
+              </button>
+            </div>
           </div>
+
         </form>
 
       </div>

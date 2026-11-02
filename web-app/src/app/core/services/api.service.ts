@@ -143,13 +143,23 @@ export class ApiService {
             .eq('tenant_id', tenantId);
 
           if (branchId && branchId !== 'all') {
-            query = query.eq('branch_id', branchId);
+            query = query.or(`branch_id.eq.${branchId},branch_id.is.null`);
           }
           if (onlyAvailable) {
             query = query.eq('is_available', true);
           }
 
-          const { data } = await query.order('sort_order');
+          let { data } = await query.order('sort_order');
+          if ((!data || data.length === 0) && branchId && branchId !== 'all') {
+            let fallbackQ = client
+              .from('products')
+              .select('*, modifier_groups(*, modifier_options(*))')
+              .eq('tenant_id', tenantId);
+            if (onlyAvailable) fallbackQ = fallbackQ.eq('is_available', true);
+            const res = await fallbackQ.order('sort_order');
+            if (res.data && res.data.length > 0) data = res.data;
+          }
+
           if (data) {
             return data.map(r => this.mapProduct(r));
           }
