@@ -168,25 +168,53 @@
         
         <!-- Category Chips (Subtle 8px Border Radius) -->
         <div class="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-          @for (cat of categories; track cat) {
-            <button (click)="selectedCategory.set(cat)"
-                    [class.bg-slate-900]="selectedCategory() === cat"
-                    [class.dark:bg-white]="selectedCategory() === cat"
-                    [class.text-white]="selectedCategory() === cat"
-                    [class.dark:text-slate-900]="selectedCategory() === cat"
-                    [class.border-slate-900]="selectedCategory() === cat"
-                    [class.dark:border-white]="selectedCategory() === cat"
-                    [class.bg-white]="selectedCategory() !== cat"
-                    [class.dark:bg-slate-900]="selectedCategory() !== cat"
-                    [class.text-slate-600]="selectedCategory() !== cat"
-                    [class.dark:text-slate-300]="selectedCategory() !== cat"
-                    [class.border-slate-200]="selectedCategory() !== cat"
-                    [class.dark:border-slate-800]="selectedCategory() !== cat"
-                    class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors flex-shrink-0">
-              <span>{{ cat }}</span>
+          @for (cat of categories(); track cat.id) {
+            <button (click)="selectedCategory.set(cat.filter); selectedSubcategory.set('Todos')"
+                    [class.bg-slate-900]="selectedCategory() === cat.filter"
+                    [class.dark:bg-white]="selectedCategory() === cat.filter"
+                    [class.text-white]="selectedCategory() === cat.filter"
+                    [class.dark:text-slate-900]="selectedCategory() === cat.filter"
+                    [class.border-slate-900]="selectedCategory() === cat.filter"
+                    [class.dark:border-white]="selectedCategory() === cat.filter"
+                    [class.bg-white]="selectedCategory() !== cat.filter"
+                    [class.dark:bg-slate-900]="selectedCategory() !== cat.filter"
+                    [class.text-slate-600]="selectedCategory() !== cat.filter"
+                    [class.dark:text-slate-300]="selectedCategory() !== cat.filter"
+                    [class.border-slate-200]="selectedCategory() !== cat.filter"
+                    [class.dark:border-slate-800]="selectedCategory() !== cat.filter"
+                    class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors flex-shrink-0 flex items-center gap-1.5 cursor-pointer">
+              <span>{{ cat.icon }}</span>
+              <span>{{ cat.name }}</span>
             </button>
           }
         </div>
+
+        @if (currentSubcategories().length > 0) {
+          <div class="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-[11px]">
+            <button (click)="selectedSubcategory.set('Todos')"
+                    [class.bg-brand-500]="selectedSubcategory() === 'Todos'"
+                    [class.text-white]="selectedSubcategory() === 'Todos'"
+                    [class.bg-slate-100]="selectedSubcategory() !== 'Todos'"
+                    [class.dark:bg-slate-800]="selectedSubcategory() !== 'Todos'"
+                    [class.text-slate-600]="selectedSubcategory() !== 'Todos'"
+                    [class.dark:text-slate-300]="selectedSubcategory() !== 'Todos'"
+                    class="px-2.5 py-1 rounded-md font-semibold transition-colors flex-shrink-0 cursor-pointer">
+              Todos
+            </button>
+            @for (sub of currentSubcategories(); track sub) {
+              <button (click)="selectedSubcategory.set(sub)"
+                      [class.bg-brand-500]="selectedSubcategory() === sub"
+                      [class.text-white]="selectedSubcategory() === sub"
+                      [class.bg-slate-100]="selectedSubcategory() !== sub"
+                      [class.dark:bg-slate-800]="selectedSubcategory() !== sub"
+                      [class.text-slate-600]="selectedSubcategory() !== sub"
+                      [class.dark:text-slate-300]="selectedSubcategory() !== sub"
+                      class="px-2.5 py-1 rounded-md font-semibold transition-colors flex-shrink-0 cursor-pointer">
+                {{ sub }}
+              </button>
+            }
+          </div>
+        }
 
         <!-- Filter & Sorting Header -->
         <div class="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-200 dark:border-slate-800">

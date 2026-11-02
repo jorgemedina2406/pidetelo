@@ -404,7 +404,7 @@ export class SuperAdminComponent implements OnInit {
     'RIDER'
   ];
 
-  readonly roleLabels: Record<UserRole, string> = {
+  readonly roleLabels: Record<string, string> = {
     SUPER_ADMIN: 'SuperAdmin',
     PLATFORM_SUPPORT: 'Soporte SaaS',
     MERCHANT_OWNER: 'Dueño Local',
@@ -414,6 +414,11 @@ export class SuperAdminComponent implements OnInit {
     RIDER: 'Motorizado',
     CUSTOMER: 'Cliente'
   };
+
+  getRoleLabel(role: any): string {
+    if (!role) return 'Usuario';
+    return this.roleLabels[String(role)] || String(role);
+  }
 
   readonly availablePermissions: { id: Permission; label: string }[] = [
     { id: 'manage_tenants', label: 'Alta y Baja de Comercios' },

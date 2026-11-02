@@ -844,7 +844,7 @@
                       <tr>
                         <th class="p-4">Capacidad / Permiso</th>
                         @for (role of availableRoles; track role) {
-                          <th class="p-4 text-center">{{ roleLabels[role] }}</th>
+                          <th class="p-4 text-center">{{ getRoleLabel(role) }}</th>
                         }
                       </tr>
                     </thead>
@@ -1304,7 +1304,7 @@
                                   [class.text-slate-700]="u.role === 'CUSTOMER'"
                                   [class.dark:bg-slate-800]="u.role === 'CUSTOMER'"
                                   [class.dark:text-slate-300]="u.role === 'CUSTOMER'">
-                              {{ roleLabels[u.role] || u.role }}
+                              {{ getRoleLabel(u.role) }}
                             </span>
                           </td>
                           <td class="p-3.5">

@@ -3,7 +3,7 @@ import { CouponsService } from './coupons.service.js';
 
 @Controller(['api/coupons', 'coupons'])
 export class CouponsController {
-  constructor(private readonly couponsService: CouponsService) {}
+  constructor(private readonly couponsService: CouponsService) { }
 
   @Get()
   async getAllCoupons() {
