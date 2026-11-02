@@ -5,3 +5,4 @@ import { UploadsController } from './uploads.controller.js';
   controllers: [UploadsController],
 })
 export class UploadsModule {}
+

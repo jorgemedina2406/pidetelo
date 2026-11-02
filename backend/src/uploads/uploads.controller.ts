@@ -69,3 +69,4 @@ export class UploadsController {
     stream.pipe(res);
   }
 }
+

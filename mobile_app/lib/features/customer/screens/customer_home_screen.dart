@@ -305,7 +305,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                                           ScaffoldMessenger.of(context).showSnackBar(
                                             SnackBar(
                                               content: Text('¡Cupón "$couponCode" copiado!'),
-                                              backgroundColor: Colors.emerald,
+                                              backgroundColor: const Color(0xFF10B981),
                                               duration: const Duration(seconds: 2),
                                             ),
                                           );
