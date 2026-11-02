@@ -332,7 +332,7 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                                               ),
                                               const SizedBox(height: 4),
                                               InkWell(
-                                                onTap: () => cart.addItem(sug, 1),
+                                                onTap: () => cart.addItem(sug, quantity: 1),
                                                 child: Container(
                                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
                                                   decoration: BoxDecoration(
