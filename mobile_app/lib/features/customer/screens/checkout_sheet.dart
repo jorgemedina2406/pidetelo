@@ -136,6 +136,21 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
   void _confirmOrder(BuildContext context, CartService cart) {
     if (cart.items.isEmpty) return;
 
+    if (cart.currentBranch != null && !cart.currentBranch!.isOpenRightNow) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'El comercio está cerrado en este momento (Abre a las ${cart.currentBranch!.businessHoursOpen}). No es posible procesar pedidos ahora.',
+            style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+          ),
+          backgroundColor: const Color(0xFFEF4444),
+          duration: const Duration(seconds: 4),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     if (cart.isOutOfCoverage) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -241,7 +256,140 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                               size: 64,
                               color: Colors.white24,
                             ),
-                            const SizedBox(height: 16),
+                            // SUGERENCIAS CROSS-SELLING
+                          if (cart.suggestedProducts.isNotEmpty) ...[
+                            Row(
+                              children: [
+                                const Icon(Icons.auto_awesome, size: 16, color: AppTheme.amberAccent),
+                                const SizedBox(width: 6),
+                                Text(
+                                  '¿Deseas acompañar tu pedido?',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            SizedBox(
+                              height: 92,
+                              child: ListView.separated(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: cart.suggestedProducts.length,
+                                separatorBuilder: (_, __) => const SizedBox(width: 10),
+                                itemBuilder: (ctx, sIdx) {
+                                  final sug = cart.suggestedProducts[sIdx];
+                                  return Container(
+                                    width: 190,
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF1E293B),
+                                      borderRadius: BorderRadius.circular(14),
+                                      border: Border.all(color: Colors.white12),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        ClipRRect(
+                                          borderRadius: BorderRadius.circular(10),
+                                          child: Image.network(
+                                            sug.imageUrl,
+                                            width: 52,
+                                            height: 52,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (_, __, ___) => Container(
+                                              width: 52,
+                                              height: 52,
+                                              color: const Color(0xFF334155),
+                                              child: const Icon(Icons.fastfood, size: 20, color: Colors.white30),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Column(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                sug.name,
+                                                style: GoogleFonts.outfit(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: Colors.white,
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                              Text(
+                                                '\$${sug.price.toStringAsFixed(2)}',
+                                                style: GoogleFonts.outfit(
+                                                  fontSize: 11.5,
+                                                  fontWeight: FontWeight.w800,
+                                                  color: AppTheme.primary,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              InkWell(
+                                                onTap: () => cart.addItem(sug, 1),
+                                                child: Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                                                  decoration: BoxDecoration(
+                                                    color: AppTheme.primary,
+                                                    borderRadius: BorderRadius.circular(6),
+                                                  ),
+                                                  child: Text(
+                                                    '+ Agregar',
+                                                    style: GoogleFonts.outfit(
+                                                      fontSize: 10,
+                                                      fontWeight: FontWeight.w800,
+                                                      color: Colors.white,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                          ],
+
+                          if (cart.currentBranch != null && !cart.currentBranch!.isOpenRightNow) ...[
+                            Container(
+                              margin: const EdgeInsets.only(bottom: 14),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEF4444).withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: const Color(0xFFEF4444).withOpacity(0.5)),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.access_time_filled_rounded, color: Color(0xFFEF4444), size: 20),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      'Comercio cerrado en este momento. Horario de atención: ${cart.currentBranch!.businessHoursOpen} a ${cart.currentBranch!.businessHoursClose}.',
+                                      style: GoogleFonts.outfit(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+
+                          const SizedBox(height: 16),
                             Text(
                               'El carrito está vacío',
                               style: GoogleFonts.outfit(

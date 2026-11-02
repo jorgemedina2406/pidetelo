@@ -57,7 +57,8 @@ export type IconName =
   | 'arrow-down'
   | 'folder'
   | 'upload'
-  | 'copy';
+  | 'copy'
+  | 'tag';
 
 
 
@@ -346,6 +347,10 @@ export type IconName =
         @case ('copy') {
           <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
           <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+        }
+        @case ('tag') {
+          <path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/>
+          <path d="M7 7h.01"/>
         }
       }
     </svg>

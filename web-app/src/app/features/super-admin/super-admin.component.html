@@ -1,5 +1,34 @@
 <div class="h-screen max-h-screen w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex overflow-hidden selection:bg-brand-500 selection:text-white transition-colors duration-200 relative">
       
+      <!-- ================= CONTENEDOR DE TOASTS LLAMATIVOS ================= -->
+      <div class="fixed top-5 right-5 z-[9999] flex flex-col gap-2.5 pointer-events-none max-w-sm w-full px-4">
+        @for (t of activeToasts(); track t.id) {
+          <div class="pointer-events-auto transform transition-all duration-300 ease-out flex items-start gap-3 p-4 rounded-2xl shadow-2xl border backdrop-blur-md animate-slide-in"
+               [class.bg-emerald-600]="t.type === 'success'"
+               [class.border-emerald-400]="t.type === 'success'"
+               [class.text-white]="t.type === 'success'"
+               [class.bg-rose-600]="t.type === 'error'"
+               [class.border-rose-400]="t.type === 'error'"
+               [class.text-white]="t.type === 'error'"
+               [class.bg-blue-600]="t.type === 'info'"
+               [class.border-blue-400]="t.type === 'info'"
+               [class.text-white]="t.type === 'info'">
+            <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 text-base font-black">
+              @if (t.type === 'success') { ✓ }
+              @else if (t.type === 'error') { ✕ }
+              @else { ℹ }
+            </div>
+            <div class="flex-1 min-w-0">
+              <h4 class="font-extrabold text-xs tracking-tight leading-tight">{{ t.title }}</h4>
+              <p class="text-[11px] opacity-90 font-medium mt-0.5 leading-relaxed">{{ t.message }}</p>
+            </div>
+            <button (click)="removeToast(t.id)" class="text-white/70 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors">
+              ✕
+            </button>
+          </div>
+        }
+      </div>
+
       <!-- Mobile Backdrop Overlay -->
       @if (isMobileMenuOpen()) {
         <div (click)="isMobileMenuOpen.set(false)"
@@ -36,7 +65,7 @@
 
               @if (isSidebarExpanded()) {
                 <div class="leading-tight truncate animate-fade-in">
-                  <span class="font-extrabold text-base tracking-tight text-slate-900 dark:text-white">DeliveryHub</span>
+                  <span class="font-extrabold text-base tracking-tight text-slate-900 dark:text-white">Pídetelo</span>
                   <div class="flex items-center gap-1.5 mt-0.5">
                     <span class="w-2 h-2 rounded-full bg-brand-500 animate-pulse"></span>
                     <span class="text-[10px] font-extrabold uppercase tracking-wider text-brand-600 dark:text-brand-400">
@@ -195,6 +224,98 @@
               }
             </div>
 
+            <!-- Banners & Promociones -->
+            <div class="relative group">
+              <button (click)="activeTab.set('banners')"
+                      [class.bg-brand-500]="activeTab() === 'banners'"
+                      [class.text-white]="activeTab() === 'banners'"
+                      [class.shadow-md]="activeTab() === 'banners'"
+                      [class.shadow-brand-500/25]="activeTab() === 'banners'"
+                      [class.text-slate-600]="activeTab() !== 'banners'"
+                      [class.dark:text-slate-400]="activeTab() !== 'banners'"
+                      [class.hover:bg-slate-100]="activeTab() !== 'banners'"
+                      [class.dark:hover:bg-slate-850]="activeTab() !== 'banners'"
+                      [class.justify-center]="!isSidebarExpanded()"
+                      [class.w-12]="!isSidebarExpanded()"
+                      [class.h-12]="!isSidebarExpanded()"
+                      [class.mx-auto]="!isSidebarExpanded()"
+                      [class.w-full]="isSidebarExpanded()"
+                      [class.px-3]="isSidebarExpanded()"
+                      [class.py-2.5]="isSidebarExpanded()"
+                      class="flex items-center gap-3 rounded-xl font-bold text-xs transition-all duration-150 active:scale-95 cursor-pointer">
+                <span class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
+                      [class.bg-white/20]="activeTab() === 'banners'"
+                      [class.text-white]="activeTab() === 'banners'"
+                      [class.bg-slate-100]="activeTab() !== 'banners'"
+                      [class.dark:bg-slate-800]="activeTab() !== 'banners'"
+                      [class.text-slate-500]="activeTab() !== 'banners'"
+                      [class.dark:text-slate-400]="activeTab() !== 'banners'">
+                  <app-icon name="sparkles" [size]="17"></app-icon>
+                </span>
+                @if (isSidebarExpanded()) {
+                  <span class="truncate flex-1 text-left font-semibold">Banners & Promos</span>
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-black"
+                        [class.bg-white/30]="activeTab() === 'banners'"
+                        [class.bg-slate-200]="activeTab() !== 'banners'"
+                        [class.dark:bg-slate-800]="activeTab() !== 'banners'">
+                    {{ banners().length }}
+                  </span>
+                }
+              </button>
+              @if (!isSidebarExpanded()) {
+                <div class="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 flex items-center gap-2">
+                  <span>Banners & Promos</span>
+                  <span class="px-1.5 py-0.2 rounded-full bg-brand-500 text-white text-[10px]">{{ banners().length }}</span>
+                </div>
+              }
+            </div>
+
+            <!-- Categorías de Negocio -->
+            <div class="relative group">
+              <button (click)="activeTab.set('categories')"
+                      [class.bg-brand-500]="activeTab() === 'categories'"
+                      [class.text-white]="activeTab() === 'categories'"
+                      [class.shadow-md]="activeTab() === 'categories'"
+                      [class.shadow-brand-500/25]="activeTab() === 'categories'"
+                      [class.text-slate-600]="activeTab() !== 'categories'"
+                      [class.dark:text-slate-400]="activeTab() !== 'categories'"
+                      [class.hover:bg-slate-100]="activeTab() !== 'categories'"
+                      [class.dark:hover:bg-slate-850]="activeTab() !== 'categories'"
+                      [class.justify-center]="!isSidebarExpanded()"
+                      [class.w-12]="!isSidebarExpanded()"
+                      [class.h-12]="!isSidebarExpanded()"
+                      [class.mx-auto]="!isSidebarExpanded()"
+                      [class.w-full]="isSidebarExpanded()"
+                      [class.px-3]="isSidebarExpanded()"
+                      [class.py-2.5]="isSidebarExpanded()"
+                      class="flex items-center gap-3 rounded-xl font-bold text-xs transition-all duration-150 active:scale-95 cursor-pointer">
+                <span class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
+                      [class.bg-white/20]="activeTab() === 'categories'"
+                      [class.text-white]="activeTab() === 'categories'"
+                      [class.bg-slate-100]="activeTab() !== 'categories'"
+                      [class.dark:bg-slate-800]="activeTab() !== 'categories'"
+                      [class.text-slate-500]="activeTab() !== 'categories'"
+                      [class.dark:text-slate-400]="activeTab() !== 'categories'">
+                  <app-icon name="tag" [size]="17"></app-icon>
+                </span>
+                @if (isSidebarExpanded()) {
+                  <span class="truncate flex-1 text-left font-semibold">Categorías</span>
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-black"
+                        [class.bg-white/30]="activeTab() === 'categories'"
+                        [class.bg-slate-200]="activeTab() !== 'categories'"
+                        [class.dark:bg-slate-800]="activeTab() !== 'categories'">
+                    {{ businessCategories().length }}
+                  </span>
+                }
+              </button>
+              @if (!isSidebarExpanded()) {
+                <div class="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 flex items-center gap-2">
+                  <span>Categorías</span>
+                  <span class="px-1.5 py-0.2 rounded-full bg-brand-500 text-white text-[10px]">{{ businessCategories().length }}</span>
+                </div>
+              }
+            </div>
+
             <!-- Métricas & Comisiones -->
             <div class="relative group">
               <button (click)="activeTab.set('metrics')"
@@ -241,6 +362,98 @@
                 <div class="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 flex items-center gap-2">
                   <span>{{ i18n.t('sa.metrics') }}</span>
                   <span class="text-emerald-400 font-bold">5%</span>
+                </div>
+              }
+            </div>
+
+            <!-- Usuarios Registrados -->
+            <div class="relative group">
+              <button (click)="activeTab.set('users')"
+                      [class.bg-brand-500]="activeTab() === 'users'"
+                      [class.text-white]="activeTab() === 'users'"
+                      [class.shadow-md]="activeTab() === 'users'"
+                      [class.shadow-brand-500/25]="activeTab() === 'users'"
+                      [class.text-slate-600]="activeTab() !== 'users'"
+                      [class.dark:text-slate-400]="activeTab() !== 'users'"
+                      [class.hover:bg-slate-100]="activeTab() !== 'users'"
+                      [class.dark:hover:bg-slate-850]="activeTab() !== 'users'"
+                      [class.justify-center]="!isSidebarExpanded()"
+                      [class.w-12]="!isSidebarExpanded()"
+                      [class.h-12]="!isSidebarExpanded()"
+                      [class.mx-auto]="!isSidebarExpanded()"
+                      [class.w-full]="isSidebarExpanded()"
+                      [class.px-3]="isSidebarExpanded()"
+                      [class.py-2.5]="isSidebarExpanded()"
+                      class="flex items-center gap-3 rounded-xl font-bold text-xs transition-all duration-150 active:scale-95 cursor-pointer">
+                <span class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
+                      [class.bg-white/20]="activeTab() === 'users'"
+                      [class.text-white]="activeTab() === 'users'"
+                      [class.bg-slate-100]="activeTab() !== 'users'"
+                      [class.dark:bg-slate-800]="activeTab() !== 'users'"
+                      [class.text-slate-500]="activeTab() !== 'users'"
+                      [class.dark:text-slate-400]="activeTab() !== 'users'">
+                  <app-icon name="users" [size]="17"></app-icon>
+                </span>
+                @if (isSidebarExpanded()) {
+                  <span class="truncate flex-1 text-left font-semibold">Usuarios Registrados</span>
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-black"
+                        [class.bg-white/30]="activeTab() === 'users'"
+                        [class.bg-slate-200]="activeTab() !== 'users'"
+                        [class.dark:bg-slate-800]="activeTab() !== 'users'">
+                    {{ platformUsers().length }}
+                  </span>
+                }
+              </button>
+              @if (!isSidebarExpanded()) {
+                <div class="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 flex items-center gap-2">
+                  <span>Usuarios</span>
+                  <span class="px-1.5 py-0.2 rounded-full bg-brand-500 text-white text-[10px]">{{ platformUsers().length }}</span>
+                </div>
+              }
+            </div>
+
+            <!-- Cupones Globales -->
+            <div class="relative group">
+              <button (click)="activeTab.set('global_coupons')"
+                      [class.bg-brand-500]="activeTab() === 'global_coupons'"
+                      [class.text-white]="activeTab() === 'global_coupons'"
+                      [class.shadow-md]="activeTab() === 'global_coupons'"
+                      [class.shadow-brand-500/25]="activeTab() === 'global_coupons'"
+                      [class.text-slate-600]="activeTab() !== 'global_coupons'"
+                      [class.dark:text-slate-400]="activeTab() !== 'global_coupons'"
+                      [class.hover:bg-slate-100]="activeTab() !== 'global_coupons'"
+                      [class.dark:hover:bg-slate-850]="activeTab() !== 'global_coupons'"
+                      [class.justify-center]="!isSidebarExpanded()"
+                      [class.w-12]="!isSidebarExpanded()"
+                      [class.h-12]="!isSidebarExpanded()"
+                      [class.mx-auto]="!isSidebarExpanded()"
+                      [class.w-full]="isSidebarExpanded()"
+                      [class.px-3]="isSidebarExpanded()"
+                      [class.py-2.5]="isSidebarExpanded()"
+                      class="flex items-center gap-3 rounded-xl font-bold text-xs transition-all duration-150 active:scale-95 cursor-pointer">
+                <span class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
+                      [class.bg-white/20]="activeTab() === 'global_coupons'"
+                      [class.text-white]="activeTab() === 'global_coupons'"
+                      [class.bg-slate-100]="activeTab() !== 'global_coupons'"
+                      [class.dark:bg-slate-800]="activeTab() !== 'global_coupons'"
+                      [class.text-slate-500]="activeTab() !== 'global_coupons'"
+                      [class.dark:text-slate-400]="activeTab() !== 'global_coupons'">
+                  <app-icon name="sparkles" [size]="17"></app-icon>
+                </span>
+                @if (isSidebarExpanded()) {
+                  <span class="truncate flex-1 text-left font-semibold">Cupones Globales</span>
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-black"
+                        [class.bg-white/30]="activeTab() === 'global_coupons'"
+                        [class.bg-slate-200]="activeTab() !== 'global_coupons'"
+                        [class.dark:bg-slate-800]="activeTab() !== 'global_coupons'">
+                    {{ allCoupons().length }}
+                  </span>
+                }
+              </button>
+              @if (!isSidebarExpanded()) {
+                <div class="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 flex items-center gap-2">
+                  <span>Cupones Globales</span>
+                  <span class="px-1.5 py-0.2 rounded-full bg-brand-500 text-white text-[10px]">{{ allCoupons().length }}</span>
                 </div>
               }
             </div>
@@ -344,7 +557,7 @@
               <a routerLink="/explorar" class="hover:text-brand-500 transition-colors">Marketplace</a>
               <span>/</span>
               <span class="font-bold text-slate-900 dark:text-white">
-                {{ activeTab() === 'merchants' ? i18n.t('sa.merchants') : activeTab() === 'branch_approvals' ? 'Aprobación de Sedes' : activeTab() === 'roles' ? i18n.t('sa.roles') : i18n.t('sa.metrics') }}
+                {{ activeTab() === 'merchants' ? i18n.t('sa.merchants') : activeTab() === 'branch_approvals' ? 'Aprobación de Sedes' : activeTab() === 'banners' ? 'Banners & Promociones' : activeTab() === 'roles' ? i18n.t('sa.roles') : i18n.t('sa.metrics') }}
               </span>
             </div>
           </div>
@@ -355,12 +568,6 @@
               <span class="hidden sm:inline">{{ i18n.t('sa.activePlatform') }}</span>
               <span class="sm:hidden">En Vivo</span>
             </span>
-
-            <a routerLink="/explorar" target="_blank"
-               class="text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-brand-500 transition-colors flex items-center gap-1.5 shadow-sm">
-              <app-icon name="external-link" [size]="14"></app-icon>
-              <span class="hidden sm:inline">{{ i18n.t('sa.clientPortal') }}</span>
-            </a>
           </div>
         </header>
 
@@ -408,6 +615,7 @@
                         <th class="p-4">{{ i18n.t('sa.colWhatsApp') }}</th>
                         <th class="p-4">{{ i18n.t('sa.colCommission') }}</th>
                         <th class="p-4">{{ i18n.t('sa.colDeliveryFee') }}</th>
+                        <th class="p-4 text-center">Destacado</th>
                         <th class="p-4">{{ i18n.t('sa.colStatus') }}</th>
                         <th class="p-4 text-right">{{ i18n.t('sa.colManage') }}</th>
                       </tr>
@@ -655,7 +863,7 @@
                               } @else {
                                 <input type="checkbox" 
                                        [checked]="isRolePermitted(role, perm.id)"
-                                       (change)="auth.toggleRolePermission(role, perm.id)"
+                                       (change)="togglePermission(role, perm.id)"
                                        class="accent-brand-500 w-4 h-4 cursor-pointer rounded" />
                               }
                             </td>
@@ -669,57 +877,545 @@
             </div>
           }
 
-          <!-- ================= TAB 3: METRICAS ================= -->
+          <!-- ================= TAB 3: METRICAS & REPORTES ================= -->
           @if (activeTab() === 'metrics') {
-            <div class="space-y-6">
-              <div>
-                <h2 class="text-2xl font-extrabold tracking-tight">{{ i18n.t('sa.metrics') }}</h2>
-                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">{{ i18n.t('sa.metricsDesc') }}</p>
+            <div class="space-y-6 animate-fade-in">
+              <div class="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <h2 class="text-2xl font-extrabold tracking-tight">{{ i18n.t('sa.metrics') }} & Reportes</h2>
+                  <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    Datos consolidados en tiempo real directamente desde la base de datos de pedidos y sucursales.
+                  </p>
+                </div>
+                <button (click)="loadMetricsSummary()" class="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer">
+                  <app-icon name="rotate-ccw" [size]="14"></app-icon>
+                  <span>Actualizar Datos</span>
+                </button>
               </div>
 
               <!-- Top KPI Cards -->
               <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div class="card-adaptive rounded-2xl p-6 shadow-sm space-y-2 relative">
-                  <div class="w-2 h-2 rounded-full bg-brand-500 absolute top-4 right-4"></div>
-                  <span class="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">{{ i18n.t('sa.merchants') }}</span>
+                <div class="card-adaptive rounded-2xl p-5 shadow-sm space-y-2 relative border border-slate-200 dark:border-slate-800">
+                  <div class="w-2.5 h-2.5 rounded-full bg-brand-500 absolute top-4 right-4"></div>
+                  <span class="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Comercios Activos</span>
                   <div class="text-3xl font-extrabold">{{ activeMerchantsCount() }}</div>
                   <span class="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
-                    ↑ 100% {{ i18n.t('common.online') }}
+                    Total Registrados: {{ merchants().length }}
                   </span>
                 </div>
 
-                <div class="card-adaptive rounded-2xl p-6 shadow-sm space-y-2 relative">
-                  <span class="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">{{ i18n.t('sa.revTitle') }}</span>
-                  <div class="text-3xl font-extrabold text-brand-500">\$24,850.00</div>
-                  <span class="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
-                    ↑ +18.5% este mes
+                <div class="card-adaptive rounded-2xl p-5 shadow-sm space-y-2 relative border border-slate-200 dark:border-slate-800">
+                  <span class="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Ventas Totales</span>
+                  <div class="text-3xl font-extrabold text-brand-500 font-mono">
+                    ${{ (metricsSummary()?.totalRevenueUsd || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+                  </div>
+                  <span class="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                    ~Bs. {{ (metricsSummary()?.totalRevenueBs || 0).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
                   </span>
                 </div>
 
-                <div class="card-adaptive rounded-2xl p-6 shadow-sm space-y-2 relative">
-                  <span class="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">{{ i18n.t('sa.commTitle') }}</span>
-                  <div class="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400">$1,242.50</div>
-                  <span class="text-[11px] text-slate-400">Ingresos netos plataforma</span>
+                <div class="card-adaptive rounded-2xl p-5 shadow-sm space-y-2 relative border border-slate-200 dark:border-slate-800">
+                  <span class="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Comisiones Pídetelo</span>
+                  <div class="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
+                    ${{ (metricsSummary()?.totalCommissionUsd || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+                  </div>
+                  <span class="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
+                    Ingreso neto de la red
+                  </span>
                 </div>
 
-                <div class="card-adaptive rounded-2xl p-6 shadow-sm space-y-2 relative">
-                  <span class="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">{{ i18n.t('sa.ordersTitle') }}</span>
-                  <div class="text-3xl font-extrabold">1,420</div>
-                  <span class="text-[11px] text-brand-500 font-semibold">WhatsApp + Marketplace</span>
+                <div class="card-adaptive rounded-2xl p-5 shadow-sm space-y-2 relative border border-slate-200 dark:border-slate-800">
+                  <span class="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Total de Pedidos</span>
+                  <div class="text-3xl font-extrabold">{{ metricsSummary()?.totalOrders || 0 }}</div>
+                  <span class="text-[11px] text-brand-500 font-semibold">
+                    {{ metricsSummary()?.deliveredOrders || 0 }} Entregados • {{ metricsSummary()?.activeOrders || 0 }} Activos
+                  </span>
                 </div>
               </div>
 
-              <!-- Strategic Highlight -->
-              <div class="card-adaptive rounded-2xl p-6 border-l-4 border-l-brand-500 space-y-3">
-                <div class="flex items-center gap-2">
-                  <app-icon name="sparkles" [size]="20" className="text-brand-500"></app-icon>
-                  <h4 class="font-bold text-base">Estrategia de Crecimiento del SaaS</h4>
+              <!-- Tabla de Reportes por Sucursal -->
+              <div class="card-adaptive rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-800 space-y-4">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <h3 class="text-base font-bold flex items-center gap-2">
+                      <app-icon name="store" [size]="18" className="text-brand-500"></app-icon>
+                      <span>Reportes de Desempeño por Sucursales</span>
+                    </h3>
+                    <p class="text-xs text-slate-400">Rendimiento, pedidos cerrados, facturación y comisiones generadas por cada sede física</p>
+                  </div>
                 </div>
-                <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed max-w-3xl">
-                  Al permitir que cada comercio utilice su tienda web express con link de WhatsApp sin costo abusivo, sumamos decenas de restaurantes que traen sus propios clientes diarios. Estos clientes luego son expuestos a la <strong>App de Motorizados y Red Marketplace</strong>, creando un ciclo de retención orgánico con costo de adquisición casi nulo.
-                </p>
+
+                <div class="overflow-x-auto">
+                  <table class="w-full text-xs text-left">
+                    <thead class="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 uppercase font-bold text-[10px] tracking-wider border-b border-slate-200 dark:border-slate-800">
+                      <tr>
+                        <th class="p-3.5">Sucursal / Local</th>
+                        <th class="p-3.5 text-center">Estado</th>
+                        <th class="p-3.5 text-center">Pedidos</th>
+                        <th class="p-3.5 text-center">Entregados</th>
+                        <th class="p-3.5 text-right">Facturación Bruta ($)</th>
+                        <th class="p-3.5 text-right">Comisión Plataforma</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                      @for (rep of metricsSummary()?.branchReports || []; track rep.branchId) {
+                        <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
+                          <td class="p-3.5">
+                            <div class="font-bold text-xs text-slate-900 dark:text-white">{{ rep.branchName }}</div>
+                            <div class="text-[10px] text-slate-400">{{ rep.companyName }}</div>
+                          </td>
+                          <td class="p-3.5 text-center">
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold"
+                                  [class.bg-emerald-100]="rep.status === 'active'"
+                                  [class.text-emerald-700]="rep.status === 'active'"
+                                  [class.dark:bg-emerald-950]="rep.status === 'active'"
+                                  [class.dark:text-emerald-300]="rep.status === 'active'"
+                                  [class.bg-slate-100]="rep.status !== 'active'"
+                                  [class.text-slate-500]="rep.status !== 'active'">
+                              {{ rep.status === 'active' ? 'Activa' : 'Pausada' }}
+                            </span>
+                          </td>
+                          <td class="p-3.5 text-center font-bold">{{ rep.totalOrders }}</td>
+                          <td class="p-3.5 text-center text-emerald-600 font-bold">{{ rep.deliveredOrders }}</td>
+                          <td class="p-3.5 text-right font-extrabold text-slate-900 dark:text-white font-mono">
+                            ${{ (rep.grossRevenueUsd || 0).toFixed(2) }}
+                          </td>
+                          <td class="p-3.5 text-right font-black text-brand-600 dark:text-brand-400 font-mono">
+                            ${{ (rep.commissionEarnedUsd || 0).toFixed(2) }}
+                          </td>
+                        </tr>
+                      } @empty {
+                        <tr>
+                          <td colspan="6" class="p-8 text-center text-slate-400 text-xs">
+                            No hay registros de pedidos aún para mostrar en los reportes de sucursales.
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
               </div>
 
+            </div>
+          }
+
+        
+          <!-- ================= TAB: BANNERS & PROMOCIONES ================= -->
+          @if (activeTab() === 'banners') {
+            <div class="space-y-6 animate-fade-in">
+              <div class="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <h2 class="text-2xl font-extrabold tracking-tight">Banners & Promociones Flash</h2>
+                  <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Configura los anuncios, descuentos y cupones que se muestran en el carrusel de la cabecera de la app móvil y web</p>
+                </div>
+
+                <button (click)="openCreateBannerModal()"
+                        class="bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm flex items-center gap-2 transition-all active:scale-95 cursor-pointer">
+                  <app-icon name="plus" [size]="16" className="text-white"></app-icon>
+                  <span>Nuevo Banner Promocional</span>
+                </button>
+              </div>
+
+              @if (bannerActionNotice()) {
+                <div class="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-bold animate-fade-in flex items-center gap-2">
+                  <app-icon name="check" [size]="16"></app-icon>
+                  <span>{{ bannerActionNotice() }}</span>
+                </div>
+              }
+
+              <!-- Grid of Banners -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                @for (b of banners(); track b.id) {
+                  <div class="card-adaptive rounded-2xl overflow-hidden p-5 flex flex-col justify-between border border-slate-200 dark:border-slate-800 shadow-sm relative group">
+                    <!-- Status pill & actions -->
+                    <div class="flex items-center justify-between gap-2 mb-3">
+                      <div class="flex items-center gap-2">
+                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider"
+                              [class.bg-emerald-100]="b.isActive"
+                              [class.text-emerald-700]="b.isActive"
+                              [class.dark:bg-emerald-950]="b.isActive"
+                              [class.dark:text-emerald-300]="b.isActive"
+                              [class.bg-slate-100]="!b.isActive"
+                              [class.text-slate-500]="!b.isActive">
+                          {{ b.isActive ? 'Activo en App y Web' : 'Pausado' }}
+                        </span>
+                        <span class="text-[10px] text-slate-400 font-bold">Orden: {{ b.sortOrder }}</span>
+                      </div>
+
+                      <div class="flex items-center gap-1.5">
+                        <button (click)="toggleBannerActive(b)"
+                                class="px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-colors cursor-pointer"
+                                [class.border-emerald-300]="b.isActive"
+                                [class.text-emerald-600]="b.isActive"
+                                [class.border-slate-300]="!b.isActive"
+                                [class.text-slate-500]="!b.isActive">
+                          {{ b.isActive ? 'Pausar' : 'Activar' }}
+                        </button>
+                        <button (click)="openEditBannerModal(b)"
+                                class="p-1.5 rounded-lg text-slate-500 hover:text-brand-500 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                                title="Editar banner">
+                          <app-icon name="edit" [size]="14"></app-icon>
+                        </button>
+                        <button (click)="deleteBanner(b)"
+                                class="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 cursor-pointer"
+                                title="Eliminar banner">
+                          <app-icon name="trash" [size]="14"></app-icon>
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- Live Banner Card Preview -->
+                    <div class="rounded-2xl p-5 text-white shadow-md relative overflow-hidden flex items-center justify-between gap-4"
+                         [style.background]="'linear-gradient(135deg, ' + (b.bgGradientStart || '#f97316') + ' 0%, ' + (b.bgGradientEnd || '#ea580c') + ' 100%)'">
+                      
+                      <div class="relative z-10 flex-1 min-w-0 space-y-2">
+                        @if (b.badgeText) {
+                          <span class="inline-block px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur-xs text-[10px] font-extrabold uppercase tracking-wider text-white">
+                            {{ b.badgeText }}
+                          </span>
+                        }
+                        <h4 class="text-lg font-black leading-tight drop-shadow-xs truncate">{{ b.title }}</h4>
+                        @if (b.subtitle) {
+                          <p class="text-xs text-white/90 font-medium line-clamp-2">{{ b.subtitle }}</p>
+                        }
+                        <div class="flex items-center gap-2 pt-1 flex-wrap">
+                          @if (b.couponCode) {
+                            <div class="px-2 py-0.5 rounded-lg bg-black/30 border border-white/20 text-[11px] font-mono font-bold tracking-wider">
+                              Cupón: {{ b.couponCode }}
+                            </div>
+                          }
+                          <span class="text-[11px] font-bold bg-white text-slate-900 px-3 py-1 rounded-xl shadow-xs">
+                            {{ b.buttonText || 'Pedir ahora' }} →
+                          </span>
+                        </div>
+                      </div>
+
+                      @if (b.imageUrl) {
+                        <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden bg-white/10 backdrop-blur-xs flex-shrink-0 shadow-lg border border-white/20">
+                          <img [src]="b.imageUrl" [alt]="b.title" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                        </div>
+                      }
+                    </div>
+
+                    <div class="mt-3 text-[11px] text-slate-400 flex items-center justify-between">
+                      <span class="truncate">Destino: <strong class="text-slate-600 dark:text-slate-300 font-mono">{{ b.linkUrl || '/' }}</strong></span>
+                    </div>
+                  </div>
+                } @empty {
+                  <div class="col-span-full p-12 text-center card-adaptive rounded-2xl">
+                    <app-icon name="sparkles" [size]="32" className="mx-auto text-slate-300 mb-2"></app-icon>
+                    <p class="font-bold text-sm">No hay banners promocionales creados</p>
+                    <p class="text-xs text-slate-400 mt-1">Crea el primer banner para mostrarlo a todos los usuarios de la app y web.</p>
+                    <button (click)="openCreateBannerModal()"
+                            class="mt-4 bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all inline-flex items-center gap-1.5 cursor-pointer">
+                      <app-icon name="plus" [size]="14"></app-icon>
+                      <span>Crear Banner Ahora</span>
+                    </button>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+
+          <!-- ================= TAB: CATEGORÍAS DE NEGOCIO & SUBDIVISIONES ================= -->
+          @if (activeTab() === 'categories') {
+            <div class="space-y-6">
+              
+              <div class="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <h2 class="text-2xl font-extrabold tracking-tight flex items-center gap-2">
+                    <app-icon name="tag" [size]="24" className="text-brand-500"></app-icon>
+                    <span>Categorías del Marketplace & Subdivisiones</span>
+                  </h2>
+                  <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    Gestiona las categorías comerciales principales que ven los clientes (Restaurantes, Súper, Farmacias...) y sus subdivisiones (Hamburguesas, Sushi, Pizzas...)
+                  </p>
+                </div>
+
+                <button (click)="openNewCategoryModal()"
+                        class="bg-brand-500 hover:bg-brand-600 active:bg-brand-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer">
+                  <app-icon name="plus" [size]="15"></app-icon>
+                  <span>Nueva Categoría</span>
+                </button>
+              </div>
+
+              <!-- Action Notice -->
+              @if (categoryActionNotice(); as notice) {
+                <div class="bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 p-4 rounded-xl text-xs font-bold flex items-center justify-between animate-fade-in">
+                  <span>{{ notice }}</span>
+                  <button (click)="categoryActionNotice.set(null)" class="text-xs underline hover:no-underline cursor-pointer">Cerrar</button>
+                </div>
+              }
+
+              <!-- Categories Cards Grid -->
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                @for (cat of businessCategories(); track cat.id) {
+                  <div class="card-adaptive rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4 flex flex-col justify-between transition-all hover:border-brand-500/40">
+                    <div class="space-y-3">
+                      <div class="flex items-start justify-between gap-3">
+                        <div class="flex items-center gap-3">
+                          <span class="text-3xl p-2 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex-shrink-0">
+                            {{ cat.icon }}
+                          </span>
+                          <div>
+                            <h3 class="text-base font-black text-slate-900 dark:text-white">{{ cat.name }}</h3>
+                            <span class="font-mono text-[11px] text-slate-400">/{{ cat.slug }}</span>
+                          </div>
+                        </div>
+
+                        <div class="flex items-center gap-1.5">
+                          <button (click)="toggleCategoryActive(cat)"
+                                  class="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase border transition-colors cursor-pointer"
+                                  [class.border-emerald-300]="cat.is_active"
+                                  [class.text-emerald-600]="cat.is_active"
+                                  [class.bg-emerald-50]="cat.is_active"
+                                  [class.dark:bg-emerald-950/40]="cat.is_active"
+                                  [class.border-slate-300]="!cat.is_active"
+                                  [class.text-slate-400]="!cat.is_active">
+                            {{ cat.is_active ? 'Activa' : 'Pausada' }}
+                          </button>
+                          <button (click)="openEditCategoryModal(cat)"
+                                  class="p-1.5 rounded-lg text-slate-500 hover:text-brand-500 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                                  title="Editar categoría">
+                            <app-icon name="edit" [size]="14"></app-icon>
+                          </button>
+                          <button (click)="deleteCategory(cat)"
+                                  class="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 cursor-pointer"
+                                  title="Eliminar categoría">
+                            <app-icon name="trash" [size]="14"></app-icon>
+                          </button>
+                        </div>
+                      </div>
+
+                      <!-- Subcategorías Pills -->
+                      <div>
+                        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                          Subdivisiones ({{ (cat.subcategories || []).length }})
+                        </div>
+                        <div class="flex flex-wrap gap-1 max-h-28 overflow-y-auto pr-1">
+                          @for (sub of cat.subcategories; track sub) {
+                            <span class="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-[10px] font-semibold text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                              {{ sub }}
+                            </span>
+                          } @empty {
+                            <span class="text-[11px] text-slate-400 italic">Sin subdivisiones configuradas</span>
+                          }
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="pt-3 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
+                      <span>Orden: <strong>{{ cat.sort_order }}</strong></span>
+                      <span class="text-brand-600 dark:text-brand-400 font-bold cursor-pointer" (click)="openEditCategoryModal(cat)">Editar subdivisiones →</span>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+
+          <!-- ================= TAB: USUARIOS REGISTRADOS ================= -->
+          @if (activeTab() === 'users') {
+            <div class="space-y-6 animate-fade-in">
+              <div class="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <h2 class="text-2xl font-extrabold tracking-tight flex items-center gap-2">
+                    <app-icon name="users" [size]="24" className="text-brand-500"></app-icon>
+                    <span>Usuarios Registrados en Pídetelo</span>
+                  </h2>
+                  <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    Directorio global de clientes, motorizados, encargados y dueños de locales registrados en la plataforma.
+                  </p>
+                </div>
+
+                <button (click)="loadPlatformUsers()" class="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer">
+                  <app-icon name="rotate-ccw" [size]="14"></app-icon>
+                  <span>Refrescar Lista</span>
+                </button>
+              </div>
+
+              <!-- Filtros y Búsqueda -->
+              <div class="flex flex-wrap items-center gap-3">
+                <div class="flex-1 min-w-[240px]">
+                  <input type="text" [ngModel]="userSearchQuery()" (ngModelChange)="userSearchQuery.set($event)"
+                         placeholder="Buscar por nombre, correo o comercio..."
+                         class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:border-brand-500 font-medium" />
+                </div>
+                <div class="w-48">
+                  <select [ngModel]="userRoleFilter()" (ngModelChange)="userRoleFilter.set($event)"
+                          class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs font-bold focus:outline-none focus:border-brand-500">
+                    <option value="all">Todos los Roles</option>
+                    <option value="SUPER_ADMIN">SuperAdmin</option>
+                    <option value="MERCHANT_OWNER">Dueño Local</option>
+                    <option value="MERCHANT_MANAGER">Encargado</option>
+                    <option value="RIDER">Motorizado / Rider</option>
+                    <option value="CUSTOMER">Cliente</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Tabla de Usuarios -->
+              <div class="card-adaptive rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+                <div class="overflow-x-auto">
+                  <table class="w-full text-xs text-left">
+                    <thead class="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 uppercase font-bold text-[10px] tracking-wider border-b border-slate-200 dark:border-slate-800">
+                      <tr>
+                        <th class="p-3.5">Usuario</th>
+                        <th class="p-3.5">Contacto</th>
+                        <th class="p-3.5 text-center">Rol en Plataforma</th>
+                        <th class="p-3.5">Comercio Asignado</th>
+                        <th class="p-3.5 text-center">Fecha Registro</th>
+                        <th class="p-3.5 text-center">Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                      @for (u of filteredPlatformUsers(); track u.id) {
+                        <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
+                          <td class="p-3.5">
+                            <div class="flex items-center gap-2.5">
+                              <div class="w-8 h-8 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 font-extrabold flex items-center justify-center text-xs">
+                                {{ (u.name || 'U').substring(0, 1).toUpperCase() }}
+                              </div>
+                              <div>
+                                <div class="font-bold text-xs text-slate-900 dark:text-white">{{ u.name || 'Sin nombre' }}</div>
+                                <div class="text-[10px] text-slate-400 font-mono">{{ u.id }}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td class="p-3.5">
+                            <div class="text-xs font-medium">{{ u.email }}</div>
+                            <div class="text-[10px] text-slate-400 font-mono">{{ u.phone || 'Sin teléfono' }}</div>
+                          </td>
+                          <td class="p-3.5 text-center">
+                            <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide"
+                                  [class.bg-purple-100]="u.role === 'SUPER_ADMIN'"
+                                  [class.text-purple-700]="u.role === 'SUPER_ADMIN'"
+                                  [class.dark:bg-purple-950]="u.role === 'SUPER_ADMIN'"
+                                  [class.dark:text-purple-300]="u.role === 'SUPER_ADMIN'"
+                                  [class.bg-brand-100]="u.role === 'MERCHANT_OWNER'"
+                                  [class.text-brand-700]="u.role === 'MERCHANT_OWNER'"
+                                  [class.dark:bg-brand-950]="u.role === 'MERCHANT_OWNER'"
+                                  [class.dark:text-brand-300]="u.role === 'MERCHANT_OWNER'"
+                                  [class.bg-blue-100]="u.role === 'RIDER'"
+                                  [class.text-blue-700]="u.role === 'RIDER'"
+                                  [class.dark:bg-blue-950]="u.role === 'RIDER'"
+                                  [class.dark:text-blue-300]="u.role === 'RIDER'"
+                                  [class.bg-slate-100]="u.role === 'CUSTOMER'"
+                                  [class.text-slate-700]="u.role === 'CUSTOMER'"
+                                  [class.dark:bg-slate-800]="u.role === 'CUSTOMER'"
+                                  [class.dark:text-slate-300]="u.role === 'CUSTOMER'">
+                              {{ roleLabels[u.role] || u.role }}
+                            </span>
+                          </td>
+                          <td class="p-3.5">
+                            <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                              {{ u.tenantName || 'Plataforma Global' }}
+                            </span>
+                          </td>
+                          <td class="p-3.5 text-center text-[11px] text-slate-400">
+                            {{ u.createdAt ? (u.createdAt | date:'shortDate') : 'Reciente' }}
+                          </td>
+                          <td class="p-3.5 text-center">
+                            <span class="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                              <span>Activo</span>
+                            </span>
+                          </td>
+                        </tr>
+                      } @empty {
+                        <tr>
+                          <td colspan="6" class="p-8 text-center text-slate-400 text-xs">
+                            No se encontraron usuarios registrados con el criterio de búsqueda.
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          }
+
+          <!-- ================= TAB: CUPONES GLOBALES DE PLATAFORMA ================= -->
+          @if (activeTab() === 'global_coupons') {
+            <div class="space-y-6 animate-fade-in">
+              <div class="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <h2 class="text-2xl font-extrabold tracking-tight flex items-center gap-2">
+                    <app-icon name="sparkles" [size]="24" className="text-brand-500"></app-icon>
+                    <span>Cupones Globales de Plataforma</span>
+                  </h2>
+                  <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    Crea cupones de descuento canjeables en <strong>cualquier comercio</strong> de la red Pídetelo.
+                  </p>
+                </div>
+
+                <button (click)="openNewGlobalCouponModal()"
+                        class="bg-brand-500 hover:bg-brand-600 active:bg-brand-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer">
+                  <app-icon name="plus" [size]="15"></app-icon>
+                  <span>Nuevo Cupón Global</span>
+                </button>
+              </div>
+
+              <!-- Listado de Cupones Globales -->
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                @for (c of allCoupons(); track c.id) {
+                  <div class="card-adaptive rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3 relative group">
+                    <div class="flex items-start justify-between gap-2">
+                      <div class="px-3 py-1 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 font-mono font-black text-sm tracking-wider border border-brand-500/20">
+                        {{ c.code }}
+                      </div>
+                      <div class="flex items-center gap-1.5">
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold"
+                              [class.bg-emerald-100]="c.isActive"
+                              [class.text-emerald-700]="c.isActive"
+                              [class.dark:bg-emerald-950]="c.isActive"
+                              [class.dark:text-emerald-300]="c.isActive"
+                              [class.bg-slate-100]="!c.isActive"
+                              [class.text-slate-500]="!c.isActive">
+                          {{ c.isActive ? 'Activo' : 'Pausado' }}
+                        </span>
+                        <button (click)="deleteGlobalCoupon(c)" class="p-1 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 cursor-pointer" title="Eliminar cupón">
+                          <app-icon name="trash" [size]="14"></app-icon>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div class="text-xl font-black text-slate-900 dark:text-white">
+                        {{ c.discountType === 'percentage' ? (c.discountValue + '% OFF') : ('$' + c.discountValue + ' OFF') }}
+                      </div>
+                      <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-2">
+                        {{ c.description || 'Válido en cualquier comercio afiliado de la plataforma.' }}
+                      </p>
+                    </div>
+
+                    <div class="pt-3 border-t border-slate-100 dark:border-slate-800 text-[11px] space-y-1">
+                      <div class="flex items-center justify-between text-slate-500">
+                        <span>Pedido Mínimo:</span>
+                        <strong class="text-slate-800 dark:text-slate-200">{{ c.minOrderAmount ? ('$' + c.minOrderAmount.toFixed(2)) : 'Sin mínimo' }}</strong>
+                      </div>
+                      <div class="flex items-center justify-between text-slate-500">
+                        <span>Alcance:</span>
+                        <span class="font-bold text-brand-600 dark:text-brand-400">
+                          {{ c.isGlobal || c.tenantId === 'global' ? 'Global (Toda la Red)' : 'Comercio Específico' }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                } @empty {
+                  <div class="col-span-full p-12 text-center card-adaptive rounded-2xl border border-slate-200 dark:border-slate-800">
+                    <app-icon name="sparkles" [size]="32" className="mx-auto text-slate-300 mb-2"></app-icon>
+                    <p class="font-bold text-sm">No hay cupones globales creados aún</p>
+                    <p class="text-xs text-slate-400 mt-1">Crea cupones como FLASHNOW o BIENVENIDO para aplicarse en cualquier comercio.</p>
+                    <button (click)="openNewGlobalCouponModal()"
+                            class="mt-4 bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all inline-flex items-center gap-1.5 cursor-pointer">
+                      <app-icon name="plus" [size]="14"></app-icon>
+                      <span>Crear Cupón Global</span>
+                    </button>
+                  </div>
+                }
+              </div>
             </div>
           }
 
@@ -759,15 +1455,39 @@
                          class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-3 focus:outline-none focus:border-brand-500 font-mono" />
                 </div>
                 <div>
-                  <label class="block font-semibold mb-1">Categoría</label>
+                  <label class="block font-semibold mb-1">Categoría Principal *</label>
                   <select [(ngModel)]="newMerchant.category" name="category"
                           class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-3 focus:outline-none focus:border-brand-500">
-                    <option value="Hamburguesas">Hamburguesas</option>
-                    <option value="Sushi & Asiática">Sushi & Asiática</option>
-                    <option value="Pizza & Pasta">Pizza & Pasta</option>
-                    <option value="Tacos & Mexicana">Tacos & Mexicana</option>
-                    <option value="Postres & Café">Postres & Café</option>
+                    @for (cat of businessCategories(); track cat.id) {
+                      <option [value]="cat.name">{{ cat.icon }} {{ cat.name }}</option>
+                    }
                   </select>
+                </div>
+              </div>
+
+              <!-- Selector de Subdivisiones / Especialidades -->
+              <div class="p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-xl space-y-2">
+                <div class="flex items-center justify-between">
+                  <label class="font-semibold text-xs text-slate-700 dark:text-slate-300">
+                    Subdivisiones de {{ newMerchant.category }} (Selecciona 1 o más)
+                  </label>
+                  <span class="text-[10px] text-brand-600 dark:text-brand-400 font-bold">{{ newMerchant.subcategories.length }} seleccionadas</span>
+                </div>
+                <div class="flex flex-wrap gap-1.5 pt-1">
+                  @for (sub of getSubcategoriesFor(newMerchant.category); track sub) {
+                    <button type="button"
+                            (click)="toggleNewSubcategory(sub)"
+                            [class.bg-brand-500]="newMerchant.subcategories.includes(sub)"
+                            [class.text-white]="newMerchant.subcategories.includes(sub)"
+                            [class.border-brand-600]="newMerchant.subcategories.includes(sub)"
+                            [class.bg-white]="!newMerchant.subcategories.includes(sub)"
+                            [class.dark:bg-slate-800]="!newMerchant.subcategories.includes(sub)"
+                            [class.text-slate-600]="!newMerchant.subcategories.includes(sub)"
+                            [class.dark:text-slate-300]="!newMerchant.subcategories.includes(sub)"
+                            class="px-2.5 py-1 rounded-lg border text-[11px] font-bold transition-all cursor-pointer">
+                      {{ newMerchant.subcategories.includes(sub) ? '✓ ' : '+ ' }}{{ sub }}
+                    </button>
+                  }
                 </div>
               </div>
 
@@ -889,20 +1609,39 @@
                          class="w-full bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 text-slate-400 rounded-xl p-3 font-mono cursor-not-allowed" />
                 </div>
                 <div>
-                  <label class="block font-semibold mb-1">Categoría</label>
+                  <label class="block font-semibold mb-1">Categoría Principal *</label>
                   <select [(ngModel)]="editingMerchant.category" name="editCategory"
                           class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-3 focus:outline-none focus:border-brand-500">
-                    <option value="Hamburguesas">Hamburguesas</option>
-                    <option value="Sushi & Asiática">Sushi & Asiática</option>
-                    <option value="Pizza & Pasta">Pizza & Pasta</option>
-                    <option value="Tacos & Mexicana">Tacos & Mexicana</option>
-                    <option value="Postres & Café">Postres & Café</option>
-                    <option value="Pollo & Fritos">Pollo & Fritos</option>
-                    <option value="Bebidas & Cocteles">Bebidas & Cocteles</option>
-                    <option value="Café & Bakery">Café & Bakery</option>
-                    <option value="Saludable & Fit">Saludable & Fit</option>
-                    <option value="General">General</option>
+                    @for (cat of businessCategories(); track cat.id) {
+                      <option [value]="cat.name">{{ cat.icon }} {{ cat.name }}</option>
+                    }
                   </select>
+                </div>
+              </div>
+
+              <!-- Selector de Subdivisiones / Especialidades -->
+              <div class="p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-xl space-y-2">
+                <div class="flex items-center justify-between">
+                  <label class="font-semibold text-xs text-slate-700 dark:text-slate-300">
+                    Subdivisiones de {{ editingMerchant.category }} (Selecciona 1 o más)
+                  </label>
+                  <span class="text-[10px] text-brand-600 dark:text-brand-400 font-bold">{{ editingMerchant.subcategories.length }} seleccionadas</span>
+                </div>
+                <div class="flex flex-wrap gap-1.5 pt-1">
+                  @for (sub of getSubcategoriesFor(editingMerchant.category); track sub) {
+                    <button type="button"
+                            (click)="toggleEditSubcategory(sub)"
+                            [class.bg-brand-500]="editingMerchant.subcategories.includes(sub)"
+                            [class.text-white]="editingMerchant.subcategories.includes(sub)"
+                            [class.border-brand-600]="editingMerchant.subcategories.includes(sub)"
+                            [class.bg-white]="!editingMerchant.subcategories.includes(sub)"
+                            [class.dark:bg-slate-800]="!editingMerchant.subcategories.includes(sub)"
+                            [class.text-slate-600]="!editingMerchant.subcategories.includes(sub)"
+                            [class.dark:text-slate-300]="!editingMerchant.subcategories.includes(sub)"
+                            class="px-2.5 py-1 rounded-lg border text-[11px] font-bold transition-all cursor-pointer">
+                      {{ editingMerchant.subcategories.includes(sub) ? '✓ ' : '+ ' }}{{ sub }}
+                    </button>
+                  }
                 </div>
               </div>
 
@@ -1047,6 +1786,152 @@
         </div>
       }
 
+      <!-- ================= MODAL: CREAR / EDITAR BANNER ================= -->
+      @if (isBannerModalOpen()) {
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
+             (click)="isBannerModalOpen.set(false)">
+          <div class="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 w-full max-w-xl rounded-2xl shadow-2xl p-6 border border-slate-200 dark:border-slate-800 space-y-4 max-h-[90vh] flex flex-col"
+               (click)="$event.stopPropagation()">
+            
+            <div class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+              <h3 class="text-base font-bold flex items-center gap-2">
+                <app-icon name="sparkles" [size]="18" className="text-brand-500"></app-icon>
+                <span>{{ editingBanner.id ? 'Editar Banner Promocional' : 'Nuevo Banner Promocional Flash' }}</span>
+              </h3>
+              <button (click)="isBannerModalOpen.set(false)" class="text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer">
+                <app-icon name="x" [size]="18"></app-icon>
+              </button>
+            </div>
+
+            <!-- Form Body with Scroll -->
+            <div class="space-y-4 overflow-y-auto flex-1 pr-1 text-xs">
+              <!-- Live Preview Inside Modal -->
+              <div>
+                <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Vista Previa en Vivo</label>
+                <div class="rounded-2xl p-5 text-white shadow-md relative overflow-hidden flex items-center justify-between gap-4"
+                     [style.background]="'linear-gradient(135deg, ' + (editingBanner.bgGradientStart || '#f97316') + ' 0%, ' + (editingBanner.bgGradientEnd || '#ea580c') + ' 100%)'">
+                  <div class="relative z-10 flex-1 min-w-0 space-y-1.5">
+                    @if (editingBanner.badgeText) {
+                      <span class="inline-block px-2.5 py-0.5 rounded-full bg-white/20 text-[10px] font-extrabold uppercase tracking-wider">
+                        {{ editingBanner.badgeText }}
+                      </span>
+                    }
+                    <h4 class="text-base font-black truncate">{{ editingBanner.title || 'Título de la promoción' }}</h4>
+                    <p class="text-xs text-white/90 line-clamp-2">{{ editingBanner.subtitle || 'Subtítulo o descripción atractiva...' }}</p>
+                    <div class="flex items-center gap-2 pt-1">
+                      @if (editingBanner.couponCode) {
+                        <span class="px-2 py-0.5 rounded-lg bg-black/30 border border-white/20 text-[10px] font-mono font-bold">
+                          {{ editingBanner.couponCode }}
+                        </span>
+                      }
+                      <span class="text-[10px] font-bold bg-white text-slate-900 px-2.5 py-1 rounded-xl">
+                        {{ editingBanner.buttonText || 'Pedir ahora' }} →
+                      </span>
+                    </div>
+                  </div>
+                  @if (editingBanner.imageUrl) {
+                    <div class="w-20 h-20 rounded-xl overflow-hidden bg-white/10 flex-shrink-0 border border-white/20 shadow">
+                      <img [src]="editingBanner.imageUrl" alt="Preview" class="w-full h-full object-cover" />
+                    </div>
+                  }
+                </div>
+              </div>
+
+              <!-- Input fields -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div class="md:col-span-2">
+                  <label class="block font-semibold mb-1">Título de la Promoción *</label>
+                  <input type="text" [(ngModel)]="editingBanner.title" placeholder="Ej: 30% OFF en tu primer pedido"
+                         class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs focus:outline-none focus:border-brand-500 font-bold" />
+                </div>
+
+                <div class="md:col-span-2">
+                  <label class="block font-semibold mb-1">Subtítulo / Bajada</label>
+                  <input type="text" [(ngModel)]="editingBanner.subtitle" placeholder="Ej: Usa el cupón FLASHNOW al momento de pagar"
+                         class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs focus:outline-none focus:border-brand-500" />
+                </div>
+
+                <div>
+                  <label class="block font-semibold mb-1">Badge Superior</label>
+                  <input type="text" [(ngModel)]="editingBanner.badgeText" placeholder="⚡ ENTREGA FLASH 20 MIN"
+                         class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs focus:outline-none focus:border-brand-500" />
+                </div>
+
+                <div>
+                  <label class="block font-semibold mb-1">Código de Cupón (Opcional)</label>
+                  <input type="text" [(ngModel)]="editingBanner.couponCode" placeholder="FLASHNOW"
+                         class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs focus:outline-none focus:border-brand-500 font-mono font-bold uppercase" />
+                </div>
+
+                <div>
+                  <label class="block font-semibold mb-1">Texto del Botón</label>
+                  <input type="text" [(ngModel)]="editingBanner.buttonText" placeholder="Pedir ahora"
+                         class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs focus:outline-none focus:border-brand-500" />
+                </div>
+
+                <div>
+                  <label class="block font-semibold mb-1">Enlace de Destino (URL o Ruta)</label>
+                  <input type="text" [(ngModel)]="editingBanner.linkUrl" placeholder="/explorar"
+                         class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs focus:outline-none focus:border-brand-500" />
+                </div>
+
+                <div class="md:col-span-2">
+                  <label class="block font-semibold mb-1">URL de Imagen Ilustrativa (PNG con fondo transparente o JPG)</label>
+                  <input type="text" [(ngModel)]="editingBanner.imageUrl" placeholder="https://..."
+                         class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs focus:outline-none focus:border-brand-500" />
+                </div>
+
+                <div>
+                  <label class="block font-semibold mb-1">Color Inicio Degradado</label>
+                  <div class="flex items-center gap-2">
+                    <input type="color" [(ngModel)]="editingBanner.bgGradientStart" class="w-8 h-8 rounded-lg cursor-pointer border-0 p-0" />
+                    <input type="text" [(ngModel)]="editingBanner.bgGradientStart" class="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2 font-mono text-xs" />
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block font-semibold mb-1">Color Fin Degradado</label>
+                  <div class="flex items-center gap-2">
+                    <input type="color" [(ngModel)]="editingBanner.bgGradientEnd" class="w-8 h-8 rounded-lg cursor-pointer border-0 p-0" />
+                    <input type="text" [(ngModel)]="editingBanner.bgGradientEnd" class="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2 font-mono text-xs" />
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block font-semibold mb-1">Orden de Visualización</label>
+                  <input type="number" [(ngModel)]="editingBanner.sortOrder" min="1"
+                         class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs focus:outline-none focus:border-brand-500" />
+                </div>
+
+                <div class="flex items-center gap-3 pt-6">
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" [(ngModel)]="editingBanner.isActive" class="sr-only peer" />
+                    <div class="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-500"></div>
+                  </label>
+                  <span class="font-bold text-xs">Banner Activo</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-3">
+              <button (click)="isBannerModalOpen.set(false)"
+                      class="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">
+                Cancelar
+              </button>
+              <button (click)="saveBanner()" [disabled]="isSavingBanner()"
+                      class="px-5 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white text-xs font-bold shadow-md cursor-pointer flex items-center gap-2">
+                @if (isSavingBanner()) {
+                  <span>Guardando...</span>
+                } @else {
+                  <span>Guardar Banner</span>
+                }
+              </button>
+            </div>
+
+          </div>
+        </div>
+      }
+
       <!-- ================= MODAL: RECHAZAR SOLICITUD DE SEDE ================= -->
       @if (rejectReasonModalOpen()) {
         <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
@@ -1080,6 +1965,247 @@
               <button (click)="confirmRejectBranch()"
                       class="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold shadow-sm cursor-pointer">
                 Confirmar Rechazo
+              </button>
+            </div>
+
+          </div>
+        </div>
+      }
+
+      <!-- ================= MODAL: CREAR / EDITAR CATEGORÍA ================= -->
+      @if (isCategoryModalOpen()) {
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
+             (click)="isCategoryModalOpen.set(false)">
+          <div class="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 w-full max-w-lg rounded-2xl shadow-2xl p-6 border border-slate-200 dark:border-slate-800 space-y-4 max-h-[90vh] flex flex-col"
+               (click)="$event.stopPropagation()">
+            
+            <div class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+              <h3 class="text-base font-bold flex items-center gap-2">
+                <app-icon name="tag" [size]="18" className="text-brand-500"></app-icon>
+                <span>{{ editingCategory.id ? 'Editar Categoría' : 'Nueva Categoría de Negocio' }}</span>
+              </h3>
+              <button (click)="isCategoryModalOpen.set(false)" class="text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer">
+                <app-icon name="x" [size]="18"></app-icon>
+              </button>
+            </div>
+
+            <div class="space-y-4 overflow-y-auto flex-1 pr-1 text-xs">
+              <div>
+                <label class="block font-semibold mb-1">Nombre de la Categoría *</label>
+                <input type="text" [(ngModel)]="editingCategory.name" placeholder="Ej: Juguetes, Restaurantes, Mascotas..."
+                       class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs focus:outline-none focus:border-brand-500 font-bold" />
+              </div>
+
+              <!-- Selector Visual e Intuitivo de Iconos -->
+              <div class="p-3 bg-slate-50 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
+                <div class="flex items-center justify-between">
+                  <label class="font-bold text-xs text-slate-800 dark:text-slate-200">Icono / Emoji de la Categoría *</label>
+                  <span class="text-[10px] text-slate-400">Selecciona o escribe uno</span>
+                </div>
+
+                <!-- Preview del Icono Seleccionado + Input Manual -->
+                <div class="flex items-center gap-3">
+                  <div class="w-14 h-14 rounded-2xl bg-white dark:bg-slate-900 border-2 border-brand-500 shadow-md flex items-center justify-center text-3xl flex-shrink-0 animate-scale-in">
+                    {{ editingCategory.icon || '🛍️' }}
+                  </div>
+                  <div class="flex-1 space-y-1">
+                    <span class="text-[11px] font-semibold text-slate-600 dark:text-slate-300 block">
+                      Haz clic en cualquiera de los iconos sugeridos abajo, o escribe tu propio emoji:
+                    </span>
+                    <input type="text" [(ngModel)]="editingCategory.icon" placeholder="Ej: 🧸 o 🍕"
+                           class="w-28 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1 text-center font-bold text-base focus:outline-none focus:border-brand-500" />
+                  </div>
+                </div>
+
+                <!-- Pestañas de categorías de iconos sugeridos -->
+                <div class="flex gap-1 overflow-x-auto pb-1 scrollbar-thin">
+                  @for (cat of iconCategories; track cat.name; let i = $index) {
+                    <button type="button"
+                            (click)="selectedIconCategoryIdx.set(i)"
+                            [class.bg-brand-500]="selectedIconCategoryIdx() === i"
+                            [class.text-white]="selectedIconCategoryIdx() === i"
+                            [class.bg-white]="selectedIconCategoryIdx() !== i"
+                            [class.dark:bg-slate-900]="selectedIconCategoryIdx() !== i"
+                            [class.text-slate-700]="selectedIconCategoryIdx() !== i"
+                            [class.dark:text-slate-300]="selectedIconCategoryIdx() !== i"
+                            class="px-2.5 py-1 rounded-lg text-[10px] font-bold border border-slate-200 dark:border-slate-700 whitespace-nowrap transition-all cursor-pointer">
+                      {{ cat.name }}
+                    </button>
+                  }
+                </div>
+
+                <!-- Grid de iconos de la categoría activa -->
+                <div class="grid grid-cols-6 sm:grid-cols-11 gap-1.5 p-2 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700">
+                  @for (ic of iconCategories[selectedIconCategoryIdx()].icons; track ic) {
+                    <button type="button"
+                            (click)="selectCategoryIcon(ic)"
+                            [class.bg-brand-500/20]="editingCategory.icon === ic"
+                            [class.border-brand-500]="editingCategory.icon === ic"
+                            [class.border-transparent]="editingCategory.icon !== ic"
+                            class="w-9 h-9 rounded-lg border text-xl flex items-center justify-center hover:scale-125 hover:bg-brand-50 dark:hover:bg-slate-800 transition-all cursor-pointer"
+                            [title]="ic">
+                      {{ ic }}
+                    </button>
+                  }
+                </div>
+              </div>
+
+              <div>
+                <label class="block font-semibold mb-1">Slug URL (Identificador)</label>
+                <input type="text" [(ngModel)]="editingCategory.slug" placeholder="restaurantes"
+                       class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs font-mono focus:outline-none focus:border-brand-500" />
+              </div>
+
+              <!-- Gestión de Subdivisiones / Especialidades -->
+              <div class="space-y-2 p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-xl">
+                <div class="flex items-center justify-between">
+                  <label class="font-semibold text-xs">Subdivisiones de esta Categoría</label>
+                  <span class="text-[10px] text-slate-400 font-bold">{{ (editingCategory.subcategories || []).length }} agregadas</span>
+                </div>
+                <p class="text-[11px] text-slate-400">
+                  Agrega las especialidades que los comercios de esta categoría podrán marcar (ej: Hamburguesas, Sushi, Pastas, Pizzas, Pollos...)
+                </p>
+
+                <div class="flex items-center gap-2 pt-1">
+                  <input type="text" [(ngModel)]="newSubcategoryInput" (keyup.enter)="addSubcategoryToEditing()"
+                         placeholder="Escribe subdivisión y pulsa Enter o Agregar..."
+                         class="flex-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-2 text-xs focus:outline-none focus:border-brand-500" />
+                  <button type="button" (click)="addSubcategoryToEditing()"
+                          class="bg-brand-500 hover:bg-brand-600 text-white px-3 py-2 rounded-xl text-xs font-bold cursor-pointer">
+                    + Agregar
+                  </button>
+                </div>
+
+                <div class="flex flex-wrap gap-1.5 pt-2 max-h-36 overflow-y-auto">
+                  @for (sub of editingCategory.subcategories || []; track sub) {
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-semibold">
+                      <span>{{ sub }}</span>
+                      <button type="button" (click)="removeSubcategoryFromEditing(sub)" class="text-slate-400 hover:text-red-500 cursor-pointer font-bold">×</button>
+                    </span>
+                  } @empty {
+                    <span class="text-slate-400 italic text-[11px]">No hay subdivisiones. Escribe una arriba para agregar.</span>
+                  }
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3 items-center pt-2">
+                <div>
+                  <label class="block font-semibold mb-1">Orden de Visualización</label>
+                  <input type="number" [(ngModel)]="editingCategory.sort_order" min="1"
+                         class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2 text-xs" />
+                </div>
+                <div class="flex items-center gap-3 pt-4">
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" [(ngModel)]="editingCategory.is_active" class="sr-only peer" />
+                    <div class="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-500"></div>
+                  </label>
+                  <span class="font-bold text-xs">Categoría Activa</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-3">
+              <button (click)="isCategoryModalOpen.set(false)"
+                      class="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">
+                Cancelar
+              </button>
+              <button (click)="saveBusinessCategory()" [disabled]="isSavingCategory()"
+                      class="px-5 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white text-xs font-bold shadow-md cursor-pointer flex items-center gap-2">
+                @if (isSavingCategory()) {
+                  <span>Guardando...</span>
+                } @else {
+                  <span>Guardar Categoría</span>
+                }
+              </button>
+            </div>
+
+          </div>
+        </div>
+      }
+
+      <!-- ================= MODAL: CREAR / EDITAR CUPÓN GLOBAL ================= -->
+      @if (isGlobalCouponModalOpen()) {
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
+             (click)="isGlobalCouponModalOpen.set(false)">
+          <div class="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 w-full max-w-md rounded-2xl shadow-2xl p-6 border border-slate-200 dark:border-slate-800 space-y-4"
+               (click)="$event.stopPropagation()">
+            
+            <div class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+              <h3 class="text-base font-bold flex items-center gap-2">
+                <app-icon name="sparkles" [size]="18" className="text-brand-500"></app-icon>
+                <span>{{ editingGlobalCoupon.id ? 'Editar Cupón Global' : 'Nuevo Cupón Global' }}</span>
+              </h3>
+              <button (click)="isGlobalCouponModalOpen.set(false)" class="text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer">
+                <app-icon name="x" [size]="18"></app-icon>
+              </button>
+            </div>
+
+            <div class="space-y-3.5 text-xs">
+              <div>
+                <label class="block font-semibold mb-1">Código del Cupón *</label>
+                <input type="text" [(ngModel)]="editingGlobalCoupon.code" placeholder="Ej: FLASHNOW, PIDETELO20"
+                       class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs font-mono font-bold tracking-wider uppercase focus:outline-none focus:border-brand-500" />
+              </div>
+
+              <div>
+                <label class="block font-semibold mb-1">Descripción / Leyenda</label>
+                <input type="text" [(ngModel)]="editingGlobalCoupon.description" placeholder="30% OFF en tu primer pedido..."
+                       class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs focus:outline-none focus:border-brand-500" />
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block font-semibold mb-1">Tipo de Descuento</label>
+                  <select [(ngModel)]="editingGlobalCoupon.discountType"
+                          class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs font-bold">
+                    <option value="percentage">Porcentaje (%)</option>
+                    <option value="fixed">Monto Fijo ($ USD)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block font-semibold mb-1">Valor del Descuento</label>
+                  <input type="number" [(ngModel)]="editingGlobalCoupon.discountValue" min="1"
+                         class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs font-bold font-mono" />
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block font-semibold mb-1">Monto Mínimo de Pedido ($)</label>
+                  <input type="number" [(ngModel)]="editingGlobalCoupon.minOrderAmount" min="0" step="1"
+                         class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs font-mono" />
+                </div>
+                <div>
+                  <label class="block font-semibold mb-1">Descuento Máximo ($ opcional)</label>
+                  <input type="number" [(ngModel)]="editingGlobalCoupon.maxDiscountAmount" min="0" step="1"
+                         placeholder="Sin límite"
+                         class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs font-mono" />
+                </div>
+              </div>
+
+              <div class="p-3 bg-brand-50 dark:bg-brand-950/30 border border-brand-200 dark:border-brand-800/60 rounded-xl">
+                <span class="text-[11px] font-bold text-brand-700 dark:text-brand-300 flex items-center gap-1.5">
+                  <app-icon name="sparkles" [size]="14"></app-icon>
+                  <span>Cupón Válido en toda la Red Pídetelo</span>
+                </span>
+                <p class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  Los clientes podrán aplicar este cupón en el checkout de cualquier comercio afiliado.
+                </p>
+              </div>
+            </div>
+
+            <div class="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-3">
+              <button (click)="isGlobalCouponModalOpen.set(false)"
+                      class="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">
+                Cancelar
+              </button>
+              <button (click)="saveGlobalCoupon()" [disabled]="isSavingGlobalCoupon()"
+                      class="px-5 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white text-xs font-bold shadow-md cursor-pointer flex items-center gap-2">
+                @if (isSavingGlobalCoupon()) {
+                  <span>Guardando...</span>
+                } @else {
+                  <span>Guardar Cupón Global</span>
+                }
               </button>
             </div>
 

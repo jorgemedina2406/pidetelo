@@ -1,0 +1,16 @@
+{
+  "1429e6b3-96dc-4610-aa17-62f3cf345f74": {
+    "is_popular": false,
+    "is_featured": false,
+    "is_on_sale": true,
+    "compare_at_price": 20,
+    "discount_percentage": 50
+  },
+  "db3da5a3-91a9-456b-9242-7521d95985b4": {
+    "is_popular": false,
+    "is_featured": false,
+    "is_on_sale": false,
+    "compare_at_price": null,
+    "discount_percentage": 0
+  }
+}

@@ -4,6 +4,7 @@ import { CartItem, CustomerInfo, FulfillmentType, Order, PaymentMethod, Selected
 import { Product } from '../../../core/models/product.model';
 import { Tenant, DeliveryTier } from '../../../core/models/tenant.model';
 import { Branch } from '../../../core/models/branch.model';
+import { Coupon } from '../../../core/models/coupon.model';
 
 export function calculateHaversineDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const p = 0.017453292519943295; // Math.PI / 180
@@ -26,6 +27,11 @@ export interface CartState {
   isSuccessModalOpen: boolean;
   completedOrder: Order | null;
   realRoadDistanceKm: number | null;
+  storeProducts: Product[];
+  appliedCoupon: Coupon | null;
+  couponCodeInput: string;
+  couponErrorMessage: string | null;
+  isApplyingCoupon: boolean;
 }
 
 const initialState: CartState = {
@@ -45,7 +51,12 @@ const initialState: CartState = {
   isCheckoutModalOpen: false,
   isSuccessModalOpen: false,
   completedOrder: null,
-  realRoadDistanceKm: null
+  realRoadDistanceKm: null,
+  storeProducts: [],
+  appliedCoupon: null,
+  couponCodeInput: '',
+  couponErrorMessage: null,
+  isApplyingCoupon: false
 };
 
 export const CartStore = signalStore(
@@ -173,8 +184,29 @@ export const CartStore = signalStore(
       return settings?.baseDeliveryFee ?? 2.50;
     });
 
+    const couponDiscount = computed<number>(() => {
+      const coupon = store.appliedCoupon();
+      if (!coupon) return 0;
+      const currentSubtotal = subtotal();
+      if (coupon.minOrderAmount && currentSubtotal < coupon.minOrderAmount) {
+        return 0;
+      }
+      let disc = 0;
+      if (coupon.discountType === 'percentage') {
+        disc = (currentSubtotal * coupon.discountValue) / 100;
+        const maxLimit = coupon.maxDiscountAmount ?? coupon.maxDiscount;
+        if (maxLimit && disc > maxLimit) {
+          disc = maxLimit;
+        }
+      } else {
+        disc = coupon.discountValue;
+      }
+      return Number(Math.min(disc, currentSubtotal).toFixed(2));
+    });
+
     const total = computed(() => {
-      return Number((subtotal() + deliveryFee()).toFixed(2));
+      const netSubtotal = Math.max(0, subtotal() - couponDiscount());
+      return Number((netSubtotal + deliveryFee()).toFixed(2));
     });
 
     const meetsMinOrder = computed(() => {
@@ -197,7 +229,12 @@ export const CartStore = signalStore(
     });
 
     const exchangeRate = computed(() => {
-      return store.activeTenant()?.currencySettings?.exchangeRate || 45.5;
+      const bRate = store.selectedBranch()?.currencySettings?.exchangeRate ||
+                    store.selectedBranch()?.exchangeRate;
+      if (bRate && bRate > 0 && bRate !== 45.5) return bRate;
+      const tRate = store.activeTenant()?.currencySettings?.exchangeRate;
+      if (tRate && tRate > 0 && tRate !== 45.5) return tRate;
+      return 52.80;
     });
 
     const subtotalVes = computed(() => {
@@ -208,8 +245,31 @@ export const CartStore = signalStore(
       return Number((deliveryFee() * exchangeRate()).toFixed(2));
     });
 
+    const couponDiscountVes = computed(() => {
+      return Number((couponDiscount() * exchangeRate()).toFixed(2));
+    });
+
     const totalVes = computed(() => {
       return Number((total() * exchangeRate()).toFixed(2));
+    });
+
+    const suggestedProducts = computed(() => {
+      const currentItemProductIds = new Set(store.items().map(i => i.productId));
+      const allProds = store.storeProducts();
+      if (allProds.length === 0 || store.items().length === 0) return [];
+
+      const cartCategories = new Set(store.items().map(i => {
+        const prod = allProds.find(p => p.id === i.productId);
+        return prod?.categoryId;
+      }).filter(Boolean));
+
+      const candidates = allProds.filter(p => !currentItemProductIds.has(p.id) && p.isAvailable);
+
+      return candidates.sort((a, b) => {
+        const aScore = (a.isOnSale ? 3 : 0) + (a.isPopular ? 2 : 0) + (!cartCategories.has(a.categoryId) ? 1 : 0);
+        const bScore = (b.isOnSale ? 3 : 0) + (b.isPopular ? 2 : 0) + (!cartCategories.has(b.categoryId) ? 1 : 0);
+        return bScore - aScore;
+      }).slice(0, 4);
     });
 
     return {
@@ -224,16 +284,52 @@ export const CartStore = signalStore(
       deliveryTiers,
       appliedDeliveryTier,
       deliveryFee,
+      couponDiscount,
       total,
       meetsMinOrder,
       isCustomerValid,
       exchangeRate,
       subtotalVes,
       deliveryFeeVes,
-      totalVes
+      couponDiscountVes,
+      totalVes,
+      suggestedProducts
     };
   }),
   withMethods((store) => ({
+    setStoreProducts(products: Product[]): void {
+      patchState(store, { storeProducts: products });
+    },
+
+    quickAddProduct(product: Product): void {
+      const cartItemId = `${product.id}`;
+      const existingIndex = store.items().findIndex(i => i.cartItemId === cartItemId);
+      if (existingIndex > -1) {
+        const updated = [...store.items()];
+        const item = updated[existingIndex];
+        const newQty = item.quantity + 1;
+        updated[existingIndex] = {
+          ...item,
+          quantity: newQty,
+          itemTotal: Number((item.unitPrice * newQty).toFixed(2))
+        };
+        patchState(store, { items: updated });
+      } else {
+        const newItem: CartItem = {
+          cartItemId,
+          productId: product.id,
+          name: product.name,
+          unitPrice: product.price,
+          quantity: 1,
+          selectedModifiers: [],
+          notes: '',
+          imageUrl: product.imageUrl,
+          itemTotal: product.price
+        };
+        patchState(store, { items: [...store.items(), newItem] });
+      }
+    },
+
     setTenant(tenant: Tenant): void {
       let cust = store.customer();
       if ((!cust.deliveryLat || !cust.deliveryLng) && typeof window !== 'undefined') {
@@ -403,7 +499,8 @@ export const CartStore = signalStore(
         items: [...store.items()],
         subtotal: store.subtotal(),
         deliveryFee: store.deliveryFee(),
-        discount: 0,
+        discount: store.couponDiscount(),
+        couponCode: store.appliedCoupon()?.code,
         total: store.total(),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
@@ -412,11 +509,34 @@ export const CartStore = signalStore(
       patchState(store, {
         completedOrder: order,
         items: [],
+        appliedCoupon: null,
+        couponCodeInput: '',
+        couponErrorMessage: null,
         isCheckoutModalOpen: false,
         isSuccessModalOpen: true
       });
 
       return order;
+    },
+
+    setCouponCodeInput(val: string): void {
+      patchState(store, { couponCodeInput: val, couponErrorMessage: null });
+    },
+
+    setAppliedCoupon(coupon: Coupon | null): void {
+      patchState(store, { appliedCoupon: coupon, couponErrorMessage: null, isApplyingCoupon: false });
+    },
+
+    setCouponErrorMessage(msg: string | null): void {
+      patchState(store, { couponErrorMessage: msg, isApplyingCoupon: false });
+    },
+
+    setIsApplyingCoupon(val: boolean): void {
+      patchState(store, { isApplyingCoupon: val });
+    },
+
+    removeCoupon(): void {
+      patchState(store, { appliedCoupon: null, couponCodeInput: '', couponErrorMessage: null });
     },
 
     generateWhatsAppOrderUrl(order: Order, whatsappNumber?: string): string {
@@ -448,7 +568,7 @@ export const CartStore = signalStore(
 
       const rate = store.selectedBranch()?.currencySettings?.exchangeRate ||
                    store.selectedBranch()?.exchangeRate ||
-                   store.activeTenant()?.currencySettings?.exchangeRate || 45.5;
+                   store.activeTenant()?.currencySettings?.exchangeRate || 52.80;
       const totalBs = (order.total * rate).toFixed(2);
       const subtotalBs = (order.subtotal * rate).toFixed(2);
       const deliveryBs = (order.deliveryFee * rate).toFixed(2);
@@ -458,6 +578,10 @@ export const CartStore = signalStore(
       const trackingUrl = `${origin}/track/${cleanOrderNum}`;
       const branchHeader = order.branchName ? `🏪 *Sucursal / Sede:* ${order.branchName}\n` : '';
 
+      const discountLine = (order.discount && order.discount > 0)
+        ? `🏷️ *Cupón (${order.couponCode || 'Oferta'}):* -$${order.discount.toFixed(2)}\n`
+        : '';
+
       const message = `👋 ¡Hola *${order.tenantName}*! Acabo de hacer un pedido web:\n\n` +
         `🧾 *Pedido #${cleanOrderNum}*\n` +
         branchHeader +
@@ -465,6 +589,7 @@ export const CartStore = signalStore(
         `📱 *Teléfono:* ${order.customer.phone}\n\n` +
         `🍽️ *Detalle del pedido:*\n${itemsList}\n\n` +
         `💵 *Subtotal:* $${order.subtotal.toFixed(2)} (Bs. ${subtotalBs})\n` +
+        discountLine +
         `🛵 *Delivery:* $${order.deliveryFee.toFixed(2)} (Bs. ${deliveryBs})\n` +
         `💰 *TOTAL A PAGAR:* *$${order.total.toFixed(2)}* (≈ *Bs. ${totalBs}*)\n` +
         `🪙 *Tasa aplicada:* ${rate.toFixed(2)} Bs/$\n\n` +

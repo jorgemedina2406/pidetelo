@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, inject, signal, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, Input, Output, EventEmitter, inject, signal, computed, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Product, ProductModifierGroup, ProductCategory } from '../../../core/models/product.model';
@@ -6,6 +6,7 @@ import { Branch } from '../../../core/models/branch.model';
 import { IconComponent } from '../../../shared/components/icon.component';
 import { I18nService } from '../../../core/services/i18n.service';
 import { ApiService } from '../../../core/services/api.service';
+import { CurrencyService } from '../../../core/services/currency.service';
 
 @Component({
   selector: 'app-product-form-modal',
@@ -65,19 +66,67 @@ import { ApiService } from '../../../core/services/api.service';
             </div>
 
             <div class="p-2.5 rounded-xl bg-brand-50 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-800">
-              <span class="text-slate-500 dark:text-slate-400 block text-[10px] font-bold uppercase tracking-wider">
-                Equivalente al cambio ({{ activeExchangeRate }} Bs/$):
-              </span>
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-slate-500 dark:text-slate-400 block text-[10px] font-bold uppercase tracking-wider">
+                  Equivalente al cambio ({{ effectiveRate().toFixed(2) }} Bs/$):
+                </span>
+                <button type="button" (click)="fetchLiveRate()" [disabled]="isFetchingRate()" title="Actualizar desde DolarApi Oficial (BCV)"
+                  class="text-[10px] font-semibold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1 cursor-pointer">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500" [class.animate-pulse]="isFetchingRate()"></span>
+                  <span>{{ isFetchingRate() ? 'Consultando BCV...' : 'DolarApi Oficial' }}</span>
+                  <app-icon name="refresh-cw" [size]="10"></app-icon>
+                </button>
+              </div>
               @if (editingProduct.currency === 'VES') {
               <span class="font-extrabold text-brand-600 dark:text-brand-400 text-sm">
-                ~\${{ (editingProduct.price / activeExchangeRate).toFixed(2) }} USD
+                ~\${{ (editingProduct.price / effectiveRate()).toFixed(2) }} USD
               </span>
               } @else {
               <span class="font-extrabold text-brand-600 dark:text-brand-400 text-sm font-mono">
-                ~Bs. {{ ((editingProduct.price || 0) * activeExchangeRate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+                ~Bs. {{ ((editingProduct.price || 0) * effectiveRate()).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
               </span>
               }
             </div>
+          </div>
+
+          <!-- Configuración de Promociones y Destacados -->
+          <div class="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3">
+            <span class="font-bold text-xs block text-slate-800 dark:text-slate-200">Visibilidad & Promociones</span>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <!-- Destacado / Popular Switch -->
+              <label class="flex items-center gap-2 p-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 cursor-pointer">
+                <input type="checkbox" [(ngModel)]="editingProduct.isPopular" name="prodIsPopular" class="rounded text-brand-500 focus:ring-brand-500 w-4 h-4" />
+                <div>
+                  <span class="font-bold text-xs block text-slate-800 dark:text-slate-200">⭐ Producto Destacado</span>
+                  <span class="text-[10px] text-slate-400 block">Mostrar badge de recomendado en el menú</span>
+                </div>
+              </label>
+
+              <!-- Oferta Switch -->
+              <label class="flex items-center gap-2 p-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 cursor-pointer">
+                <input type="checkbox" [(ngModel)]="editingProduct.isOnSale" name="prodIsOnSale" class="rounded text-rose-500 focus:ring-rose-500 w-4 h-4" />
+                <div>
+                  <span class="font-bold text-xs block text-slate-800 dark:text-slate-200">🔥 En Oferta / Descuento</span>
+                  <span class="text-[10px] text-slate-400 block">Mostrar badge de promoción y precio tachado</span>
+                </div>
+              </label>
+            </div>
+
+            @if (editingProduct.isOnSale) {
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
+                <div>
+                  <label class="block font-semibold mb-1 text-[11px]">Precio Original Anterior (Tachado)</label>
+                  <input type="number" step="0.25" [(ngModel)]="editingProduct.compareAtPrice" (input)="onCompareAtPriceChange()" name="prodCompareAtPrice" placeholder="Ej: 15.00"
+                         class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 font-mono text-xs focus:outline-none focus:border-rose-500" />
+                </div>
+                <div>
+                  <label class="block font-semibold mb-1 text-[11px]">% de Descuento (Opcional)</label>
+                  <input type="number" [(ngModel)]="editingProduct.discountPercentage" (input)="onDiscountPercentageChange()" name="prodDiscountPercentage" placeholder="Ej: 20"
+                         class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 font-mono text-xs focus:outline-none focus:border-rose-500" />
+                </div>
+              </div>
+            }
           </div>
 
           <!-- Identificadores opcionales: SKU y Código de Barra -->
@@ -101,6 +150,44 @@ import { ApiService } from '../../../core/services/api.service';
                 placeholder="Ej: 7591234567890 (Lector láser / EAN)"
                 class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 font-mono text-xs focus:outline-none focus:border-brand-500" />
             </div>
+          </div>
+
+          <!-- Control de Inventario / Stock Real -->
+          <div class="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <span class="font-bold text-xs block text-slate-800 dark:text-slate-200">📦 Control de Inventario / Stock</span>
+                <span class="text-[10px] text-slate-500">Limita las compras según las existencias disponibles y registra auditoría</span>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" [(ngModel)]="editingProduct.trackStock" name="prodTrackStock" class="sr-only peer" />
+                <div class="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+              </label>
+            </div>
+
+            @if (editingProduct.trackStock) {
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-200/60 dark:border-slate-700/60 animate-fade-in">
+                <div>
+                  <label class="block font-semibold mb-1 text-[11px]">Cantidad en Stock Actual</label>
+                  <input type="number" min="0" [(ngModel)]="editingProduct.stockQuantity" name="prodStockQuantity"
+                         placeholder="Ej: 50"
+                         class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 font-mono text-xs font-bold focus:outline-none focus:border-brand-500" />
+                </div>
+                <div class="p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex flex-col justify-center">
+                  <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Historial / Stock Previo:</span>
+                  <div class="flex items-center gap-2 mt-0.5">
+                    <span class="font-bold text-xs text-slate-700 dark:text-slate-300">
+                      {{ editingProduct.previousStock !== undefined && editingProduct.previousStock !== null ? (editingProduct.previousStock + ' unidades') : 'Sin registro previo' }}
+                    </span>
+                    @if (editingProduct.previousStock !== undefined && editingProduct.previousStock !== null && editingProduct.stockQuantity !== editingProduct.previousStock) {
+                      <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                        → Actualiza a {{ editingProduct.stockQuantity }}
+                      </span>
+                    }
+                  </div>
+                </div>
+              </div>
+            }
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
@@ -167,11 +254,71 @@ import { ApiService } from '../../../core/services/api.service';
             </div>
           </div>
 
-          <div>
-            <label class="block font-semibold mb-1">URL de Imagen del Producto</label>
-            <input type="text" [(ngModel)]="editingProduct.imageUrl" name="prodImage"
-              placeholder="https://images.unsplash.com/..."
-              class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 focus:outline-none focus:border-brand-500" />
+          <!-- Imagen del Producto: Subida desde PC o URL -->
+          <div class="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2.5">
+            <div class="flex items-center justify-between">
+              <label class="block font-semibold text-slate-800 dark:text-slate-200">
+                🖼️ Imagen del Producto o Artículo
+              </label>
+              <div class="flex items-center gap-2">
+                <button type="button" (click)="imageMode = imageMode === 'upload' ? 'url' : 'upload'"
+                  class="text-[11px] font-bold text-brand-600 dark:text-brand-400 hover:underline cursor-pointer">
+                  {{ imageMode === 'upload' ? 'Ingresar URL de Internet' : 'Subir desde la Computadora' }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Previsualización y acciones -->
+            @if (editingProduct.imageUrl) {
+            <div class="flex items-center gap-3 p-2 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700">
+              <img [src]="editingProduct.imageUrl" alt="Preview"
+                class="w-16 h-16 rounded-lg object-cover border border-slate-200 dark:border-slate-700 shadow-xs flex-shrink-0 bg-slate-100 dark:bg-slate-800" />
+              <div class="min-w-0 flex-1">
+                <span class="text-xs font-bold text-slate-800 dark:text-slate-200 block truncate">
+                  {{ imageFileName || 'Imagen asignada' }}
+                </span>
+                <span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold block">
+                  ✓ Lista para mostrar en el catálogo
+                </span>
+                <div class="flex items-center gap-2 mt-1">
+                  <button type="button" (click)="pcFileInput.click()"
+                    class="text-[11px] font-bold text-brand-500 hover:text-brand-600 cursor-pointer">
+                    Cambiar imagen
+                  </button>
+                  <span class="text-slate-300 dark:text-slate-700">•</span>
+                  <button type="button" (click)="clearProductImage()"
+                    class="text-[11px] font-bold text-rose-500 hover:text-rose-600 cursor-pointer">
+                    Eliminar
+                  </button>
+                </div>
+              </div>
+            </div>
+            }
+
+            <input type="file" #pcFileInput (change)="onFileSelected($event)" accept="image/*" class="hidden" />
+
+            @if (imageMode === 'upload') {
+            <div (click)="pcFileInput.click()"
+              class="border-2 border-dashed border-brand-300 dark:border-brand-800 hover:border-brand-500 rounded-xl p-4 text-center cursor-pointer transition-all bg-white/50 dark:bg-slate-900/50 hover:bg-brand-50/50 dark:hover:bg-brand-950/20">
+              <div class="flex flex-col items-center justify-center gap-1.5">
+                <div class="w-10 h-10 rounded-full bg-brand-500/10 text-brand-500 flex items-center justify-center">
+                  <app-icon name="upload" [size]="20"></app-icon>
+                </div>
+                <span class="font-bold text-xs text-slate-700 dark:text-slate-200">
+                  {{ isUploadingImage() ? 'Cargando y optimizando imagen...' : 'Haz clic para seleccionar foto desde tu PC' }}
+                </span>
+                <span class="text-[10px] text-slate-400">
+                  Formatos JPG, PNG, WEBP (se ajusta automáticamente para catálogo)
+                </span>
+              </div>
+            </div>
+            } @else {
+            <div>
+              <input type="text" [(ngModel)]="editingProduct.imageUrl" name="prodImage"
+                placeholder="https://images.unsplash.com/... o enlace directo de la imagen"
+                class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs focus:outline-none focus:border-brand-500" />
+            </div>
+            }
           </div>
 
           <div>
@@ -374,6 +521,15 @@ export class ProductFormModalComponent implements OnChanges {
 
   readonly i18n = inject(I18nService);
   private readonly api = inject(ApiService);
+  readonly currency = inject(CurrencyService);
+
+  readonly liveRate = signal<number>(0);
+  readonly isFetchingRate = signal<boolean>(false);
+  readonly effectiveRate = computed(() => this.liveRate() || this.activeExchangeRate || 54.50);
+
+  imageMode: 'upload' | 'url' = 'upload';
+  imageFileName = '';
+  readonly isUploadingImage = signal<boolean>(false);
 
   readonly isCreatingCategoryInline = signal(false);
   readonly isSavingCategory = signal(false);
@@ -382,6 +538,10 @@ export class ProductFormModalComponent implements OnChanges {
   editingProduct: Product = this.getDefaultProduct();
 
   ngOnChanges(changes: SimpleChanges): void {
+    if (changes['isOpen'] && this.isOpen) {
+      this.fetchLiveRate();
+    }
+
     if (changes['product'] || (changes['isOpen'] && this.isOpen)) {
       if (this.product) {
         this.editingProduct = JSON.parse(JSON.stringify(this.product));
@@ -393,7 +553,94 @@ export class ProductFormModalComponent implements OnChanges {
       }
       this.isCreatingCategoryInline.set(false);
       this.newCategoryName = '';
+      this.imageFileName = '';
     }
+  }
+
+  fetchLiveRate(): void {
+    this.isFetchingRate.set(true);
+    this.currency.fetchDolarApiRate('oficial').then(data => {
+      this.isFetchingRate.set(false);
+      if (data && typeof data.promedio === 'number' && data.promedio > 0) {
+        this.liveRate.set(Number(data.promedio.toFixed(2)));
+      }
+    }).catch(() => {
+      this.isFetchingRate.set(false);
+    });
+  }
+
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+    const file = input.files[0];
+    this.imageFileName = file.name;
+    this.isUploadingImage.set(true);
+
+    const reader = new FileReader();
+    reader.onload = (e: ProgressEvent<FileReader>) => {
+      const dataUrl = e.target?.result as string;
+      if (!dataUrl) {
+        this.isUploadingImage.set(false);
+        return;
+      }
+
+      // Optimizar en Canvas a máximo 800px para almacenamiento ligero
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxDim = 800;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxDim) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          }
+        } else {
+          if (height > maxDim) {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressed = canvas.toDataURL('image/jpeg', 0.85);
+          this.editingProduct.imageUrl = compressed;
+
+          // Enviar al backend para guardar archivo estático
+          this.api.uploadImage(compressed, file.name).subscribe({
+            next: (res) => {
+              if (res?.url) {
+                this.editingProduct.imageUrl = res.url;
+              }
+              this.isUploadingImage.set(false);
+            },
+            error: () => {
+              this.isUploadingImage.set(false);
+            }
+          });
+        } else {
+          this.editingProduct.imageUrl = dataUrl;
+          this.isUploadingImage.set(false);
+        }
+      };
+      img.onerror = () => {
+        this.editingProduct.imageUrl = dataUrl;
+        this.isUploadingImage.set(false);
+      };
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  clearProductImage(): void {
+    this.editingProduct.imageUrl = '';
+    this.imageFileName = '';
   }
 
   private getDefaultProduct(): Product {
@@ -408,6 +655,12 @@ export class ProductFormModalComponent implements OnChanges {
       imageUrl: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500',
       isAvailable: true,
       branchId: this.activeBranch?.id || null,
+      isPopular: false,
+      isFeatured: false,
+      isOnSale: false,
+      trackStock: false,
+      stockQuantity: 0,
+      previousStock: 0,
       modifierGroups: []
     };
   }
@@ -524,8 +777,37 @@ export class ProductFormModalComponent implements OnChanges {
     });
   }
 
+  onCompareAtPriceChange(): void {
+    const curPrice = Number(this.editingProduct.price) || 0;
+    const compPrice = Number(this.editingProduct.compareAtPrice) || 0;
+    if (compPrice > curPrice && curPrice > 0) {
+      this.editingProduct.discountPercentage = Math.round(((compPrice - curPrice) / compPrice) * 100);
+    }
+  }
+
+  onDiscountPercentageChange(): void {
+    const curPrice = Number(this.editingProduct.price) || 0;
+    const discPct = Number(this.editingProduct.discountPercentage) || 0;
+    if (discPct > 0 && discPct < 100 && curPrice > 0) {
+      this.editingProduct.compareAtPrice = Number((curPrice / (1 - discPct / 100)).toFixed(2));
+    }
+  }
+
   onSubmit(e: Event): void {
     e.preventDefault();
+    if (this.editingProduct.isOnSale) {
+      const curPrice = Number(this.editingProduct.price) || 0;
+      const compPrice = Number(this.editingProduct.compareAtPrice) || 0;
+      const discPct = Number(this.editingProduct.discountPercentage) || 0;
+      if (compPrice > curPrice && !discPct) {
+        this.onCompareAtPriceChange();
+      } else if (discPct > 0 && !compPrice) {
+        this.onDiscountPercentageChange();
+      }
+    } else {
+      this.editingProduct.compareAtPrice = undefined;
+      this.editingProduct.discountPercentage = 0;
+    }
     this.save.emit({ ...this.editingProduct });
   }
 }

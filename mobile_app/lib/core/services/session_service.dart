@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
 import 'cart_service.dart';
@@ -12,11 +12,13 @@ class SessionService extends ChangeNotifier {
   static const String _keySelectedRole = 'selected_role';
   static const String _keyUserData = 'user_data';
   static const String _keyRememberChoice = 'remember_choice';
+  static const String _keyDarkMode = 'is_dark_mode';
 
   AppUserRole? _selectedRole;
   AppUser? _currentUser;
   bool _rememberChoice = false;
   bool _isInitialized = false;
+  bool _isDarkMode = false;
   final Set<String> _favoriteStoreIds = {};
 
   AppUserRole? get selectedRole => _selectedRole;
@@ -24,7 +26,18 @@ class SessionService extends ChangeNotifier {
   bool get rememberChoice => _rememberChoice;
   bool get isInitialized => _isInitialized;
   bool get isAuthenticated => _currentUser != null;
+  bool get isDarkMode => _isDarkMode;
+  ThemeMode get themeMode => _isDarkMode ? ThemeMode.dark : ThemeMode.light;
   Set<String> get favoriteStoreIds => Set.unmodifiable(_favoriteStoreIds);
+
+  Future<void> toggleTheme() async {
+    _isDarkMode = !_isDarkMode;
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_keyDarkMode, _isDarkMode);
+    } catch (_) {}
+  }
 
   String _getFavoritesKey(String? identifier) {
     if (identifier == null || identifier.trim().isEmpty) return 'favs_guest';
@@ -41,6 +54,7 @@ class SessionService extends ChangeNotifier {
     }
 
     _rememberChoice = prefs.getBool(_keyRememberChoice) ?? false;
+    _isDarkMode = prefs.getBool(_keyDarkMode) ?? false;
 
     final userJson = prefs.getString(_keyUserData);
     if (userJson != null) {

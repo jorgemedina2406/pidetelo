@@ -94,6 +94,47 @@ export class OrdersService {
       if (itemsErr) {
         console.warn(`[OrdersService] Warning inserting order items: ${itemsErr.message}`);
       }
+
+      // 2.1 Deducción automática de stock para productos con inventario habilitado
+      for (const item of items) {
+        const prodId = item.product_id;
+        if (prodId && isUuid(prodId)) {
+          try {
+            const { data: p } = await client
+              .from('products')
+              .select('id, track_stock, stock_quantity, name')
+              .eq('id', prodId)
+              .maybeSingle();
+
+            if (p && p.track_stock && p.stock_quantity !== null && p.stock_quantity !== undefined) {
+              const currentStock = Number(p.stock_quantity) || 0;
+              const qtyBought = Number(item.quantity) || 1;
+              const newStock = Math.max(0, currentStock - qtyBought);
+              const isOut = newStock <= 0;
+
+              await client.from('products').update({
+                stock_quantity: newStock,
+                previous_stock: currentStock,
+                is_available: !isOut
+              }).eq('id', p.id);
+
+              // Registrar en historial de movimientos de inventario
+              await client.from('stock_history').insert({
+                product_id: p.id,
+                tenant_id: newOrder.tenant_id,
+                previous_stock: currentStock,
+                new_stock: newStock,
+                difference: -qtyBought,
+                change_type: 'order_deduction',
+                reference_id: newOrder.order_number,
+                notes: `Venta por orden #${newOrder.order_number}`
+              });
+            }
+          } catch (stkErr) {
+            console.warn('[OrdersService] Error descontando stock de producto:', stkErr);
+          }
+        }
+      }
     }
 
     // 3. Return order with items

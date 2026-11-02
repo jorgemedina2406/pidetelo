@@ -51,6 +51,7 @@ class CartService extends ChangeNotifier {
   static const String _keyPayouts = 'rider_payout_history_v2';
 
   final List<CartItem> _items = [];
+  List<Product> _storeProducts = [];
   String? _currentStoreName;
   Branch? _currentBranch;
   String? _currentCompanyId;
@@ -109,6 +110,25 @@ class CartService extends ChangeNotifier {
 
   int get totalItemCount => _items.fold(0, (sum, item) => sum + item.quantity);
   double get subtotal => _items.fold(0.0, (sum, item) => sum + item.totalPrice);
+
+  List<Product> get storeProducts => List.unmodifiable(_storeProducts);
+
+  void setStoreProducts(List<Product> prods) {
+    _storeProducts = List.from(prods);
+    notifyListeners();
+  }
+
+  List<Product> get suggestedProducts {
+    if (_items.isEmpty || _storeProducts.isEmpty) return [];
+    final inCartIds = _items.map((i) => i.product.id).toSet();
+    final candidates = _storeProducts.where((p) => !inCartIds.contains(p.id)).toList();
+    candidates.sort((a, b) {
+      final aScore = (a.isOnSale ? 3 : 0) + (a.isPopular ? 2 : 0) + (a.isFeatured ? 1 : 0);
+      final bScore = (b.isOnSale ? 3 : 0) + (b.isPopular ? 2 : 0) + (b.isFeatured ? 1 : 0);
+      return bScore.compareTo(aScore);
+    });
+    return candidates.take(5).toList();
+  }
 
   double? get distanceToCurrentBranchKm {
     if (_currentBranch == null) return null;

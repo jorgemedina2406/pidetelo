@@ -71,6 +71,9 @@ export class BranchesService {
     ];
 
     const deliveryTiers = branch.delivery_tiers ?? meta.delivery_tiers ?? meta.deliveryTiers ?? tenant.delivery_tiers ?? defaultDeliveryTiers;
+    const businessHours = branch.business_hours ?? meta.business_hours ?? { open: '11:00', close: '23:00', isOpenToday: true };
+    const openTime = businessHours?.open || '11:00';
+    const closeTime = businessHours?.close || '23:00';
 
     return {
       ...branch,
@@ -91,6 +94,12 @@ export class BranchesService {
       currencySettings,
       delivery_tiers: deliveryTiers,
       deliveryTiers,
+      business_hours: businessHours,
+      businessHours,
+      openTime,
+      closeTime,
+      open_time: openTime,
+      close_time: closeTime,
       branding: {
         accentColor,
         logoUrl,
@@ -338,6 +347,14 @@ export class BranchesService {
     }
     if (branchPayload.deliveryTiers !== undefined || branchPayload.delivery_tiers !== undefined) {
       metaToSave.delivery_tiers = branchPayload.deliveryTiers || branchPayload.delivery_tiers;
+    }
+    if (branchPayload.openTime || branchPayload.closeTime || branchPayload.businessHours || branchPayload.business_hours) {
+      const bh = branchPayload.businessHours || branchPayload.business_hours || {};
+      metaToSave.business_hours = {
+        open: branchPayload.openTime || bh.open || '11:00',
+        close: branchPayload.closeTime || bh.close || '23:00',
+        isOpenToday: true,
+      };
     }
 
     if (Object.keys(metaToSave).length > 0) {

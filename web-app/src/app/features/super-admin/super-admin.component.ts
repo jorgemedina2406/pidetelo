@@ -10,7 +10,17 @@ import { SupabaseService } from '../../core/services/supabase.service';
 import { Tenant } from '../../core/models/tenant.model';
 import { Branch } from '../../core/models/branch.model';
 import { Permission, UserRole } from '../../core/models/user.model';
+import { Banner } from '../../core/models/banner.model';
+import { BusinessCategory } from '../../core/models/category.model';
+import { Coupon } from '../../core/models/coupon.model';
 import { IconComponent } from '../../shared/components/icon.component';
+
+export interface ToastNotification {
+  id: string;
+  type: 'success' | 'error' | 'info';
+  title: string;
+  message: string;
+}
 
 @Component({
   selector: 'app-super-admin',
@@ -28,12 +38,83 @@ export class SuperAdminComponent implements OnInit {
 
   readonly isSidebarExpanded = signal(true);
   readonly isMobileMenuOpen = signal(false);
-  readonly activeTab = signal<'merchants' | 'branch_approvals' | 'roles' | 'metrics'>('merchants');
+  readonly activeTab = signal<'merchants' | 'branch_approvals' | 'categories' | 'roles' | 'metrics' | 'banners' | 'users' | 'global_coupons'>('merchants');
   searchMerchant = '';
   readonly isCreateModalOpen = signal(false);
 
+  // --- SISTEMA DE TOASTS LLAMATIVOS ---
+  readonly activeToasts = signal<ToastNotification[]>([]);
+
+  showToast(type: 'success' | 'error' | 'info', title: string, message: string): void {
+    const id = `toast_${Date.now()}_${Math.random()}`;
+    const newToast: ToastNotification = { id, type, title, message };
+    this.activeToasts.update(list => [...list, newToast]);
+    setTimeout(() => {
+      this.activeToasts.update(list => list.filter(t => t.id !== id));
+    }, 4500);
+  }
+
+  removeToast(id: string): void {
+    this.activeToasts.update(list => list.filter(t => t.id !== id));
+  }
+
+  // --- SELECTOR INTUITIVO DE ICONOS Y EMOJIS ---
+  readonly iconCategories = [
+    { name: '🧸 Juguetes & Niños', icons: ['🧸', '🎮', '🎯', '🚀', '🎲', '🛹', '🪀', '🧩', '🎨', '🎪', '🎠'] },
+    { name: '🍔 Comida & Restaurantes', icons: ['🍽️', '🍔', '🍕', '🍣', '🌮', '🍗', '🍝', '🥩', '🥪', '🍰', '🧁', '🍦', '☕'] },
+    { name: '🛒 Súper & Mercados', icons: ['🛒', '🛍️', '🏬', '🥖', '🥛', '🍎', '🥦', '🥩', '🧀', '🥫', '🧴', '🧹'] },
+    { name: '💊 Farmacia & Salud', icons: ['💊', '🩺', '🩹', '🧼', '🦷', '🍼', '👶', '♿'] },
+    { name: '🐾 Mascotas', icons: ['🐾', '🐶', '🐱', '🦜', '🐠', '🦴', '🐹'] },
+    { name: '🍷 Licores & Bebidas', icons: ['🍷', '🍺', '🍸', '🍹', '🍾', '🥃', '🥂'] },
+    { name: '👗 Moda & Ropa', icons: ['👕', '👗', '👟', '👠', '🧢', '👜', '💍', '💄', '🕶️'] },
+    { name: '📱 Tecnología & Varios', icons: ['📱', '💻', '🎧', '⚡', '🔧', '💐', '📚', '⚽', '🚗', '🛵'] }
+  ];
+  readonly selectedIconCategoryIdx = signal(0);
+
+  selectCategoryIcon(icon: string): void {
+    this.editingCategory.icon = icon;
+  }
+
+  // --- USUARIOS DE LA PLATAFORMA ---
+  readonly platformUsers = signal<any[]>([]);
+  readonly loadingUsers = signal(false);
+  readonly userSearchQuery = signal('');
+  readonly userRoleFilter = signal('all');
+
+  // --- CUPONES GLOBALES DE PLATAFORMA ---
+  readonly allCoupons = signal<Coupon[]>([]);
+  readonly loadingCoupons = signal(false);
+  readonly isGlobalCouponModalOpen = signal(false);
+  readonly isSavingGlobalCoupon = signal(false);
+  editingGlobalCoupon: Partial<Coupon> = {
+    isGlobal: true,
+    discountType: 'percentage',
+    discountValue: 15,
+    minOrderAmount: 0,
+    isActive: true,
+    targetCondition: 'all'
+  };
+
+  // --- MÉTRICAS REALES Y REPORTES DE SEDES ---
+  readonly metricsSummary = signal<any>(null);
+  readonly loadingMetrics = signal(false);
+
   readonly merchants = signal<Tenant[]>([]);
   readonly pendingBranches = signal<Branch[]>([]);
+  readonly banners = signal<Banner[]>([]);
+  readonly isBannerModalOpen = signal(false);
+  readonly isSavingBanner = signal(false);
+  editingBanner: Partial<Banner> = {};
+  readonly bannerActionNotice = signal<string | null>(null);
+
+  // --- CATEGORÍAS GLOBALES DEL MARKETPLACE ---
+  readonly businessCategories = signal<BusinessCategory[]>([]);
+  readonly isCategoryModalOpen = signal(false);
+  readonly isSavingCategory = signal(false);
+  editingCategory: Partial<BusinessCategory> = { subcategories: [] };
+  newSubcategoryInput = '';
+  readonly categoryActionNotice = signal<string | null>(null);
+
   readonly rejectReasonModalOpen = signal(false);
   readonly selectedBranchToReject = signal<Branch | null>(null);
   rejectionReason = '';
@@ -44,6 +125,103 @@ export class SuperAdminComponent implements OnInit {
       this.merchants.set(tenants || []);
     });
     this.loadPendingBranches();
+    this.loadBanners();
+    this.loadBusinessCategories();
+    this.loadPlatformUsers();
+    this.loadMetricsSummary();
+    this.loadAllCoupons();
+  }
+
+  loadPlatformUsers(): void {
+    this.loadingUsers.set(true);
+    this.api.getPlatformUsers().subscribe(users => {
+      this.platformUsers.set(users || []);
+      this.loadingUsers.set(false);
+    });
+  }
+
+  loadMetricsSummary(): void {
+    this.loadingMetrics.set(true);
+    this.api.getMetricsSummary().subscribe(data => {
+      this.metricsSummary.set(data);
+      this.loadingMetrics.set(false);
+    });
+  }
+
+  loadAllCoupons(): void {
+    this.loadingCoupons.set(true);
+    this.api.getAllCoupons().subscribe(coupons => {
+      this.allCoupons.set(coupons || []);
+      this.loadingCoupons.set(false);
+    });
+  }
+
+  readonly filteredPlatformUsers = computed(() => {
+    const q = this.userSearchQuery().toLowerCase().trim();
+    const role = this.userRoleFilter();
+    return this.platformUsers().filter(u => {
+      const matchQuery = !q || (u.name && u.name.toLowerCase().includes(q)) || (u.email && u.email.toLowerCase().includes(q)) || (u.tenantName && u.tenantName.toLowerCase().includes(q));
+      const matchRole = role === 'all' || u.role === role;
+      return matchQuery && matchRole;
+    });
+  });
+
+  openNewGlobalCouponModal(): void {
+    this.editingGlobalCoupon = {
+      isGlobal: true,
+      tenantId: 'global',
+      code: '',
+      description: 'Cupón general de plataforma para todos los comercios',
+      discountType: 'percentage',
+      discountValue: 15,
+      minOrderAmount: 0,
+      isActive: true,
+      targetCondition: 'all'
+    };
+    this.isGlobalCouponModalOpen.set(true);
+  }
+
+  saveGlobalCoupon(): void {
+    if (!this.editingGlobalCoupon.code) return;
+    this.isSavingGlobalCoupon.set(true);
+    this.editingGlobalCoupon.isGlobal = true;
+    this.editingGlobalCoupon.tenantId = 'global';
+
+    if (this.editingGlobalCoupon.id) {
+      this.api.updateCoupon(this.editingGlobalCoupon.id, this.editingGlobalCoupon).subscribe({
+        next: () => {
+          this.isSavingGlobalCoupon.set(false);
+          this.isGlobalCouponModalOpen.set(false);
+          this.loadAllCoupons();
+          this.showToast('success', '¡Cupón Global Actualizado!', `El cupón ${this.editingGlobalCoupon.code} está listo.`);
+        },
+        error: () => this.isSavingGlobalCoupon.set(false)
+      });
+    } else {
+      this.api.createCoupon(this.editingGlobalCoupon).subscribe({
+        next: (created) => {
+          this.isSavingGlobalCoupon.set(false);
+          this.isGlobalCouponModalOpen.set(false);
+          this.loadAllCoupons();
+          this.showToast('success', '¡Cupón Global Creado!', `El cupón ${created.code} aplica en cualquier comercio de la plataforma.`);
+        },
+        error: () => this.isSavingGlobalCoupon.set(false)
+      });
+    }
+  }
+
+  deleteGlobalCoupon(c: Coupon): void {
+    if (!confirm(`¿Eliminar el cupón global "${c.code}"?`)) return;
+    this.api.deleteCoupon(c.id).subscribe(() => {
+      this.loadAllCoupons();
+      this.showToast('info', 'Cupón Eliminado', `El cupón ${c.code} fue retirado.`);
+    });
+  }
+
+  loadBusinessCategories(): void {
+    this.api.getBusinessCategories(true).subscribe(cats => {
+      this.businessCategories.set(cats || []);
+    });
   }
 
   readonly filteredMerchants = computed(() => {
@@ -52,16 +230,30 @@ export class SuperAdminComponent implements OnInit {
     return this.merchants().filter(m => 
       m.name.toLowerCase().includes(q) || 
       m.category.toLowerCase().includes(q) || 
+      (m.subcategories || []).some(s => s.toLowerCase().includes(q)) ||
       m.slug.toLowerCase().includes(q)
     );
   });
 
   readonly activeMerchantsCount = computed(() => this.merchants().filter(m => m.isActive).length);
 
-  newMerchant = {
+  newMerchant: {
+    name: string;
+    slug: string;
+    category: string;
+    subcategories: string[];
+    whatsapp: string;
+    address: string;
+    deliveryFee: number;
+    commission: number;
+    ownerName: string;
+    ownerEmail: string;
+    ownerPassword: string;
+  } = {
     name: '',
     slug: '',
-    category: 'Hamburguesas',
+    category: 'Restaurantes',
+    subcategories: ['Hamburguesas'],
     whatsapp: '+584129990000',
     address: 'Av. Las Delicias, Centro',
     deliveryFee: 2.50,
@@ -86,11 +278,23 @@ export class SuperAdminComponent implements OnInit {
   readonly isEditModalOpen = signal(false);
   readonly isSavingEdit = signal(false);
   readonly editMerchantError = signal<string | null>(null);
-  editingMerchant = {
+  editingMerchant: {
+    id: string;
+    name: string;
+    slug: string;
+    category: string;
+    subcategories: string[];
+    whatsapp: string;
+    address: string;
+    deliveryFee: number;
+    commission: number;
+    isActive: boolean;
+  } = {
     id: '',
     name: '',
     slug: '',
-    category: 'Hamburguesas',
+    category: 'Restaurantes',
+    subcategories: [],
     whatsapp: '',
     address: '',
     deliveryFee: 2.50,
@@ -103,7 +307,8 @@ export class SuperAdminComponent implements OnInit {
       id: m.id,
       name: m.name,
       slug: m.slug,
-      category: m.category,
+      category: m.category || 'Restaurantes',
+      subcategories: Array.isArray(m.subcategories) ? [...m.subcategories] : [],
       whatsapp: m.contact?.whatsappNumber || '',
       address: m.contact?.address || '',
       deliveryFee: m.deliverySettings?.baseDeliveryFee ?? 2.50,
@@ -114,6 +319,30 @@ export class SuperAdminComponent implements OnInit {
     this.isEditModalOpen.set(true);
   }
 
+  // Helper para obtener las subdivisiones disponibles para una categoría seleccionada
+  getSubcategoriesFor(categoryName: string): string[] {
+    const cat = this.businessCategories().find(c => c.name.toLowerCase() === (categoryName || '').toLowerCase() || c.slug.toLowerCase() === (categoryName || '').toLowerCase());
+    return cat?.subcategories || ['Hamburguesas', 'Sushi & Asiática', 'Pastas & Italiana', 'Pizzas', 'Pollos & Brasas', 'Carnes & Grill', 'Comida Rápida', 'Comida Mexicana', 'Café & Bakery'];
+  }
+
+  toggleEditSubcategory(sub: string): void {
+    const current = this.editingMerchant.subcategories || [];
+    if (current.includes(sub)) {
+      this.editingMerchant.subcategories = current.filter(s => s !== sub);
+    } else {
+      this.editingMerchant.subcategories = [...current, sub];
+    }
+  }
+
+  toggleNewSubcategory(sub: string): void {
+    const current = this.newMerchant.subcategories || [];
+    if (current.includes(sub)) {
+      this.newMerchant.subcategories = current.filter(s => s !== sub);
+    } else {
+      this.newMerchant.subcategories = [...current, sub];
+    }
+  }
+
   onSaveEditMerchant(e: Event): void {
     e.preventDefault();
     this.editMerchantError.set(null);
@@ -122,6 +351,7 @@ export class SuperAdminComponent implements OnInit {
     const updatePayload = {
       name: this.editingMerchant.name.trim(),
       category: this.editingMerchant.category,
+      subcategories: this.editingMerchant.subcategories,
       whatsapp_number: this.editingMerchant.whatsapp.trim(),
       phone: this.editingMerchant.whatsapp.trim(),
       address: this.editingMerchant.address.trim(),
@@ -134,6 +364,7 @@ export class SuperAdminComponent implements OnInit {
       next: () => {
         this.isSavingEdit.set(false);
         this.isEditModalOpen.set(false);
+        this.showToast('success', '¡Datos Actualizados!', `Los datos de "${updatePayload.name}" fueron guardados exitosamente.`);
         this.merchants.update(list => list.map(m => {
           if (m.id === this.editingMerchant.id) {
             return {
@@ -204,6 +435,12 @@ export class SuperAdminComponent implements OnInit {
     return list.includes(permission);
   }
 
+  togglePermission(role: UserRole, permission: Permission): void {
+    this.auth.toggleRolePermission(role, permission);
+    const roleName = this.roleLabels[role] || role;
+    this.showToast('success', '¡Permiso Actualizado!', `Permisos modificados correctamente para el rol "${roleName}".`);
+  }
+
   toggleMerchantActive(id: string): void {
     const m = this.merchants().find(item => item.id === id);
     const newActive = m ? !m.isActive : true;
@@ -225,6 +462,7 @@ export class SuperAdminComponent implements OnInit {
       name: this.newMerchant.name.trim(),
       slug: this.newMerchant.slug.trim() || this.newMerchant.name.toLowerCase().replace(/[^a-z0-9]/g, '-'),
       category: this.newMerchant.category,
+      subcategories: this.newMerchant.subcategories,
       whatsapp: this.newMerchant.whatsapp.trim(),
       address: this.newMerchant.address.trim(),
       deliveryFee: this.newMerchant.deliveryFee,
@@ -238,6 +476,7 @@ export class SuperAdminComponent implements OnInit {
       next: (res: any) => {
         this.isCreatingMerchant.set(false);
         this.isCreateModalOpen.set(false);
+        this.showToast('success', '¡Comercio Creado!', `El comercio "${payload.name}" fue dado de alta con éxito.`);
         this.api.getTenants(true).subscribe(tenants => {
           if (tenants && tenants.length > 0) {
             this.merchants.set(tenants);
@@ -253,7 +492,8 @@ export class SuperAdminComponent implements OnInit {
         this.newMerchant = {
           name: '',
           slug: '',
-          category: 'Hamburguesas',
+          category: 'Restaurantes',
+          subcategories: [],
           whatsapp: '+58412',
           address: '',
           deliveryFee: 2.50,
@@ -291,6 +531,7 @@ export class SuperAdminComponent implements OnInit {
   approveBranch(branch: Branch): void {
     this.api.approveBranch(branch.id).subscribe(() => {
       this.loadPendingBranches();
+      this.showToast('success', '¡Sucursal Aprobada!', `La sucursal "${branch.name}" fue aprobada y activada.`);
       this.branchApprovalNotice.set(`✓ Sucursal "${branch.name}" aprobada exitosamente y activada en el radar.`);
       setTimeout(() => this.branchApprovalNotice.set(null), 5000);
     });
@@ -312,6 +553,187 @@ export class SuperAdminComponent implements OnInit {
       this.loadPendingBranches();
       this.branchApprovalNotice.set(`Sede "${b.name}" rechazada.`);
       setTimeout(() => this.branchApprovalNotice.set(null), 5000);
+    });
+  }
+
+  // --- GESTIÓN DE COMERCIOS DESTACADOS ---
+  toggleMerchantFeatured(m: Tenant): void {
+    const nextVal = !m.isFeatured;
+    this.merchants.update(list => list.map(item => item.id === m.id ? { ...item, isFeatured: nextVal } : item));
+    this.api.updateTenant(m.id, { is_featured: nextVal }).subscribe({
+      next: () => {
+        const msg = nextVal ? `⭐ "${m.name}" marcado como Comercio Destacado.` : `"${m.name}" retirado de destacados.`;
+        this.branchApprovalNotice.set(msg);
+        setTimeout(() => this.branchApprovalNotice.set(null), 3500);
+      }
+    });
+  }
+
+  // --- GESTIÓN DE BANNERS & PROMOCIONES GLOBALES ---
+  loadBanners(): void {
+    this.api.getBanners(false).subscribe(banners => {
+      this.banners.set(banners || []);
+    });
+  }
+
+  openCreateBannerModal(): void {
+    this.editingBanner = {
+      title: '',
+      subtitle: '',
+      couponCode: '',
+      badgeText: '⚡ PROMOCIÓN FLASH',
+      buttonText: 'Pedir ahora',
+      linkUrl: '/explorar',
+      imageUrl: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&auto=format&fit=crop&q=80',
+      bgGradientStart: '#f97316',
+      bgGradientEnd: '#ea580c',
+      sortOrder: (this.banners().length + 1),
+      isActive: true,
+    };
+    this.isBannerModalOpen.set(true);
+  }
+
+  openEditBannerModal(b: Banner): void {
+    this.editingBanner = { ...b };
+    this.isBannerModalOpen.set(true);
+  }
+
+  saveBanner(): void {
+    if (!this.editingBanner.title?.trim()) {
+      alert('El título del banner es requerido.');
+      return;
+    }
+    this.isSavingBanner.set(true);
+
+    if (this.editingBanner.id) {
+      this.api.updateBanner(this.editingBanner.id, this.editingBanner).subscribe({
+        next: (saved) => {
+          this.isSavingBanner.set(false);
+          this.isBannerModalOpen.set(false);
+          this.loadBanners();
+          this.bannerActionNotice.set('✓ Banner actualizado correctamente.');
+          setTimeout(() => this.bannerActionNotice.set(null), 3500);
+        },
+        error: () => this.isSavingBanner.set(false)
+      });
+    } else {
+      this.api.createBanner(this.editingBanner).subscribe({
+        next: (created) => {
+          this.isSavingBanner.set(false);
+          this.isBannerModalOpen.set(false);
+          this.loadBanners();
+          this.bannerActionNotice.set('✓ Nuevo banner promocional publicado.');
+          setTimeout(() => this.bannerActionNotice.set(null), 3500);
+        },
+        error: () => this.isSavingBanner.set(false)
+      });
+    }
+  }
+
+  toggleBannerActive(b: Banner): void {
+    const nextVal = !b.isActive;
+    this.api.updateBanner(b.id, { isActive: nextVal }).subscribe(() => {
+      this.banners.update(list => list.map(item => item.id === b.id ? { ...item, isActive: nextVal } : item));
+    });
+  }
+
+  deleteBanner(b: Banner): void {
+    if (!confirm(`¿Eliminar el banner "${b.title}"?`)) return;
+    this.api.deleteBanner(b.id).subscribe(() => {
+      this.banners.update(list => list.filter(item => item.id !== b.id));
+      this.bannerActionNotice.set(`Banner "${b.title}" eliminado.`);
+      setTimeout(() => this.bannerActionNotice.set(null), 3500);
+    });
+  }
+
+  // --- MÉTODOS DE GESTIÓN DE CATEGORÍAS GLOBALES ---
+  openNewCategoryModal(): void {
+    this.editingCategory = {
+      name: '',
+      slug: '',
+      icon: '🛍️',
+      subcategories: [],
+      sort_order: (this.businessCategories().length + 1),
+      is_active: true
+    };
+    this.newSubcategoryInput = '';
+    this.isCategoryModalOpen.set(true);
+  }
+
+  openEditCategoryModal(cat: BusinessCategory): void {
+    this.editingCategory = {
+      ...cat,
+      subcategories: [...(cat.subcategories || [])]
+    };
+    this.newSubcategoryInput = '';
+    this.isCategoryModalOpen.set(true);
+  }
+
+  addSubcategoryToEditing(): void {
+    const val = this.newSubcategoryInput.trim();
+    if (!val) return;
+    const current = this.editingCategory.subcategories || [];
+    if (!current.includes(val)) {
+      this.editingCategory.subcategories = [...current, val];
+    }
+    this.newSubcategoryInput = '';
+  }
+
+  removeSubcategoryFromEditing(sub: string): void {
+    const current = this.editingCategory.subcategories || [];
+    this.editingCategory.subcategories = current.filter(s => s !== sub);
+  }
+
+  saveBusinessCategory(): void {
+    if (!this.editingCategory.name) return;
+    this.isSavingCategory.set(true);
+
+    if (this.editingCategory.id) {
+      this.api.updateBusinessCategory(this.editingCategory.id, this.editingCategory).subscribe({
+        next: (saved) => {
+          this.isSavingCategory.set(false);
+          this.isCategoryModalOpen.set(false);
+          this.loadBusinessCategories();
+          this.showToast('success', '¡Categoría Actualizada!', `La categoría "${saved.name}" fue actualizada exitosamente.`);
+          this.categoryActionNotice.set(`✓ Categoría "${saved.name}" actualizada con éxito.`);
+          setTimeout(() => this.categoryActionNotice.set(null), 3500);
+        },
+        error: (err: any) => {
+          this.isSavingCategory.set(false);
+          this.showToast('error', 'Error al Guardar', err.error?.message || 'No se pudo actualizar la categoría.');
+        }
+      });
+    } else {
+      this.api.createBusinessCategory(this.editingCategory).subscribe({
+        next: (created) => {
+          this.isSavingCategory.set(false);
+          this.isCategoryModalOpen.set(false);
+          this.loadBusinessCategories();
+          this.showToast('success', '¡Categoría Creada!', `La categoría "${created.name}" fue creada con éxito.`);
+          this.categoryActionNotice.set(`✓ Nueva categoría "${created.name}" creada con éxito.`);
+          setTimeout(() => this.categoryActionNotice.set(null), 3500);
+        },
+        error: (err: any) => {
+          this.isSavingCategory.set(false);
+          this.showToast('error', 'Error al Crear', err.error?.message || 'No se pudo crear la categoría.');
+        }
+      });
+    }
+  }
+
+  toggleCategoryActive(cat: BusinessCategory): void {
+    const nextVal = !cat.is_active;
+    this.api.updateBusinessCategory(cat.id, { is_active: nextVal }).subscribe(() => {
+      this.loadBusinessCategories();
+    });
+  }
+
+  deleteCategory(cat: BusinessCategory): void {
+    if (!confirm(`¿Eliminar la categoría "${cat.name}"?`)) return;
+    this.api.deleteBusinessCategory(cat.id).subscribe(() => {
+      this.loadBusinessCategories();
+      this.categoryActionNotice.set(`Categoría "${cat.name}" eliminada.`);
+      setTimeout(() => this.categoryActionNotice.set(null), 3500);
     });
   }
 

@@ -1,4 +1,4 @@
-name: Build iOS IPAs
+name: Build iOS IPAs (Cliente & Rider)
 
 on:
   workflow_dispatch:
@@ -12,9 +12,13 @@ jobs:
     name: Build iOS (${{ matrix.app }})
     runs-on: macos-latest
     strategy:
-      max-parallel: 1
+      fail-fast: false
       matrix:
-        app: [mobile_app]
+        include:
+          - app: mobile_app
+            output_name: Pidetelo-Cliente-iOS
+          - app: rider_app
+            output_name: Pidetelo-Rider-iOS
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -39,12 +43,12 @@ jobs:
       - name: Package IPA
         run: |
           cd ${{ matrix.app }}/build/ios/iphoneos
-          mkdir Payload
+          mkdir -p Payload
           cp -r Runner.app Payload/
-          zip -r -q "${{ matrix.app }}.ipa" Payload
+          zip -r -q "${{ matrix.output_name }}.ipa" Payload
 
       - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.app }}-ipa
-          path: ${{ matrix.app }}/build/ios/iphoneos/${{ matrix.app }}.ipa
+          name: ${{ matrix.output_name }}-ipa
+          path: ${{ matrix.app }}/build/ios/iphoneos/${{ matrix.output_name }}.ipa

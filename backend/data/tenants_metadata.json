@@ -35,6 +35,10 @@
         "maxKm": 20,
         "price": 6
       }
+    ],
+    "category": "Restaurantes",
+    "subcategories": [
+      "Hamburguesas"
     ]
   }
 }

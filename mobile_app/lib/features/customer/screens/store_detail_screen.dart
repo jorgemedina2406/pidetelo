@@ -49,6 +49,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
 
   List<Product> _products = [];
   bool _isLoadingProducts = true;
+  bool _isProductGridView = false;
 
   @override
   void initState() {
@@ -143,6 +144,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
         _products = prods;
         _isLoadingProducts = false;
       });
+      CartService().setStoreProducts(prods);
     }
   }
 
@@ -871,6 +873,35 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                         },
                       ),
 
+                      // Closed Store Warning
+                      if (_selectedBranch != null && !_selectedBranch!.isOpenRightNow) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEF4444).withOpacity(0.18),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: const Color(0xFFEF4444).withOpacity(0.6)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.access_time_filled_rounded, color: Color(0xFFEF4444), size: 20),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  'Local actualmente cerrado • Abre a las ${_selectedBranch!.businessHoursOpen} (Horario: ${_selectedBranch!.businessHoursOpen} - ${_selectedBranch!.businessHoursClose})',
+                                  style: GoogleFonts.outfit(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      
                       // Active Branch Banner (Multi-Sucursal)
                       if (_selectedBranch != null) ...[
                         const SizedBox(height: 14),
@@ -999,13 +1030,101 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                 ),
               ),
 
-              // Product Cards List
+              // View Switcher & Title Header
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Menú & Platillos',
+                        style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.w800, color: Colors.white),
+                      ),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E293B),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.white12),
+                        ),
+                        padding: const EdgeInsets.all(2),
+                        child: Row(
+                          children: [
+                            InkWell(
+                              onTap: () => setState(() => _isProductGridView = false),
+                              borderRadius: BorderRadius.circular(8),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: !_isProductGridView ? storeAccent : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(Icons.view_list_rounded, size: 16, color: !_isProductGridView ? Colors.white : Colors.white60),
+                              ),
+                            ),
+                            InkWell(
+                              onTap: () => setState(() => _isProductGridView = true),
+                              borderRadius: BorderRadius.circular(8),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: _isProductGridView ? storeAccent : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(Icons.grid_view_rounded, size: 16, color: _isProductGridView ? Colors.white : Colors.white60),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Product Cards List / Grid
               if (_isLoadingProducts)
-                const SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(vertical: 60),
-                    child: Center(
-                      child: CircularProgressIndicator(color: AppTheme.primary),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, idx) => Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        height: 90,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E293B),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: Colors.white10),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 66,
+                                height: 66,
+                                decoration: BoxDecoration(
+                                  color: Colors.white10,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Container(width: 140, height: 14, decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(4))),
+                                    const SizedBox(height: 8),
+                                    Container(width: 80, height: 12, decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(4))),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      childCount: 4,
                     ),
                   ),
                 )
@@ -1049,23 +1168,132 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                             color: const Color(0xFF94A3B8),
                           ),
                         ),
-                        if (_availableBranches.length > 1) ...[
-                          const SizedBox(height: 16),
-                          ElevatedButton.icon(
-                            onPressed: _openBranchSelector,
-                            icon: const Icon(Icons.swap_horiz_rounded, size: 18),
-                            label: Text(
-                              'Seleccionar otra sede',
-                              style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.primary,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ],
+                    ),
+                  ),
+                )
+              else if (_isProductGridView)
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
+                  sliver: SliverGrid(
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: 0.68,
+                    ),
+                    delegate: SliverChildBuilderDelegate(
+                      (context, idx) {
+                        final prod = filteredProducts[idx];
+                        return Container(
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1E293B),
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: Colors.white10),
+                          ),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(18),
+                            onTap: () => _openProductSheet(prod),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Stack(
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: const BorderRadius.vertical(top: Radius.circular(17)),
+                                      child: Image.network(
+                                        prod.imageUrl,
+                                        height: 110,
+                                        width: double.infinity,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, __, ___) => Container(height: 110, color: const Color(0xFF334155)),
+                                      ),
+                                    ),
+                                    if (prod.isOnSale)
+                                      Positioned(
+                                        top: 6,
+                                        left: 6,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFEF4444),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            prod.discountPercentage != null ? '🔥 ${prod.discountPercentage}% OFF' : '🔥 OFERTA',
+                                            style: GoogleFonts.outfit(fontSize: 8.5, fontWeight: FontWeight.w900, color: Colors.white),
+                                          ),
+                                        ),
+                                      )
+                                    else if (prod.isPopular || prod.isFeatured)
+                                      Positioned(
+                                        top: 6,
+                                        left: 6,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFF59E0B),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            '⭐ DESTACADO',
+                                            style: GoogleFonts.outfit(fontSize: 8.5, fontWeight: FontWeight.w900, color: Colors.white),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.all(10),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        prod.name,
+                                        style: GoogleFonts.outfit(fontSize: 13.5, fontWeight: FontWeight.w700, color: Colors.white),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        prod.description,
+                                        style: GoogleFonts.outfit(fontSize: 11, color: const Color(0xFF94A3B8)),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Row(
+                                        children: [
+                                          Text(
+                                            '\$${prod.price.toStringAsFixed(2)}',
+                                            style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w900, color: storeAccent),
+                                          ),
+                                          if (prod.compareAtPrice != null && prod.compareAtPrice! > prod.price) ...[
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              '\$${prod.compareAtPrice!.toStringAsFixed(2)}',
+                                              style: GoogleFonts.outfit(
+                                                fontSize: 10.5,
+                                                color: Colors.white38,
+                                                decoration: TextDecoration.lineThrough,
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                      Text(
+                                        'Bs. ${(prod.price * rate).toStringAsFixed(2)}',
+                                        style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.w600, color: const Color(0xFF65A30D)),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ],
-                      ],
+                        );
+                      },
+                      childCount: filteredProducts.length,
                     ),
                   ),
                 )
@@ -1074,144 +1302,179 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
                   sliver: SliverList(
                     delegate: SliverChildBuilderDelegate(
-                    (context, idx) {
-                      final prod = filteredProducts[idx];
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 14),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1E293B),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.white10),
-                        ),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(20),
-                          onTap: () => _openProductSheet(prod),
-                          child: Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Thumbnail with badge
-                                Stack(
-                                  children: [
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(16),
-                                      child: Image.network(
-                                        prod.imageUrl,
-                                        width: 90,
-                                        height: 90,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (_, __, ___) => Container(
+                      (context, idx) {
+                        final prod = filteredProducts[idx];
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1E293B),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: Colors.white10),
+                          ),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(20),
+                            onTap: () => _openProductSheet(prod),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Thumbnail with badge
+                                  Stack(
+                                    children: [
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(16),
+                                        child: Image.network(
+                                          prod.imageUrl,
                                           width: 90,
                                           height: 90,
-                                          color: const Color(0xFF334155),
-                                          child: const Icon(Icons.fastfood_rounded, color: Colors.white30),
-                                        ),
-                                      ),
-                                    ),
-                                    if (prod.isPopular)
-                                      Positioned(
-                                        top: 6,
-                                        left: 6,
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: AppTheme.primary,
-                                            borderRadius: BorderRadius.circular(6),
-                                          ),
-                                          child: Text(
-                                            'TOP',
-                                            style: GoogleFonts.outfit(
-                                              fontSize: 9,
-                                              fontWeight: FontWeight.w900,
-                                              color: Colors.white,
-                                            ),
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (_, __, ___) => Container(
+                                            width: 90,
+                                            height: 90,
+                                            color: const Color(0xFF334155),
+                                            child: const Icon(Icons.fastfood_rounded, color: Colors.white30),
                                           ),
                                         ),
                                       ),
-                                  ],
-                                ),
-                                const SizedBox(width: 14),
-
-                                // Details
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        prod.name,
-                                        style: GoogleFonts.outfit(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w700,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        prod.description,
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: GoogleFonts.outfit(
-                                          fontSize: 12,
-                                          color: const Color(0xFF94A3B8),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                '\$${prod.price.toStringAsFixed(2)}',
-                                                style: GoogleFonts.outfit(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.w900,
-                                                  color: AppTheme.primary,
-                                                ),
-                                              ),
-                                              Text(
-                                                'Bs. ${(prod.price * 36.5).toStringAsFixed(2)}',
-                                                style: GoogleFonts.outfit(
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: const Color(0xFF65A30D),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                      if (prod.isOnSale)
+                                        Positioned(
+                                          top: 6,
+                                          left: 6,
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                             decoration: BoxDecoration(
-                                              color: AppTheme.primary.withOpacity(0.12),
-                                              borderRadius: BorderRadius.circular(10),
-                                              border: Border.all(color: AppTheme.primary.withOpacity(0.3)),
+                                              color: const Color(0xFFEF4444),
+                                              borderRadius: BorderRadius.circular(6),
                                             ),
                                             child: Text(
-                                              '+ Agregar',
+                                              prod.discountPercentage != null ? '🔥 ${prod.discountPercentage}% OFF' : '🔥 OFERTA',
                                               style: GoogleFonts.outfit(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w700,
-                                                color: AppTheme.primary,
+                                                fontSize: 8.5,
+                                                fontWeight: FontWeight.w900,
+                                                color: Colors.white,
                                               ),
                                             ),
                                           ),
-                                        ],
-                                      ),
+                                        )
+                                      else if (prod.isPopular || prod.isFeatured)
+                                        Positioned(
+                                          top: 6,
+                                          left: 6,
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFF59E0B),
+                                              borderRadius: BorderRadius.circular(6),
+                                            ),
+                                            child: Text(
+                                              '⭐ DESTACADO',
+                                              style: GoogleFonts.outfit(
+                                                fontSize: 8.5,
+                                                fontWeight: FontWeight.w900,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
                                     ],
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(width: 14),
+
+                                  // Details
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          prod.name,
+                                          style: GoogleFonts.outfit(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w700,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          prod.description,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: GoogleFonts.outfit(
+                                            fontSize: 12,
+                                            color: const Color(0xFF94A3B8),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Row(
+                                                  children: [
+                                                    Text(
+                                                      '\$${prod.price.toStringAsFixed(2)}',
+                                                      style: GoogleFonts.outfit(
+                                                        fontSize: 16,
+                                                        fontWeight: FontWeight.w900,
+                                                        color: storeAccent,
+                                                      ),
+                                                    ),
+                                                    if (prod.compareAtPrice != null && prod.compareAtPrice! > prod.price) ...[
+                                                      const SizedBox(width: 6),
+                                                      Text(
+                                                        '\$${prod.compareAtPrice!.toStringAsFixed(2)}',
+                                                        style: GoogleFonts.outfit(
+                                                          fontSize: 11.5,
+                                                          color: Colors.white38,
+                                                          decoration: TextDecoration.lineThrough,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ],
+                                                ),
+                                                Text(
+                                                  'Bs. ${(prod.price * rate).toStringAsFixed(2)}',
+                                                  style: GoogleFonts.outfit(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: const Color(0xFF65A30D),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                              decoration: BoxDecoration(
+                                                color: storeAccent.withOpacity(0.12),
+                                                borderRadius: BorderRadius.circular(10),
+                                                border: Border.all(color: storeAccent.withOpacity(0.3)),
+                                              ),
+                                              child: Text(
+                                                '+ Agregar',
+                                                style: GoogleFonts.outfit(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: storeAccent,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                      );
-                    },
-                    childCount: filteredProducts.length,
+                        );
+                      },
+                      childCount: filteredProducts.length,
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
 

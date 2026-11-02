@@ -35,10 +35,15 @@ export interface Product {
   isAvailable: boolean;
   isPopular?: boolean;
   isFeatured?: boolean;
+  isOnSale?: boolean;
+  discountPercentage?: number;
   tags?: string[];
   modifierGroups?: ProductModifierGroup[];
   branchId?: string | null;
   sku?: string;
   barcode?: string;
+  trackStock?: boolean;
+  stockQuantity?: number | null;
+  previousStock?: number | null;
 }
 

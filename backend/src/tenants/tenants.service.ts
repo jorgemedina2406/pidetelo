@@ -68,6 +68,8 @@ export class TenantsService {
     const baseCurrency = t.base_currency ?? meta.base_currency ?? meta.currency_settings?.baseCurrency ?? 'USD';
     const displayMode = t.display_mode ?? meta.display_mode ?? meta.currency_settings?.displayMode ?? 'usd_and_bs';
     const tagline = t.tagline ?? meta.tagline ?? '';
+    const category = t.category ?? meta.category ?? 'Restaurantes';
+    const subcategories = t.subcategories ?? meta.subcategories ?? [];
 
     const currencySettings = {
       baseCurrency,
@@ -82,10 +84,15 @@ export class TenantsService {
       { id: 'tier_3', minKm: 5, maxKm: 8, price: 4.50 }
     ];
     const deliveryTiers = t.delivery_tiers ?? meta.delivery_tiers ?? meta.deliveryTiers ?? defaultDeliveryTiers;
+    const isFeatured = Boolean(t.is_featured ?? meta.is_featured ?? meta.isFeatured ?? false);
 
     return {
       ...t,
+      category,
+      subcategories,
       tagline,
+      is_featured: isFeatured,
+      isFeatured,
       exchange_rate: exchangeRate,
       base_currency: baseCurrency,
       display_mode: displayMode,
@@ -146,9 +153,14 @@ export class TenantsService {
     // 1. Guardar metadata local (tagline, moneda, tasa, modo, etc.)
     const metaToSave: Record<string, any> = {};
     if (updateData.tagline !== undefined) metaToSave.tagline = updateData.tagline;
+    if (updateData.category !== undefined) metaToSave.category = updateData.category;
+    if (updateData.subcategories !== undefined) metaToSave.subcategories = updateData.subcategories;
     if (updateData.exchange_rate !== undefined) metaToSave.exchange_rate = Number(updateData.exchange_rate);
     if (updateData.base_currency !== undefined) metaToSave.base_currency = updateData.base_currency;
     if (updateData.display_mode !== undefined) metaToSave.display_mode = updateData.display_mode;
+    if (updateData.is_featured !== undefined || updateData.isFeatured !== undefined) {
+      metaToSave.is_featured = Boolean(updateData.is_featured ?? updateData.isFeatured);
+    }
     if (updateData.delivery_tiers !== undefined || updateData.deliveryTiers !== undefined) {
       metaToSave.delivery_tiers = updateData.delivery_tiers || updateData.deliveryTiers;
     }
@@ -174,7 +186,8 @@ export class TenantsService {
       'email', 'logo_url', 'banner_url', 'accent_color', 'address',
       'latitude', 'longitude', 'delivery_radius_km', 'base_delivery_fee',
       'delivery_tiers', 'min_order_amount', 'commission_percentage', 'is_active',
-      'subscription_plan_id', 'subscription_status'
+      'is_featured', 'subscription_plan_id', 'subscription_status',
+      'category', 'subcategories'
     ]);
 
     const cleanPayload: any = { updated_at: new Date().toISOString() };
@@ -264,6 +277,8 @@ export class TenantsService {
       longitude: payload.longitude || -66.9036,
       base_delivery_fee: payload.delivery_fee || payload.deliveryFee || 2.50,
       commission_percentage: payload.commission || payload.commission_percentage || 5.0,
+      category: payload.category || 'Restaurantes',
+      subcategories: payload.subcategories || [],
       is_active: true,
       logo_url: payload.logo_url || 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=200&auto=format&fit=crop&q=80',
       banner_url: payload.banner_url || 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1200&auto=format&fit=crop&q=80',
@@ -281,6 +296,11 @@ export class TenantsService {
     if (tErr) {
       throw new InternalServerErrorException(`Error creando comercio en base de datos: ${tErr.message}`);
     }
+
+    this.saveTenantMetadata(tenantId, {
+      category: payload.category || 'Restaurantes',
+      subcategories: payload.subcategories || []
+    });
 
     // 1.1 Crear automáticamente la Sede Principal en la tabla branches
     const mainBranchId = crypto.randomUUID();

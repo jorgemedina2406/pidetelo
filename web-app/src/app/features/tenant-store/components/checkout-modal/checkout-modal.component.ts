@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { CartStore } from '../../stores/cart.store';
 import { ApiService } from '../../../../core/services/api.service';
 import { PaymentMethod } from '../../../../core/models/order.model';
+import { Coupon } from '../../../../core/models/coupon.model';
 
 @Component({
   selector: 'app-checkout-modal',
@@ -24,6 +25,37 @@ export class CheckoutModalComponent {
     { id: 'card_terminal', label: 'Punto de Venta', icon: '💳', desc: 'Tarjeta al recibir' },
     { id: 'cash_local', label: 'Efectivo Bs', icon: '🪙', desc: 'A tasa del día' }
   ];
+
+  applyCoupon(): void {
+    const code = this.cart.couponCodeInput()?.trim().toUpperCase();
+    if (!code) return;
+    const tenantId = this.cart.activeTenant()?.id || this.cart.selectedBranch()?.companyId;
+    if (!tenantId) return;
+
+    this.cart.setIsApplyingCoupon(true);
+    this.api.validateCoupon(tenantId, code, this.cart.subtotal()).subscribe({
+      next: (res) => {
+        if (res.isValid && res.coupon) {
+          const applied: Coupon = {
+            id: res.coupon.id,
+            tenantId,
+            code: res.coupon.code,
+            discountType: res.coupon.discountType,
+            discountValue: res.coupon.discountValue,
+            minOrderAmount: 0,
+            timesUsed: 0,
+            isActive: true
+          };
+          this.cart.setAppliedCoupon(applied);
+        } else {
+          this.cart.setCouponErrorMessage(res.message || 'Cupón inválido o no aplicable.');
+        }
+      },
+      error: () => {
+        this.cart.setCouponErrorMessage('Error al verificar el cupón. Intenta nuevamente.');
+      }
+    });
+  }
 
   captureGpsLocation(): void {
     if (typeof navigator !== 'undefined' && 'geolocation' in navigator) {

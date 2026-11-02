@@ -1,0 +1,11 @@
+[
+  {
+    "id": "notif_welcome",
+    "title": "🎉 ¡Bienvenido a Pídetelo!",
+    "body": "Explora los mejores restaurantes, súper, farmacias y comercios de tu ciudad.",
+    "type": "system",
+    "target_condition": "all",
+    "is_global": true,
+    "created_at": "2026-10-31T00:43:55.624Z"
+  }
+]

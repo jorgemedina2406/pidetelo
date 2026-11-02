@@ -34,6 +34,10 @@ export interface TenantDeliverySettings {
   minOrderAmount: number;
   currency: string;
   currencySymbol: string;
+  businessHours?: {
+    open: string;
+    close: string;
+  };
 }
 
 export type CurrencyDisplayMode = 'usd_and_bs' | 'bs_and_usd' | 'only_usd' | 'only_bs';
@@ -63,8 +67,10 @@ export interface Tenant {
   bannerUrl: string;
   rating: number;
   reviewCount: number;
-  category: string; // e.g. "Hamburguesas", "Sushi", "Pizzas"
+  category: string; // e.g. "Restaurantes", "Súper", "Farmacias"
+  subcategories?: string[]; // e.g. ["Hamburguesas", "Sushi"]
   isActive: boolean;
+  isFeatured?: boolean;
   contact: TenantContact;
   deliverySettings: TenantDeliverySettings;
   businessHours: TenantBusinessHours;

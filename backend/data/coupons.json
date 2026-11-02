@@ -1,0 +1,40 @@
+[
+  {
+    "id": "5bf768ad-6e3b-4e84-90d4-372e27394ff2",
+    "tenant_id": "0cefc844-f2f2-4fd6-ac8f-aefcd83dd91d",
+    "code": "CUPON 1 COMERCIO",
+    "description": "20% de descuento",
+    "discount_type": "percentage",
+    "discount_value": 20,
+    "min_order_amount": 20,
+    "max_discount": 25,
+    "usage_limit": 1,
+    "times_used": 0,
+    "is_active": true,
+    "is_global": false,
+    "target_condition": "all",
+    "notification_sent_at": "2026-11-02T16:11:45.242Z",
+    "expires_at": null,
+    "created_at": "2026-11-02T16:09:53.488Z",
+    "updated_at": "2026-11-02T16:09:53.488Z"
+  },
+  {
+    "id": "5d4513bc-9e6e-4a8e-9f1b-276e263be765",
+    "tenant_id": "global",
+    "code": "CUPON 1 GLOBAL",
+    "description": "Cupón general de plataforma para todos los comercios",
+    "discount_type": "percentage",
+    "discount_value": 10,
+    "min_order_amount": 15,
+    "max_discount": null,
+    "usage_limit": null,
+    "times_used": 0,
+    "is_active": true,
+    "is_global": true,
+    "target_condition": "all",
+    "notification_sent_at": null,
+    "expires_at": null,
+    "created_at": "2026-11-02T15:30:54.229Z",
+    "updated_at": "2026-11-02T15:30:54.229Z"
+  }
+]

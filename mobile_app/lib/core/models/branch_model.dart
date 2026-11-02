@@ -103,6 +103,7 @@ class Branch {
   final double? exchangeRate;
   final String? baseCurrency;
   final String? displayMode;
+  final bool isFeatured;
 
   const Branch({
     required this.id,
@@ -134,7 +135,28 @@ class Branch {
     this.exchangeRate,
     this.baseCurrency,
     this.displayMode,
+    this.isFeatured = false,
   });
+
+  /// Check whether the store branch is within its open business hours
+  bool get isOpenRightNow {
+    try {
+      final now = DateTime.now();
+      final currentMinutes = now.hour * 60 + now.minute;
+      final openParts = openTime.split(':').map(int.parse).toList();
+      final closeParts = closeTime.split(':').map(int.parse).toList();
+      final openMin = (openParts.isNotEmpty ? openParts[0] : 9) * 60 + (openParts.length > 1 ? openParts[1] : 0);
+      final closeMin = (closeParts.isNotEmpty ? closeParts[0] : 23) * 60 + (closeParts.length > 1 ? closeParts[1] : 0);
+
+      if (closeMin > openMin) {
+        return currentMinutes >= openMin && currentMinutes < closeMin;
+      } else {
+        return currentMinutes >= openMin || currentMinutes < closeMin;
+      }
+    } catch (_) {
+      return true;
+    }
+  }
 
   /// Real distance in km using Haversine
   double distanceKmTo(double userLat, double userLng) {
@@ -235,6 +257,52 @@ class Branch {
       exchangeRate: (json['exchange_rate'] as num?)?.toDouble() ?? (json['exchangeRate'] as num?)?.toDouble(),
       baseCurrency: json['base_currency']?.toString() ?? json['baseCurrency']?.toString(),
       displayMode: json['display_mode']?.toString() ?? json['displayMode']?.toString(),
+      isFeatured: json['is_featured'] ?? json['isFeatured'] ?? false,
     );
   }
+}
+
+class BannerItem {
+  final String id;
+  final String title;
+  final String subtitle;
+  final String? couponCode;
+  final String? badgeText;
+  final String? buttonText;
+  final String? linkUrl;
+  final String? imageUrl;
+  final String bgGradientStart;
+  final String bgGradientEnd;
+  final bool isActive;
+  final int sortOrder;
+
+  const BannerItem({
+    required this.id,
+    required this.title,
+    this.subtitle = '',
+    this.couponCode,
+    this.badgeText,
+    this.buttonText,
+    this.linkUrl,
+    this.imageUrl,
+    this.bgGradientStart = '#f97316',
+    this.bgGradientEnd = '#ea580c',
+    this.isActive = true,
+    this.sortOrder = 0,
+  });
+
+  factory BannerItem.fromJson(Map<String, dynamic> json) => BannerItem(
+    id: json['id']?.toString() ?? '',
+    title: json['title']?.toString() ?? '',
+    subtitle: json['subtitle']?.toString() ?? '',
+    couponCode: json['coupon_code']?.toString() ?? json['couponCode']?.toString(),
+    badgeText: json['badge_text']?.toString() ?? json['badgeText']?.toString(),
+    buttonText: json['button_text']?.toString() ?? json['buttonText']?.toString(),
+    linkUrl: json['link_url']?.toString() ?? json['linkUrl']?.toString(),
+    imageUrl: json['image_url']?.toString() ?? json['imageUrl']?.toString(),
+    bgGradientStart: json['bg_gradient_start']?.toString() ?? json['bgGradientStart']?.toString() ?? '#f97316',
+    bgGradientEnd: json['bg_gradient_end']?.toString() ?? json['bgGradientEnd']?.toString() ?? '#ea580c',
+    isActive: json['is_active'] ?? json['isActive'] ?? true,
+    sortOrder: (json['sort_order'] as num?)?.toInt() ?? (json['sortOrder'] as num?)?.toInt() ?? 0,
+  );
 }

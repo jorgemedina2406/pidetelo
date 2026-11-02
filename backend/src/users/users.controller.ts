@@ -7,6 +7,12 @@ import { UsersService, CreateStoreUserDto } from './users.service.js';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
+  @Get('users')
+  @ApiOperation({ summary: 'Obtener todos los usuarios registrados en la plataforma (Super Admin)' })
+  findAllGlobal() {
+    return this.usersService.findAllPlatformUsers();
+  }
+
   @Get('tenants/:tenantId/users')
   @ApiOperation({ summary: 'Obtener todos los colaboradores de un comercio (filtrable por branchId)' })
   @ApiQuery({ name: 'branchId', required: false, type: String })

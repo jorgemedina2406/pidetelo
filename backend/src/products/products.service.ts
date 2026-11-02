@@ -1,9 +1,62 @@
+import * as fs from 'fs';
+import * as path from 'path';
 import { Injectable, NotFoundException, InternalServerErrorException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service.js';
 
 @Injectable()
 export class ProductsService {
+  private metadataFilePath = path.join(process.cwd(), 'data', 'product_metadata.json');
+
   constructor(private supabase: SupabaseService) {}
+
+  private loadMetadata(): Record<string, any> {
+    try {
+      if (fs.existsSync(this.metadataFilePath)) {
+        const raw = fs.readFileSync(this.metadataFilePath, 'utf-8');
+        return JSON.parse(raw);
+      }
+    } catch (_) {}
+    return {};
+  }
+
+  private saveProductMetadata(productId: string, metadata: Record<string, any>) {
+    try {
+      const data = this.loadMetadata();
+      data[productId] = { ...(data[productId] || {}), ...metadata };
+      const dir = path.dirname(this.metadataFilePath);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(this.metadataFilePath, JSON.stringify(data, null, 2), 'utf-8');
+    } catch (e) {
+      console.warn('[ProductsService] Error saving product metadata:', e);
+    }
+  }
+
+  private getProductMetadata(productId: string): Record<string, any> {
+    try {
+      const data = this.loadMetadata();
+      return data[productId] || {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  private mergeProductWithMetadata(product: any): any {
+    if (!product) return product;
+    const meta = this.getProductMetadata(product.id);
+    return {
+      ...product,
+      is_popular: Boolean(product.is_popular ?? meta.is_popular ?? false),
+      isPopular: Boolean(product.is_popular ?? meta.is_popular ?? false),
+      is_featured: Boolean(product.is_featured ?? meta.is_featured ?? false),
+      isFeatured: Boolean(product.is_featured ?? meta.is_featured ?? false),
+      is_on_sale: Boolean(product.is_on_sale ?? meta.is_on_sale ?? false),
+      isOnSale: Boolean(product.is_on_sale ?? meta.is_on_sale ?? false),
+      compare_at_price: (product.compare_at_price ?? meta.compare_at_price) ? Number(product.compare_at_price ?? meta.compare_at_price) : null,
+      compareAtPrice: (product.compare_at_price ?? meta.compare_at_price) ? Number(product.compare_at_price ?? meta.compare_at_price) : null,
+      discount_percentage: Number(product.discount_percentage ?? meta.discount_percentage) || 0,
+      discountPercentage: Number(product.discount_percentage ?? meta.discount_percentage) || 0,
+    };
+  }
 
   async findByTenant(tenantId: string, branchId?: string, onlyAvailable = false) {
     let query = this.supabase
@@ -41,7 +94,7 @@ export class ProductsService {
     if (error) {
       throw new InternalServerErrorException(`Error fetching products: ${error.message}`);
     }
-    return data;
+    return (data || []).map(p => this.mergeProductWithMetadata(p));
   }
 
   async getCategories(tenantId: string) {
@@ -129,7 +182,7 @@ export class ProductsService {
     if (error || !data) {
       throw new NotFoundException(`Producto '${id}' no encontrado`);
     }
-    return data;
+    return this.mergeProductWithMetadata(data);
   }
 
   async create(productData: any) {
@@ -164,18 +217,53 @@ export class ProductsService {
       is_available: productData.is_available ?? productData.isAvailable ?? true,
       sku: productData.sku ? String(productData.sku).trim() : null,
       barcode: productData.barcode ? String(productData.barcode).trim() : null,
-      sort_order: Number(productData.sort_order ?? productData.sortOrder) || 0
+      sort_order: Number(productData.sort_order ?? productData.sortOrder) || 0,
+      is_popular: Boolean(productData.is_popular ?? productData.isPopular ?? false),
+      is_featured: Boolean(productData.is_featured ?? productData.isFeatured ?? false),
+      is_on_sale: Boolean(productData.is_on_sale ?? productData.isOnSale ?? false),
+      compare_at_price: productData.compare_at_price || productData.compareAtPrice ? Number(productData.compare_at_price || productData.compareAtPrice) : null,
+      discount_percentage: Number(productData.discount_percentage ?? productData.discountPercentage) || 0,
+      track_stock: Boolean(productData.track_stock ?? productData.trackStock ?? false),
+      stock_quantity: (productData.stock_quantity !== undefined && productData.stock_quantity !== null && productData.stock_quantity !== '')
+        ? Number(productData.stock_quantity) : null,
+      previous_stock: (productData.stock_quantity !== undefined && productData.stock_quantity !== null && productData.stock_quantity !== '')
+        ? Number(productData.stock_quantity) : null,
     };
 
-    const { data: createdProduct, error } = await this.supabase
-      .getClient()
-      .from('products')
-      .insert(productRow)
-      .select()
-      .single();
+    let createdProduct: any = null;
+    let createErr: any = null;
 
-    if (error || !createdProduct) {
-      throw new InternalServerErrorException(`Error creating product: ${error?.message}`);
+    try {
+      const res = await this.supabase
+        .getClient()
+        .from('products')
+        .insert(productRow)
+        .select()
+        .single();
+      createdProduct = res.data;
+      createErr = res.error;
+    } catch (e: any) {
+      createErr = e;
+    }
+
+    if (createErr) {
+      // Fallback si las nuevas columnas aún no se crearon en Supabase
+      const fallbackRow = { ...productRow };
+      delete fallbackRow.is_popular;
+      delete fallbackRow.is_featured;
+      delete fallbackRow.is_on_sale;
+      delete fallbackRow.compare_at_price;
+      delete fallbackRow.discount_percentage;
+      const { data: retryData, error: retryErr } = await this.supabase
+        .getClient()
+        .from('products')
+        .insert(fallbackRow)
+        .select()
+        .single();
+      if (retryErr || !retryData) {
+        throw new InternalServerErrorException(`Error creating product: ${retryErr?.message || createErr.message}`);
+      }
+      createdProduct = retryData;
     }
 
     // Save modifier groups if provided
@@ -183,6 +271,13 @@ export class ProductsService {
       await this.saveModifierGroups(createdProduct.id, modifierGroups);
     }
 
+    this.saveProductMetadata(createdProduct.id, {
+      is_popular: productRow.is_popular,
+      is_featured: productRow.is_featured,
+      is_on_sale: productRow.is_on_sale,
+      compare_at_price: productRow.compare_at_price,
+      discount_percentage: productRow.discount_percentage,
+    });
     return this.findById(createdProduct.id);
   }
 
@@ -221,7 +316,59 @@ export class ProductsService {
     if (updateData.sort_order !== undefined || updateData.sortOrder !== undefined) {
       productRow.sort_order = Number(updateData.sort_order ?? updateData.sortOrder);
     }
+    if (updateData.is_popular !== undefined || updateData.isPopular !== undefined) {
+      productRow.is_popular = Boolean(updateData.is_popular ?? updateData.isPopular);
+    }
+    if (updateData.is_featured !== undefined || updateData.isFeatured !== undefined) {
+      productRow.is_featured = Boolean(updateData.is_featured ?? updateData.isFeatured);
+    }
+    if (updateData.is_on_sale !== undefined || updateData.isOnSale !== undefined) {
+      productRow.is_on_sale = Boolean(updateData.is_on_sale ?? updateData.isOnSale);
+    }
+    if (updateData.compare_at_price !== undefined || updateData.compareAtPrice !== undefined) {
+      const val = updateData.compare_at_price ?? updateData.compareAtPrice;
+      productRow.compare_at_price = val ? Number(val) : null;
+    }
+    if (updateData.discount_percentage !== undefined || updateData.discountPercentage !== undefined) {
+      productRow.discount_percentage = Number(updateData.discount_percentage ?? updateData.discountPercentage) || 0;
+    }
 
+    let previousStockFound: number | null = null;
+    let tenantIdForHistory: string | null = null;
+    try {
+      const { data: currP } = await this.supabase.getClient().from('products').select('stock_quantity, track_stock, tenant_id').eq('id', id).maybeSingle();
+      if (currP) {
+        previousStockFound = currP.stock_quantity !== null && currP.stock_quantity !== undefined ? Number(currP.stock_quantity) : null;
+        tenantIdForHistory = currP.tenant_id || null;
+      }
+    } catch (_) {}
+
+    if (updateData.track_stock !== undefined || updateData.trackStock !== undefined) {
+      productRow.track_stock = Boolean(updateData.track_stock ?? updateData.trackStock);
+    }
+    if (updateData.stock_quantity !== undefined || updateData.stockQuantity !== undefined) {
+      const rawSq = updateData.stock_quantity ?? updateData.stockQuantity;
+      const newStock = (rawSq !== null && rawSq !== undefined && rawSq !== '') ? Math.max(0, parseInt(rawSq, 10)) : null;
+      productRow.stock_quantity = newStock;
+      productRow.previous_stock = previousStockFound;
+
+      // Registrar en historial si el stock cambió numéricamente
+      if (newStock !== null && previousStockFound !== null && newStock !== previousStockFound) {
+        try {
+          await this.supabase.getClient().from('stock_history').insert({
+            product_id: id,
+            tenant_id: tenantIdForHistory || updateData.tenant_id,
+            previous_stock: previousStockFound,
+            new_stock: newStock,
+            difference: newStock - previousStockFound,
+            change_type: 'manual_update',
+            notes: `Actualización manual de stock: de ${previousStockFound} a ${newStock} unidades`
+          });
+        } catch (_) {}
+      }
+    }
+
+    let updatedProduct: any = null;
     const { data, error } = await this.supabase
       .getClient()
       .from('products')
@@ -231,7 +378,26 @@ export class ProductsService {
       .single();
 
     if (error) {
-      throw new InternalServerErrorException(`Error updating product: ${error.message}`);
+      // Fallback sin columnas extendidas si aún no existen en Supabase
+      const fallbackRow = { ...productRow };
+      delete fallbackRow.is_popular;
+      delete fallbackRow.is_featured;
+      delete fallbackRow.is_on_sale;
+      delete fallbackRow.compare_at_price;
+      delete fallbackRow.discount_percentage;
+      const { data: retryData, error: retryErr } = await this.supabase
+        .getClient()
+        .from('products')
+        .update(fallbackRow)
+        .eq('id', id)
+        .select()
+        .single();
+      if (retryErr) {
+        throw new InternalServerErrorException(`Error updating product: ${retryErr.message}`);
+      }
+      updatedProduct = retryData;
+    } else {
+      updatedProduct = data;
     }
 
     // If modifier groups were explicitly provided, replace them
@@ -242,6 +408,13 @@ export class ProductsService {
       }
     }
 
+    this.saveProductMetadata(id, {
+      is_popular: productRow.is_popular,
+      is_featured: productRow.is_featured,
+      is_on_sale: productRow.is_on_sale,
+      compare_at_price: productRow.compare_at_price,
+      discount_percentage: productRow.discount_percentage,
+    });
     return this.findById(id);
   }
 
@@ -472,5 +645,20 @@ export class ProductsService {
       sourceBranchName: mainBranch.name,
       message: `¡Éxito! Se copiaron ${copiedCount} productos y sus modificadores desde ${mainBranch.name}.`
     };
+  }
+
+  async getStockHistory(tenantId?: string, productId?: string) {
+    try {
+      let query = this.supabase.getClient().from('stock_history').select('*').order('created_at', { ascending: false }).limit(100);
+      if (productId) {
+        query = query.eq('product_id', productId);
+      }
+      if (tenantId) {
+        query = query.eq('tenant_id', tenantId);
+      }
+      const { data, error } = await query;
+      if (!error && data) return data;
+    } catch (_) {}
+    return [];
   }
 }

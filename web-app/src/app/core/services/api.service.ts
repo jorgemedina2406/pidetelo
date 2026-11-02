@@ -7,6 +7,9 @@ import { Product, ProductCategory } from '../models/product.model';
 import { Order } from '../models/order.model';
 import { Branch, SubscriptionPlan } from '../models/branch.model';
 import { AppUser } from '../models/user.model';
+import { Banner } from '../models/banner.model';
+import { BusinessCategory } from '../models/category.model';
+import { Coupon } from '../models/coupon.model';
 import { MockDataService } from './mock-data.service';
 import { SupabaseService } from './supabase.service';
 
@@ -111,6 +114,13 @@ export class ApiService {
     );
   }
 
+  uploadImage(data: string, filename?: string): Observable<{ success: boolean; url: string; filename: string }> {
+    return this.http.post<{ success: boolean; url: string; filename: string }>(
+      `${this.baseUrl}/uploads`,
+      { data, filename }
+    );
+  }
+
   // --- PRODUCTOS ---
   getProducts(tenantId: string, branchId?: string, onlyAvailable = false): Observable<Product[]> {
     let url = `${this.baseUrl}/tenants/${tenantId}/products`;
@@ -166,6 +176,11 @@ export class ApiService {
             is_available: productData.is_available ?? productData.isAvailable ?? true,
             sku: productData.sku ? String(productData.sku).trim() : null,
             barcode: productData.barcode ? String(productData.barcode).trim() : null,
+            is_popular: Boolean(productData.is_popular ?? productData.isPopular ?? false),
+            is_featured: Boolean(productData.is_featured ?? productData.isFeatured ?? false),
+            is_on_sale: Boolean(productData.is_on_sale ?? productData.isOnSale ?? false),
+            compare_at_price: (productData.compare_at_price || productData.compareAtPrice) ? Number(productData.compare_at_price || productData.compareAtPrice) : null,
+            discount_percentage: Number(productData.discount_percentage ?? productData.discountPercentage) || 0,
             sort_order: Number(productData.sort_order ?? productData.sortOrder) || 0
           };
           const { data, error } = await client.from('products').insert(row).select().single();
@@ -226,6 +241,22 @@ export class ApiService {
           }
           if (productData.sku !== undefined) row.sku = productData.sku ? String(productData.sku).trim() : null;
           if (productData.barcode !== undefined) row.barcode = productData.barcode ? String(productData.barcode).trim() : null;
+          if (productData.is_popular !== undefined || productData.isPopular !== undefined) {
+            row.is_popular = Boolean(productData.is_popular ?? productData.isPopular);
+          }
+          if (productData.is_featured !== undefined || productData.isFeatured !== undefined) {
+            row.is_featured = Boolean(productData.is_featured ?? productData.isFeatured);
+          }
+          if (productData.is_on_sale !== undefined || productData.isOnSale !== undefined) {
+            row.is_on_sale = Boolean(productData.is_on_sale ?? productData.isOnSale);
+          }
+          if (productData.compare_at_price !== undefined || productData.compareAtPrice !== undefined) {
+            const cap = productData.compare_at_price ?? productData.compareAtPrice;
+            row.compare_at_price = cap ? Number(cap) : null;
+          }
+          if (productData.discount_percentage !== undefined || productData.discountPercentage !== undefined) {
+            row.discount_percentage = Number(productData.discount_percentage ?? productData.discountPercentage) || 0;
+          }
 
           await client.from('products').update(row).eq('id', productId);
 
@@ -536,6 +567,300 @@ export class ApiService {
     );
   }
 
+  // --- BANNERS & PROMOCIONES GLOBALES (SUPER ADMIN) ---
+  getBanners(onlyActive = true): Observable<Banner[]> {
+    const url = onlyActive ? `${this.baseUrl}/banners` : `${this.baseUrl}/banners?all=true`;
+    return this.http.get<any[]>(url).pipe(
+      map(rows => (rows || []).map(r => this.mapBanner(r))),
+      catchError(async () => {
+        const client = this.supabase.rawClient;
+        if (client) {
+          let query = client.from('banners').select('*').order('sort_order', { ascending: true });
+          if (onlyActive) query = query.eq('is_active', true);
+          const { data } = await query;
+          if (data && data.length > 0) return data.map(r => this.mapBanner(r));
+        }
+        return [
+          {
+            id: 'banner_flash_30',
+            title: '30% OFF en tu primer pedido',
+            subtitle: 'Usa el cupón FLASHNOW al pagar',
+            couponCode: 'FLASHNOW',
+            badgeText: '⚡ ENTREGA FLASH 20 MIN',
+            buttonText: 'Pedir ahora',
+            linkUrl: '/explorar',
+            imageUrl: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&auto=format&fit=crop&q=80',
+            bgGradientStart: '#f97316',
+            bgGradientEnd: '#ea580c',
+            sortOrder: 1,
+            isActive: true
+          }
+        ];
+      })
+    );
+  }
+
+  createBanner(payload: Partial<Banner>): Observable<Banner> {
+    const body = {
+      title: payload.title,
+      subtitle: payload.subtitle,
+      coupon_code: payload.couponCode,
+      badge_text: payload.badgeText,
+      button_text: payload.buttonText,
+      link_url: payload.linkUrl,
+      image_url: payload.imageUrl,
+      bg_gradient_start: payload.bgGradientStart,
+      bg_gradient_end: payload.bgGradientEnd,
+      sort_order: payload.sortOrder ?? 0,
+      is_active: payload.isActive ?? true
+    };
+    return this.http.post<any>(`${this.baseUrl}/banners`, body).pipe(
+      map(row => this.mapBanner(row))
+    );
+  }
+
+  updateBanner(id: string, payload: Partial<Banner>): Observable<Banner> {
+    const body: any = {};
+    if (payload.title !== undefined) body.title = payload.title;
+    if (payload.subtitle !== undefined) body.subtitle = payload.subtitle;
+    if (payload.couponCode !== undefined) body.coupon_code = payload.couponCode;
+    if (payload.badgeText !== undefined) body.badge_text = payload.badgeText;
+    if (payload.buttonText !== undefined) body.button_text = payload.buttonText;
+    if (payload.linkUrl !== undefined) body.link_url = payload.linkUrl;
+    if (payload.imageUrl !== undefined) body.image_url = payload.imageUrl;
+    if (payload.bgGradientStart !== undefined) body.bg_gradient_start = payload.bgGradientStart;
+    if (payload.bgGradientEnd !== undefined) body.bg_gradient_end = payload.bgGradientEnd;
+    if (payload.sortOrder !== undefined) body.sort_order = payload.sortOrder;
+    if (payload.isActive !== undefined) body.is_active = payload.isActive;
+
+    return this.http.patch<any>(`${this.baseUrl}/banners/${id}`, body).pipe(
+      map(row => this.mapBanner(row))
+    );
+  }
+
+  deleteBanner(id: string): Observable<boolean> {
+    return this.http.delete<any>(`${this.baseUrl}/banners/${id}`).pipe(
+      map(() => true),
+      catchError(async () => true)
+    );
+  }
+
+  // --- CATEGORIAS GLOBALES DEL MARKETPLACE ---
+  getBusinessCategories(includeInactive = false): Observable<BusinessCategory[]> {
+    const url = includeInactive ? `${this.baseUrl}/categories?includeInactive=true` : `${this.baseUrl}/categories`;
+    return this.http.get<any[]>(url).pipe(
+      map(rows => {
+        if (!rows || rows.length === 0) return [];
+        return rows.map(r => ({
+          id: r.id,
+          name: r.name,
+          slug: r.slug,
+          icon: r.icon || '🛍️',
+          subcategories: Array.isArray(r.subcategories) ? r.subcategories : [],
+          sort_order: r.sort_order ?? 0,
+          is_active: r.is_active ?? true,
+          created_at: r.created_at,
+          updated_at: r.updated_at
+        }));
+      }),
+      catchError(async () => {
+        const client = this.supabase.rawClient;
+        if (client) {
+          try {
+            let query = client.from('business_categories').select('*').order('sort_order');
+            if (!includeInactive) query = query.eq('is_active', true);
+            const { data } = await query;
+            if (data && data.length > 0) {
+              return data.map(r => ({
+                id: r.id,
+                name: r.name,
+                slug: r.slug,
+                icon: r.icon || '🛍️',
+                subcategories: Array.isArray(r.subcategories) ? r.subcategories : [],
+                sort_order: r.sort_order ?? 0,
+                is_active: r.is_active ?? true,
+                created_at: r.created_at,
+                updated_at: r.updated_at
+              }));
+            }
+          } catch (_) {}
+        }
+        return [
+          { id: 'cat_restaurantes', name: 'Restaurantes', slug: 'restaurantes', icon: '🍽️', subcategories: ['Hamburguesas', 'Sushi & Asiática', 'Pastas & Italiana', 'Pizzas', 'Pollos & Brasas', 'Carnes & Grill', 'Comida Rápida', 'Comida Mexicana', 'Café & Bakery', 'Desayunos', 'Arepas & Empanadas'], sort_order: 1, is_active: true },
+          { id: 'cat_super', name: 'Súper', slug: 'super', icon: '🛒', subcategories: ['Víveres', 'Lácteos & Huevos', 'Frutas & Verduras', 'Carnicería & Aves', 'Limpieza', 'Bebidas'], sort_order: 2, is_active: true },
+          { id: 'cat_farmacias', name: 'Farmacias', slug: 'farmacias', icon: '💊', subcategories: ['Medicamentos', 'Cuidado Personal', 'Bebés & Maternidad', 'Primeros Auxilios', 'Vitaminas'], sort_order: 3, is_active: true },
+          { id: 'cat_mascotas', name: 'Mascotas', slug: 'mascotas', icon: '🐾', subcategories: ['Alimento Perros', 'Alimento Gatos', 'Snacks & Premios', 'Higiene & Farmacia', 'Accesorios'], sort_order: 4, is_active: true },
+          { id: 'cat_licores', name: 'Licores', slug: 'licores', icon: '🍷', subcategories: ['Cervezas', 'Vinos', 'Rones', 'Whiskies', 'Snacks & Hielo'], sort_order: 5, is_active: true },
+          { id: 'cat_postres', name: 'Postres', slug: 'postres', icon: '🧁', subcategories: ['Tortas & Pasteles', 'Helados', 'Donas & Churros', 'Chocolatería', 'Galletas'], sort_order: 6, is_active: true }
+        ];
+      })
+    );
+  }
+
+  createBusinessCategory(payload: any): Observable<BusinessCategory> {
+    return this.http.post<BusinessCategory>(`${this.baseUrl}/categories`, payload);
+  }
+
+  updateBusinessCategory(id: string, payload: any): Observable<BusinessCategory> {
+    return this.http.patch<BusinessCategory>(`${this.baseUrl}/categories/${id}`, payload);
+  }
+
+  deleteBusinessCategory(id: string): Observable<boolean> {
+    return this.http.delete<any>(`${this.baseUrl}/categories/${id}`).pipe(
+      map(() => true),
+      catchError(async () => true)
+    );
+  }
+
+  // --- CUPONES DE OFERTA DE COMERCIO ---
+  getCoupons(tenantId: string): Observable<Coupon[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/coupons/tenant/${tenantId}`).pipe(
+      map(rows => {
+        if (!rows || rows.length === 0) return [];
+        return rows.map(r => this.mapCoupon(r));
+      }),
+      catchError(async () => {
+        const client = this.supabase.rawClient;
+        if (client) {
+          try {
+            const { data } = await client.from('coupons').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false });
+            if (data && data.length > 0) return data.map(r => this.mapCoupon(r));
+          } catch (_) {}
+        }
+        return [];
+      })
+    );
+  }
+
+  createCoupon(payload: any): Observable<Coupon> {
+    const body = {
+      tenant_id: payload.tenantId || payload.tenant_id,
+      code: payload.code,
+      description: payload.description || '',
+      discount_type: payload.discountType || payload.discount_type || 'percentage',
+      discount_value: payload.discountValue ?? payload.discount_value ?? 10,
+      min_order_amount: payload.minOrderAmount ?? payload.min_order_amount ?? 0,
+      max_discount: payload.maxDiscountAmount ?? payload.maxDiscount ?? payload.max_discount ?? null,
+      usage_limit: payload.usageLimit ?? payload.usage_limit ?? null,
+      is_active: payload.isActive ?? payload.is_active ?? true,
+      is_global: Boolean(payload.isGlobal ?? payload.is_global),
+      target_condition: payload.targetCondition || payload.target_condition || 'all',
+      expires_at: payload.expiresAt || payload.expires_at || null
+    };
+    return this.http.post<any>(`${this.baseUrl}/coupons`, body).pipe(
+      map(r => this.mapCoupon(r))
+    );
+  }
+
+  updateCoupon(id: string, payload: any): Observable<Coupon> {
+    const body: any = {};
+    if (payload.code !== undefined) body.code = payload.code;
+    if (payload.description !== undefined) body.description = payload.description;
+    if (payload.discountType !== undefined || payload.discount_type !== undefined) body.discount_type = payload.discountType || payload.discount_type;
+    if (payload.discountValue !== undefined || payload.discount_value !== undefined) body.discount_value = payload.discountValue ?? payload.discount_value;
+    if (payload.minOrderAmount !== undefined || payload.min_order_amount !== undefined) body.min_order_amount = payload.minOrderAmount ?? payload.min_order_amount;
+    if (payload.maxDiscountAmount !== undefined || payload.maxDiscount !== undefined || payload.max_discount !== undefined) {
+      body.max_discount = payload.maxDiscountAmount ?? payload.maxDiscount ?? payload.max_discount;
+    }
+    if (payload.isActive !== undefined || payload.is_active !== undefined) body.is_active = payload.isActive ?? payload.is_active;
+    if (payload.expiresAt !== undefined || payload.expires_at !== undefined) body.expires_at = payload.expiresAt ?? payload.expires_at;
+
+    return this.http.patch<any>(`${this.baseUrl}/coupons/${id}`, body).pipe(
+      map(r => this.mapCoupon(r))
+    );
+  }
+
+  deleteCoupon(id: string): Observable<boolean> {
+    return this.http.delete<any>(`${this.baseUrl}/coupons/${id}`).pipe(
+      map(() => true),
+      catchError(async () => true)
+    );
+  }
+
+  getAllCoupons(): Observable<Coupon[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/coupons`).pipe(
+      map(list => (list || []).map(r => this.mapCoupon(r))),
+      catchError(async () => [])
+    );
+  }
+
+  notifyCoupon(couponId: string, condition?: string, tenantName?: string): Observable<{ success: boolean; message: string }> {
+    return this.http.post<any>(`${this.baseUrl}/coupons/${couponId}/notify`, { condition, tenantName }).pipe(
+      catchError(async () => ({ success: false, message: 'Error enviando notificación' }))
+    );
+  }
+
+  getNotifications(condition = 'all', tenantId?: string): Observable<any[]> {
+    let url = `${this.baseUrl}/notifications?condition=${condition}`;
+    if (tenantId) url += `&tenantId=${tenantId}`;
+    return this.http.get<any[]>(url).pipe(
+      catchError(async () => [])
+    );
+  }
+
+  getPlatformUsers(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/users`).pipe(
+      catchError(async () => [])
+    );
+  }
+
+  getMetricsSummary(): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/metrics/summary`).pipe(
+      catchError(async () => null)
+    );
+  }
+
+  getStockHistory(tenantId: string, productId?: string): Observable<any[]> {
+    let url = `${this.baseUrl}/tenants/${tenantId}/stock-history`;
+    if (productId) url += `?productId=${productId}`;
+    return this.http.get<any[]>(url).pipe(
+      catchError(async () => [])
+    );
+  }
+
+  validateCoupon(tenantId: string, code: string, orderAmount: number): Observable<{
+    isValid: boolean;
+    message: string;
+    coupon?: {
+      id: string;
+      code: string;
+      discountType: 'percentage' | 'fixed';
+      discountValue: number;
+      discountAmount: number;
+      finalAmount: number;
+    };
+  }> {
+    return this.http.post<any>(`${this.baseUrl}/coupons/validate`, { tenantId, code, orderAmount }).pipe(
+      catchError(async (err) => ({
+        isValid: false,
+        message: err.error?.message || 'Cupón inválido o expirado'
+      }))
+    );
+  }
+
+  private mapCoupon(r: any): Coupon {
+    return {
+      id: r.id,
+      tenantId: r.tenant_id || r.tenantId,
+      code: r.code,
+      description: r.description || '',
+      discountType: r.discount_type || r.discountType || 'percentage',
+      discountValue: Number(r.discount_value ?? r.discountValue) || 0,
+      minOrderAmount: Number(r.min_order_amount ?? r.minOrderAmount) || 0,
+      maxDiscount: r.max_discount ? Number(r.max_discount) : (r.maxDiscount ? Number(r.maxDiscount) : null),
+      maxDiscountAmount: r.max_discount ? Number(r.max_discount) : (r.maxDiscount ? Number(r.maxDiscount) : (r.maxDiscountAmount ? Number(r.maxDiscountAmount) : null)),
+      usageLimit: r.usage_limit ? Number(r.usage_limit) : null,
+      timesUsed: Number(r.times_used ?? r.timesUsed) || 0,
+      isActive: r.is_active ?? r.isActive ?? true,
+      isGlobal: Boolean(r.is_global ?? r.isGlobal),
+      targetCondition: r.target_condition || r.targetCondition || 'all',
+      notificationSentAt: r.notification_sent_at || r.notificationSentAt || null,
+      expiresAt: r.expires_at || r.expiresAt || null,
+      createdAt: r.created_at || r.createdAt,
+      updatedAt: r.updated_at || r.updatedAt
+    };
+  }
+
   // --- COMERCIOS (UPDATE CON PERSISTENCIA DUAL BACKEND + SUPABASE) ---
   updateTenant(id: string, updateData: any): Observable<any> {
     const saveToSupabaseDirectly = async () => {
@@ -544,6 +869,11 @@ export class ApiService {
         try {
           const supabasePayload: any = { updated_at: new Date().toISOString() };
           if (updateData.name !== undefined) supabasePayload.name = updateData.name;
+          if (updateData.category !== undefined) supabasePayload.category = updateData.category;
+          if (updateData.subcategories !== undefined) supabasePayload.subcategories = updateData.subcategories;
+          if (updateData.is_active !== undefined || updateData.isActive !== undefined) {
+            supabasePayload.is_active = Boolean(updateData.is_active ?? updateData.isActive);
+          }
           if (updateData.accent_color !== undefined) supabasePayload.accent_color = updateData.accent_color;
           if (updateData.logo_url !== undefined) supabasePayload.logo_url = updateData.logo_url;
           if (updateData.banner_url !== undefined) supabasePayload.banner_url = updateData.banner_url;
@@ -556,6 +886,9 @@ export class ApiService {
           if (updateData.base_delivery_fee !== undefined) supabasePayload.base_delivery_fee = Number(updateData.base_delivery_fee);
           if (updateData.delivery_tiers !== undefined || updateData.deliveryTiers !== undefined) {
             supabasePayload.delivery_tiers = updateData.delivery_tiers || updateData.deliveryTiers;
+          }
+          if (updateData.is_featured !== undefined || updateData.isFeatured !== undefined) {
+            supabasePayload.is_featured = Boolean(updateData.is_featured ?? updateData.isFeatured);
           }
 
           const { data } = await client.from('tenants').update(supabasePayload).eq('id', id).select('*').maybeSingle();
@@ -693,8 +1026,10 @@ export class ApiService {
       bannerUrl: defaultBanner,
       rating: Number(row.rating) || 5.0,
       reviewCount: Number(row.review_count) || 0,
-      category: row.category || (row.slug === 'burger-lab' ? 'Hamburguesas' : 'Comercio'),
+      category: row.category || (row.slug === 'burger-lab' ? 'Restaurantes' : 'Restaurantes'),
+      subcategories: Array.isArray(row.subcategories) ? row.subcategories : (row.slug === 'burger-lab' ? ['Hamburguesas'] : []),
       isActive: row.is_active ?? true,
+      isFeatured: Boolean(row.is_featured ?? row.isFeatured ?? false),
       contact: {
         whatsappNumber: row.whatsapp_number || row.phone || '',
         phone: row.phone || '',
@@ -772,12 +1107,34 @@ export class ApiService {
       currency: row.currency || 'USD',
       imageUrl: row.image_url || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&auto=format&fit=crop&q=80',
       isAvailable: row.is_available ?? true,
-      isPopular: row.is_popular ?? false,
-      isFeatured: row.is_featured ?? false,
+      isPopular: Boolean(row.is_popular ?? row.isPopular ?? false),
+      isFeatured: Boolean(row.is_featured ?? row.isFeatured ?? false),
+      isOnSale: Boolean(row.is_on_sale ?? row.isOnSale ?? false),
+      compareAtPrice: (row.compare_at_price || row.compareAtPrice) ? Number(row.compare_at_price || row.compareAtPrice) : undefined,
+      discountPercentage: Number(row.discount_percentage ?? row.discountPercentage) || 0,
       sku: row.sku || '',
       barcode: row.barcode || '',
       branchId: row.branch_id || (row as any).branchId || undefined,
       modifierGroups,
+    };
+  }
+
+  private mapBanner(row: any): Banner {
+    return {
+      id: row.id,
+      title: row.title || '',
+      subtitle: row.subtitle || '',
+      couponCode: row.coupon_code || row.couponCode || '',
+      badgeText: row.badge_text || row.badgeText || 'PROMOCIÓN',
+      buttonText: row.button_text || row.buttonText || 'Pedir ahora',
+      linkUrl: row.link_url || row.linkUrl || '/explorar',
+      imageUrl: row.image_url || row.imageUrl || '',
+      bgGradientStart: row.bg_gradient_start || row.bgGradientStart || '#f97316',
+      bgGradientEnd: row.bg_gradient_end || row.bgGradientEnd || '#ea580c',
+      sortOrder: Number(row.sort_order ?? row.sortOrder) || 0,
+      isActive: row.is_active ?? row.isActive ?? true,
+      createdAt: row.created_at || row.createdAt,
+      updatedAt: row.updated_at || row.updatedAt,
     };
   }
 
@@ -1300,6 +1657,10 @@ export class ApiService {
       whatsapp: r.whatsapp_number || r.whatsapp,
       openTime: r.business_hours?.open || r.open_time || r.openTime || '11:00',
       closeTime: r.business_hours?.close || r.close_time || r.closeTime || '23:00',
+      businessHours: {
+        open: r.business_hours?.open || r.open_time || r.openTime || '11:00',
+        close: r.business_hours?.close || r.close_time || r.closeTime || '23:00'
+      },
       isOpenNow: r.business_hours?.isOpenToday ?? r.is_open_now ?? (r.status === 'active'),
       createdAt: r.created_at || r.createdAt,
       paymentCredentials: this.mapPaymentCredentials(r.branch_payment_credentials || r.paymentCredentials),

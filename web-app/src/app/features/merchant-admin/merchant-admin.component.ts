@@ -11,6 +11,7 @@ import { Order, OrderStatus } from '../../core/models/order.model';
 import { AppUser, UserRole } from '../../core/models/user.model';
 import { Tenant, CurrencyDisplayMode, DeliveryTier } from '../../core/models/tenant.model';
 import { Branch, SubscriptionPlan } from '../../core/models/branch.model';
+import { Coupon } from '../../core/models/coupon.model';
 import { IconComponent } from '../../shared/components/icon.component';
 import { CARACAS_DELIVERY_ROUTE } from '../../core/constants/street-route.data';
 import { CurrencyService } from '../../core/services/currency.service';
@@ -76,7 +77,40 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
   readonly isSidebarExpanded = signal(true);
   readonly isMobileMenuOpen = signal(false);
   readonly productViewMode = signal<'grid' | 'list'>('grid');
-  readonly activeTab = signal<'orders' | 'products' | 'branches' | 'riders' | 'gps_map' | 'users' | 'settings'>('orders');
+  readonly activeTab = signal<'orders' | 'products' | 'branches' | 'riders' | 'gps_map' | 'users' | 'settings' | 'coupons'>('orders');
+
+  // --- SISTEMA DE TOASTS LLAMATIVOS PARA COMERCIO ---
+  readonly activeToasts = signal<{ id: string; type: 'success' | 'error' | 'info'; title: string; message: string }[]>([]);
+
+  showToast(type: 'success' | 'error' | 'info', title: string, message: string): void {
+    const id = `toast_${Date.now()}_${Math.random()}`;
+    this.activeToasts.update(list => [...list, { id, type, title, message }]);
+    setTimeout(() => {
+      this.activeToasts.update(list => list.filter(t => t.id !== id));
+    }, 4500);
+  }
+
+  removeToast(id: string): void {
+    this.activeToasts.update(list => list.filter(t => t.id !== id));
+  }
+
+  readonly coupons = signal<Coupon[]>([]);
+  readonly isCouponModalOpen = signal(false);
+  readonly isSavingCoupon = signal(false);
+  readonly couponActionNotice = signal<string | null>(null);
+
+  // --- NOTIFICAR CUPÓN A CLIENTES SEGÚN CONDICIÓN ---
+  readonly isNotifyCouponModalOpen = signal(false);
+  readonly selectedCouponToNotify = signal<Coupon | null>(null);
+  readonly notificationCondition = signal<string>('all');
+  readonly notificationCustomMessage = signal<string>('¡Aprovecha este descuento especial en tu próximo pedido!');
+  readonly isSendingNotification = signal(false);
+  editingCoupon: Partial<Coupon> = {
+    discountType: 'percentage',
+    discountValue: 10,
+    minOrderAmount: 0,
+    isActive: true
+  };
 
   readonly currentTenant = signal<Tenant>({
     id: this.auth.currentUser()?.tenantId || '',
@@ -230,7 +264,8 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     const plan = this.currentSubscriptionPlan();
     return this.activeBranchesCount() < plan.maxBranches;
   });
-  readonly activeExchangeRate = computed(() => this.currentTenant()?.currencySettings?.exchangeRate || this.brandingForm.exchangeRate || 45.50);
+  readonly liveExchangeRate = signal<number | null>(null);
+  readonly activeExchangeRate = computed(() => this.liveExchangeRate() || this.currentTenant()?.currencySettings?.exchangeRate || this.brandingForm.exchangeRate || 54.50);
 
 
 
@@ -263,7 +298,9 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     ] as DeliveryTier[],
     baseCurrency: 'USD' as 'USD' | 'VES',
     displayMode: 'usd_and_bs' as CurrencyDisplayMode,
-    exchangeRate: 45.50
+    exchangeRate: 45.50,
+    openTime: '11:00',
+    closeTime: '23:00'
   };
 
   addDeliveryTier(): void {
@@ -336,6 +373,8 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     this.brandingForm.exchangeRate = Number(branch.exchangeRate ?? curr?.exchangeRate ?? cached?.exchangeRate ?? tenant.currencySettings?.exchangeRate ?? 45.50);
     this.brandingForm.baseCurrency = (branch.baseCurrency || curr?.baseCurrency || cached?.baseCurrency || tenant.currencySettings?.baseCurrency || 'USD') as 'USD' | 'VES';
     this.brandingForm.displayMode = (branch.displayMode || curr?.displayMode || cached?.displayMode || tenant.currencySettings?.displayMode || 'usd_and_bs') as CurrencyDisplayMode;
+    this.brandingForm.openTime = branch.businessHours?.open || branch.openTime || (branch as any).open_time || (branch as any).openTime || cached?.openTime || '11:00';
+    this.brandingForm.closeTime = branch.businessHours?.close || branch.closeTime || (branch as any).close_time || (branch as any).closeTime || cached?.closeTime || '23:00';
   }
 
   onConfigBranchChange(branchId: string): void {
@@ -760,6 +799,8 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
           }
           if (parsed.deliveryRadiusKm) this.brandingForm.deliveryRadiusKm = Number(parsed.deliveryRadiusKm);
           if (parsed.baseDeliveryFee) this.brandingForm.baseDeliveryFee = Number(parsed.baseDeliveryFee);
+          if (parsed.openTime) this.brandingForm.openTime = parsed.openTime;
+          if (parsed.closeTime) this.brandingForm.closeTime = parsed.closeTime;
         }
       } catch (_) {}
 
@@ -811,6 +852,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
 
       // 3. Cargar sucursales reales (esto fija la sede activa y dispara la carga aislada de pedidos, productos, motorizados y colaboradores)
       this.loadBranches(activeTenantId);
+      this.loadCoupons();
       this.api.getSubscriptionPlans().subscribe(plans => {
         if (plans && plans.length > 0) {
           this.subscriptionPlans.set(plans);
@@ -905,7 +947,9 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     // Preload live exchange rate from DolarApi
     this.currency.fetchDolarApiRate('oficial').then(data => {
       if (data && typeof data.promedio === 'number' && data.promedio > 0) {
-        this.brandingForm.exchangeRate = Number(data.promedio.toFixed(2));
+        const rate = Number(data.promedio.toFixed(2));
+        this.liveExchangeRate.set(rate);
+        this.brandingForm.exchangeRate = rate;
         this.bcvLastUpdated.set(data.fechaActualizacion);
       }
     });
@@ -1671,9 +1715,19 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         branch_id: branchToAssign || null,
         sku: prodToSave.sku?.trim() || null,
         barcode: prodToSave.barcode?.trim() || null,
+        is_popular: Boolean(prodToSave.isPopular),
+        is_featured: Boolean(prodToSave.isFeatured),
+        is_on_sale: Boolean(prodToSave.isOnSale),
+        compare_at_price: prodToSave.compareAtPrice ? Number(prodToSave.compareAtPrice) : null,
+        discount_percentage: Number(prodToSave.discountPercentage) || 0,
+        track_stock: Boolean(prodToSave.trackStock),
+        stock_quantity: Number(prodToSave.stockQuantity) || 0,
         modifierGroups: prodToSave.modifierGroups || []
       }).subscribe({
-        next: () => console.log(`[MerchantAdmin] Producto ${prodToSave.id} actualizado`),
+        next: () => {
+          this.showToast('success', '¡Producto Actualizado!', `"${prodToSave.name}" se actualizó correctamente.`);
+          console.log(`[MerchantAdmin] Producto ${prodToSave.id} actualizado`);
+        },
         error: (err) => console.warn('[MerchantAdmin] Error actualizando producto:', err)
       });
     } else {
@@ -1690,9 +1744,17 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         branch_id: branchToAssign || null,
         sku: prodToSave.sku?.trim() || null,
         barcode: prodToSave.barcode?.trim() || null,
+        is_popular: Boolean(prodToSave.isPopular),
+        is_featured: Boolean(prodToSave.isFeatured),
+        is_on_sale: Boolean(prodToSave.isOnSale),
+        compare_at_price: prodToSave.compareAtPrice ? Number(prodToSave.compareAtPrice) : null,
+        discount_percentage: Number(prodToSave.discountPercentage) || 0,
+        track_stock: Boolean(prodToSave.trackStock),
+        stock_quantity: Number(prodToSave.stockQuantity) || 0,
         modifierGroups: prodToSave.modifierGroups || []
       }).subscribe({
         next: (created) => {
+          this.showToast('success', '¡Nuevo Producto Guardado!', `"${prodToSave.name}" fue agregado al catálogo.`);
           if (created && created.id) {
             this.products.update(list => list.map(p => p.id === prodToSave.id ? { ...p, id: created.id, branchId: branchToAssign } : p));
           }
@@ -2040,6 +2102,18 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       base_currency: this.brandingForm.baseCurrency,
       displayMode: this.brandingForm.displayMode,
       display_mode: this.brandingForm.displayMode,
+      openTime: this.brandingForm.openTime,
+      closeTime: this.brandingForm.closeTime,
+      businessHours: {
+        open: this.brandingForm.openTime,
+        close: this.brandingForm.closeTime,
+        isOpenToday: true
+      },
+      business_hours: {
+        open: this.brandingForm.openTime,
+        close: this.brandingForm.closeTime,
+        isOpenToday: true
+      },
       currencySettings: {
         baseCurrency: this.brandingForm.baseCurrency,
         displayMode: this.brandingForm.displayMode,
@@ -2131,9 +2205,23 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
           displayMode: this.brandingForm.displayMode,
           exchangeRate: Number(this.brandingForm.exchangeRate),
           lastRateUpdate: new Date().toISOString()
+        },
+        business_hours: {
+          open: this.brandingForm.openTime,
+          close: this.brandingForm.closeTime,
+          isOpenToday: true
         }
       }).subscribe({ error: (err) => console.warn('[MerchantAdmin] Sync tenant warning:', err) });
     }
+
+    try {
+      const storageKey = 'deliveryhub_branding_' + (targetBranch?.id || this.currentTenant().id);
+      localStorage.setItem(storageKey, JSON.stringify({
+        ...branchPayload,
+        openTime: this.brandingForm.openTime,
+        closeTime: this.brandingForm.closeTime
+      }));
+    } catch (_) {}
 
     // Guardar específicamente la sucursal seleccionada en el backend
     if (targetBranch) {
@@ -2330,6 +2418,110 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         this.isDeletingBranch.set(false);
         this.deleteBranchErrorMessage.set(err?.error?.message || err?.message || 'Error al eliminar la sucursal en el servidor.');
       }
+    });
+  }
+
+  // --- GESTIÓN DE CUPONES DE OFERTA DEL COMERCIO ---
+  loadCoupons(): void {
+    const tenantId = this.currentTenant().id || this.auth.currentUser()?.tenantId;
+    if (!tenantId) return;
+    this.api.getCoupons(tenantId).subscribe(coupons => {
+      this.coupons.set(coupons || []);
+    });
+  }
+
+  openNewCouponModal(): void {
+    this.editingCoupon = {
+      tenantId: this.currentTenant().id || this.auth.currentUser()?.tenantId || '',
+      code: '',
+      description: '',
+      discountType: 'percentage',
+      discountValue: 10,
+      minOrderAmount: 0,
+      isActive: true
+    };
+    this.isCouponModalOpen.set(true);
+  }
+
+  openEditCouponModal(c: Coupon): void {
+    this.editingCoupon = { ...c };
+    this.isCouponModalOpen.set(true);
+  }
+
+  openNotifyCouponModal(c: Coupon): void {
+    this.selectedCouponToNotify.set(c);
+    this.notificationCondition.set('all');
+    this.notificationCustomMessage.set(`¡Aprovecha hoy un ${c.discountType === 'percentage' ? c.discountValue + '% OFF' : '$' + c.discountValue + ' OFF'} usando el cupón ${c.code} en nuestro menú!`);
+    this.isNotifyCouponModalOpen.set(true);
+  }
+
+  sendCouponNotification(): void {
+    const c = this.selectedCouponToNotify();
+    if (!c) return;
+    this.isSendingNotification.set(true);
+
+    this.api.notifyCoupon(c.id, this.notificationCondition(), this.notificationCustomMessage().trim()).subscribe({
+      next: (res: any) => {
+        this.isSendingNotification.set(false);
+        this.isNotifyCouponModalOpen.set(false);
+        this.showToast('success', '¡Notificación Enviada!', `El cupón ${c.code} fue notificado a los clientes según el criterio seleccionado.`);
+        this.loadCoupons();
+      },
+      error: (err: any) => {
+        this.isSendingNotification.set(false);
+        this.showToast('error', 'Error al Notificar', err.error?.message || 'No se pudo enviar la notificación a los clientes.');
+      }
+    });
+  }
+
+  saveCoupon(): void {
+    if (!this.editingCoupon.code) return;
+    this.isSavingCoupon.set(true);
+    const tenantId = this.currentTenant().id || this.auth.currentUser()?.tenantId || '';
+    this.editingCoupon.tenantId = tenantId;
+
+    if (this.editingCoupon.id) {
+      this.api.updateCoupon(this.editingCoupon.id, this.editingCoupon).subscribe({
+        next: () => {
+          this.isSavingCoupon.set(false);
+          this.isCouponModalOpen.set(false);
+          this.loadCoupons();
+          this.showToast('success', '¡Cupón Actualizado!', `El cupón "${this.editingCoupon.code}" fue guardado exitosamente.`);
+          this.couponActionNotice.set(`✓ Cupón "${this.editingCoupon.code}" actualizado con éxito.`);
+          setTimeout(() => this.couponActionNotice.set(null), 3500);
+        },
+        error: () => this.isSavingCoupon.set(false)
+      });
+    } else {
+      this.api.createCoupon(this.editingCoupon).subscribe({
+        next: (created) => {
+          this.isSavingCoupon.set(false);
+          this.isCouponModalOpen.set(false);
+          this.loadCoupons();
+          this.showToast('success', '¡Cupón Creado!', `El cupón de oferta "${created.code}" ya está activo para tus clientes.`);
+          this.couponActionNotice.set(`✓ Cupón "${created.code}" creado con éxito.`);
+          setTimeout(() => this.couponActionNotice.set(null), 3500);
+        },
+        error: () => this.isSavingCoupon.set(false)
+      });
+    }
+  }
+
+  toggleCouponActive(c: Coupon): void {
+    const nextVal = !c.isActive;
+    this.api.updateCoupon(c.id, { isActive: nextVal }).subscribe(() => {
+      this.coupons.update(list => list.map(item => item.id === c.id ? { ...item, isActive: nextVal } : item));
+      this.showToast('info', 'Estado Actualizado', `Cupón ${c.code} ahora está ${nextVal ? 'activo' : 'pausado'}.`);
+    });
+  }
+
+  deleteCoupon(c: Coupon): void {
+    if (!confirm(`¿Eliminar el cupón de oferta "${c.code}"?`)) return;
+    this.api.deleteCoupon(c.id).subscribe(() => {
+      this.coupons.update(list => list.filter(item => item.id !== c.id));
+      this.showToast('info', 'Cupón Eliminado', `El cupón "${c.code}" fue eliminado.`);
+      this.couponActionNotice.set(`Cupón "${c.code}" eliminado.`);
+      setTimeout(() => this.couponActionNotice.set(null), 3500);
     });
   }
 

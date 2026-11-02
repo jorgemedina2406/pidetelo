@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/models/order_model.dart';
 import '../../../core/models/branch_model.dart';
@@ -28,6 +29,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   int _selectedTab = 0;
   String _selectedCategory = 'Todos';
   bool _isLoadingStores = false;
+  bool _isStoreGridView = false;
+  List<BannerItem> _banners = [];
   Timer? _liveOrdersSyncTimer;
 
   List<Map<String, dynamic>> _stores = [];
@@ -36,6 +39,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   void initState() {
     super.initState();
     _loadTenants();
+    _loadBanners();
     _startLiveOrdersSync();
   }
 
@@ -58,6 +62,51 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   void dispose() {
     _liveOrdersSyncTimer?.cancel();
     super.dispose();
+  }
+
+  Future<void> _loadBanners() async {
+    final banners = await ApiService().fetchBanners();
+    if (mounted) {
+      setState(() {
+        _banners = banners;
+      });
+    }
+  }
+
+  Color _parseHexColor(dynamic hex, {Color fallback = const Color(0xFFF97316)}) {
+    if (hex == null) return fallback;
+    final str = hex.toString().trim();
+    if (str.isEmpty) return fallback;
+    try {
+      final clean = str.replaceAll('#', '');
+      if (clean.length == 6) {
+        return Color(int.parse('0xFF$clean'));
+      } else if (clean.length == 8) {
+        return Color(int.parse('0x$clean'));
+      }
+    } catch (_) {}
+    return fallback;
+  }
+
+  bool _isStoreOpenNow(Map<String, dynamic> store) {
+    try {
+      final openStr = store['open_time'] ?? store['openTime'] ?? '09:00';
+      final closeStr = store['close_time'] ?? store['closeTime'] ?? '23:00';
+      final now = DateTime.now();
+      final cur = now.hour * 60 + now.minute;
+      final oParts = openStr.toString().split(':').map(int.parse).toList();
+      final cParts = closeStr.toString().split(':').map(int.parse).toList();
+      final o = (oParts.isNotEmpty ? oParts[0] : 9) * 60 + (oParts.length > 1 ? oParts[1] : 0);
+      final c = (cParts.isNotEmpty ? cParts[0] : 23) * 60 + (cParts.length > 1 ? cParts[1] : 0);
+
+      if (c > o) {
+        return cur >= o && cur < c;
+      } else {
+        return cur >= o || cur < c;
+      }
+    } catch (_) {
+      return true;
+    }
   }
 
   Future<void> _loadTenants() async {
@@ -96,6 +145,196 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
       MaterialPageRoute(
         builder: (_) => UserProfileScreen(sessionService: widget.sessionService),
       ),
+    );
+  }
+
+  void _openNotificationsSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: widget.sessionService.isDarkMode ? const Color(0xFF0F172A) : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return FutureBuilder<List<Map<String, dynamic>>>(
+          future: ApiService().fetchNotifications(),
+          builder: (context, snapshot) {
+            final isDark = widget.sessionService.isDarkMode;
+            final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+              constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.75),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.notifications_active_rounded, color: AppTheme.primary, size: 24),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Notificaciones & Cupones',
+                            style: GoogleFonts.outfit(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: textColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Promociones exclusivas y cupones enviados para ti',
+                    style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 16),
+                  if (snapshot.connectionState == ConnectionState.waiting)
+                    const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator()))
+                  else if (!snapshot.hasData || snapshot.data!.isEmpty)
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 40),
+                        child: Column(
+                          children: [
+                            const Text('🏷️', style: TextStyle(fontSize: 40)),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Sin notificaciones activas',
+                              style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: textColor),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Los cupones que recibas de tus comercios favoritos aparecerán aquí.',
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  else
+                    Expanded(
+                      child: ListView.separated(
+                        itemCount: snapshot.data!.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        itemBuilder: (context, idx) {
+                          final notif = snapshot.data![idx];
+                          final couponCode = notif['coupon_code'] ?? notif['couponCode'];
+                          return Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        notif['title'] ?? 'Promoción Especial',
+                                        style: GoogleFonts.outfit(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 14,
+                                          color: textColor,
+                                        ),
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.primary.withOpacity(0.15),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        'Pídetelo',
+                                        style: GoogleFonts.outfit(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w800,
+                                          color: AppTheme.primary,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  notif['message'] ?? '',
+                                  style: GoogleFonts.outfit(fontSize: 12, color: isDark ? Colors.grey[300] : Colors.grey[700]),
+                                ),
+                                if (couponCode != null && couponCode.toString().isNotEmpty) ...[
+                                  const SizedBox(height: 12),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                        decoration: BoxDecoration(
+                                          color: Colors.amber.withOpacity(0.15),
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(color: Colors.amber.withOpacity(0.4)),
+                                        ),
+                                        child: Text(
+                                          couponCode.toString().toUpperCase(),
+                                          style: GoogleFonts.firaCode(
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 13,
+                                            color: Colors.amber[800] ?? Colors.amber,
+                                          ),
+                                        ),
+                                      ),
+                                      ElevatedButton.icon(
+                                        onPressed: () {
+                                          Clipboard.setData(ClipboardData(text: couponCode.toString()));
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text('¡Cupón "$couponCode" copiado!'),
+                                              backgroundColor: Colors.emerald,
+                                              duration: const Duration(seconds: 2),
+                                            ),
+                                          );
+                                        },
+                                        icon: const Icon(Icons.copy_rounded, size: 14),
+                                        label: const Text('Copiar'),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: AppTheme.primary,
+                                          foregroundColor: Colors.white,
+                                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                                          textStyle: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.bold),
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -367,6 +606,20 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.notifications_active_outlined, color: AppTheme.primary, size: 22),
+            tooltip: 'Notificaciones y Cupones',
+            onPressed: () => _openNotificationsSheet(context),
+          ),
+          IconButton(
+            icon: Icon(
+              widget.sessionService.isDarkMode ? Icons.wb_sunny_rounded : Icons.nightlight_round,
+              color: widget.sessionService.isDarkMode ? Colors.amber : null,
+              size: 20,
+            ),
+            tooltip: widget.sessionService.isDarkMode ? 'Modo claro' : 'Modo oscuro',
+            onPressed: () => widget.sessionService.toggleTheme(),
+          ),
+          IconButton(
             icon: const Icon(Icons.person_rounded),
             tooltip: 'Mi Perfil',
             onPressed: _openUserProfile,
@@ -589,361 +842,341 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
                 const SizedBox(height: 16),
 
-                // Categories list
+                // 1. CATEGORÍAS CON ICONOS EN FONDO GRIS SUAVE
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Explora por categoría',
+                      style: GoogleFonts.outfit(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => setState(() => _selectedCategory = 'Todos'),
+                      child: Text(
+                        'Ver todos',
+                        style: GoogleFonts.outfit(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.primary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
-                      'Todos',
-                      'Comida',
-                      'Farmacias',
-                      'Markets',
-                      'Repuestos',
-                      'Juguetes',
-                      'Tecnología',
-                      'Mascotas'
-                    ].map((cat) {
-                      final isSelected = _selectedCategory == cat;
+                      {'name': 'Todos', 'icon': '✨', 'filter': 'Todos'},
+                      {'name': 'Restaurantes', 'icon': '🍽️', 'filter': 'Comida'},
+                      {'name': 'Súper', 'icon': '🛒', 'filter': 'Markets'},
+                      {'name': 'Farmacias', 'icon': '💊', 'filter': 'Farmacias'},
+                      {'name': 'Mascotas', 'icon': '🐾', 'filter': 'Mascotas'},
+                      {'name': 'Licores', 'icon': '🍷', 'filter': 'Licores'},
+                      {'name': 'Postres', 'icon': '🧁', 'filter': 'Postres'},
+                    ].map((catData) {
+                      final name = catData['name'] as String;
+                      final icon = catData['icon'] as String;
+                      final filter = catData['filter'] as String;
+                      final isSelected = _selectedCategory == filter;
+
                       return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: FilterChip(
-                          selected: isSelected,
-                          label: Text(cat),
-                          labelStyle: GoogleFonts.outfit(
-                            fontSize: 12,
-                            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                            color: isSelected ? Colors.white : (isDark ? Colors.white70 : const Color(0xFF334155)),
-                          ),
-                          backgroundColor: isDark ? AppTheme.darkSurface : const Color(0xFFF1F5F9),
-                          selectedColor: AppTheme.primary,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            side: BorderSide(
+                        padding: const EdgeInsets.only(right: 10),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(16),
+                          onTap: () => setState(() => _selectedCategory = filter),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 150),
+                            width: 76,
+                            height: 76,
+                            decoration: BoxDecoration(
                               color: isSelected
-                                  ? AppTheme.primary
-                                  : (isDark ? AppTheme.darkBorder : AppTheme.lightBorder),
+                                  ? (isDark ? AppTheme.darkSurface : Colors.white)
+                                  : (isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9)),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: isSelected
+                                    ? AppTheme.primary
+                                    : (isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
+                                width: isSelected ? 2.0 : 1.0,
+                              ),
+                              boxShadow: isSelected
+                                  ? [
+                                      BoxShadow(
+                                        color: AppTheme.primary.withOpacity(0.2),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 3),
+                                      ),
+                                    ]
+                                  : null,
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(icon, style: const TextStyle(fontSize: 24)),
+                                const SizedBox(height: 4),
+                                Text(
+                                  name,
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 10.5,
+                                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                                    color: isSelected
+                                        ? AppTheme.primary
+                                        : (isDark ? Colors.white70 : const Color(0xFF475569)),
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
                             ),
                           ),
-                          onSelected: (val) {
-                            setState(() => _selectedCategory = cat);
-                          },
                         ),
                       );
                     }).toList(),
                   ),
                 ),
 
-                const SizedBox(height: 20),
-
-                // Section Header
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Comercios en Cabudare',
-                      style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.w700),
-                    ),
-                    Text(
-                      '${_stores.length} disponibles',
-                      style: GoogleFonts.outfit(
-                        fontSize: 12,
-                        color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                      ),
-                    ),
-                  ],
-                ),
-                if (_isLoadingStores)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8),
-                    child: LinearProgressIndicator(color: AppTheme.primary, minHeight: 2),
-                  ),
-                const SizedBox(height: 12),
-
-                ..._stores.where((store) {
-                  // Validación de radio de cobertura del comercio respecto a la ubicación del cliente
-                  final selectedAddr = CartService().selectedAddress;
-                  final storeLat = (store['lat'] as num?)?.toDouble() ?? (store['latitude'] as num?)?.toDouble();
-                  final storeLng = (store['lng'] as num?)?.toDouble() ?? (store['longitude'] as num?)?.toDouble();
-                  final maxRadius = (store['delivery_radius_km'] as num?)?.toDouble() ?? (store['deliveryRadiusKm'] as num?)?.toDouble() ?? 8.0;
-                  if (storeLat != null && storeLng != null && storeLat != 0 && storeLng != 0) {
-                    final dist = ApiService.calculateDistanceKm(storeLat, storeLng, selectedAddr.latitude, selectedAddr.longitude);
-                    if (dist > maxRadius) {
-                      return false; // Fuera del radio máximo de cobertura
-                    }
-                  }
-
-                  if (_selectedCategory == 'Todos') return true;
-                  final storeCat = (store['category'] ?? '').toString().toLowerCase();
-                  final storeName = (store['name'] ?? '').toString().toLowerCase();
-                  final target = _selectedCategory.toLowerCase();
-                  if (target == 'comida') {
-                    return storeCat.contains('hamburguesa') ||
-                        storeCat.contains('sushi') ||
-                        storeCat.contains('pizza') ||
-                        storeCat.contains('comida') ||
-                        storeCat.contains('grill') ||
-                        storeCat.contains('restauran');
-                  }
-                  if (target == 'farmacias') {
-                    return storeCat.contains('farma') || storeCat.contains('salud') || storeName.contains('farma');
-                  }
-                  if (target == 'markets') {
-                    return storeCat.contains('market') || storeCat.contains('super') || storeName.contains('market');
-                  }
-                  if (target == 'repuestos') {
-                    return storeCat.contains('repuesto') || storeCat.contains('moto') || storeCat.contains('auto');
-                  }
-                  if (target == 'juguetes') {
-                    return storeCat.contains('juguete') || storeCat.contains('regalo') || storeCat.contains('niño');
-                  }
-                  if (target == 'tecnología') {
-                    return storeCat.contains('tecno') || storeCat.contains('comput') || storeCat.contains('celul');
-                  }
-                  if (target == 'mascotas') {
-                    return storeCat.contains('mascota') || storeCat.contains('veterin');
-                  }
-                  return storeCat.contains(target) || storeName.contains(target);
-                }).map((store) {
-                  final isFav = widget.sessionService.isFavorite(store['id']?.toString() ?? '');
-                  final selectedAddr = CartService().selectedAddress;
-                  final dynamicDeliveryTime = ApiService.calculateDeliveryTime(
-                    store['lat'],
-                    store['lng'],
-                    selectedAddr.latitude,
-                    selectedAddr.longitude,
-                  );
-
-                  final sLat = (store['lat'] as num?)?.toDouble() ?? (store['latitude'] as num?)?.toDouble();
-                  final sLng = (store['lng'] as num?)?.toDouble() ?? (store['longitude'] as num?)?.toDouble();
-                  final storeDist = (sLat != null && sLng != null && sLat != 0 && sLng != 0)
-                      ? ApiService.calculateDistanceKm(sLat, sLng, selectedAddr.latitude, selectedAddr.longitude)
-                      : null;
-                  double storeComputedFee = (store['base_delivery_fee'] as num?)?.toDouble() ?? (store['baseDeliveryFee'] as num?)?.toDouble() ?? 2.50;
-                  final rawTiers = store['delivery_tiers'] ?? store['deliveryTiers'];
-                  if (storeDist != null && rawTiers is List && rawTiers.isNotEmpty) {
-                    for (final t in rawTiers) {
-                      final minK = (t['minKm'] as num?)?.toDouble() ?? (t['min_km'] as num?)?.toDouble() ?? 0.0;
-                      final maxK = (t['maxKm'] as num?)?.toDouble() ?? (t['max_km'] as num?)?.toDouble() ?? 5.0;
-                      final p = (t['price'] as num?)?.toDouble() ?? 2.50;
-                      if (storeDist >= minK && storeDist <= maxK) {
-                        storeComputedFee = p;
-                        break;
-                      }
-                    }
-                  }
-
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 14),
+                // 2. BANNERS PROMOCIONALES / FLASH
+                if (_banners.isNotEmpty) ...[
+                  const SizedBox(height: 18),
+                  ..._banners.take(1).map((b) => Container(
+                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: isDark ? AppTheme.darkSurface : Colors.white,
+                      gradient: LinearGradient(
+                        colors: [
+                          _parseHexColor(b.bgGradientStart, fallback: const Color(0xFFF97316)),
+                          _parseHexColor(b.bgGradientEnd, fallback: const Color(0xFFEA580C)),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
+                          color: const Color(0xFFEA580C).withOpacity(0.35),
+                          blurRadius: 14,
+                          offset: const Offset(0, 5),
                         ),
                       ],
                     ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(20),
-                        onTap: () async {
-                          final rawBranches = store['branches'];
-                          List<Branch> branches = [];
-                          if (rawBranches is List) {
-                            branches = rawBranches
-                                .map((b) => b is Branch ? b : Branch.fromJson(b as Map<String, dynamic>))
-                                .toList();
-                          }
-                          if (branches.isEmpty) {
-                            final fetched = await ApiService().fetchBranchesForCompany(store['id']?.toString() ?? '');
-                            if (fetched.isNotEmpty) branches = fetched;
-                          }
-                          // Filtrar estrictamente solo sucursales activas para clientes (nunca inactivas o pendientes)
-                          branches = branches
-                              .where((b) => b.status == 'active')
-                              .toList();
-
-                          if (!mounted) return;
-
-                          if (branches.length > 1) {
-                            final userAddr = CartService().selectedAddress;
-                            final selected = await BranchSelectorBottomSheet.show(
-                              context: context,
-                              companyName: store['name'] ?? 'Comercio',
-                              branches: branches,
-                              userLat: userAddr.latitude,
-                              userLng: userAddr.longitude,
-                            );
-                            if (selected != null && mounted) {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => StoreDetailScreen(
-                                    storeData: store,
-                                    sessionService: widget.sessionService,
-                                    initialBranch: selected,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (b.badgeText != null && b.badgeText!.isNotEmpty)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  margin: const EdgeInsets.only(bottom: 6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.22),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    b.badgeText!,
+                                    style: GoogleFonts.outfit(fontSize: 9.5, fontWeight: FontWeight.w800, color: Colors.white),
                                   ),
                                 ),
-                              );
-                            }
-                          } else {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => StoreDetailScreen(
-                                  storeData: store,
-                                  sessionService: widget.sessionService,
-                                  initialBranch: branches.isNotEmpty ? branches.first : null,
-                                ),
+                              Text(
+                                b.title,
+                                style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.w900, color: Colors.white, height: 1.15),
                               ),
-                            );
-                          }
-                        },
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Stack(
-                              children: [
-                                ClipRRect(
-                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(19)),
-                                  child: Image.network(
-                                    store['imageUrl'],
-                                    height: 140,
-                                    width: double.infinity,
-                                    fit: BoxFit.cover,
-                                  ),
+                              if (b.subtitle.isNotEmpty) ...[
+                                const SizedBox(height: 3),
+                                Text(
+                                  b.subtitle,
+                                  style: GoogleFonts.outfit(fontSize: 11.5, color: Colors.white.withOpacity(0.92)),
                                 ),
-                                if (store['isPromo'] == true)
-                                  Positioned(
-                                    top: 10,
-                                    left: 10,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              ],
+                              const SizedBox(height: 10),
+                              Row(
+                                children: [
+                                  if (b.couponCode != null && b.couponCode!.isNotEmpty)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                                      margin: const EdgeInsets.only(right: 8),
                                       decoration: BoxDecoration(
-                                        color: AppTheme.primary,
+                                        color: Colors.black.withOpacity(0.25),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Text(
-                                        store['promoText'] ?? 'Envío garantizado',
-                                        style: GoogleFonts.outfit(
-                                          color: Colors.white,
-                                          fontSize: 10.5,
-                                          fontWeight: FontWeight.w700,
-                                        ),
+                                        'Cupón: ${b.couponCode!}',
+                                        style: GoogleFonts.outfit(fontSize: 10.5, fontWeight: FontWeight.w800, color: const Color(0xFFFDE047)),
                                       ),
+                                    ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      b.buttonText ?? 'Pedir ahora',
+                                      style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w800, color: const Color(0xFFEA580C)),
                                     ),
                                   ),
-                                Positioned(
-                                  top: 10,
-                                  right: 10,
-                                  child: Container(
-                                    decoration: const BoxDecoration(
-                                      color: Color(0x99000000),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: IconButton(
-                                      icon: Icon(
-                                        isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                                        color: isFav ? const Color(0xFFEF4444) : Colors.white,
-                                        size: 20,
-                                      ),
-                                      onPressed: () async {
-                                        await widget.sessionService.toggleFavorite(store['id']?.toString() ?? '');
-                                        if (mounted) setState(() {});
-                                      },
-                                    ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (b.imageUrl != null && b.imageUrl!.isNotEmpty)
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(14),
+                            child: Image.network(
+                              b.imageUrl!,
+                              width: 80,
+                              height: 80,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const SizedBox(),
+                            ),
+                          ),
+                      ],
+                    ),
+                  )),
+                ],
+
+                // 3. COMERCIOS DESTACADOS (TOP SELECCIÓN)
+                Builder(
+                  builder: (_) {
+                    final featured = _stores.where((s) => s['isFeatured'] == true || s['is_featured'] == true).toList();
+                    if (featured.isEmpty) return const SizedBox.shrink();
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 20),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                const Text('⭐ ', style: TextStyle(fontSize: 16)),
+                                Text(
+                                  'Comercios Destacados',
+                                  style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w800),
+                                ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF59E0B).withOpacity(0.15),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    'TOP SELECCIÓN',
+                                    style: GoogleFonts.outfit(fontSize: 9, fontWeight: FontWeight.w900, color: const Color(0xFFF59E0B)),
                                   ),
                                 ),
                               ],
                             ),
-                            Padding(
-                              padding: const EdgeInsets.all(14),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          store['name'],
-                                          style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w700),
-                                        ),
-                                      ),
-                                      Row(
-                                        children: [
-                                          const Icon(Icons.star_rounded, size: 16, color: AppTheme.amberAccent),
-                                          const SizedBox(width: 3),
-                                          Text(
-                                            store['rating']?.toString() ?? '4.8',
-                                            style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.w700),
-                                          ),
-                                          if (store['reviewsCount'] != null) ...[
-                                            const SizedBox(width: 3),
-                                            Text(
-                                              '(${store['reviewsCount']})',
-                                              style: GoogleFonts.outfit(
-                                                fontSize: 11,
-                                                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                                              ),
-                                            ),
-                                          ],
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    store['category'] ?? 'Restaurante',
-                                    style: GoogleFonts.outfit(
-                                      fontSize: 12,
-                                      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    children: [
-                                      const Icon(Icons.access_time_rounded, size: 14, color: Colors.grey),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        dynamicDeliveryTime,
-                                        style: GoogleFonts.outfit(fontSize: 11.5, color: Colors.grey),
-                                      ),
-                                      const SizedBox(width: 14),
-                                      const Icon(Icons.delivery_dining_rounded, size: 15, color: Colors.grey),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        'Envío: \$${storeComputedFee.toStringAsFixed(2)}${storeDist != null ? " (${storeDist.toStringAsFixed(1)} km)" : ""}',
-                                        style: GoogleFonts.outfit(fontSize: 11.5, color: Colors.grey),
-                                      ),
-                                      if (store['branches'] is List && (store['branches'] as List).length > 1) ...[
-                                        const SizedBox(width: 14),
-                                        const Icon(Icons.storefront_rounded, size: 14, color: AppTheme.primary),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          '${(store['branches'] as List).length} sedes',
-                                          style: GoogleFonts.outfit(
-                                            fontSize: 11.5,
-                                            color: AppTheme.primary,
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                        ),
-                                      ],
-                                    ],
-                                  ),
-                                ],
-                              ),
+                            Text(
+                              '${featured.length} destacados',
+                              style: GoogleFonts.outfit(fontSize: 11.5, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
                             ),
                           ],
                         ),
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          height: 185,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: featured.length,
+                            separatorBuilder: (_, __) => const SizedBox(width: 12),
+                            itemBuilder: (ctx, fIdx) {
+                              final fStore = featured[fIdx];
+                              return _buildFeaturedStoreCard(fStore, isDark);
+                            },
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 20),
+
+                // Section Header & View switcher (Grid vs List)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Comercios en Cabudare',
+                          style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.w700),
+                        ),
+                        Text(
+                          '${_stores.length} disponibles',
+                          style: GoogleFonts.outfit(
+                            fontSize: 12,
+                            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    // 8. STORE VIEW SWITCHER (CARDS vs LIST)
+                    Container(
+                      decoration: BoxDecoration(
+                        color: isDark ? AppTheme.darkSurface : const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder),
+                      ),
+                      padding: const EdgeInsets.all(2),
+                      child: Row(
+                        children: [
+                          InkWell(
+                            onTap: () => setState(() => _isStoreGridView = false),
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: !_isStoreGridView ? AppTheme.primary : Colors.transparent,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(Icons.view_list_rounded, size: 16, color: !_isStoreGridView ? Colors.white : (isDark ? Colors.white70 : const Color(0xFF64748B))),
+                            ),
+                          ),
+                          InkWell(
+                            onTap: () => setState(() => _isStoreGridView = true),
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: _isStoreGridView ? AppTheme.primary : Colors.transparent,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(Icons.grid_view_rounded, size: 16, color: _isStoreGridView ? Colors.white : (isDark ? Colors.white70 : const Color(0xFF64748B))),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  );
-                }),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // 6. SKELETON LOADERS
+                if (_isLoadingStores)
+                  _buildStoreSkeletons(isDark)
+                else ...[
+                  ..._filterStores().map((store) {
+                    if (_isStoreGridView) {
+                      return _buildStoreGridCard(store, isDark);
+                    } else {
+                      return _buildStoreListCard(store, isDark);
+                    }
+                  }),
+                ],
               ],
             ),
           ),
@@ -1375,4 +1608,514 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
       ),
     );
   }
+
+  List<Map<String, dynamic>> _filterStores() {
+    return _stores.where((store) {
+      final selectedAddr = CartService().selectedAddress;
+      final storeLat = (store['lat'] as num?)?.toDouble() ?? (store['latitude'] as num?)?.toDouble();
+      final storeLng = (store['lng'] as num?)?.toDouble() ?? (store['longitude'] as num?)?.toDouble();
+      final maxRadius = (store['delivery_radius_km'] as num?)?.toDouble() ?? (store['deliveryRadiusKm'] as num?)?.toDouble() ?? 8.0;
+      if (storeLat != null && storeLng != null && storeLat != 0 && storeLng != 0) {
+        final dist = ApiService.calculateDistanceKm(storeLat, storeLng, selectedAddr.latitude, selectedAddr.longitude);
+        if (dist > maxRadius) {
+          return false;
+        }
+      }
+
+      if (_selectedCategory == 'Todos') return true;
+      final storeCat = (store['category'] ?? '').toString().toLowerCase();
+      final storeName = (store['name'] ?? '').toString().toLowerCase();
+      final target = _selectedCategory.toLowerCase();
+      if (target == 'comida') {
+        return storeCat.contains('hamburguesa') ||
+            storeCat.contains('sushi') ||
+            storeCat.contains('pizza') ||
+            storeCat.contains('comida') ||
+            storeCat.contains('grill') ||
+            storeCat.contains('restauran');
+      }
+      if (target == 'farmacias') {
+        return storeCat.contains('farma') || storeCat.contains('salud') || storeName.contains('farma');
+      }
+      if (target == 'markets') {
+        return storeCat.contains('market') || storeCat.contains('super') || storeName.contains('market');
+      }
+      if (target == 'repuestos') {
+        return storeCat.contains('repuesto') || storeCat.contains('moto') || storeCat.contains('auto');
+      }
+      if (target == 'juguetes') {
+        return storeCat.contains('juguete') || storeCat.contains('regalo') || storeCat.contains('niño');
+      }
+      if (target == 'tecnología') {
+        return storeCat.contains('tecno') || storeCat.contains('comput') || storeCat.contains('celul');
+      }
+      if (target == 'mascotas') {
+        return storeCat.contains('mascota') || storeCat.contains('veterin');
+      }
+      if (target == 'licores') {
+        return storeCat.contains('licor') || storeCat.contains('vino') || storeCat.contains('cerveza') || storeCat.contains('bodega');
+      }
+      if (target == 'postres') {
+        return storeCat.contains('postre') || storeCat.contains('dulce') || storeCat.contains('helado') || storeCat.contains('panad');
+      }
+      return storeCat.contains(target) || storeName.contains(target);
+    }).toList();
+  }
+
+  Future<void> _openStore(Map<String, dynamic> store) async {
+    final rawBranches = store['branches'];
+    List<Branch> branches = [];
+    if (rawBranches is List) {
+      branches = rawBranches
+          .map((b) => b is Branch ? b : Branch.fromJson(b as Map<String, dynamic>))
+          .toList();
+    }
+    if (branches.isEmpty) {
+      final fetched = await ApiService().fetchBranchesForCompany(store['id']?.toString() ?? '');
+      if (fetched.isNotEmpty) branches = fetched;
+    }
+    branches = branches.where((b) => b.status == 'active').toList();
+
+    if (!mounted) return;
+
+    if (branches.length > 1) {
+      final userAddr = CartService().selectedAddress;
+      final selected = await BranchSelectorBottomSheet.show(
+        context: context,
+        companyName: store['name'] ?? 'Comercio',
+        branches: branches,
+        userLat: userAddr.latitude,
+        userLng: userAddr.longitude,
+      );
+      if (selected != null && mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => StoreDetailScreen(
+              storeData: store,
+              sessionService: widget.sessionService,
+              initialBranch: selected,
+            ),
+          ),
+        );
+      }
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => StoreDetailScreen(
+            storeData: store,
+            sessionService: widget.sessionService,
+            initialBranch: branches.isNotEmpty ? branches.first : null,
+          ),
+        ),
+      );
+    }
+  }
+
+  Widget _buildFeaturedStoreCard(Map<String, dynamic> store, bool isDark) {
+    final isOpen = _isStoreOpenNow(store);
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: () => _openStore(store),
+      child: Container(
+        width: 220,
+        decoration: BoxDecoration(
+          color: isDark ? AppTheme.darkSurface : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+                  child: Image.network(
+                    store['imageUrl'] ?? 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=500',
+                    height: 95,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(height: 95, color: Colors.grey.shade300),
+                  ),
+                ),
+                Positioned(
+                  top: 8,
+                  left: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF59E0B),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      'TOP SELECCIÓN',
+                      style: GoogleFonts.outfit(fontSize: 8.5, fontWeight: FontWeight.w900, color: Colors.white),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+                    decoration: BoxDecoration(
+                      color: isOpen ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      isOpen ? 'Abierto' : 'Cerrado',
+                      style: GoogleFonts.outfit(fontSize: 8.5, fontWeight: FontWeight.w800, color: Colors.white),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    store['name'] ?? 'Comercio',
+                    style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.w700),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 3),
+                  Row(
+                    children: [
+                      const Icon(Icons.star_rounded, size: 14, color: AppTheme.amberAccent),
+                      const SizedBox(width: 3),
+                      Text(
+                        store['rating']?.toString() ?? '4.9',
+                        style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        store['category'] ?? 'Restaurante',
+                        style: GoogleFonts.outfit(fontSize: 10.5, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStoreGridCard(Map<String, dynamic> store, bool isDark) {
+    final isOpen = _isStoreOpenNow(store);
+    final isFav = widget.sessionService.isFavorite(store['id']?.toString() ?? '');
+    final selectedAddr = CartService().selectedAddress;
+    final sLat = (store['lat'] as num?)?.toDouble() ?? (store['latitude'] as num?)?.toDouble();
+    final sLng = (store['lng'] as num?)?.toDouble() ?? (store['longitude'] as num?)?.toDouble();
+    final storeDist = (sLat != null && sLng != null && sLat != 0 && sLng != 0)
+        ? ApiService.calculateDistanceKm(sLat, sLng, selectedAddr.latitude, selectedAddr.longitude)
+        : null;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.darkSurface : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => _openStore(store),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+                    child: Image.network(
+                      store['imageUrl'] ?? 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=500',
+                      height: 120,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(height: 120, color: Colors.grey.shade300),
+                    ),
+                  ),
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: isOpen ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        isOpen ? '🟢 Abierto' : '🔴 Cerrado',
+                        style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.w800, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        color: Color(0x99000000),
+                        shape: BoxShape.circle,
+                      ),
+                      child: IconButton(
+                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                        padding: EdgeInsets.zero,
+                        icon: Icon(
+                          isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                          color: isFav ? const Color(0xFFEF4444) : Colors.white,
+                          size: 18,
+                        ),
+                        onPressed: () async {
+                          await widget.sessionService.toggleFavorite(store['id']?.toString() ?? '');
+                          if (mounted) setState(() {});
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      store['name'] ?? 'Comercio',
+                      style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 3),
+                    Row(
+                      children: [
+                        const Icon(Icons.star_rounded, size: 14, color: AppTheme.amberAccent),
+                        const SizedBox(width: 3),
+                        Text(
+                          store['rating']?.toString() ?? '4.8',
+                          style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          store['category'] ?? 'Restaurante',
+                          style: GoogleFonts.outfit(fontSize: 11.5, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                        ),
+                        if (storeDist != null) ...[
+                          const Spacer(),
+                          Text(
+                            '${storeDist.toStringAsFixed(1)} km',
+                            style: GoogleFonts.outfit(fontSize: 11.5, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStoreListCard(Map<String, dynamic> store, bool isDark) {
+    final isOpen = _isStoreOpenNow(store);
+    final isFav = widget.sessionService.isFavorite(store['id']?.toString() ?? '');
+    final selectedAddr = CartService().selectedAddress;
+    final sLat = (store['lat'] as num?)?.toDouble() ?? (store['latitude'] as num?)?.toDouble();
+    final sLng = (store['lng'] as num?)?.toDouble() ?? (store['longitude'] as num?)?.toDouble();
+    final storeDist = (sLat != null && sLng != null && sLat != 0 && sLng != 0)
+        ? ApiService.calculateDistanceKm(sLat, sLng, selectedAddr.latitude, selectedAddr.longitude)
+        : null;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.darkSurface : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => _openStore(store),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    store['imageUrl'] ?? 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=500',
+                    width: 72,
+                    height: 72,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(width: 72, height: 72, color: Colors.grey.shade300),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              store['name'] ?? 'Comercio',
+                              style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w700),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: isOpen ? const Color(0xFF10B981).withOpacity(0.12) : const Color(0xFFEF4444).withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              isOpen ? 'Abierto' : 'Cerrado',
+                              style: GoogleFonts.outfit(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w800,
+                                color: isOpen ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        store['category'] ?? 'Restaurante',
+                        style: GoogleFonts.outfit(fontSize: 11.5, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          const Icon(Icons.star_rounded, size: 14, color: AppTheme.amberAccent),
+                          const SizedBox(width: 3),
+                          Text(
+                            store['rating']?.toString() ?? '4.8',
+                            style: GoogleFonts.outfit(fontSize: 11.5, fontWeight: FontWeight.w700),
+                          ),
+                          if (storeDist != null) ...[
+                            const SizedBox(width: 10),
+                            const Icon(Icons.navigation_rounded, size: 12, color: Colors.grey),
+                            const SizedBox(width: 2),
+                            Text(
+                              '${storeDist.toStringAsFixed(1)} km',
+                              style: GoogleFonts.outfit(fontSize: 11, color: Colors.grey),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(
+                    isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                    color: isFav ? const Color(0xFFEF4444) : (isDark ? Colors.white38 : Colors.grey.shade400),
+                    size: 20,
+                  ),
+                  onPressed: () async {
+                    await widget.sessionService.toggleFavorite(store['id']?.toString() ?? '');
+                    if (mounted) setState(() {});
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStoreSkeletons(bool isDark) {
+    return Column(
+      children: List.generate(3, (idx) {
+        return Container(
+          margin: const EdgeInsets.only(bottom: 14),
+          height: 180,
+          decoration: BoxDecoration(
+            color: isDark ? AppTheme.darkSurface : const Color(0xFFF1F5F9),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                height: 110,
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 120,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      width: 40,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      }),
+    );
+  }
+
 }

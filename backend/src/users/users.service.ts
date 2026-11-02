@@ -122,6 +122,96 @@ export class UsersService {
     return user;
   }
 
+  async findAllPlatformUsers() {
+    const allUsers: any[] = [];
+    const client = this.supabase.getClient();
+
+    // 1. Dueños y Colaboradores de Comercio
+    try {
+      const { data: collaborators } = await client
+        .from('store_collaborators')
+        .select('*, tenants(name), branches(name)')
+        .order('created_at', { ascending: false });
+
+      if (collaborators && collaborators.length > 0) {
+        collaborators.forEach(c => {
+          allUsers.push({
+            id: c.id,
+            name: c.name,
+            email: c.email,
+            phone: c.phone || 'N/A',
+            role: c.role || 'merchant_admin',
+            roleLabel: c.role === 'admin' ? 'Administrador Comercio' : (c.role === 'branch_manager' ? 'Encargado de Sucursal' : (c.role === 'kitchen' ? 'Cocina / Caja' : 'Colaborador')),
+            tenantName: c.tenants?.name || 'Comercio',
+            branchName: c.branches?.name || 'Todas las Sedes',
+            isActive: c.is_active ?? true,
+            createdAt: c.created_at
+          });
+        });
+      }
+    } catch (_) {}
+
+    // Fallback colaboradores si Supabase no tiene registros
+    if (allUsers.length === 0) {
+      const local = Array.from(this.localUsers.values());
+      local.forEach(u => {
+        allUsers.push({
+          id: u.id,
+          name: u.name,
+          email: u.email,
+          phone: u.phone || 'N/A',
+          role: u.role || 'merchant_admin',
+          roleLabel: 'Colaborador de Comercio',
+          tenantName: 'Comercio',
+          branchName: u.branch_name || 'Sede Principal',
+          isActive: u.is_active ?? true,
+          createdAt: u.created_at || new Date().toISOString()
+        });
+      });
+    }
+
+    // 2. Motorizados / Riders
+    try {
+      const { data: riders } = await client
+        .from('riders')
+        .select('id, name, email, phone, is_active, vehicle_type, plate_number, created_at')
+        .order('created_at', { ascending: false });
+
+      if (riders && riders.length > 0) {
+        riders.forEach(r => {
+          allUsers.push({
+            id: r.id,
+            name: r.name,
+            email: r.email,
+            phone: r.phone || 'N/A',
+            role: 'rider',
+            roleLabel: 'Motorizado / Repartidor',
+            tenantName: 'Flota Global',
+            branchName: r.vehicle_type ? `${r.vehicle_type} (${r.plate_number || 'N/A'})` : 'Flota Express',
+            isActive: r.is_active ?? true,
+            createdAt: r.created_at || new Date().toISOString()
+          });
+        });
+      }
+    } catch (_) {}
+
+    // 3. Super Administradores
+    allUsers.unshift({
+      id: 'usr_superadmin',
+      name: 'Super Administrador Pídetelo',
+      email: 'admin@pidetelo.app',
+      phone: '+58 412-0000000',
+      role: 'superadmin',
+      roleLabel: 'Super Administrador',
+      tenantName: 'Pídetelo HQ',
+      branchName: 'Global',
+      isActive: true,
+      createdAt: '2026-01-01T00:00:00.000Z'
+    });
+
+    return allUsers;
+  }
+
   async create(tenantId: string, payload: CreateStoreUserDto) {
     const name = payload.name?.trim();
     const email = payload.email?.toLowerCase().trim();

@@ -178,6 +178,10 @@ class Product {
   final String imageUrl;
   final String category;
   final bool isPopular;
+  final bool isFeatured;
+  final bool isOnSale;
+  final double? compareAtPrice;
+  final int? discountPercentage;
   final String? branchId;
   final List<ProductOption> availableOptions;
   final List<ProductModifierGroup> modifierGroups;
@@ -190,6 +194,10 @@ class Product {
     required this.imageUrl,
     required this.category,
     this.isPopular = false,
+    this.isFeatured = false,
+    this.isOnSale = false,
+    this.compareAtPrice,
+    this.discountPercentage,
     this.branchId,
     this.availableOptions = const [],
     this.modifierGroups = const [],
@@ -203,6 +211,10 @@ class Product {
         'imageUrl': imageUrl,
         'category': category,
         'isPopular': isPopular,
+        'isFeatured': isFeatured,
+        'isOnSale': isOnSale,
+        'compareAtPrice': compareAtPrice,
+        'discountPercentage': discountPercentage,
         'branch_id': branchId,
         'availableOptions': availableOptions.map((o) => o.toJson()).toList(),
         'modifier_groups': modifierGroups.map((g) => g.toJson()).toList(),
@@ -222,6 +234,10 @@ class Product {
       imageUrl: json['imageUrl'] ?? json['image_url'] ?? '',
       category: json['category'] ?? json['categories']?['name'] ?? '',
       isPopular: json['isPopular'] ?? json['is_popular'] ?? false,
+      isFeatured: json['isFeatured'] ?? json['is_featured'] ?? false,
+      isOnSale: json['isOnSale'] ?? json['is_on_sale'] ?? false,
+      compareAtPrice: (json['compareAtPrice'] as num?)?.toDouble() ?? (json['compare_at_price'] as num?)?.toDouble(),
+      discountPercentage: (json['discountPercentage'] as num?)?.toInt() ?? (json['discount_percentage'] as num?)?.toInt(),
       branchId: json['branch_id'] ?? json['branchId'],
       availableOptions: (json['availableOptions'] as List? ?? [])
           .map((o) => ProductOption.fromJson(o as Map<String, dynamic>))

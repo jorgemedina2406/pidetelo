@@ -1,6 +1,35 @@
 <div
   class="h-screen max-h-screen w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex overflow-hidden selection:bg-brand-500 selection:text-white transition-colors duration-200 relative">
 
+  <!-- ================= CONTENEDOR DE TOASTS LLAMATIVOS ================= -->
+  <div class="fixed top-5 right-5 z-[9999] flex flex-col gap-2.5 pointer-events-none max-w-sm w-full px-4">
+    @for (t of activeToasts(); track t.id) {
+      <div class="pointer-events-auto transform transition-all duration-300 ease-out flex items-start gap-3 p-4 rounded-2xl shadow-2xl border backdrop-blur-md animate-slide-in"
+           [class.bg-emerald-600]="t.type === 'success'"
+           [class.border-emerald-400]="t.type === 'success'"
+           [class.text-white]="t.type === 'success'"
+           [class.bg-rose-600]="t.type === 'error'"
+           [class.border-rose-400]="t.type === 'error'"
+           [class.text-white]="t.type === 'error'"
+           [class.bg-blue-600]="t.type === 'info'"
+           [class.border-blue-400]="t.type === 'info'"
+           [class.text-white]="t.type === 'info'">
+        <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 text-base font-black">
+          @if (t.type === 'success') { ✓ }
+          @else if (t.type === 'error') { ✕ }
+          @else { ℹ }
+        </div>
+        <div class="flex-1 min-w-0">
+          <h4 class="font-extrabold text-xs tracking-tight leading-tight">{{ t.title }}</h4>
+          <p class="text-[11px] opacity-90 font-medium mt-0.5 leading-relaxed">{{ t.message }}</p>
+        </div>
+        <button (click)="removeToast(t.id)" class="text-white/70 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors">
+          ✕
+        </button>
+      </div>
+    }
+  </div>
+
   <!-- Mobile Backdrop Overlay -->
   @if (isMobileMenuOpen()) {
   <div (click)="isMobileMenuOpen.set(false)"
@@ -308,6 +337,43 @@
           <div
             class="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
             Marca & Moneda
+          </div>
+          }
+        </div>
+
+        <!-- Cupones de Oferta -->
+        <div class="relative group">
+          <button (click)="activeTab.set('coupons')" [class.bg-brand-500]="activeTab() === 'coupons'"
+            [class.text-white]="activeTab() === 'coupons'" [class.shadow-md]="activeTab() === 'coupons'"
+            [class.shadow-brand-500/25]="activeTab() === 'coupons'" [class.text-slate-600]="activeTab() !== 'coupons'"
+            [class.dark:text-slate-400]="activeTab() !== 'coupons'"
+            [class.hover:bg-slate-100]="activeTab() !== 'coupons'"
+            [class.dark:hover:bg-slate-850]="activeTab() !== 'coupons'" [class.justify-center]="!isSidebarExpanded()"
+            [class.w-12]="!isSidebarExpanded()" [class.h-12]="!isSidebarExpanded()"
+            [class.mx-auto]="!isSidebarExpanded()" [class.w-full]="isSidebarExpanded()"
+            [class.px-3]="isSidebarExpanded()" [class.py-2.5]="isSidebarExpanded()"
+            class="flex items-center gap-3 rounded-xl font-bold text-xs transition-all duration-150 active:scale-95 cursor-pointer">
+            <span class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
+              [class.bg-white/20]="activeTab() === 'coupons'" [class.text-white]="activeTab() === 'coupons'"
+              [class.bg-slate-100]="activeTab() !== 'coupons'" [class.dark:bg-slate-800]="activeTab() !== 'coupons'"
+              [class.text-slate-500]="activeTab() !== 'coupons'"
+              [class.dark:text-slate-400]="activeTab() !== 'coupons'">
+              <app-icon name="tag" [size]="17"></app-icon>
+            </span>
+            @if (isSidebarExpanded()) {
+            <span class="truncate flex-1 text-left font-semibold">Cupones de Oferta</span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-black" [class.bg-white/30]="activeTab() === 'coupons'"
+              [class.bg-slate-200]="activeTab() !== 'coupons'" [class.dark:bg-slate-800]="activeTab() !== 'coupons'">
+              {{ coupons().length }}
+            </span>
+            }
+          </button>
+
+          @if (!isSidebarExpanded()) {
+          <div
+            class="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 flex items-center gap-2">
+            <span>Cupones de Oferta</span>
+            <span class="px-1.5 py-0.2 rounded-full bg-brand-500 text-white text-[10px]">{{ coupons().length }}</span>
           </div>
           }
         </div>
@@ -1186,16 +1252,23 @@
                 class="p-3 pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-1.5 mt-1">
                 <!-- Toggle Stock Button -->
                 <button (click)="toggleProductStock(prod.id)"
-                  class="text-[10px] font-semibold px-2 py-1 rounded-md border border-slate-200 dark:border-slate-800 hover:border-brand-500 transition-colors">
+                  class="text-[10px] font-semibold px-2 py-1 rounded-md border border-slate-200 dark:border-slate-800 hover:border-brand-500 transition-colors cursor-pointer">
                   {{ prod.isAvailable ? 'Agotado' : 'Reactivar' }}
                 </button>
 
-                <!-- Edit Extras Button -->
-                <button (click)="openProductModal(prod)"
-                  class="text-[10px] font-bold px-2 py-1 rounded-md bg-brand-500/10 text-brand-600 dark:text-brand-400 hover:bg-brand-500 hover:text-white transition-all flex items-center gap-1">
-                  <app-icon name="sparkles" [size]="12"></app-icon>
-                  <span>{{ i18n.t('ma.configModifiers') }}</span>
-                </button>
+                <!-- Botones de Acción: Editar Producto y Modificadores -->
+                <div class="flex items-center gap-1.5">
+                  <button (click)="openProductModal(prod)"
+                    class="text-[10px] font-bold px-2.5 py-1 rounded-md bg-brand-500 text-white hover:bg-brand-600 transition-all flex items-center gap-1 shadow-xs cursor-pointer">
+                    <app-icon name="edit" [size]="12"></app-icon>
+                    <span>Editar</span>
+                  </button>
+                  <button (click)="openProductModal(prod)"
+                    class="text-[10px] font-bold px-2 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all flex items-center gap-1 cursor-pointer">
+                    <app-icon name="sparkles" [size]="12"></app-icon>
+                    <span>Extras</span>
+                  </button>
+                </div>
               </div>
 
             </div>
@@ -1272,12 +1345,18 @@
                 </div>
 
                 <button (click)="toggleProductStock(prod.id)"
-                  class="text-[10px] font-semibold px-2 py-1 rounded-md border border-slate-200 dark:border-slate-800 hover:border-brand-500 transition-colors">
+                  class="text-[10px] font-semibold px-2 py-1 rounded-md border border-slate-200 dark:border-slate-800 hover:border-brand-500 transition-colors cursor-pointer">
                   {{ prod.isAvailable ? 'Agotado' : 'Reactivar' }}
                 </button>
 
                 <button (click)="openProductModal(prod)"
-                  class="text-[10px] font-bold px-2 py-1 rounded-md bg-brand-500/10 text-brand-600 dark:text-brand-400 hover:bg-brand-500 hover:text-white transition-all flex items-center gap-1">
+                  class="text-[10px] font-bold px-2.5 py-1 rounded-md bg-brand-500 text-white hover:bg-brand-600 transition-all flex items-center gap-1 shadow-xs cursor-pointer">
+                  <app-icon name="edit" [size]="12"></app-icon>
+                  <span>Editar</span>
+                </button>
+
+                <button (click)="openProductModal(prod)"
+                  class="text-[10px] font-bold px-2 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all flex items-center gap-1 cursor-pointer">
                   <app-icon name="sparkles" [size]="12"></app-icon>
                   <span>Extras</span>
                 </button>
@@ -2881,6 +2960,132 @@
         </div>
         }
 
+        <!-- PESTAÑA: CUPONES DE OFERTA -->
+        @if (activeTab() === 'coupons') {
+        <div class="space-y-6">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="text-2xl">🎟️</span>
+                <h2 class="text-xl font-black text-slate-900 dark:text-white">Cupones de Oferta y Descuento</h2>
+              </div>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Crea códigos promocionales exclusivos para tus clientes. Se aplicarán automáticamente al momento de pagar.
+              </p>
+            </div>
+            <button (click)="openNewCouponModal()"
+                    class="inline-flex items-center gap-2 px-4 py-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-brand-500/25 transition">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
+              </svg>
+              <span>+ Nuevo Cupón</span>
+            </button>
+          </div>
+
+          @if (couponActionNotice()) {
+            <div class="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-semibold text-emerald-700 dark:text-emerald-300 flex items-center justify-between">
+              <span>{{ couponActionNotice() }}</span>
+              <button (click)="couponActionNotice.set(null)" class="text-emerald-500 hover:text-emerald-700">✕</button>
+            </div>
+          }
+
+          @if (coupons().length === 0) {
+            <div class="text-center py-16 bg-white dark:bg-slate-800 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+              <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-brand-50 dark:bg-brand-950/40 flex items-center justify-center text-3xl">
+                🏷️
+              </div>
+              <h3 class="text-base font-bold text-slate-800 dark:text-slate-200 mb-1">No tienes cupones creados</h3>
+              <p class="text-xs text-slate-400 dark:text-slate-500 max-w-sm mx-auto mb-6">
+                Impulsa tus ventas ofreciendo descuentos por porcentaje o monto fijo en tus órdenes.
+              </p>
+              <button (click)="openNewCouponModal()"
+                      class="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-bold shadow-md transition">
+                <span>Crear mi primer cupón</span>
+              </button>
+            </div>
+          } @else {
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              @for (c of coupons(); track c.id) {
+                <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm hover:shadow-md transition relative flex flex-col justify-between"
+                     [class.opacity-60]="!c.isActive">
+                  <div>
+                    <div class="flex items-start justify-between gap-3 mb-3">
+                      <div class="flex items-center gap-2">
+                        <span class="px-3 py-1 font-mono font-black text-sm tracking-wider rounded-lg border-2 border-dashed bg-brand-50 dark:bg-brand-950/50 border-brand-400 text-brand-600 dark:text-brand-400">
+                          {{ c.code }}
+                        </span>
+                        @if (c.isActive) {
+                          <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">
+                            Activo
+                          </span>
+                        } @else {
+                          <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400">
+                            Pausado
+                          </span>
+                        }
+                      </div>
+                      <div class="flex items-center gap-1">
+                        <button (click)="openEditCouponModal(c)"
+                                class="p-1.5 text-slate-400 hover:text-brand-600 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                        </button>
+                        <button (click)="deleteCoupon(c)"
+                                class="p-1.5 text-slate-400 hover:text-red-500 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="mb-3">
+                      <div class="text-2xl font-black text-slate-900 dark:text-white">
+                        @if (c.discountType === 'percentage') {
+                          <span>{{ c.discountValue }}% OFF</span>
+                        } @else {
+                          <span>${{ c.discountValue | number:'1.2-2' }} OFF</span>
+                        }
+                      </div>
+                      @if (c.description) {
+                        <p class="text-xs text-slate-600 dark:text-slate-300 mt-1 line-clamp-2">{{ c.description }}</p>
+                      }
+                    </div>
+                    <div class="space-y-1 text-[11px] text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-700/60 pt-3">
+                      <div class="flex justify-between">
+                        <span>Compra mínima:</span>
+                        <span class="font-bold text-slate-700 dark:text-slate-300">{{ (c.minOrderAmount && c.minOrderAmount > 0) ? ('$' + c.minOrderAmount) : 'Sin mínimo' }}</span>
+                      </div>
+                      @if (c.maxDiscountAmount || c.maxDiscount) {
+                        <div class="flex justify-between">
+                          <span>Tope máx. desc:</span>
+                          <span class="font-bold text-slate-700 dark:text-slate-300">${{ c.maxDiscountAmount || c.maxDiscount }}</span>
+                        </div>
+                      }
+                      <div class="flex justify-between">
+                        <span>Límite de uso:</span>
+                        <span class="font-bold text-slate-700 dark:text-slate-300">{{ c.usageLimit ? (c.usageLimit + ' usos') : 'Ilimitado' }}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/60 space-y-2">
+                    <div class="flex items-center justify-between">
+                      <span class="text-[11px] text-slate-400">Estado</span>
+                      <button (click)="toggleCouponActive(c)" class="text-xs font-bold px-3 py-1 rounded-lg border transition cursor-pointer" [class.border-emerald-500]="c.isActive" [class.text-emerald-600]="c.isActive" [class.bg-emerald-50]="c.isActive" [class.dark:bg-emerald-950/40]="c.isActive" [class.border-slate-300]="!c.isActive" [class.text-slate-500]="!c.isActive">
+                        {{ c.isActive ? 'Desactivar' : 'Activar' }}
+                      </button>
+                    </div>
+
+                    <!-- Botón Enviar Notificación a Clientes -->
+                    <button (click)="openNotifyCouponModal(c)"
+                            class="w-full py-2 px-3 rounded-xl bg-brand-500/10 hover:bg-brand-500 text-brand-600 dark:text-brand-400 hover:text-white border border-brand-500/20 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer">
+                      <span>📢</span>
+                      <span>Notificar a Clientes</span>
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+        }
+
       </main>
 
     </div>
@@ -2996,6 +3201,190 @@
     (closeConflict)="closeConflictModal()">
   </app-user-form-modal>
 
+  <!-- MODAL: CREAR / EDITAR CUPÓN DE DESCUENTO -->
+  @if (isCouponModalOpen()) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+    <div class="bg-white dark:bg-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-5 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-700/60 pb-4">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">🏷️</span>
+          <div>
+            <h3 class="text-lg font-black text-slate-900 dark:text-white">{{ editingCoupon.id ? 'Editar Cupón' : 'Nuevo Cupón de Oferta' }}</h3>
+            <p class="text-xs text-slate-400">Configura el código y valor del descuento</p>
+          </div>
+        </div>
+        <button (click)="isCouponModalOpen.set(false)" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-white flex items-center justify-center transition">✕</button>
+      </div>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Código del Cupón <span class="text-rose-500">*</span></label>
+          <input type="text" [(ngModel)]="editingCoupon.code" (input)="editingCoupon.code = editingCoupon.code?.toUpperCase()" placeholder="EJ: VERANO20, FLASH10, HAMBURGUESAS" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm font-mono font-black tracking-wider text-brand-600 dark:text-brand-400 uppercase focus:outline-none focus:border-brand-500" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Descripción / Leyenda</label>
+          <input type="text" [(ngModel)]="editingCoupon.description" placeholder="Ej: 20% de descuento en pedidos mayores a $15" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Tipo de Descuento</label>
+            <select [(ngModel)]="editingCoupon.discountType" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-brand-500">
+              <option value="percentage">Porcentaje (%)</option>
+              <option value="fixed">Monto Fijo ($ USD)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">{{ editingCoupon.discountType === 'percentage' ? 'Porcentaje (%)' : 'Monto ($ USD)' }} <span class="text-rose-500">*</span></label>
+            <input type="number" min="0.01" step="0.5" [(ngModel)]="editingCoupon.discountValue" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Mínimo de Compra ($ USD)</label>
+            <input type="number" min="0" step="1" [(ngModel)]="editingCoupon.minOrderAmount" placeholder="0 (sin mínimo)" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Tope Máx. Desc. ($ USD)</label>
+            <input type="number" min="0" step="1" [(ngModel)]="editingCoupon.maxDiscountAmount" placeholder="Opcional" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Límite Total de Usos</label>
+          <input type="number" min="1" [(ngModel)]="editingCoupon.usageLimit" placeholder="Ej: 100 (dejar en blanco para ilimitado)" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
+        </div>
+        <div class="flex items-center gap-2 pt-2">
+          <input type="checkbox" id="couponIsActive" [(ngModel)]="editingCoupon.isActive" class="w-4 h-4 text-brand-600 rounded border-slate-300 focus:ring-brand-500 cursor-pointer" />
+          <label for="couponIsActive" class="text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">Cupón activo (habilitado para canjear en el checkout)</label>
+        </div>
+      </div>
+      <div class="flex items-center justify-end gap-3 border-t border-slate-100 dark:border-slate-700/60 pt-4">
+        <button (click)="isCouponModalOpen.set(false)" class="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-600 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition">Cancelar</button>
+        <button (click)="saveCoupon()" [disabled]="!editingCoupon.code || isSavingCoupon()" class="px-5 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white text-xs font-bold shadow-md shadow-brand-500/25 transition flex items-center gap-2">
+          @if (isSavingCoupon()) {
+            <span class="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+            <span>Guardando...</span>
+          } @else {
+            <span>{{ editingCoupon.id ? 'Guardar Cambios' : 'Crear Cupón' }}</span>
+          }
+        </button>
+      </div>
+    </div>
+  </div>
+  }
+
+  <!-- ================= MODAL: ENVIAR NOTIFICACIÓN DE CUPÓN ================= -->
+  @if (isNotifyCouponModalOpen() && selectedCouponToNotify(); as selCoupon) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
+         (click)="isNotifyCouponModalOpen.set(false)">
+      <div class="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 w-full max-w-lg rounded-2xl shadow-2xl p-6 border border-slate-200 dark:border-slate-800 space-y-4"
+           (click)="$event.stopPropagation()">
+        
+        <div class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+          <div>
+            <h3 class="text-base font-bold flex items-center gap-2">
+              <span>📢</span>
+              <span>Enviar Cupón por Notificación Push</span>
+            </h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Cupón: <strong class="font-mono text-brand-500">{{ selCoupon.code }}</strong></p>
+          </div>
+          <button (click)="isNotifyCouponModalOpen.set(false)" class="text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer">
+            <app-icon name="x" [size]="18"></app-icon>
+          </button>
+        </div>
+
+        <div class="p-3 bg-brand-50 dark:bg-brand-950/30 border border-brand-200 dark:border-brand-800/60 rounded-xl text-xs space-y-1">
+          <div class="font-bold text-brand-700 dark:text-brand-300 flex items-center gap-1.5">
+            <app-icon name="shield" [size]="14"></app-icon>
+            <span>Privacidad de Clientes Protegida</span>
+          </div>
+          <p class="text-[11px] text-slate-600 dark:text-slate-400">
+            Como comercio, tus datos no exponen información privada de clientes. El sistema inteligente de Pídetelo segmenta y entrega automáticamente la notificación en la app móvil y web a los usuarios que cumplan la condición seleccionada.
+          </p>
+        </div>
+
+        <div class="space-y-3 text-xs">
+          <div>
+            <label class="block font-bold mb-1.5 text-slate-700 dark:text-slate-300">
+              ¿A qué clientes deseas enviar este cupón?
+            </label>
+            <div class="space-y-2">
+              <label class="flex items-start gap-2.5 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-850"
+                     [class.border-brand-500]="notificationCondition() === 'all'"
+                     [class.bg-brand-500/5]="notificationCondition() === 'all'">
+                <input type="radio" [(ngModel)]="notificationCondition" value="all" name="cond" class="mt-0.5 accent-brand-500" />
+                <div>
+                  <div class="font-bold text-xs text-slate-900 dark:text-white">Todos los Clientes en Cobertura</div>
+                  <div class="text-[11px] text-slate-400">Notifica a todos los clientes registrados en tu radio de delivery</div>
+                </div>
+              </label>
+
+              <label class="flex items-start gap-2.5 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-850"
+                     [class.border-brand-500]="notificationCondition() === 'new_customers'"
+                     [class.bg-brand-500/5]="notificationCondition() === 'new_customers'">
+                <input type="radio" [(ngModel)]="notificationCondition" value="new_customers" name="cond" class="mt-0.5 accent-brand-500" />
+                <div>
+                  <div class="font-bold text-xs text-slate-900 dark:text-white">Clientes Nuevos</div>
+                  <div class="text-[11px] text-slate-400">Clientes que aún no han hecho su primera orden en tu local</div>
+                </div>
+              </label>
+
+              <label class="flex items-start gap-2.5 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-850"
+                     [class.border-brand-500]="notificationCondition() === 'frequent_customers'"
+                     [class.bg-brand-500/5]="notificationCondition() === 'frequent_customers'">
+                <input type="radio" [(ngModel)]="notificationCondition" value="frequent_customers" name="cond" class="mt-0.5 accent-brand-500" />
+                <div>
+                  <div class="font-bold text-xs text-slate-900 dark:text-white">Clientes Frecuentes (+5 compras)</div>
+                  <div class="text-[11px] text-slate-400">Recompensa la lealtad de tus clientes más fieles</div>
+                </div>
+              </label>
+
+              <label class="flex items-start gap-2.5 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-850"
+                     [class.border-brand-500]="notificationCondition() === 'inactive_customers'"
+                     [class.bg-brand-500/5]="notificationCondition() === 'inactive_customers'">
+                <input type="radio" [(ngModel)]="notificationCondition" value="inactive_customers" name="cond" class="mt-0.5 accent-brand-500" />
+                <div>
+                  <div class="font-bold text-xs text-slate-900 dark:text-white">Clientes Inactivos (+15 días sin comprar)</div>
+                  <div class="text-[11px] text-slate-400">Reactiva clientes enviándoles un incentivo directo</div>
+                </div>
+              </label>
+
+              <label class="flex items-start gap-2.5 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-850"
+                     [class.border-brand-500]="notificationCondition() === 'high_spenders'"
+                     [class.bg-brand-500/5]="notificationCondition() === 'high_spenders'">
+                <input type="radio" [(ngModel)]="notificationCondition" value="high_spenders" name="cond" class="mt-0.5 accent-brand-500" />
+                <div>
+                  <div class="font-bold text-xs text-slate-900 dark:text-white">Clientes VIP (Compras > $25)</div>
+                  <div class="text-[11px] text-slate-400">Premia a los clientes con mayor valor de compra promedio</div>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <div>
+            <label class="block font-semibold mb-1">Mensaje de la Notificación</label>
+            <input type="text" [ngModel]="notificationCustomMessage()" (ngModelChange)="notificationCustomMessage.set($event)"
+                   placeholder="¡Aprovecha este descuento exclusivo hoy!"
+                   class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs focus:outline-none focus:border-brand-500 font-medium" />
+          </div>
+        </div>
+
+        <div class="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-3">
+          <button (click)="isNotifyCouponModalOpen.set(false)"
+                  class="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">
+            Cancelar
+          </button>
+          <button (click)="sendCouponNotification()" [disabled]="isSendingNotification()"
+                  class="px-5 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white text-xs font-bold shadow-md cursor-pointer flex items-center gap-2">
+            @if (isSendingNotification()) {
+              <span>Enviando...</span>
+            } @else {
+              <span>🚀 Enviar Notificación a Clientes</span>
+            }
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
 
 </div>
 

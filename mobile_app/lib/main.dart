@@ -50,7 +50,7 @@ class DeliveryApp extends StatelessWidget {
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
-          themeMode: ThemeMode.light,
+          themeMode: sessionService.themeMode,
           home: SplashScreen(
             appTitle: 'Pídetelo.',
             subtitle: 'Tu comida favorita, directo a tu puerta',

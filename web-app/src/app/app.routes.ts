@@ -11,25 +11,25 @@ export const routes: Routes = [
     path: 'login',
     canActivate: [guestGuard],
     loadComponent: () => import('./features/auth/login/login.component').then(m => m.LoginComponent),
-    title: 'Iniciar Sesión | DeliveryHub'
+    title: 'Iniciar Sesión | Pídetelo'
   },
   {
     path: 'super-admin',
     canActivate: [superAdminGuard],
     loadComponent: () => import('./features/super-admin/super-admin.component').then(m => m.SuperAdminComponent),
-    title: 'SuperAdmin | Panel Plataforma'
+    title: 'SuperAdmin | Pídetelo'
   },
   {
     path: 'merchant-admin',
     canActivate: [merchantAdminGuard],
     loadComponent: () => import('./features/merchant-admin/merchant-admin.component').then(m => m.MerchantAdminComponent),
-    title: 'Panel Comercio | DeliveryHub'
+    title: 'Panel Comercio | Pídetelo'
   },
   {
     path: 'rider',
     canActivate: [riderGuard],
     loadComponent: () => import('./features/rider-app/rider-app.component').then(m => m.RiderAppComponent),
-    title: 'App Motorizados | DeliveryHub'
+    title: 'App Motorizados | Pídetelo'
   },
   {
     path: 'track/:orderId',

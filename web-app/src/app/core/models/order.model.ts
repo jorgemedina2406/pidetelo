@@ -67,6 +67,7 @@ export interface Order {
   deliveryFee: number;
   tip?: number;
   discount: number;
+  couponCode?: string;
   total: number;
   deliveryLat?: number;
   deliveryLng?: number;

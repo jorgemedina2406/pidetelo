@@ -427,6 +427,7 @@ class ApiService {
                 'longitude': (item['longitude'] as num?)?.toDouble() ?? -69.2812938,
                 'isPromo': false,
                 'promoText': '',
+                'isFeatured': item['is_featured'] ?? item['isFeatured'] ?? false,
                 'branches': branchesList,
               };
             }).toList();
@@ -482,6 +483,7 @@ class ApiService {
             'longitude': (item['longitude'] as num?)?.toDouble() ?? -69.2812938,
             'isPromo': false,
             'promoText': '',
+            'isFeatured': item['is_featured'] ?? item['isFeatured'] ?? false,
             'branches': branchesList,
           };
         }).toList();
@@ -542,6 +544,10 @@ class ApiService {
                   'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600',
               category: category,
               isPopular: item['is_popular'] ?? item['isPopular'] ?? false,
+              isFeatured: item['is_featured'] ?? item['isFeatured'] ?? false,
+              isOnSale: item['is_on_sale'] ?? item['isOnSale'] ?? false,
+              compareAtPrice: (item['compare_at_price'] as num?)?.toDouble() ?? (item['compareAtPrice'] as num?)?.toDouble(),
+              discountPercentage: (item['discount_percentage'] as num?)?.toInt() ?? (item['discountPercentage'] as num?)?.toInt(),
               branchId: item['branch_id'] ?? item['branchId'],
               availableOptions: options,
               modifierGroups: modGroups,
@@ -597,6 +603,10 @@ class ApiService {
               'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600',
           category: category,
           isPopular: item['is_popular'] ?? false,
+          isFeatured: item['is_featured'] ?? false,
+          isOnSale: item['is_on_sale'] ?? false,
+          compareAtPrice: (item['compare_at_price'] as num?)?.toDouble(),
+          discountPercentage: (item['discount_percentage'] as num?)?.toInt(),
           branchId: item['branch_id'],
           availableOptions: options,
           modifierGroups: modGroups,
@@ -607,6 +617,76 @@ class ApiService {
     }
 
     // Zero mock fallback: if no products exist in the database for this branch, return empty list
+    return [];
+  }
+
+  /// Fetch promotional banners from backend or fallback to Supabase
+  Future<List<BannerItem>> fetchBanners() async {
+    final urls = [
+      '${AppConfig.backendBaseUrl}/banners?activeOnly=true',
+      'http://192.168.0.151:3000/api/banners?activeOnly=true',
+      'http://127.0.0.1:3000/api/banners?activeOnly=true',
+    ];
+
+    for (final u in urls) {
+      try {
+        final res = await http.get(Uri.parse(u)).timeout(const Duration(seconds: 3));
+        if (res.statusCode == 200) {
+          final List list = json.decode(res.body);
+          if (list.isNotEmpty) {
+            return list.map((b) => BannerItem.fromJson(b as Map<String, dynamic>)).toList();
+          }
+        }
+      } catch (e) {
+        if (kDebugMode) print('[ApiService] fetchBanners exception on $u: $e');
+      }
+    }
+
+    try {
+      final supabase = Supabase.instance.client;
+      final data = await supabase.from('banners').select().eq('is_active', true).order('sort_order', ascending: true);
+      if (data.isNotEmpty) {
+        return (data as List).map((b) => BannerItem.fromJson(b as Map<String, dynamic>)).toList();
+      }
+    } catch (_) {}
+
+    // Default flash promotion fallback banner
+    return const [
+      BannerItem(
+        id: 'banner_default',
+        title: '30% OFF en tu primer pedido',
+        subtitle: 'Usa el cupón FLASHNOW al pagar',
+        couponCode: 'FLASHNOW',
+        badgeText: '⚡ ENTREGA FLASH 20 MIN',
+        buttonText: 'Pedir ahora',
+        linkUrl: '/explorar',
+        imageUrl: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500',
+        bgGradientStart: '#f97316',
+        bgGradientEnd: '#ea580c',
+        isActive: true,
+      ),
+    ];
+  }
+
+  /// Obtiene notificaciones y cupones dirigidos a los clientes
+  Future<List<Map<String, dynamic>>> fetchNotifications({String? customerId}) async {
+    final urls = [
+      '${AppConfig.backendBaseUrl}/notifications',
+      'http://192.168.0.151:3000/api/notifications',
+      'http://127.0.0.1:3000/api/notifications',
+    ];
+
+    for (final u in urls) {
+      try {
+        final res = await http.get(Uri.parse(u)).timeout(const Duration(seconds: 4));
+        if (res.statusCode == 200) {
+          final decoded = jsonDecode(res.body);
+          if (decoded is List) {
+            return List<Map<String, dynamic>>.from(decoded);
+          }
+        }
+      } catch (_) {}
+    }
     return [];
   }
 

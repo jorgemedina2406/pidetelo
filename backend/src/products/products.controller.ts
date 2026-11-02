@@ -103,4 +103,13 @@ export class ProductsController {
   update(@Param('id') id: string, @Body() updateData: any) {
     return this.productsService.update(id, updateData);
   }
+
+  @Get('tenants/:tenantId/stock-history')
+  @ApiOperation({ summary: 'Obtener historial de auditoría de stock del comercio' })
+  getStockHistory(
+    @Param('tenantId') tenantId: string,
+    @Query('productId') productId?: string
+  ) {
+    return this.productsService.getStockHistory(tenantId, productId);
+  }
 }

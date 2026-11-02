@@ -44,6 +44,10 @@ export interface Branch {
   whatsapp?: string;
   openTime: string;              // e.g. "11:30"
   closeTime: string;             // e.g. "23:00"
+  businessHours?: {
+    open: string;
+    close: string;
+  };
   isOpenNow: boolean;
   paymentCredentials: BranchPaymentCredentials;
   createdAt?: string;

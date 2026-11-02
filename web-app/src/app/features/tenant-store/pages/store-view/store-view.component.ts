@@ -10,9 +10,10 @@ import { ProductDetailModalComponent } from '../../components/product-detail-mod
 import { CartDrawerComponent } from '../../components/cart-drawer/cart-drawer.component';
 import { CheckoutModalComponent } from '../../components/checkout-modal/checkout-modal.component';
 import { OrderSuccessModalComponent } from '../../components/order-success-modal/order-success-modal.component';
-
 import { CurrencyService } from '../../../../core/services/currency.service';
+import { ThemeService } from '../../../../core/services/theme.service';
 import { Branch } from '../../../../core/models/branch.model';
+import { IconComponent } from '../../../../shared/components/icon.component';
 
 @Component({
   selector: 'app-store-view',
@@ -24,7 +25,8 @@ import { Branch } from '../../../../core/models/branch.model';
     ProductDetailModalComponent,
     CartDrawerComponent,
     CheckoutModalComponent,
-    OrderSuccessModalComponent
+    OrderSuccessModalComponent,
+    IconComponent
   ],
   templateUrl: './store-view.component.html'
 })
@@ -34,27 +36,73 @@ export class StoreViewComponent implements OnInit {
   private readonly api = inject(ApiService);
   readonly cart = inject(CartStore);
   readonly currency = inject(CurrencyService);
+  readonly theme = inject(ThemeService);
 
   readonly tenant = signal<Tenant | null>(null);
   readonly categories = signal<ProductCategory[]>([]);
   readonly products = signal<Product[]>([]);
   readonly isLoading = signal<boolean>(true);
   readonly isBranchModalOpen = signal<boolean>(false);
+  readonly liveBcvRate = signal<number | null>(null);
   
   readonly selectedCategory = signal<string | null>(null);
+  readonly specialFilter = signal<'all' | 'offers' | 'featured'>('all');
+  readonly viewMode = signal<'grid' | 'list'>('grid');
   searchQuery = '';
   
   readonly activeModalProduct = signal<Product | null>(null);
 
   readonly activeBranchRate = computed(() => {
-    return this.cart.selectedBranch()?.currencySettings?.exchangeRate ||
-           this.cart.selectedBranch()?.exchangeRate ||
-           this.tenant()?.currencySettings?.exchangeRate || 45.50;
+    const bRate = this.cart.selectedBranch()?.currencySettings?.exchangeRate ||
+                  this.cart.selectedBranch()?.exchangeRate;
+    if (bRate && bRate > 0 && bRate !== 45.50) return Number(bRate.toFixed(2));
+
+    const tRate = this.tenant()?.currencySettings?.exchangeRate;
+    if (tRate && tRate > 0 && tRate !== 45.50) return Number(tRate.toFixed(2));
+
+    const live = this.liveBcvRate();
+    if (live && live > 0) return Number(live.toFixed(2));
+
+    return Number((bRate || tRate || 52.80).toFixed(2));
+  });
+
+  readonly isStoreOpen = computed(() => {
+    const t = this.tenant();
+    if (!t) return { isOpen: true, label: 'Abierto', openStr: '09:00', closeStr: '23:00' };
+    const b = this.cart.selectedBranch();
+    const hours = b?.businessHours || t.deliverySettings?.businessHours;
+    const openStr = hours?.open || '09:00';
+    const closeStr = hours?.close || '23:00';
+
+    const [openH, openM] = openStr.split(':').map(Number);
+    const [closeH, closeM] = closeStr.split(':').map(Number);
+    const now = new Date();
+    const cur = now.getHours() * 60 + now.getMinutes();
+    const o = (openH || 9) * 60 + (openM || 0);
+    const c = (closeH || 23) * 60 + (closeM || 0);
+
+    let open = false;
+    if (c > o) {
+      open = cur >= o && cur < c;
+    } else {
+      open = cur >= o || cur < c;
+    }
+    return {
+      isOpen: open,
+      label: open ? `Abierto • Cierra a las ${closeStr}` : `Cerrado • Abre a las ${openStr}`,
+      openStr,
+      closeStr
+    };
   });
 
   formatPrice(price: number, itemCurrency: 'USD' | 'VES' = 'USD') {
+    const rate = this.activeBranchRate();
     const branchCurr = this.cart.selectedBranch()?.currencySettings;
-    return this.currency.formatPrice(price, itemCurrency, branchCurr || this.tenant()?.currencySettings);
+    const settings = {
+      ...(branchCurr || this.tenant()?.currencySettings || {}),
+      exchangeRate: rate
+    } as any;
+    return this.currency.formatPrice(price, itemCurrency, settings);
   }
 
   selectBranch(branch: Branch): void {
@@ -78,12 +126,19 @@ export class StoreViewComponent implements OnInit {
       this.isLoading.set(true);
       this.api.getProducts(t.id, branch.id, true).subscribe(prods => {
         this.products.set(prods);
+        this.cart.setStoreProducts(prods);
         this.isLoading.set(false);
       });
     }
   }
 
   ngOnInit(): void {
+    this.currency.fetchDolarApiRate('oficial').then(data => {
+      if (data && typeof data.promedio === 'number' && data.promedio > 0) {
+        this.liveBcvRate.set(Number(data.promedio.toFixed(2)));
+      }
+    });
+
     this.route.paramMap.subscribe(params => {
       const slug = params.get('slug');
       if (!slug) {
@@ -139,6 +194,24 @@ export class StoreViewComponent implements OnInit {
           this.tenant.set(cleanStoreData);
           this.cart.setTenant(cleanStoreData);
 
+          // Asegurar carga de todas las sedes activas desde el backend si no venian completas
+          this.api.getBranches(storeData.id).subscribe(branches => {
+            if (branches && branches.length > 0) {
+              const active = branches.filter((b: Branch) => b.status === 'active');
+              if (active.length > 0) {
+                const mergedBranches = active.map((b: Branch) => ({
+                  ...b,
+                  deliveryRadiusKm: Math.max(Number(b.deliveryRadiusKm) || 0, globalRadius),
+                  deliveryTiers: (Array.isArray(b.deliveryTiers) && b.deliveryTiers.length >= globalTiers.length)
+                    ? b.deliveryTiers
+                    : (globalTiers.length > 0 ? globalTiers : b.deliveryTiers)
+                }));
+                cleanStoreData.branches = mergedBranches;
+                this.tenant.set({ ...cleanStoreData, branches: mergedBranches });
+              }
+            }
+          });
+
           // Resolver sucursal desde query param (?branch=slug-o-id o ?sucursal=...)
           const branchParam = this.route.snapshot.queryParamMap.get('branch') ||
                               this.route.snapshot.queryParamMap.get('sucursal') ||
@@ -183,6 +256,7 @@ export class StoreViewComponent implements OnInit {
           const branchIdToLoad = assignedBranch?.id;
           this.api.getProducts(storeData.id, branchIdToLoad, true).subscribe(prods => {
             this.products.set(prods);
+            this.cart.setStoreProducts(prods);
             this.isLoading.set(false);
           });
 
@@ -224,13 +298,19 @@ export class StoreViewComponent implements OnInit {
       });
     }
 
-    const cat = this.selectedCategory();
-    const query = this.searchQuery.trim().toLowerCase();
-
-    if (cat) {
-      list = list.filter(p => p.categoryId === cat);
+    const special = this.specialFilter();
+    if (special === 'offers') {
+      list = list.filter(p => p.isOnSale);
+    } else if (special === 'featured') {
+      list = list.filter(p => p.isPopular || p.isFeatured);
+    } else {
+      const cat = this.selectedCategory();
+      if (cat) {
+        list = list.filter(p => p.categoryId === cat);
+      }
     }
 
+    const query = this.searchQuery.trim().toLowerCase();
     if (query) {
       list = list.filter(p => 
         p.name.toLowerCase().includes(query) || 
@@ -240,6 +320,18 @@ export class StoreViewComponent implements OnInit {
 
     return list;
   });
+
+  setSpecialFilter(filter: 'all' | 'offers' | 'featured'): void {
+    this.specialFilter.set(filter);
+    if (filter !== 'all') {
+      this.selectedCategory.set(null);
+    }
+  }
+
+  selectCategoryFilter(catId: string | null): void {
+    this.selectedCategory.set(catId);
+    this.specialFilter.set('all');
+  }
 
   openProductDetail(product: Product): void {
     this.activeModalProduct.set(product);

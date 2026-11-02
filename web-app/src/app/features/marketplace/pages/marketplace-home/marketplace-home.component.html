@@ -10,7 +10,7 @@
               <img src="assets/logo.png" alt="Logo" class="w-full h-full object-contain" />
             </div>
             <div class="flex items-center gap-2">
-              <span class="font-bold text-slate-900 dark:text-white tracking-tight text-base">DeliveryHub</span>
+              <span class="font-bold text-slate-900 dark:text-white tracking-tight text-base">Pídetelo</span>
               <span class="text-[11px] bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">
                 Marketplace
               </span>
@@ -61,6 +61,18 @@
 
           <!-- Utility Controls -->
           <div class="flex items-center gap-2">
+                        <!-- Notifications & Cupones Bell -->
+            <button (click)="isNotificationsModalOpen.set(!isNotificationsModalOpen())"
+                    class="relative p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 transition-all cursor-pointer"
+                    title="Mis Notificaciones y Cupones">
+              <span class="text-sm">🔔</span>
+              @if (notifications().length > 0) {
+                <span class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-brand-500 text-white text-[9px] font-black flex items-center justify-center animate-pulse">
+                  {{ notifications().length }}
+                </span>
+              }
+            </button>
+
             <!-- Theme Toggle -->
             <button (click)="theme.toggleTheme()" 
                     [title]="theme.isDark() ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'"
@@ -342,4 +354,65 @@
         </div>
       </footer>
 
-    </div>
+    
+      <!-- ================= MODAL: NOTIFICACIONES & CUPONES PARA CLIENTE ================= -->
+      @if (isNotificationsModalOpen()) {
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
+             (click)="isNotificationsModalOpen.set(false)">
+          <div class="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 w-full max-w-md rounded-2xl shadow-2xl p-6 border border-slate-200 dark:border-slate-800 space-y-4 max-h-[85vh] flex flex-col"
+               (click)="$event.stopPropagation()">
+            
+            <div class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+              <div>
+                <h3 class="text-base font-bold flex items-center gap-2">
+                  <span>🔔</span>
+                  <span>Notificaciones & Cupones</span>
+                </h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Ofertas y descuentos exclusivos para ti</p>
+              </div>
+              <button (click)="isNotificationsModalOpen.set(false)" class="text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer">
+                <app-icon name="x" [size]="18"></app-icon>
+              </button>
+            </div>
+
+            <div class="overflow-y-auto flex-1 space-y-3 pr-1">
+              @for (n of notifications(); track n.id) {
+                <div class="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-850/60 space-y-2">
+                  <div class="flex items-start justify-between gap-2">
+                    <span class="font-bold text-xs text-slate-900 dark:text-white">{{ n.title }}</span>
+                    <span class="text-[10px] text-slate-400">{{ n.createdAt ? (n.createdAt | date:'shortTime') : 'Hoy' }}</span>
+                  </div>
+                  <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">{{ n.message }}</p>
+                  @if (n.couponCode) {
+                    <div class="pt-2 flex items-center justify-between gap-2">
+                      <div class="px-2.5 py-1 rounded-lg bg-brand-500/10 text-brand-600 dark:text-brand-400 font-mono font-black text-xs tracking-wider border border-brand-500/20">
+                        {{ n.couponCode }}
+                      </div>
+                      <button (click)="copyCouponCode(n.couponCode)"
+                              class="px-3 py-1 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-[11px] font-bold shadow-xs transition-all cursor-pointer">
+                        {{ copiedCouponCode() === n.couponCode ? '¡Copiado! ✓' : 'Copiar Cupón' }}
+                      </button>
+                    </div>
+                  }
+                </div>
+              } @empty {
+                <div class="text-center py-12 text-slate-400 space-y-2">
+                  <span class="text-3xl block">🏷️</span>
+                  <p class="font-bold text-xs text-slate-600 dark:text-slate-300">No tienes notificaciones pendientes</p>
+                  <p class="text-[11px] text-slate-400">Cuando tus comercios favoritos publiquen cupones y ofertas especiales, aparecerán aquí.</p>
+                </div>
+              }
+            </div>
+
+            <div class="pt-3 border-t border-slate-200 dark:border-slate-800 flex justify-end">
+              <button (click)="isNotificationsModalOpen.set(false)"
+                      class="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold cursor-pointer">
+                Cerrar
+              </button>
+            </div>
+
+          </div>
+        </div>
+      }
+
+</div>
