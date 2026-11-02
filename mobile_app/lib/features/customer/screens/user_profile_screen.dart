@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/models/order_model.dart';
@@ -815,6 +816,142 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     );
   }
 
+  void _showCouponsModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF0F172A),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+      builder: (ctx) => FutureBuilder<List<Map<String, dynamic>>>(
+        future: ApiService().fetchNotifications(),
+        builder: (ctx, snapshot) {
+          final items = (snapshot.data ?? [])
+              .where((n) => n['coupon_code'] != null || n['couponCode'] != null || n['type'] == 'coupon')
+              .toList();
+
+          return Container(
+            constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.75),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    width: 44,
+                    height: 4,
+                    decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    const Icon(Icons.local_offer_rounded, color: Color(0xFFF59E0B), size: 24),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Mis Cupones y Promociones',
+                      style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.white),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Cupones disponibles emitidos por la plataforma y tus comercios',
+                  style: GoogleFonts.outfit(fontSize: 12.5, color: const Color(0xFF94A3B8)),
+                ),
+                const SizedBox(height: 16),
+                if (snapshot.connectionState == ConnectionState.waiting)
+                  const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator(color: AppTheme.primary)))
+                else if (items.isEmpty)
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 36),
+                      child: Column(
+                        children: [
+                          const Text('🏷️', style: TextStyle(fontSize: 40)),
+                          const SizedBox(height: 10),
+                          Text('No tienes cupones vigentes', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                          const SizedBox(height: 4),
+                          Text('Los cupones y ofertas que recibas aparecerán aquí.', style: GoogleFonts.outfit(color: const Color(0xFF94A3B8), fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  Expanded(
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: items.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 10),
+                      itemBuilder: (context, idx) {
+                        final item = items[idx];
+                        final code = (item['coupon_code'] ?? item['couponCode'] ?? '').toString();
+                        return Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1E293B),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: const Color(0xFF334155)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    item['tenant_name'] ?? item['tenantName'] ?? 'Pídetelo',
+                                    style: GoogleFonts.outfit(color: AppTheme.primary, fontWeight: FontWeight.bold, fontSize: 12),
+                                  ),
+                                  if (code.isNotEmpty)
+                                    InkWell(
+                                      onTap: () {
+                                        Clipboard.setData(ClipboardData(text: code));
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('¡Cupón $code copiado!'),
+                                            backgroundColor: const Color(0xFF10B981),
+                                            duration: const Duration(seconds: 2),
+                                          ),
+                                        );
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFF59E0B).withOpacity(0.15),
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(color: const Color(0xFFF59E0B).withOpacity(0.5)),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(code.toUpperCase(), style: GoogleFonts.firaCode(color: const Color(0xFFF59E0B), fontWeight: FontWeight.bold, fontSize: 12)),
+                                            const SizedBox(width: 4),
+                                            const Icon(Icons.copy_rounded, color: Color(0xFFF59E0B), size: 13),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Text(item['title'] ?? 'Cupón de Descuento', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                              const SizedBox(height: 2),
+                              Text(item['message'] ?? item['body'] ?? '', style: GoogleFonts.outfit(color: const Color(0xFFCBD5E1), fontSize: 12)),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   void _showNotificationSettingsModal() {
     showModalBottomSheet(
       context: context,
@@ -1231,13 +1368,24 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                       context: context,
                       icon: Icons.account_balance_wallet_rounded,
                       iconColor: const Color(0xFF10B981),
-                      title: 'Billetera DeliveryHub',
+                      title: 'Billetera Pídetelo',
                       subtitle: 'Saldo: \$${_walletBalance.toStringAsFixed(2)} • Recargas y Métodos',
                       onTap: _showWalletModal,
                     ),
                     Divider(height: 1, indent: 64, color: isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
 
-                    // 4. Configuración de Notificaciones
+                    // 4. Mis Cupones y Promociones
+                    _buildMenuItem(
+                      context: context,
+                      icon: Icons.local_offer_rounded,
+                      iconColor: const Color(0xFFF59E0B),
+                      title: 'Mis Cupones y Descuentos',
+                      subtitle: 'Cupones vigentes y códigos promocionales',
+                      onTap: () => _showCouponsModal(context),
+                    ),
+                    Divider(height: 1, indent: 64, color: isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
+
+                    // 5. Configuración de Notificaciones
                     _buildMenuItem(
                       context: context,
                       icon: Icons.notifications_active_rounded,

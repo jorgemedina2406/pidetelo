@@ -209,8 +209,22 @@
               <option value="fee">Tarifa de Envío</option>
             </select>
           </div>
-            <!-- ================= RESTAURANTS GRID (8px subtle corners, clean cards) ================= -->
-        @if (filteredTenants().length === 0 && !isLoading()) {
+        </div>
+
+        <!-- ================= LOADING SKELETON ================= -->
+        @if (isLoading()) {
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            @for (sk of [1, 2, 3]; track sk) {
+              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden animate-pulse">
+                <div class="h-40 bg-slate-200 dark:bg-slate-800"></div>
+                <div class="p-4 space-y-3">
+                  <div class="h-4 bg-slate-200 dark:bg-slate-800 rounded w-2/3"></div>
+                  <div class="h-3 bg-slate-200 dark:bg-slate-800 rounded w-1/2"></div>
+                </div>
+              </div>
+            }
+          </div>
+        } @else if (filteredTenants().length === 0) {
           <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 sm:p-12 text-center max-w-xl mx-auto space-y-4 my-6 shadow-xs">
             <div class="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-500 mx-auto flex items-center justify-center">
               <app-icon name="map-pin" [size]="28"></app-icon>
@@ -320,21 +334,18 @@
             }
           </div>
         }
-        </div>
 
       </main>
 
       <!-- ================= FOOTER ================= -->
-      <footer class="bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 py-8 px-4 mt-12 text-xs text-slate-500 dark:text-slate-400">
+      <footer class="bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 py-6 px-4 mt-12 text-xs text-slate-500 dark:text-slate-400">
         <div class="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div class="flex items-center gap-2">
             <span class="font-bold text-slate-900 dark:text-white">Pídetelo</span>
-            <span>— Red descentralizada de comercio y logística</span>
+            <span>— Plataforma digital de compras y delivery local</span>
           </div>
-          <div class="flex items-center gap-4">
-            <a routerLink="/rider" class="hover:text-slate-900 dark:hover:text-white transition-colors">Portal Repartidores</a>
-            <a routerLink="/merchant-admin" class="hover:text-slate-900 dark:hover:text-white transition-colors">Portal Comercios</a>
-            <a routerLink="/super-admin" class="hover:text-slate-900 dark:hover:text-white transition-colors">SuperAdmin</a>
+          <div class="flex items-center gap-4 text-[11px] text-slate-400">
+            <span>© 2026 Pídetelo. Todos los derechos reservados.</span>
           </div>
         </div>
       </footer>

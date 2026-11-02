@@ -44,6 +44,7 @@ export type IconName =
   | 'list'
   | 'menu'
   | 'refresh-cw'
+  | 'rotate-ccw'
   | 'crosshair'
   | 'activity'
   | 'settings'
@@ -280,6 +281,10 @@ export type IconName =
           <path d="M21 3v5h-5"/>
           <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
           <path d="M3 21v-5h5"/>
+        }
+        @case ('rotate-ccw') {
+          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+          <path d="M3 3v5h5"/>
         }
         @case ('crosshair') {
           <circle cx="12" cy="12" r="10"/>

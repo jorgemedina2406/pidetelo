@@ -566,7 +566,7 @@ class ApiService {
           .from('products')
           .select('*, categories(name), modifier_groups(*, modifier_options(*))')
           .eq('tenant_id', tenantId)
-          .eq('is_available', true);
+          .or('is_available.eq.true,is_available.is.null');
 
       if (branchId != null && branchId.trim().isNotEmpty && branchId != 'all') {
         query = query.or('branch_id.eq.${branchId.trim()},branch_id.is.null');
@@ -578,7 +578,7 @@ class ApiService {
             .from('products')
             .select('*, categories(name), modifier_groups(*, modifier_options(*))')
             .eq('tenant_id', tenantId)
-            .eq('is_available', true);
+            .or('is_available.eq.true,is_available.is.null');
         data = await fallbackQ.order('sort_order', ascending: true);
       }
       return (data as List).map((item) {

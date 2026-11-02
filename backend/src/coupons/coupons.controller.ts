@@ -33,9 +33,9 @@ export class CouponsController {
   @Post(':id/notify')
   async notifyCustomers(
     @Param('id') id: string,
-    @Body() body: { condition?: string; tenantName?: string }
+    @Body() body: { condition?: string; tenantName?: string; customMessage?: string }
   ) {
-    return this.couponsService.notifyCustomers(id, body?.condition, body?.tenantName);
+    return this.couponsService.notifyCustomers(id, body?.condition, body?.tenantName, body?.customMessage);
   }
 
   @Post('validate')

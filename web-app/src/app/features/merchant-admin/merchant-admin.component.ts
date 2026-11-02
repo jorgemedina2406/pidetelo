@@ -2460,7 +2460,8 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     if (!c) return;
     this.isSendingNotification.set(true);
 
-    this.api.notifyCoupon(c.id, this.notificationCondition(), this.notificationCustomMessage().trim()).subscribe({
+    const tenantName = this.currentTenant()?.name || 'Comercio';
+    this.api.notifyCoupon(c.id, this.notificationCondition(), tenantName, this.notificationCustomMessage().trim()).subscribe({
       next: (res: any) => {
         this.isSendingNotification.set(false);
         this.isNotifyCouponModalOpen.set(false);

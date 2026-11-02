@@ -146,7 +146,7 @@ export class ApiService {
             query = query.or(`branch_id.eq.${branchId},branch_id.is.null`);
           }
           if (onlyAvailable) {
-            query = query.eq('is_available', true);
+            query = query.or('is_available.eq.true,is_available.is.null');
           }
 
           let { data } = await query.order('sort_order');
@@ -155,7 +155,7 @@ export class ApiService {
               .from('products')
               .select('*, modifier_groups(*, modifier_options(*))')
               .eq('tenant_id', tenantId);
-            if (onlyAvailable) fallbackQ = fallbackQ.eq('is_available', true);
+            if (onlyAvailable) fallbackQ = fallbackQ.or('is_available.eq.true,is_available.is.null');
             const res = await fallbackQ.order('sort_order');
             if (res.data && res.data.length > 0) data = res.data;
           }
@@ -794,8 +794,8 @@ export class ApiService {
     );
   }
 
-  notifyCoupon(couponId: string, condition?: string, tenantName?: string): Observable<{ success: boolean; message: string }> {
-    return this.http.post<any>(`${this.baseUrl}/coupons/${couponId}/notify`, { condition, tenantName }).pipe(
+  notifyCoupon(couponId: string, condition?: string, tenantName?: string, customMessage?: string): Observable<{ success: boolean; message: string }> {
+    return this.http.post<any>(`${this.baseUrl}/coupons/${couponId}/notify`, { condition, tenantName, customMessage }).pipe(
       catchError(async () => ({ success: false, message: 'Error enviando notificación' }))
     );
   }

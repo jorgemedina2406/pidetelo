@@ -247,7 +247,7 @@ export class CouponsService {
     return true;
   }
 
-  async notifyCustomers(id: string, condition?: string, tenantName?: string): Promise<{ success: boolean; message: string }> {
+  async notifyCustomers(id: string, condition?: string, tenantName?: string, customMessage?: string): Promise<{ success: boolean; message: string }> {
     const list = this.readLocal();
     const coupon = list.find(c => c.id === id);
     if (!coupon) {
@@ -261,9 +261,11 @@ export class CouponsService {
 
     // Guardar notificación para los clientes (Supabase y archivo local)
     const notifTitle = `🎟️ Cupón de Descuento: ${coupon.code}`;
-    const descText = coupon.discount_type === 'percentage' 
-      ? `Aprovecha un ${coupon.discount_value}% OFF en ${tenantName || 'tu próximo pedido'}.`
-      : `Disfruta de $${coupon.discount_value} OFF en ${tenantName || 'tu próximo pedido'}.`;
+    const descText = (customMessage && customMessage.trim().length > 0)
+      ? customMessage.trim()
+      : (coupon.discount_type === 'percentage' 
+          ? `Aprovecha un ${coupon.discount_value}% OFF en ${tenantName || 'tu próximo pedido'}.`
+          : `Disfruta de $${coupon.discount_value} OFF en ${tenantName || 'tu próximo pedido'}.`);
 
     try {
       await this.notificationsService.create({
@@ -294,10 +296,13 @@ export class CouponsService {
   private formatCondition(cond: string): string {
     switch (cond) {
       case 'new_customers': return 'Clientes Nuevos (sin pedidos previos)';
-      case 'frequent': return 'Clientes Frecuentes (> 3 pedidos)';
-      case 'inactive_15d': return 'Clientes Inactivos (+15 días sin ordenar)';
-      case 'high_ticket': return 'Clientes de Alto Consumo (> $20 promedio)';
-      default: return 'Todos los clientes de la zona';
+      case 'frequent':
+      case 'frequent_customers': return 'Clientes Frecuentes (+5 compras)';
+      case 'inactive_15d':
+      case 'inactive_customers': return 'Clientes Inactivos (+15 días sin comprar)';
+      case 'high_ticket':
+      case 'high_spenders': return 'Clientes VIP (Compras > $25)';
+      default: return 'Todos los clientes en zona de cobertura';
     }
   }
 

@@ -70,7 +70,7 @@ export class ProductsService {
     }
 
     if (onlyAvailable) {
-      query = query.eq('is_available', true);
+      query = query.or('is_available.eq.true,is_available.is.null');
     }
 
     let { data, error } = await query.order('sort_order', { ascending: true });
@@ -87,7 +87,7 @@ export class ProductsService {
         .select('*, categories(id, name), modifier_groups(*, modifier_options(*))')
         .eq('tenant_id', tenantId);
       if (onlyAvailable) {
-        fallbackQuery = fallbackQuery.eq('is_available', true);
+        fallbackQuery = fallbackQuery.or('is_available.eq.true,is_available.is.null');
       }
       const { data: fallbackData } = await fallbackQuery.order('sort_order', { ascending: true });
       if (fallbackData && fallbackData.length > 0) {
