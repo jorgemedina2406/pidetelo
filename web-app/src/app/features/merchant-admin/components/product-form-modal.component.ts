@@ -270,7 +270,7 @@ import { CurrencyService } from '../../../core/services/currency.service';
                   </div>
                   @if (editingProduct.currency === 'VES') {
                   <span class="font-extrabold text-brand-600 dark:text-brand-400 text-sm">
-                    ~${{ (editingProduct.price / effectiveRate()).toFixed(2) }} USD
+                    ~&#36;{{ (editingProduct.price / effectiveRate()).toFixed(2) }} USD
                   </span>
                   } @else {
                   <span class="font-extrabold text-brand-600 dark:text-brand-400 text-sm font-mono">
@@ -422,7 +422,7 @@ import { CurrencyService } from '../../../core/services/currency.service';
             <div class="flex items-center gap-2">
               <span class="text-xs font-bold text-slate-500 hidden sm:inline">Precio configurado:</span>
               <span class="text-sm font-extrabold text-brand-600 dark:text-brand-400">
-                ${{ editingProduct.price || 0 }} {{ editingProduct.currency }}
+                &#36;{{ editingProduct.price || 0 }} {{ editingProduct.currency }}
               </span>
               <span class="text-xs text-slate-400 font-mono">
                 (~Bs. {{ ((editingProduct.price || 0) * effectiveRate()).toFixed(2) }})
