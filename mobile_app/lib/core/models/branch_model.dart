@@ -138,6 +138,10 @@ class Branch {
     this.isFeatured = false,
   });
 
+  /// Aliases for opening and closing business hours
+  String get businessHoursOpen => openTime;
+  String get businessHoursClose => closeTime;
+
   /// Check whether the store branch is within its open business hours
   bool get isOpenRightNow {
     try {
