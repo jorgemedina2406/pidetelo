@@ -140,9 +140,6 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
       });
     }
     var prods = await ApiService().fetchProductsByTenant(tenantId, branchId: branchId);
-    if (prods.isEmpty && branchId != null) {
-      prods = await ApiService().fetchProductsByTenant(tenantId, branchId: null);
-    }
     if (mounted) {
       setState(() {
         _products = prods;
@@ -1037,10 +1034,10 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                 duration: const Duration(milliseconds: 200),
                                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                                 decoration: BoxDecoration(
-                                  color: isSel ? storeAccent : const Color(0xFF1E293B),
+                                  color: isSel ? storeAccent : (isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9)),
                                   borderRadius: BorderRadius.circular(20),
                                   border: Border.all(
-                                    color: isSel ? storeAccent : Colors.white10,
+                                    color: isSel ? storeAccent : cardBorderColor,
                                   ),
                                 ),
                                 child: Text(
@@ -1048,7 +1045,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                   style: GoogleFonts.outfit(
                                     fontSize: 13,
                                     fontWeight: isSel ? FontWeight.w700 : FontWeight.w500,
-                                    color: isSel ? Colors.white : const Color(0xFF94A3B8),
+                                    color: isSel ? Colors.white : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569)),
                                   ),
                                 ),
                               ),
@@ -1070,13 +1067,13 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                     children: [
                       Text(
                         'Menú & Platillos',
-                        style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.w800, color: Colors.white),
+                        style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.w800, color: textColor),
                       ),
                       Container(
                         decoration: BoxDecoration(
-                          color: const Color(0xFF1E293B),
+                          color: cardBgColor,
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: Colors.white12),
+                          border: Border.all(color: cardBorderColor),
                         ),
                         padding: const EdgeInsets.all(2),
                         child: Row(
@@ -1090,7 +1087,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                   color: !_isProductGridView ? storeAccent : Colors.transparent,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: Icon(Icons.view_list_rounded, size: 16, color: !_isProductGridView ? Colors.white : Colors.white60),
+                                child: Icon(Icons.view_list_rounded, size: 16, color: !_isProductGridView ? Colors.white : (isDark ? Colors.white60 : const Color(0xFF64748B))),
                               ),
                             ),
                             InkWell(
@@ -1102,7 +1099,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                   color: _isProductGridView ? storeAccent : Colors.transparent,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: Icon(Icons.grid_view_rounded, size: 16, color: _isProductGridView ? Colors.white : Colors.white60),
+                                child: Icon(Icons.grid_view_rounded, size: 16, color: _isProductGridView ? Colors.white : (isDark ? Colors.white60 : const Color(0xFF64748B))),
                               ),
                             ),
                           ],
@@ -1165,9 +1162,9 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                     margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
                     padding: const EdgeInsets.all(28),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF1E293B),
+                      color: cardBgColor,
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.white10),
+                      border: Border.all(color: cardBorderColor),
                     ),
                     child: Column(
                       children: [
@@ -1185,7 +1182,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                           style: GoogleFonts.outfit(
                             fontSize: 17,
                             fontWeight: FontWeight.w700,
-                            color: Colors.white,
+                            color: textColor,
                           ),
                         ),
                         const SizedBox(height: 6),
@@ -1196,7 +1193,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                           textAlign: TextAlign.center,
                           style: GoogleFonts.outfit(
                             fontSize: 13,
-                            color: const Color(0xFF94A3B8),
+                            color: subtextColor,
                           ),
                         ),
                       ],
@@ -1616,12 +1613,17 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
   }
 
   Widget _buildBadge(IconData icon, String text, Color color) {
+    final isDark = widget.sessionService?.isDarkMode ?? (Theme.of(context).brightness == Brightness.dark);
+    final bg = isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9);
+    final border = isDark ? Colors.white10 : const Color(0xFFE2E8F0);
+    final txt = isDark ? Colors.white : const Color(0xFF0F172A);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
+        color: bg,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.white10),
+        border: Border.all(color: border),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1630,7 +1632,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
           const SizedBox(width: 4),
           Text(
             text,
-            style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white),
+            style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w700, color: txt),
           ),
         ],
       ),

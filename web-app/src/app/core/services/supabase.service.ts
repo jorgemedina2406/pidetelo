@@ -167,32 +167,38 @@ export class SupabaseService {
   subscribeToOrders(tenantId: string, onChange: (payload: any) => void) {
     if (!this.client) return null;
 
-    return this.client
-      .channel(`orders:${tenantId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'orders', filter: `tenant_id=eq.${tenantId}` },
-        onChange
-      )
-      .on(
-        'broadcast',
-        { event: 'order_rejected' },
-        (eventPayload: any) => {
-          if (eventPayload && eventPayload['payload']) {
-            onChange({ eventType: 'REJECTED_BY_RIDER', order: eventPayload['payload'] });
+    try {
+      const channelId = `orders:${tenantId}:${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      return this.client
+        .channel(channelId)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'orders', filter: `tenant_id=eq.${tenantId}` },
+          onChange
+        )
+        .on(
+          'broadcast',
+          { event: 'order_rejected' },
+          (eventPayload: any) => {
+            if (eventPayload && eventPayload['payload']) {
+              onChange({ eventType: 'REJECTED_BY_RIDER', order: eventPayload['payload'] });
+            }
           }
-        }
-      )
-      .on(
-        'broadcast',
-        { event: 'order_status_updated' },
-        (eventPayload: any) => {
-          if (eventPayload && eventPayload['payload']) {
-            onChange({ eventType: 'UPDATE', new: eventPayload['payload'] });
+        )
+        .on(
+          'broadcast',
+          { event: 'order_status_updated' },
+          (eventPayload: any) => {
+            if (eventPayload && eventPayload['payload']) {
+              onChange({ eventType: 'UPDATE', new: eventPayload['payload'] });
+            }
           }
-        }
-      )
-      .subscribe();
+        )
+        .subscribe();
+    } catch (e) {
+      console.warn('[SupabaseService] subscribeToOrders failed:', e);
+      return null;
+    }
   }
 
   async broadcastOrderRejected(tenantId: string, orderData: { id: string; orderNumber: string; riderName?: string }): Promise<void> {
@@ -212,35 +218,47 @@ export class SupabaseService {
   subscribeToRiderTelemetry(orderId: string, onTelemetry: (telemetry: any) => void) {
     if (!this.client) return null;
 
-    return this.client
-      .channel(`telemetry:${orderId}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'rider_telemetry', filter: `order_id=eq.${orderId}` },
-        payload => onTelemetry(payload.new)
-      )
-      .on(
-        'broadcast',
-        { event: 'telemetry_update' },
-        (eventPayload: any) => {
-          if (eventPayload && eventPayload['payload']) {
-            onTelemetry(eventPayload['payload']);
+    try {
+      const channelId = `telemetry:${orderId}:${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      return this.client
+        .channel(channelId)
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'rider_telemetry', filter: `order_id=eq.${orderId}` },
+          payload => onTelemetry(payload.new)
+        )
+        .on(
+          'broadcast',
+          { event: 'telemetry_update' },
+          (eventPayload: any) => {
+            if (eventPayload && eventPayload['payload']) {
+              onTelemetry(eventPayload['payload']);
+            }
           }
-        }
-      )
-      .subscribe();
+        )
+        .subscribe();
+    } catch (e) {
+      console.warn('[SupabaseService] subscribeToRiderTelemetry failed:', e);
+      return null;
+    }
   }
 
   subscribeToRiders(onChange: (payload: any) => void) {
     if (!this.client) return null;
 
-    return this.client
-      .channel('riders:live')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'riders' },
-        payload => onChange(payload)
-      )
-      .subscribe();
+    try {
+      const channelId = `riders:live:${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      return this.client
+        .channel(channelId)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'riders' },
+          payload => onChange(payload)
+        )
+        .subscribe();
+    } catch (e) {
+      console.warn('[SupabaseService] subscribeToRiders failed:', e);
+      return null;
+    }
   }
 }

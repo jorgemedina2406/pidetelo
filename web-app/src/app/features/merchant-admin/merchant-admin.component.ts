@@ -978,13 +978,17 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     };
 
     if (activeTenantId) {
-      this.realtimeChannel = this.supabase.subscribeToOrders(activeTenantId, (payload) => {
-        console.log('[MerchantAdmin] Realtime event from Supabase:', payload);
-        if (payload && payload.eventType === 'REJECTED_BY_RIDER' && payload.order) {
-          triggerRejectionAlert(payload.order.orderNumber || payload.order.id, payload.order.riderName);
-        }
-        reloadOrders();
-      });
+      try {
+        this.realtimeChannel = this.supabase.subscribeToOrders(activeTenantId, (payload) => {
+          console.log('[MerchantAdmin] Realtime event from Supabase:', payload);
+          if (payload && payload.eventType === 'REJECTED_BY_RIDER' && payload.order) {
+            triggerRejectionAlert(payload.order.orderNumber || payload.order.id, payload.order.riderName);
+          }
+          reloadOrders();
+        });
+      } catch (e) {
+        console.warn('[MerchantAdmin] Realtime subscribeToOrders caught error:', e);
+      }
     }
 
     // Polling de respaldo para órdenes y ubicación en vivo de motorizados (Supabase Realtime notifica al instante)
@@ -994,9 +998,13 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
 
     // Carga inicial, Realtime y polling de respaldo cada 4 segundos para telemetría GPS de motorizados
     this.refreshRidersLocation();
-    this.supabase.subscribeToRiders(() => {
-      this.refreshRidersLocation();
-    });
+    try {
+      this.supabase.subscribeToRiders(() => {
+        this.refreshRidersLocation();
+      });
+    } catch (e) {
+      console.warn('[MerchantAdmin] Realtime subscribeToRiders caught error:', e);
+    }
     this.ridersPollingInterval = setInterval(() => {
       this.refreshRidersLocation();
     }, 4000);

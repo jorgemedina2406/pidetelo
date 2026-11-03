@@ -29,11 +29,15 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
   }
 
   void _showAddressPicker(BuildContext context, CartService cart) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final modalBg = isDark ? const Color(0xFF0F172A) : Colors.white;
+    final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final subtextColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569);
+    final cardBg = isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9);
+    final cardBorder = isDark ? Colors.white12 : const Color(0xFFCBD5E1);
     showModalBottomSheet(
       context: context,
-      backgroundColor: Theme.of(context).brightness == Brightness.dark
-          ? const Color(0xFF0F172A)
-          : Colors.white,
+      backgroundColor: modalBg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -51,12 +55,12 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                   style: GoogleFonts.outfit(
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
-                    color: Colors.white,
+                    color: textColor,
                   ),
                 ),
                 IconButton(
                   onPressed: () => Navigator.pop(ctx),
-                  icon: const Icon(Icons.close_rounded, color: Colors.white70),
+                  icon: Icon(Icons.close_rounded, color: subtextColor),
                 ),
               ],
             ),
@@ -68,10 +72,10 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                 decoration: BoxDecoration(
                   color: isSelected
                       ? AppTheme.primary.withOpacity(0.12)
-                      : const Color(0xFF1E293B),
+                      : cardBg,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: isSelected ? AppTheme.primary : Colors.white12,
+                    color: isSelected ? AppTheme.primary : cardBorder,
                     width: isSelected ? 1.5 : 1.0,
                   ),
                 ),
@@ -80,20 +84,20 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                     addr.title.toLowerCase().contains('casa')
                         ? Icons.home_rounded
                         : Icons.business_rounded,
-                    color: isSelected ? AppTheme.primary : Colors.white70,
+                    color: isSelected ? AppTheme.primary : subtextColor,
                   ),
                   title: Text(
                     addr.title,
                     style: GoogleFonts.outfit(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
-                      color: Colors.white,
+                      color: textColor,
                     ),
                   ),
                   subtitle: Text(
                     '${addr.address}\n${addr.reference ?? ''}',
                     style: GoogleFonts.outfit(
-                        fontSize: 12, color: const Color(0xFF94A3B8)),
+                        fontSize: 12, color: subtextColor),
                   ),
                   trailing: isSelected
                       ? const Icon(Icons.check_circle_rounded,
@@ -198,12 +202,23 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
       animation: CartService(),
       builder: (context, _) {
         final cart = CartService();
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final sheetBg = isDark ? const Color(0xFF0F172A) : Colors.white;
+        final cardBg = isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC);
+        final cardBorder = isDark ? Colors.white12 : const Color(0xFFE2E8F0);
+        final dividerColor = isDark ? Colors.white10 : const Color(0xFFE2E8F0);
+        final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+        final subtextColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+        final inputFill = isDark ? const Color(0xFF1E293B) : Colors.white;
+        final inputBorder = isDark ? Colors.white12 : const Color(0xFFCBD5E1);
+        final handleColor = isDark ? Colors.white24 : const Color(0xFFCBD5E1);
+        final darkBoxBg = isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9);
 
         return Container(
           height: MediaQuery.of(context).size.height * 0.88,
           decoration: BoxDecoration(
-            color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF0F172A) : Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+            color: sheetBg,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
           ),
           child: Column(
             children: [
@@ -213,7 +228,7 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                 width: 44,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.white24,
+                  color: handleColor,
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
@@ -227,7 +242,7 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                       style: GoogleFonts.outfit(
                         fontSize: 20,
                         fontWeight: FontWeight.w800,
-                        color: Colors.white,
+                        color: textColor,
                       ),
                     ),
                     if (cart.items.isNotEmpty)
@@ -244,7 +259,7 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                   ],
                 ),
               ),
-              const Divider(color: Colors.white10, height: 1),
+              Divider(color: dividerColor, height: 1),
 
               // Content
               Expanded(
@@ -269,7 +284,7 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                                   style: GoogleFonts.outfit(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w700,
-                                    color: Colors.white,
+                                    color: textColor,
                                   ),
                                 ),
                               ],
@@ -287,9 +302,9 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                                     width: 190,
                                     padding: const EdgeInsets.all(8),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFF1E293B),
+                                      color: cardBg,
                                       borderRadius: BorderRadius.circular(14),
-                                      border: Border.all(color: Colors.white12),
+                                      border: Border.all(color: cardBorder),
                                     ),
                                     child: Row(
                                       children: [
@@ -319,7 +334,7 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                                                 style: GoogleFonts.outfit(
                                                   fontSize: 12,
                                                   fontWeight: FontWeight.w700,
-                                                  color: Colors.white,
+                                                  color: textColor,
                                                 ),
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
@@ -397,7 +412,7 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                               style: GoogleFonts.outfit(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w700,
-                                color: Colors.white,
+                                color: textColor,
                               ),
                             ),
                             const SizedBox(height: 6),
@@ -405,7 +420,7 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                               'Agrega platillos deliciosos para comenzar',
                               style: GoogleFonts.outfit(
                                 fontSize: 13,
-                                color: const Color(0xFF94A3B8),
+                                color: subtextColor,
                               ),
                             ),
                           ],
@@ -423,7 +438,7 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 14, vertical: 10),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF1E293B),
+                                color: cardBg,
                                 borderRadius: BorderRadius.circular(14),
                                 border: Border.all(
                                     color: AppTheme.primary.withOpacity(0.35)),
@@ -445,7 +460,7 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                                           style: GoogleFonts.outfit(
                                             fontSize: 13.5,
                                             fontWeight: FontWeight.w700,
-                                            color: Colors.white,
+                                            color: textColor,
                                           ),
                                         ),
                                         if (cart.currentBranchAddress != null)
@@ -453,7 +468,7 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                                             cart.currentBranchAddress!,
                                             style: GoogleFonts.outfit(
                                               fontSize: 11,
-                                              color: const Color(0xFF94A3B8),
+                                              color: subtextColor,
                                             ),
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
@@ -492,9 +507,9 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                               margin: const EdgeInsets.only(bottom: 12),
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF1E293B),
+                                color: cardBg,
                                 borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: Colors.white10),
+                                border: Border.all(color: cardBorder),
                               ),
                               child: Row(
                                 children: [
@@ -527,7 +542,7 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                                           style: GoogleFonts.outfit(
                                             fontSize: 14.5,
                                             fontWeight: FontWeight.w700,
-                                            color: Colors.white,
+                                            color: textColor,
                                           ),
                                         ),
                                         if (item.notes != null &&
@@ -553,8 +568,9 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                                   // Quantity controls
                                   Container(
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFF0F172A),
+                                      color: darkBoxBg,
                                       borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: cardBorder),
                                     ),
                                     child: Row(
                                       children: [
@@ -568,13 +584,13 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                                             minHeight: 32,
                                           ),
                                           padding: EdgeInsets.zero,
-                                          color: Colors.white70,
+                                          color: textColor,
                                         ),
                                         Text(
                                           '${item.quantity}',
                                           style: GoogleFonts.outfit(
                                             fontWeight: FontWeight.w800,
-                                            color: Colors.white,
+                                            color: textColor,
                                           ),
                                         ),
                                         IconButton(
@@ -602,9 +618,9 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                           Container(
                             padding: const EdgeInsets.all(14),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF1E293B),
+                              color: cardBg,
                               borderRadius: BorderRadius.circular(18),
-                              border: Border.all(color: Colors.white12),
+                              border: Border.all(color: cardBorder),
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -626,7 +642,7 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                                           style: GoogleFonts.outfit(
                                             fontSize: 14,
                                             fontWeight: FontWeight.w700,
-                                            color: Colors.white,
+                                            color: textColor,
                                           ),
                                         ),
                                       ],
@@ -648,7 +664,7 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                                   '${cart.selectedAddress.title} • ${cart.selectedAddress.address}',
                                   style: GoogleFonts.outfit(
                                     fontSize: 13,
-                                    color: const Color(0xFFCBD5E1),
+                                    color: textColor,
                                   ),
                                 ),
                                 if (cart.selectedAddress.reference != null)
@@ -656,7 +672,7 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                                     'Ref: ${cart.selectedAddress.reference}',
                                     style: GoogleFonts.outfit(
                                       fontSize: 11.5,
-                                      color: const Color(0xFF94A3B8),
+                                      color: subtextColor,
                                     ),
                                   ),
                               ],
@@ -671,7 +687,7 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                             style: GoogleFonts.outfit(
                               fontSize: 15,
                               fontWeight: FontWeight.w700,
-                              color: Colors.white,
+                              color: textColor,
                             ),
                           ),
                           const SizedBox(height: 10),
@@ -703,9 +719,9 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF0F172A),
+                                color: darkBoxBg,
                                 borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: Colors.white10),
+                                border: Border.all(color: cardBorder),
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -748,7 +764,7 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                                     style: GoogleFonts.outfit(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
-                                      color: const Color(0xFFCBD5E1),
+                                      color: textColor,
                                     ),
                                   ),
                                   if (cart.currentBranchPayment
@@ -759,37 +775,37 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                                       'Titular: ${cart.currentBranchPayment!.pagoMovilAccountName}',
                                       style: GoogleFonts.outfit(
                                         fontSize: 11,
-                                        color: const Color(0xFF94A3B8),
+                                        color: subtextColor,
                                       ),
                                     ),
                                   ],
                                   const SizedBox(height: 8),
                                   TextField(
                                     controller: _pagoMovilRefController,
-                                    style: const TextStyle(
-                                        color: Colors.white,
+                                    style: TextStyle(
+                                        color: textColor,
                                         fontSize: 13.5,
                                         fontWeight: FontWeight.w700),
                                     decoration: InputDecoration(
                                       hintText:
                                           'Número de referencia (ej: 4821)',
-                                      hintStyle: const TextStyle(
-                                          color: Colors.white38, fontSize: 12),
+                                      hintStyle: TextStyle(
+                                          color: subtextColor, fontSize: 12),
                                       filled: true,
-                                      fillColor: const Color(0xFF1E293B),
+                                      fillColor: inputFill,
                                       isDense: true,
                                       contentPadding:
                                           const EdgeInsets.symmetric(
                                               horizontal: 14, vertical: 12),
                                       border: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(12),
-                                        borderSide: const BorderSide(
-                                            color: Colors.white12),
+                                        borderSide: BorderSide(
+                                            color: inputBorder),
                                       ),
                                       enabledBorder: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(12),
-                                        borderSide: const BorderSide(
-                                            color: Colors.white12),
+                                        borderSide: BorderSide(
+                                            color: inputBorder),
                                       ),
                                       focusedBorder: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(12),
@@ -809,9 +825,9 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF0F172A),
+                                color: darkBoxBg,
                                 borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: Colors.white10),
+                                border: Border.all(color: cardBorder),
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -859,7 +875,7 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                                     style: GoogleFonts.outfit(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
-                                      color: const Color(0xFFCBD5E1),
+                                      color: textColor,
                                     ),
                                   ),
                                   if (cart.currentBranchPayment
@@ -872,37 +888,37 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                                       'A nombre de: ${cart.currentBranchPayment!.zelleAccountName}',
                                       style: GoogleFonts.outfit(
                                         fontSize: 11,
-                                        color: const Color(0xFF94A3B8),
+                                        color: subtextColor,
                                       ),
                                     ),
                                   ],
                                   const SizedBox(height: 8),
                                   TextField(
                                     controller: _pagoMovilRefController,
-                                    style: const TextStyle(
-                                        color: Colors.white,
+                                    style: TextStyle(
+                                        color: textColor,
                                         fontSize: 13.5,
                                         fontWeight: FontWeight.w700),
                                     decoration: InputDecoration(
                                       hintText:
                                           'Nombre de la cuenta o referencia Zelle',
-                                      hintStyle: const TextStyle(
-                                          color: Colors.white38, fontSize: 12),
+                                      hintStyle: TextStyle(
+                                          color: subtextColor, fontSize: 12),
                                       filled: true,
-                                      fillColor: const Color(0xFF1E293B),
+                                      fillColor: inputFill,
                                       isDense: true,
                                       contentPadding:
                                           const EdgeInsets.symmetric(
                                               horizontal: 14, vertical: 12),
                                       border: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(12),
-                                        borderSide: const BorderSide(
-                                            color: Colors.white12),
+                                        borderSide: BorderSide(
+                                            color: inputBorder),
                                       ),
                                       enabledBorder: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(12),
-                                        borderSide: const BorderSide(
-                                            color: Colors.white12),
+                                        borderSide: BorderSide(
+                                            color: inputBorder),
                                       ),
                                       focusedBorder: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(12),
@@ -922,17 +938,17 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                             TextField(
                               controller: _cashAmountController,
                               keyboardType: TextInputType.number,
-                              style: const TextStyle(
-                                  color: Colors.white,
+                              style: TextStyle(
+                                  color: textColor,
                                   fontSize: 13.5,
                                   fontWeight: FontWeight.w700),
                               decoration: InputDecoration(
                                 hintText:
                                     '¿Con cuánto pagas? (Para llevarte cambio)',
-                                hintStyle: const TextStyle(
-                                    color: Colors.white38, fontSize: 12),
+                                hintStyle: TextStyle(
+                                    color: subtextColor, fontSize: 12),
                                 filled: true,
-                                fillColor: const Color(0xFF1E293B),
+                                fillColor: inputFill,
                                 isDense: true,
                                 contentPadding: const EdgeInsets.symmetric(
                                     horizontal: 14, vertical: 12),
@@ -961,8 +977,9 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                           Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF1E293B),
+                              color: cardBg,
                               borderRadius: BorderRadius.circular(18),
+                              border: Border.all(color: cardBorder),
                             ),
                             child: Column(
                               children: [
@@ -1070,6 +1087,10 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
     required String label,
   }) {
     final isSelected = _selectedPayment == id;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9);
+    final cardBorder = isDark ? Colors.white10 : const Color(0xFFCBD5E1);
+    final subtextColor = isDark ? Colors.white70 : const Color(0xFF475569);
 
     return Expanded(
       child: GestureDetector(
@@ -1079,17 +1100,17 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
           decoration: BoxDecoration(
             color: isSelected
                 ? AppTheme.primary.withOpacity(0.15)
-                : const Color(0xFF1E293B),
+                : cardBg,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: isSelected ? AppTheme.primary : Colors.white10,
+              color: isSelected ? AppTheme.primary : cardBorder,
               width: isSelected ? 1.5 : 1.0,
             ),
           ),
           child: Column(
             children: [
               Icon(icon,
-                  color: isSelected ? AppTheme.primary : Colors.white70,
+                  color: isSelected ? AppTheme.primary : subtextColor,
                   size: 20),
               const SizedBox(height: 6),
               Text(
@@ -1097,7 +1118,7 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                 style: GoogleFonts.outfit(
                   fontSize: 11.5,
                   fontWeight: FontWeight.w700,
-                  color: isSelected ? AppTheme.primary : Colors.white70,
+                  color: isSelected ? AppTheme.primary : subtextColor,
                 ),
               ),
             ],
@@ -1108,6 +1129,10 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
   }
 
   Widget _buildPriceRow(String label, String value, {bool isTotal = false}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final subtextColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569);
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -1116,7 +1141,7 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
           style: GoogleFonts.outfit(
             fontSize: isTotal ? 16 : 13.5,
             fontWeight: isTotal ? FontWeight.w800 : FontWeight.w500,
-            color: isTotal ? Colors.white : const Color(0xFF94A3B8),
+            color: isTotal ? textColor : subtextColor,
           ),
         ),
         Text(
@@ -1124,7 +1149,7 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
           style: GoogleFonts.outfit(
             fontSize: isTotal ? 18 : 14,
             fontWeight: isTotal ? FontWeight.w900 : FontWeight.w700,
-            color: isTotal ? AppTheme.primary : Colors.white,
+            color: isTotal ? AppTheme.primary : textColor,
           ),
         ),
       ],
