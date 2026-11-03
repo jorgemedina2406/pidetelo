@@ -20,7 +20,7 @@ on:
 jobs:
   build-cliente:
     name: Build iOS (Cliente)
-    runs-on: macos-latest
+    runs-on: macos-13
     if: github.event_name == 'push' || github.event.inputs.target_app == 'ambas' || github.event.inputs.target_app == 'cliente'
     steps:
       - name: Checkout Code
@@ -58,7 +58,7 @@ jobs:
 
   build-rider:
     name: Build iOS (Rider)
-    runs-on: macos-latest
+    runs-on: macos-13
     needs: [build-cliente]
     if: always() && (github.event_name == 'push' || github.event.inputs.target_app == 'ambas' || github.event.inputs.target_app == 'rider')
     steps:
