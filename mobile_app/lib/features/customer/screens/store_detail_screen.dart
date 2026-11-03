@@ -1449,10 +1449,6 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                             color: subtextColor,
                                           ),
                                         ),
-                                            fontSize: 12,
-                                            color: const Color(0xFF94A3B8),
-                                          ),
-                                        ),
                                         const SizedBox(height: 8),
                                         Row(
                                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
