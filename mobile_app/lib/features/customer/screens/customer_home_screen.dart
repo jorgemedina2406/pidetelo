@@ -1111,7 +1111,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Comercios en Cabudare',
+                          'Comercios Disponibles',
                           style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.w700),
                         ),
                         Text(
@@ -1165,9 +1165,44 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 ),
                 const SizedBox(height: 12),
 
-                // 6. SKELETON LOADERS
+                // 6. SKELETON LOADERS & STORE LIST
                 if (_isLoadingStores)
                   _buildStoreSkeletons(isDark)
+                else if (_filterStores().isEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+                    alignment: Alignment.center,
+                    child: Column(
+                      children: [
+                        const Text('🏪', style: TextStyle(fontSize: 44)),
+                        const SizedBox(height: 12),
+                        Text(
+                          'No hay comercios en esta categoría',
+                          style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Prueba cambiando de categoría o explorando todos los locales',
+                          style: GoogleFonts.outfit(fontSize: 12.5, color: const Color(0xFF94A3B8)),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            setState(() => _selectedCategory = 'Todos');
+                            _loadTenants();
+                          },
+                          icon: const Icon(Icons.refresh_rounded, size: 16),
+                          label: const Text('Ver todos los comercios'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primary,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
                 else ...[
                   ..._filterStores().map((store) {
                     if (_isStoreGridView) {
@@ -1566,14 +1601,12 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 ),
                 child: ListTile(
                   contentPadding: const EdgeInsets.all(12),
-                  leading: ClipRRect(
+                  leading: _buildAdaptiveImage(
+                    store['imageUrl'],
+                    width: 56,
+                    height: 56,
+                    fit: BoxFit.cover,
                     borderRadius: BorderRadius.circular(12),
-                    child: Image.network(
-                      store['imageUrl'],
-                      width: 56,
-                      height: 56,
-                      fit: BoxFit.cover,
-                    ),
                   ),
                   title: Text(
                     store['name'],
@@ -1609,24 +1642,57 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     );
   }
 
-  List<Map<String, dynamic>> _filterStores() {
-    return _stores.where((store) {
-      final selectedAddr = CartService().selectedAddress;
-      final storeLat = (store['lat'] as num?)?.toDouble() ?? (store['latitude'] as num?)?.toDouble();
-      final storeLng = (store['lng'] as num?)?.toDouble() ?? (store['longitude'] as num?)?.toDouble();
-      final maxRadius = (store['delivery_radius_km'] as num?)?.toDouble() ?? (store['deliveryRadiusKm'] as num?)?.toDouble() ?? 8.0;
-      if (storeLat != null && storeLng != null && storeLat != 0 && storeLng != 0) {
-        final dist = ApiService.calculateDistanceKm(storeLat, storeLng, selectedAddr.latitude, selectedAddr.longitude);
-        if (dist > maxRadius) {
-          return false;
-        }
+  Widget _buildAdaptiveImage(String? rawUrl, {double? width, double? height, BoxFit fit = BoxFit.cover, BorderRadius? borderRadius}) {
+    Widget imageWidget;
+    final url = (rawUrl ?? '').trim();
+    if (url.startsWith('data:image')) {
+      try {
+        final commaIdx = url.indexOf(',');
+        final base64Str = commaIdx != -1 ? url.substring(commaIdx + 1) : url;
+        final bytes = base64Decode(base64Str);
+        imageWidget = Image.memory(
+          bytes,
+          width: width,
+          height: height,
+          fit: fit,
+          errorBuilder: (_, __, ___) => Container(width: width, height: height, color: Colors.grey.shade300, child: const Icon(Icons.store, color: Colors.grey)),
+        );
+      } catch (_) {
+        imageWidget = Container(width: width, height: height, color: Colors.grey.shade300, child: const Icon(Icons.store, color: Colors.grey));
       }
+    } else if (url.startsWith('http://') || url.startsWith('https://')) {
+      imageWidget = Image.network(
+        url,
+        width: width,
+        height: height,
+        fit: fit,
+        errorBuilder: (_, __, ___) => Container(width: width, height: height, color: Colors.grey.shade300, child: const Icon(Icons.store, color: Colors.grey)),
+      );
+    } else {
+      imageWidget = Container(
+        width: width,
+        height: height,
+        color: Colors.grey.shade300,
+        child: const Icon(Icons.restaurant, color: Colors.grey),
+      );
+    }
 
+    if (borderRadius != null) {
+      return ClipRRect(borderRadius: borderRadius, child: imageWidget);
+    }
+    return imageWidget;
+  }
+
+  List<Map<String, dynamic>> _filterStores() {
+    final selectedAddr = CartService().selectedAddress;
+
+    // 1. Filtrado por categoría seleccionada
+    final categoryFiltered = _stores.where((store) {
       if (_selectedCategory == 'Todos') return true;
       final storeCat = (store['category'] ?? '').toString().toLowerCase();
       final storeName = (store['name'] ?? '').toString().toLowerCase();
       final target = _selectedCategory.toLowerCase();
-      if (target == 'comida') {
+      if (target == 'comida' || target == 'restaurantes') {
         return storeCat.contains('hamburguesa') ||
             storeCat.contains('sushi') ||
             storeCat.contains('pizza') ||
@@ -1637,7 +1703,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
       if (target == 'farmacias') {
         return storeCat.contains('farma') || storeCat.contains('salud') || storeName.contains('farma');
       }
-      if (target == 'markets') {
+      if (target == 'markets' || target == 'súper') {
         return storeCat.contains('market') || storeCat.contains('super') || storeName.contains('market');
       }
       if (target == 'repuestos') {
@@ -1660,6 +1726,35 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
       }
       return storeCat.contains(target) || storeName.contains(target);
     }).toList();
+
+    // 2. Filtro preferente de cobertura por sucursales
+    final inRange = categoryFiltered.where((store) {
+      final branches = store['branches'] as List<dynamic>? ?? [];
+      if (branches.isNotEmpty) {
+        for (final b in branches) {
+          final bLat = b is Branch ? b.latitude : (b['latitude'] as num?)?.toDouble();
+          final bLng = b is Branch ? b.longitude : (b['longitude'] as num?)?.toDouble();
+          final bRadius = b is Branch ? b.deliveryRadiusKm : ((b['delivery_radius_km'] ?? b['deliveryRadiusKm']) as num?)?.toDouble() ?? 15.0;
+          if (bLat != null && bLng != null && bLat != 0 && bLng != 0) {
+            final d = ApiService.calculateDistanceKm(bLat, bLng, selectedAddr.latitude, selectedAddr.longitude);
+            if (d <= bRadius) return true;
+          }
+        }
+      }
+      final storeLat = (store['lat'] as num?)?.toDouble() ?? (store['latitude'] as num?)?.toDouble();
+      final storeLng = (store['lng'] as num?)?.toDouble() ?? (store['longitude'] as num?)?.toDouble();
+      final maxRadius = (store['delivery_radius_km'] as num?)?.toDouble() ?? (store['deliveryRadiusKm'] as num?)?.toDouble() ?? 15.0;
+      if (storeLat != null && storeLng != null && storeLat != 0 && storeLng != 0) {
+        final dist = ApiService.calculateDistanceKm(storeLat, storeLng, selectedAddr.latitude, selectedAddr.longitude);
+        return dist <= maxRadius;
+      }
+      return true;
+    }).toList();
+
+    // Si hay comercios dentro del radio de entrega, mostrarlos.
+    // Si la ubicación seleccionada está temporalmente fuera de radio, permitir explorar los comercios
+    // disponibles para que el cliente nunca vea la pantalla vacía.
+    return inRange.isNotEmpty ? inRange : categoryFiltered;
   }
 
   Future<void> _openStore(Map<String, dynamic> store) async {
@@ -1737,15 +1832,12 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
           children: [
             Stack(
               children: [
-                ClipRRect(
+                _buildAdaptiveImage(
+                  store['imageUrl'],
+                  height: 95,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
-                  child: Image.network(
-                    store['imageUrl'] ?? 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=500',
-                    height: 95,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(height: 95, color: Colors.grey.shade300),
-                  ),
                 ),
                 Positioned(
                   top: 8,
@@ -1851,15 +1943,12 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
             children: [
               Stack(
                 children: [
-                  ClipRRect(
+                  _buildAdaptiveImage(
+                    store['imageUrl'],
+                    height: 120,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
-                    child: Image.network(
-                      store['imageUrl'] ?? 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=500',
-                      height: 120,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(height: 120, color: Colors.grey.shade300),
-                    ),
                   ),
                   Positioned(
                     top: 8,
@@ -1976,15 +2065,12 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
             padding: const EdgeInsets.all(12),
             child: Row(
               children: [
-                ClipRRect(
+                _buildAdaptiveImage(
+                  store['imageUrl'],
+                  width: 72,
+                  height: 72,
+                  fit: BoxFit.cover,
                   borderRadius: BorderRadius.circular(12),
-                  child: Image.network(
-                    store['imageUrl'] ?? 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=500',
-                    width: 72,
-                    height: 72,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(width: 72, height: 72, color: Colors.grey.shade300),
-                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(

@@ -373,8 +373,83 @@ class ApiService {
     return [];
   }
 
+  Map<String, dynamic> _mapTenantItem(dynamic item) {
+    final rawBranches = item['branches'];
+    List<Branch> branchesList = [];
+    if (rawBranches is List) {
+      branchesList = rawBranches
+          .map((b) => b is Branch ? b : Branch.fromJson(b as Map<String, dynamic>))
+          .where((b) => b.status == 'active')
+          .toList();
+    }
+    final baseFee = ((item['base_delivery_fee'] ?? item['deliverySettings']?['baseDeliveryFee']) as num?)?.toDouble() ?? 2.50;
+    final rate = ((item['exchange_rate'] ?? item['currency_settings']?['exchangeRate'] ?? item['currencySettings']?['exchangeRate']) as num?)?.toDouble() ?? 45.50;
+    final displayMode = item['display_mode'] ?? item['currency_settings']?['displayMode'] ?? item['currencySettings']?['displayMode'] ?? 'usd_and_bs';
+    final baseCurrency = item['base_currency'] ?? item['currency_settings']?['baseCurrency'] ?? item['currencySettings']?['baseCurrency'] ?? 'USD';
+    final accent = item['accent_color'] ?? item['branding']?['accentColor'] ?? '#ea580c';
+    final tagline = item['tagline'] ?? '';
+    final whatsapp = item['whatsapp_number'] ?? item['contact']?['whatsappNumber'] ?? item['phone'] ?? '';
+    final rawLogo = item['logo_url'] ?? item['branding']?['logoUrl'];
+    final rawBanner = item['banner_url'] ?? item['branding']?['bannerUrl'];
+    final deliveryRadius = (item['delivery_radius_km'] as num?)?.toDouble() ??
+        (item['deliveryRadiusKm'] as num?)?.toDouble() ??
+        (item['deliverySettings']?['deliveryRadiusKm'] as num?)?.toDouble() ??
+        15.0;
+
+    return {
+      'id': item['id'],
+      'name': item['name'] ?? 'Comercio',
+      'slug': item['slug'] ?? '',
+      'category': item['category'] ?? 'Restaurantes',
+      'subcategories': item['subcategories'] ?? [],
+      'rating': item['rating']?.toString() ?? '5.0',
+      'reviewsCount': item['reviews_count']?.toString() ?? '0',
+      'time': '25-35 min',
+      'fee': '\$${baseFee.toStringAsFixed(2)}',
+      'baseDeliveryFee': baseFee,
+      'imageUrl': (rawLogo != null && rawLogo.toString().trim().isNotEmpty)
+          ? rawLogo.toString()
+          : 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=500',
+      'bannerUrl': (rawBanner != null && rawBanner.toString().trim().isNotEmpty)
+          ? rawBanner.toString()
+          : 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1200',
+      'address': item['address'] ?? item['contact']?['address'] ?? '',
+      'phone': item['phone'] ?? item['contact']?['phone'] ?? '',
+      'whatsappNumber': whatsapp,
+      'accentColor': accent,
+      'tagline': tagline,
+      'exchangeRate': rate,
+      'baseCurrency': baseCurrency,
+      'displayMode': displayMode,
+      'latitude': (item['latitude'] as num?)?.toDouble() ?? 10.077715,
+      'longitude': (item['longitude'] as num?)?.toDouble() ?? -69.2812938,
+      'delivery_radius_km': deliveryRadius,
+      'deliveryRadiusKm': deliveryRadius,
+      'isPromo': false,
+      'promoText': '',
+      'isFeatured': item['is_featured'] ?? item['isFeatured'] ?? false,
+      'branches': branchesList,
+    };
+  }
+
   /// Fetch real merchants/tenants from backend
   Future<List<Map<String, dynamic>>> fetchTenants() async {
+    // 1. Direct cloud Supabase query (Immediate, works from any network/device)
+    try {
+      final supabase = Supabase.instance.client;
+      final data = await supabase
+          .from('tenants')
+          .select('*, branches(*)')
+          .eq('is_active', true)
+          .timeout(const Duration(seconds: 4));
+      if (data.isNotEmpty) {
+        return (data as List).map((item) => _mapTenantItem(item)).toList();
+      }
+    } catch (e) {
+      if (kDebugMode) print('[ApiService] Supabase fetchTenants notice: $e');
+    }
+
+    // 2. Fallback: local backend
     final urls = [
       '${AppConfig.backendBaseUrl}/tenants',
       'http://192.168.0.151:3000/api/tenants',
@@ -383,54 +458,11 @@ class ApiService {
 
     for (final u in urls) {
       try {
-        final res = await http.get(Uri.parse(u)).timeout(const Duration(seconds: 3));
+        final res = await http.get(Uri.parse(u)).timeout(const Duration(seconds: 2));
         if (res.statusCode == 200) {
           final List list = json.decode(res.body);
           if (list.isNotEmpty) {
-            return list.map((item) {
-              final rawBranches = item['branches'];
-              List<Branch> branchesList = [];
-              if (rawBranches is List) {
-                branchesList = rawBranches
-                    .map((b) => Branch.fromJson(b as Map<String, dynamic>))
-                    .where((b) => b.status == 'active')
-                    .toList();
-              }
-              final baseFee = ((item['base_delivery_fee'] ?? item['deliverySettings']?['baseDeliveryFee']) as num?)?.toDouble() ?? 2.50;
-              final rate = ((item['exchange_rate'] ?? item['currency_settings']?['exchangeRate'] ?? item['currencySettings']?['exchangeRate']) as num?)?.toDouble() ?? 45.50;
-              final displayMode = item['display_mode'] ?? item['currency_settings']?['displayMode'] ?? item['currencySettings']?['displayMode'] ?? 'usd_and_bs';
-              final baseCurrency = item['base_currency'] ?? item['currency_settings']?['baseCurrency'] ?? item['currencySettings']?['baseCurrency'] ?? 'USD';
-              final accent = item['accent_color'] ?? item['branding']?['accentColor'] ?? '#ea580c';
-              final tagline = item['tagline'] ?? '';
-              final whatsapp = item['whatsapp_number'] ?? item['contact']?['whatsappNumber'] ?? item['phone'] ?? '';
-
-              return {
-                'id': item['id'],
-                'name': item['name'] ?? 'Comercio',
-                'slug': item['slug'] ?? '',
-                'category': item['category'] ?? 'Restaurante',
-                'rating': item['rating']?.toString() ?? '5.0',
-                'time': '25-35 min',
-                'fee': '\$${baseFee.toStringAsFixed(2)}',
-                'baseDeliveryFee': baseFee,
-                'imageUrl': item['logo_url'] ?? item['branding']?['logoUrl'] ?? '',
-                'bannerUrl': item['banner_url'] ?? item['branding']?['bannerUrl'] ?? '',
-                'address': item['address'] ?? item['contact']?['address'] ?? '',
-                'phone': item['phone'] ?? item['contact']?['phone'] ?? '',
-                'whatsappNumber': whatsapp,
-                'accentColor': accent,
-                'tagline': tagline,
-                'exchangeRate': rate,
-                'baseCurrency': baseCurrency,
-                'displayMode': displayMode,
-                'latitude': (item['latitude'] as num?)?.toDouble() ?? 10.077715,
-                'longitude': (item['longitude'] as num?)?.toDouble() ?? -69.2812938,
-                'isPromo': false,
-                'promoText': '',
-                'isFeatured': item['is_featured'] ?? item['isFeatured'] ?? false,
-                'branches': branchesList,
-              };
-            }).toList();
+            return list.map((item) => _mapTenantItem(item)).toList();
           }
         }
       } catch (e) {
@@ -438,61 +470,8 @@ class ApiService {
       }
     }
 
-    // Fallback: Query Supabase cloud directly
-    try {
-      final supabase = Supabase.instance.client;
-      final data = await supabase.from('tenants').select('*, branches(*)').eq('is_active', true);
-      if (data.isNotEmpty) {
-        return (data as List).map((item) {
-          final rawBranches = item['branches'];
-          List<Branch> branchesList = [];
-          if (rawBranches is List) {
-            branchesList = rawBranches
-                .map((b) => Branch.fromJson(b as Map<String, dynamic>))
-                .where((b) => b.status == 'active')
-                .toList();
-          }
-          final baseFee = ((item['base_delivery_fee'] ?? item['deliverySettings']?['baseDeliveryFee']) as num?)?.toDouble() ?? 2.50;
-          final rate = ((item['exchange_rate'] ?? item['currency_settings']?['exchangeRate'] ?? item['currencySettings']?['exchangeRate']) as num?)?.toDouble() ?? 45.50;
-          final displayMode = item['display_mode'] ?? item['currency_settings']?['displayMode'] ?? item['currencySettings']?['displayMode'] ?? 'usd_and_bs';
-          final baseCurrency = item['base_currency'] ?? item['currency_settings']?['baseCurrency'] ?? item['currencySettings']?['baseCurrency'] ?? 'USD';
-          final accent = item['accent_color'] ?? item['branding']?['accentColor'] ?? '#ea580c';
-          final tagline = item['tagline'] ?? '';
-          final whatsapp = item['whatsapp_number'] ?? item['contact']?['whatsappNumber'] ?? item['phone'] ?? '';
-
-          return {
-            'id': item['id'],
-            'name': item['name'] ?? 'Comercio',
-            'slug': item['slug'] ?? '',
-            'category': item['category'] ?? 'Restaurante',
-            'rating': item['rating']?.toString() ?? '5.0',
-            'reviewsCount': item['reviews_count']?.toString() ?? '0',
-            'fee': '\$${baseFee.toStringAsFixed(2)}',
-            'baseDeliveryFee': baseFee,
-            'imageUrl': item['logo_url'] ?? item['branding']?['logoUrl'] ?? '',
-            'bannerUrl': item['banner_url'] ?? item['branding']?['bannerUrl'] ?? '',
-            'address': item['address'] ?? item['contact']?['address'] ?? '',
-            'phone': item['phone'] ?? item['contact']?['phone'] ?? '',
-            'whatsappNumber': whatsapp,
-            'accentColor': accent,
-            'tagline': tagline,
-            'exchangeRate': rate,
-            'baseCurrency': baseCurrency,
-            'displayMode': displayMode,
-            'latitude': (item['latitude'] as num?)?.toDouble() ?? 10.077715,
-            'longitude': (item['longitude'] as num?)?.toDouble() ?? -69.2812938,
-            'isPromo': false,
-            'promoText': '',
-            'isFeatured': item['is_featured'] ?? item['isFeatured'] ?? false,
-            'branches': branchesList,
-          };
-        }).toList();
-      }
-    } catch (e) {
-      if (kDebugMode) print('[ApiService] Supabase fetchTenants notice: $e');
-    }
-
     return [];
+  }
   }
 
   /// Fetch real products for a tenant and specific branch (Database Only - Zero Mock Products)

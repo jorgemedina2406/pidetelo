@@ -787,13 +787,24 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                   background: Stack(
                     fit: StackFit.expand,
                     children: [
-                      Image.network(
-                        (store['bannerUrl'] != null && store['bannerUrl'].toString().isNotEmpty)
-                            ? store['bannerUrl']
-                            : (store['imageUrl'] ?? ''),
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(color: const Color(0xFF1E293B)),
-                      ),
+                      Builder(builder: (_) {
+                        final rawImg = (store['bannerUrl'] != null && store['bannerUrl'].toString().trim().isNotEmpty)
+                            ? store['bannerUrl'].toString()
+                            : (store['imageUrl'] ?? '').toString();
+                        if (rawImg.startsWith('data:image')) {
+                          try {
+                            final commaIdx = rawImg.indexOf(',');
+                            final base64Str = commaIdx != -1 ? rawImg.substring(commaIdx + 1) : rawImg;
+                            return Image.memory(base64Decode(base64Str), fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: const Color(0xFF1E293B)));
+                          } catch (_) {
+                            return Container(color: const Color(0xFF1E293B));
+                          }
+                        } else if (rawImg.startsWith('http')) {
+                          return Image.network(rawImg, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: const Color(0xFF1E293B)));
+                        } else {
+                          return Container(color: const Color(0xFF1E293B));
+                        }
+                      }),
                       Container(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
