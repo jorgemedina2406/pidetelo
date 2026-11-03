@@ -7,6 +7,7 @@ import '../../../core/models/order_model.dart';
 import '../../../core/models/user_model.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/services/cart_service.dart';
+import '../../../core/services/dolar_api_service.dart';
 import '../../../core/services/session_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../auth/screens/customer_login_screen.dart';
