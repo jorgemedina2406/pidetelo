@@ -472,7 +472,6 @@ class ApiService {
 
     return [];
   }
-  }
 
   /// Fetch real products for a tenant and specific branch (Database Only - Zero Mock Products)
   Future<List<Product>> fetchProductsByTenant(String tenantId, {String? branchId}) async {
