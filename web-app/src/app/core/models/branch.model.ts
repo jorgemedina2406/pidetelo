@@ -47,6 +47,12 @@ export interface Branch {
   businessHours?: {
     open: string;
     close: string;
+    scheduleDays?: Array<{
+      day: string;
+      open: boolean;
+      from: string;
+      to: string;
+    }>;
   };
   isOpenNow: boolean;
   paymentCredentials: BranchPaymentCredentials;

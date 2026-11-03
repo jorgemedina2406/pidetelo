@@ -384,10 +384,12 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     this.brandingForm.displayMode = (branch.displayMode || curr?.displayMode || cached?.displayMode || tenant.currencySettings?.displayMode || 'usd_and_bs') as CurrencyDisplayMode;
     this.brandingForm.openTime = branch.businessHours?.open || branch.openTime || (branch as any).open_time || (branch as any).openTime || cached?.openTime || '11:00';
     this.brandingForm.closeTime = branch.businessHours?.close || branch.closeTime || (branch as any).close_time || (branch as any).closeTime || cached?.closeTime || '23:00';
-    if (branch.businessHours?.scheduleDays && Array.isArray(branch.businessHours.scheduleDays)) {
-      this.brandingForm.scheduleDays = JSON.parse(JSON.stringify(branch.businessHours.scheduleDays));
-    } else if ((branch as any).business_hours?.scheduleDays && Array.isArray((branch as any).business_hours.scheduleDays)) {
-      this.brandingForm.scheduleDays = JSON.parse(JSON.stringify((branch as any).business_hours.scheduleDays));
+    const bh = branch.businessHours as any;
+    const bhRaw = (branch as any).business_hours as any;
+    if (bh?.scheduleDays && Array.isArray(bh.scheduleDays)) {
+      this.brandingForm.scheduleDays = JSON.parse(JSON.stringify(bh.scheduleDays));
+    } else if (bhRaw?.scheduleDays && Array.isArray(bhRaw.scheduleDays)) {
+      this.brandingForm.scheduleDays = JSON.parse(JSON.stringify(bhRaw.scheduleDays));
     } else if (cached?.scheduleDays && Array.isArray(cached.scheduleDays)) {
       this.brandingForm.scheduleDays = JSON.parse(JSON.stringify(cached.scheduleDays));
     }
