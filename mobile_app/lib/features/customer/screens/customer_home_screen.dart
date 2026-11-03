@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -52,7 +53,9 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
       final name = user?.name.trim() ?? '';
       if (phone.length >= 7) {
         CartService().syncOrdersWithCloud(phone);
-      } else if (name.length >= 4 && name.toLowerCase() != 'cliente' && name.toLowerCase() != 'invitado') {
+      } else if (name.length >= 4 &&
+          name.toLowerCase() != 'cliente' &&
+          name.toLowerCase() != 'invitado') {
         CartService().syncOrdersWithCloud(name);
       }
     });
@@ -73,7 +76,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     }
   }
 
-  Color _parseHexColor(dynamic hex, {Color fallback = const Color(0xFFF97316)}) {
+  Color _parseHexColor(dynamic hex,
+      {Color fallback = const Color(0xFFF97316)}) {
     if (hex == null) return fallback;
     final str = hex.toString().trim();
     if (str.isEmpty) return fallback;
@@ -96,8 +100,10 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
       final cur = now.hour * 60 + now.minute;
       final oParts = openStr.toString().split(':').map(int.parse).toList();
       final cParts = closeStr.toString().split(':').map(int.parse).toList();
-      final o = (oParts.isNotEmpty ? oParts[0] : 9) * 60 + (oParts.length > 1 ? oParts[1] : 0);
-      final c = (cParts.isNotEmpty ? cParts[0] : 23) * 60 + (cParts.length > 1 ? cParts[1] : 0);
+      final o = (oParts.isNotEmpty ? oParts[0] : 9) * 60 +
+          (oParts.length > 1 ? oParts[1] : 0);
+      final c = (cParts.isNotEmpty ? cParts[0] : 23) * 60 +
+          (cParts.length > 1 ? cParts[1] : 0);
 
       if (c > o) {
         return cur >= o && cur < c;
@@ -118,7 +124,9 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     final name = user?.name.trim() ?? '';
     if (phone.length >= 7) {
       CartService().syncOrdersWithCloud(phone);
-    } else if (name.length >= 4 && name.toLowerCase() != 'cliente' && name.toLowerCase() != 'invitado') {
+    } else if (name.length >= 4 &&
+        name.toLowerCase() != 'cliente' &&
+        name.toLowerCase() != 'invitado') {
       CartService().syncOrdersWithCloud(name);
     }
 
@@ -143,7 +151,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => UserProfileScreen(sessionService: widget.sessionService),
+        builder: (_) =>
+            UserProfileScreen(sessionService: widget.sessionService),
       ),
     );
   }
@@ -152,7 +161,9 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: widget.sessionService.isDarkMode ? const Color(0xFF0F172A) : Colors.white,
+      backgroundColor: widget.sessionService.isDarkMode
+          ? const Color(0xFF0F172A)
+          : Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -165,7 +176,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
             return Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-              constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.75),
+              constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.75),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -175,7 +187,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.notifications_active_rounded, color: AppTheme.primary, size: 24),
+                          const Icon(Icons.notifications_active_rounded,
+                              color: AppTheme.primary, size: 24),
                           const SizedBox(width: 8),
                           Text(
                             'Notificaciones & Cupones',
@@ -200,7 +213,10 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   ),
                   const SizedBox(height: 16),
                   if (snapshot.connectionState == ConnectionState.waiting)
-                    const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator()))
+                    const Center(
+                        child: Padding(
+                            padding: EdgeInsets.all(32),
+                            child: CircularProgressIndicator()))
                   else if (!snapshot.hasData || snapshot.data!.isEmpty)
                     Center(
                       child: Padding(
@@ -211,13 +227,17 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                             const SizedBox(height: 8),
                             Text(
                               'Sin notificaciones activas',
-                              style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: textColor),
+                              style: GoogleFonts.outfit(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: textColor),
                             ),
                             const SizedBox(height: 4),
                             Text(
                               'Los cupones que recibas de tus comercios favoritos aparecerán aquí.',
                               textAlign: TextAlign.center,
-                              style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey),
+                              style: GoogleFonts.outfit(
+                                  fontSize: 12, color: Colors.grey),
                             ),
                           ],
                         ),
@@ -230,21 +250,27 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                         separatorBuilder: (_, __) => const SizedBox(height: 12),
                         itemBuilder: (context, idx) {
                           final notif = snapshot.data![idx];
-                          final couponCode = notif['coupon_code'] ?? notif['couponCode'];
+                          final couponCode =
+                              notif['coupon_code'] ?? notif['couponCode'];
                           return Container(
                             padding: const EdgeInsets.all(14),
                             decoration: BoxDecoration(
-                              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                              color: isDark
+                                  ? const Color(0xFF1E293B)
+                                  : const Color(0xFFF8FAFC),
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
-                                color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                                color: isDark
+                                    ? const Color(0xFF334155)
+                                    : const Color(0xFFE2E8F0),
                               ),
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     Expanded(
                                       child: Text(
@@ -257,9 +283,11 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                                       ),
                                     ),
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 3),
                                       decoration: BoxDecoration(
-                                        color: AppTheme.primary.withOpacity(0.15),
+                                        color:
+                                            AppTheme.primary.withOpacity(0.15),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Text(
@@ -276,48 +304,70 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                                 const SizedBox(height: 6),
                                 Text(
                                   notif['message'] ?? '',
-                                  style: GoogleFonts.outfit(fontSize: 12, color: isDark ? Colors.grey[300] : Colors.grey[700]),
+                                  style: GoogleFonts.outfit(
+                                      fontSize: 12,
+                                      color: isDark
+                                          ? Colors.grey[300]
+                                          : Colors.grey[700]),
                                 ),
-                                if (couponCode != null && couponCode.toString().isNotEmpty) ...[
+                                if (couponCode != null &&
+                                    couponCode.toString().isNotEmpty) ...[
                                   const SizedBox(height: 12),
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 10, vertical: 5),
                                         decoration: BoxDecoration(
                                           color: Colors.amber.withOpacity(0.15),
-                                          borderRadius: BorderRadius.circular(8),
-                                          border: Border.all(color: Colors.amber.withOpacity(0.4)),
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                          border: Border.all(
+                                              color: Colors.amber
+                                                  .withOpacity(0.4)),
                                         ),
                                         child: Text(
                                           couponCode.toString().toUpperCase(),
                                           style: GoogleFonts.firaCode(
                                             fontWeight: FontWeight.w800,
                                             fontSize: 13,
-                                            color: Colors.amber[800] ?? Colors.amber,
+                                            color: Colors.amber[800] ??
+                                                Colors.amber,
                                           ),
                                         ),
                                       ),
                                       ElevatedButton.icon(
                                         onPressed: () {
-                                          Clipboard.setData(ClipboardData(text: couponCode.toString()));
-                                          ScaffoldMessenger.of(context).showSnackBar(
+                                          Clipboard.setData(ClipboardData(
+                                              text: couponCode.toString()));
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
                                             SnackBar(
-                                              content: Text('¡Cupón "$couponCode" copiado!'),
-                                              backgroundColor: const Color(0xFF10B981),
-                                              duration: const Duration(seconds: 2),
+                                              content: Text(
+                                                  '¡Cupón "$couponCode" copiado!'),
+                                              backgroundColor:
+                                                  const Color(0xFF10B981),
+                                              duration:
+                                                  const Duration(seconds: 2),
                                             ),
                                           );
                                         },
-                                        icon: const Icon(Icons.copy_rounded, size: 14),
+                                        icon: const Icon(Icons.copy_rounded,
+                                            size: 14),
                                         label: const Text('Copiar'),
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: AppTheme.primary,
                                           foregroundColor: Colors.white,
-                                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                                          textStyle: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.bold),
-                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 14, vertical: 6),
+                                          textStyle: GoogleFonts.outfit(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold),
+                                          shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(10)),
                                         ),
                                       ),
                                     ],
@@ -379,12 +429,14 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                     ),
                     Text(
                       'Pedido: ${order.orderNumber}',
-                      style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFF94A3B8)),
+                      style: GoogleFonts.outfit(
+                          fontSize: 12, color: const Color(0xFF94A3B8)),
                     ),
                   ],
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: (order.status == OrderDeliveryStatus.delivered
                             ? const Color(0xFF10B981)
@@ -408,7 +460,6 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
             const SizedBox(height: 16),
             const Divider(color: Colors.white12),
             const SizedBox(height: 10),
-
             Text(
               'PLATILLOS DEL PEDIDO',
               style: GoogleFonts.outfit(
@@ -419,7 +470,6 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
               ),
             ),
             const SizedBox(height: 8),
-
             ...order.items.map((item) => Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Row(
@@ -444,13 +494,12 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                     ],
                   ),
                 )),
-
             const Divider(color: Colors.white12, height: 16),
-
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Subtotal', style: GoogleFonts.outfit(color: const Color(0xFF94A3B8))),
+                Text('Subtotal',
+                    style: GoogleFonts.outfit(color: const Color(0xFF94A3B8))),
                 Text('\$${order.subtotal.toStringAsFixed(2)}',
                     style: GoogleFonts.outfit(color: Colors.white)),
               ],
@@ -459,7 +508,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Costo de Envío', style: GoogleFonts.outfit(color: const Color(0xFF94A3B8))),
+                Text('Costo de Envío',
+                    style: GoogleFonts.outfit(color: const Color(0xFF94A3B8))),
                 Text('\$${order.deliveryFee.toStringAsFixed(2)}',
                     style: GoogleFonts.outfit(color: Colors.white)),
               ],
@@ -470,7 +520,10 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
               children: [
                 Text(
                   'Total Pagado',
-                  style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w800, color: Colors.white),
+                  style: GoogleFonts.outfit(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white),
                 ),
                 Text(
                   '\$${order.total.toStringAsFixed(2)}',
@@ -482,7 +535,6 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 ),
               ],
             ),
-
             const SizedBox(height: 14),
             Container(
               padding: const EdgeInsets.all(12),
@@ -495,23 +547,26 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 children: [
                   Text(
                     'Dirección de Entrega:',
-                    style: GoogleFonts.outfit(fontSize: 11, color: const Color(0xFF94A3B8)),
+                    style: GoogleFonts.outfit(
+                        fontSize: 11, color: const Color(0xFF94A3B8)),
                   ),
                   Text(
                     order.customerAddress,
-                    style: GoogleFonts.outfit(fontSize: 12.5, fontWeight: FontWeight.w600, color: Colors.white),
+                    style: GoogleFonts.outfit(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     'Método de Pago: ${order.paymentMethod}',
-                    style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.amberAccent),
+                    style: GoogleFonts.outfit(
+                        fontSize: 12, color: AppTheme.amberAccent),
                   ),
                 ],
               ),
             ),
-
             const SizedBox(height: 20),
-
             if (order.status != OrderDeliveryStatus.delivered)
               ElevatedButton.icon(
                 onPressed: () {
@@ -523,7 +578,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primary,
                   minimumSize: const Size(double.infinity, 48),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
                 ),
               )
             else
@@ -533,7 +589,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   foregroundColor: Colors.white,
                   side: const BorderSide(color: Colors.white24),
                   minimumSize: const Size(double.infinity, 48),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
                 ),
                 child: const Text('Cerrar'),
               ),
@@ -564,7 +621,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
               style: GoogleFonts.outfit(
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
-                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                color:
+                    isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                 letterSpacing: 0.5,
               ),
             ),
@@ -585,7 +643,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.location_on_rounded, size: 15, color: AppTheme.primary),
+                      const Icon(Icons.location_on_rounded,
+                          size: 15, color: AppTheme.primary),
                       const SizedBox(width: 4),
                       ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 180),
@@ -593,7 +652,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                           addr.title.isNotEmpty ? addr.title : 'Mi Dirección',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.outfit(fontSize: 13.5, fontWeight: FontWeight.w700),
+                          style: GoogleFonts.outfit(
+                              fontSize: 13.5, fontWeight: FontWeight.w700),
                         ),
                       ),
                       const Icon(Icons.keyboard_arrow_down_rounded, size: 16),
@@ -606,17 +666,21 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.notifications_active_outlined, color: AppTheme.primary, size: 22),
+            icon: const Icon(Icons.notifications_active_outlined,
+                color: AppTheme.primary, size: 22),
             tooltip: 'Notificaciones y Cupones',
             onPressed: () => _openNotificationsSheet(context),
           ),
           IconButton(
             icon: Icon(
-              widget.sessionService.isDarkMode ? Icons.wb_sunny_rounded : Icons.nightlight_round,
+              widget.sessionService.isDarkMode
+                  ? Icons.wb_sunny_rounded
+                  : Icons.nightlight_round,
               color: widget.sessionService.isDarkMode ? Colors.amber : null,
               size: 20,
             ),
-            tooltip: widget.sessionService.isDarkMode ? 'Modo claro' : 'Modo oscuro',
+            tooltip:
+                widget.sessionService.isDarkMode ? 'Modo claro' : 'Modo oscuro',
             onPressed: () => widget.sessionService.toggleTheme(),
           ),
           IconButton(
@@ -633,7 +697,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 widget.sessionService.logout();
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(
-                    builder: (_) => CustomerLoginScreen(sessionService: widget.sessionService),
+                    builder: (_) => CustomerLoginScreen(
+                        sessionService: widget.sessionService),
                   ),
                   (route) => false,
                 );
@@ -644,9 +709,11 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 value: 'profile',
                 child: Row(
                   children: [
-                    const Icon(Icons.account_circle_rounded, size: 20, color: AppTheme.primary),
+                    const Icon(Icons.account_circle_rounded,
+                        size: 20, color: AppTheme.primary),
                     const SizedBox(width: 10),
-                    Text('Mi Perfil (${user?.name.isNotEmpty == true ? user!.name : "Cliente"})'),
+                    Text(
+                        'Mi Perfil (${user?.name.isNotEmpty == true ? user!.name : "Cliente"})'),
                   ],
                 ),
               ),
@@ -655,7 +722,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 value: 'logout',
                 child: Row(
                   children: [
-                    Icon(Icons.logout_rounded, size: 20, color: Colors.redAccent),
+                    Icon(Icons.logout_rounded,
+                        size: 20, color: Colors.redAccent),
                     SizedBox(width: 10),
                     Text('Cerrar Sesión'),
                   ],
@@ -729,7 +797,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // Floating Active Order Radar Banner
-                if (activeOrder != null && activeOrder.status != OrderDeliveryStatus.delivered)
+                if (activeOrder != null &&
+                    activeOrder.status != OrderDeliveryStatus.delivered)
                   GestureDetector(
                     onTap: () => _showOrderTrackingModal(activeOrder),
                     child: Container(
@@ -762,7 +831,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                               color: Colors.white.withOpacity(0.2),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Icon(Icons.delivery_dining_rounded, color: Colors.white, size: 26),
+                            child: const Icon(Icons.delivery_dining_rounded,
+                                color: Colors.white, size: 26),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -770,13 +840,18 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  activeOrder.status == OrderDeliveryStatus.onTheWay
+                                  activeOrder.status ==
+                                          OrderDeliveryStatus.onTheWay
                                       ? 'En camino (${activeOrder.orderNumber})'
-                                      : activeOrder.status == OrderDeliveryStatus.atMerchant
+                                      : activeOrder.status ==
+                                              OrderDeliveryStatus.atMerchant
                                           ? 'En el local (${activeOrder.orderNumber})'
-                                          : activeOrder.status == OrderDeliveryStatus.assigned
+                                          : activeOrder.status ==
+                                                  OrderDeliveryStatus.assigned
                                               ? 'Repartidor asignado (${activeOrder.orderNumber})'
-                                              : activeOrder.status == OrderDeliveryStatus.preparing
+                                              : activeOrder.status ==
+                                                      OrderDeliveryStatus
+                                                          .preparing
                                                   ? 'En preparación (${activeOrder.orderNumber})'
                                                   : 'Pedido recibido (${activeOrder.orderNumber})',
                                   style: GoogleFonts.outfit(
@@ -786,13 +861,18 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                                   ),
                                 ),
                                 Text(
-                                  activeOrder.status == OrderDeliveryStatus.onTheWay
+                                  activeOrder.status ==
+                                          OrderDeliveryStatus.onTheWay
                                       ? '${activeOrder.riderName.isNotEmpty ? activeOrder.riderName : "Repartidor"} en ruta a tu ubicación'
-                                      : activeOrder.status == OrderDeliveryStatus.atMerchant
+                                      : activeOrder.status ==
+                                              OrderDeliveryStatus.atMerchant
                                           ? '¡${activeOrder.riderName.isNotEmpty ? activeOrder.riderName : "El repartidor"} llegó al local a retirar!'
-                                          : activeOrder.status == OrderDeliveryStatus.assigned
+                                          : activeOrder.status ==
+                                                  OrderDeliveryStatus.assigned
                                               ? '${activeOrder.riderName.isNotEmpty ? activeOrder.riderName : "Repartidor"} asignado • Yendo al comercio'
-                                              : activeOrder.status == OrderDeliveryStatus.preparing
+                                              : activeOrder.status ==
+                                                      OrderDeliveryStatus
+                                                          .preparing
                                                   ? 'Cocina preparando tu orden'
                                                   : 'Esperando confirmación del comercio',
                                   style: GoogleFonts.outfit(
@@ -804,7 +884,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                             ),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 6),
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(10),
@@ -835,7 +916,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                         color: AppTheme.primary.withOpacity(0.12),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: const Icon(Icons.tune_rounded, size: 18, color: AppTheme.primary),
+                      child: const Icon(Icons.tune_rounded,
+                          size: 18, color: AppTheme.primary),
                     ),
                   ),
                 ),
@@ -855,7 +937,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                       ),
                     ),
                     TextButton(
-                      onPressed: () => setState(() => _selectedCategory = 'Todos'),
+                      onPressed: () =>
+                          setState(() => _selectedCategory = 'Todos'),
                       child: Text(
                         'Ver todos',
                         style: GoogleFonts.outfit(
@@ -874,9 +957,17 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   child: Row(
                     children: [
                       {'name': 'Todos', 'icon': '✨', 'filter': 'Todos'},
-                      {'name': 'Restaurantes', 'icon': '🍽️', 'filter': 'Comida'},
+                      {
+                        'name': 'Restaurantes',
+                        'icon': '🍽️',
+                        'filter': 'Comida'
+                      },
                       {'name': 'Súper', 'icon': '🛒', 'filter': 'Markets'},
-                      {'name': 'Farmacias', 'icon': '💊', 'filter': 'Farmacias'},
+                      {
+                        'name': 'Farmacias',
+                        'icon': '💊',
+                        'filter': 'Farmacias'
+                      },
                       {'name': 'Mascotas', 'icon': '🐾', 'filter': 'Mascotas'},
                       {'name': 'Licores', 'icon': '🍷', 'filter': 'Licores'},
                       {'name': 'Postres', 'icon': '🧁', 'filter': 'Postres'},
@@ -890,26 +981,34 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                         padding: const EdgeInsets.only(right: 10),
                         child: InkWell(
                           borderRadius: BorderRadius.circular(16),
-                          onTap: () => setState(() => _selectedCategory = filter),
+                          onTap: () =>
+                              setState(() => _selectedCategory = filter),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 150),
                             width: 76,
                             height: 76,
                             decoration: BoxDecoration(
                               color: isSelected
-                                  ? (isDark ? AppTheme.darkSurface : Colors.white)
-                                  : (isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9)),
+                                  ? (isDark
+                                      ? AppTheme.darkSurface
+                                      : Colors.white)
+                                  : (isDark
+                                      ? const Color(0xFF1E293B)
+                                      : const Color(0xFFF1F5F9)),
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
                                 color: isSelected
                                     ? AppTheme.primary
-                                    : (isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
+                                    : (isDark
+                                        ? Colors.white10
+                                        : const Color(0xFFE2E8F0)),
                                 width: isSelected ? 2.0 : 1.0,
                               ),
                               boxShadow: isSelected
                                   ? [
                                       BoxShadow(
-                                        color: AppTheme.primary.withOpacity(0.2),
+                                        color:
+                                            AppTheme.primary.withOpacity(0.2),
                                         blurRadius: 8,
                                         offset: const Offset(0, 3),
                                       ),
@@ -919,16 +1018,21 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Text(icon, style: const TextStyle(fontSize: 24)),
+                                Text(icon,
+                                    style: const TextStyle(fontSize: 24)),
                                 const SizedBox(height: 4),
                                 Text(
                                   name,
                                   style: GoogleFonts.outfit(
                                     fontSize: 10.5,
-                                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                                    fontWeight: isSelected
+                                        ? FontWeight.w800
+                                        : FontWeight.w600,
                                     color: isSelected
                                         ? AppTheme.primary
-                                        : (isDark ? Colors.white70 : const Color(0xFF475569)),
+                                        : (isDark
+                                            ? Colors.white70
+                                            : const Color(0xFF475569)),
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -946,107 +1050,138 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 if (_banners.isNotEmpty) ...[
                   const SizedBox(height: 18),
                   ..._banners.take(1).map((b) => Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          _parseHexColor(b.bgGradientStart, fallback: const Color(0xFFF97316)),
-                          _parseHexColor(b.bgGradientEnd, fallback: const Color(0xFFEA580C)),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFFEA580C).withOpacity(0.35),
-                          blurRadius: 14,
-                          offset: const Offset(0, 5),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              _parseHexColor(b.bgGradientStart,
+                                  fallback: const Color(0xFFF97316)),
+                              _parseHexColor(b.bgGradientEnd,
+                                  fallback: const Color(0xFFEA580C)),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFEA580C).withOpacity(0.35),
+                              blurRadius: 14,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              if (b.badgeText != null && b.badgeText!.isNotEmpty)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                  margin: const EdgeInsets.only(bottom: 6),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.22),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    b.badgeText!,
-                                    style: GoogleFonts.outfit(fontSize: 9.5, fontWeight: FontWeight.w800, color: Colors.white),
-                                  ),
-                                ),
-                              Text(
-                                b.title,
-                                style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.w900, color: Colors.white, height: 1.15),
-                              ),
-                              if (b.subtitle.isNotEmpty) ...[
-                                const SizedBox(height: 3),
-                                Text(
-                                  b.subtitle,
-                                  style: GoogleFonts.outfit(fontSize: 11.5, color: Colors.white.withOpacity(0.92)),
-                                ),
-                              ],
-                              const SizedBox(height: 10),
-                              Row(
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  if (b.couponCode != null && b.couponCode!.isNotEmpty)
+                                  if (b.badgeText != null &&
+                                      b.badgeText!.isNotEmpty)
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
-                                      margin: const EdgeInsets.only(right: 8),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 3),
+                                      margin: const EdgeInsets.only(bottom: 6),
                                       decoration: BoxDecoration(
-                                        color: Colors.black.withOpacity(0.25),
+                                        color: Colors.white.withOpacity(0.22),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Text(
-                                        'Cupón: ${b.couponCode!}',
-                                        style: GoogleFonts.outfit(fontSize: 10.5, fontWeight: FontWeight.w800, color: const Color(0xFFFDE047)),
+                                        b.badgeText!,
+                                        style: GoogleFonts.outfit(
+                                            fontSize: 9.5,
+                                            fontWeight: FontWeight.w800,
+                                            color: Colors.white),
                                       ),
                                     ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(8),
+                                  Text(
+                                    b.title,
+                                    style: GoogleFonts.outfit(
+                                        fontSize: 17,
+                                        fontWeight: FontWeight.w900,
+                                        color: Colors.white,
+                                        height: 1.15),
+                                  ),
+                                  if (b.subtitle.isNotEmpty) ...[
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      b.subtitle,
+                                      style: GoogleFonts.outfit(
+                                          fontSize: 11.5,
+                                          color:
+                                              Colors.white.withOpacity(0.92)),
                                     ),
-                                    child: Text(
-                                      b.buttonText ?? 'Pedir ahora',
-                                      style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w800, color: const Color(0xFFEA580C)),
-                                    ),
+                                  ],
+                                  const SizedBox(height: 10),
+                                  Row(
+                                    children: [
+                                      if (b.couponCode != null &&
+                                          b.couponCode!.isNotEmpty)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 8, vertical: 3.5),
+                                          margin:
+                                              const EdgeInsets.only(right: 8),
+                                          decoration: BoxDecoration(
+                                            color:
+                                                Colors.black.withOpacity(0.25),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                          child: Text(
+                                            'Cupón: ${b.couponCode!}',
+                                            style: GoogleFonts.outfit(
+                                                fontSize: 10.5,
+                                                fontWeight: FontWeight.w800,
+                                                color: const Color(0xFFFDE047)),
+                                          ),
+                                        ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 10, vertical: 5),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                        ),
+                                        child: Text(
+                                          b.buttonText ?? 'Pedir ahora',
+                                          style: GoogleFonts.outfit(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w800,
+                                              color: const Color(0xFFEA580C)),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
-                            ],
-                          ),
-                        ),
-                        if (b.imageUrl != null && b.imageUrl!.isNotEmpty)
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(14),
-                            child: Image.network(
-                              b.imageUrl!,
-                              width: 80,
-                              height: 80,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => const SizedBox(),
                             ),
-                          ),
-                      ],
-                    ),
-                  )),
+                            if (b.imageUrl != null && b.imageUrl!.isNotEmpty)
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(14),
+                                child: Image.network(
+                                  b.imageUrl!,
+                                  width: 80,
+                                  height: 80,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) =>
+                                      const SizedBox(),
+                                ),
+                              ),
+                          ],
+                        ),
+                      )),
                 ],
 
                 // 3. COMERCIOS DESTACADOS (TOP SELECCIÓN)
                 Builder(
                   builder: (_) {
-                    final featured = _stores.where((s) => s['isFeatured'] == true || s['is_featured'] == true).toList();
+                    final featured = _stores
+                        .where((s) =>
+                            s['isFeatured'] == true || s['is_featured'] == true)
+                        .toList();
                     if (featured.isEmpty) return const SizedBox.shrink();
 
                     return Column(
@@ -1058,28 +1193,40 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                           children: [
                             Row(
                               children: [
-                                const Text('⭐ ', style: TextStyle(fontSize: 16)),
+                                const Text('⭐ ',
+                                    style: TextStyle(fontSize: 16)),
                                 Text(
                                   'Comercios Destacados',
-                                  style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w800),
+                                  style: GoogleFonts.outfit(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w800),
                                 ),
                                 const SizedBox(width: 8),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 2),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFF59E0B).withOpacity(0.15),
+                                    color: const Color(0xFFF59E0B)
+                                        .withOpacity(0.15),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(
                                     'TOP SELECCIÓN',
-                                    style: GoogleFonts.outfit(fontSize: 9, fontWeight: FontWeight.w900, color: const Color(0xFFF59E0B)),
+                                    style: GoogleFonts.outfit(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w900,
+                                        color: const Color(0xFFF59E0B)),
                                   ),
                                 ),
                               ],
                             ),
                             Text(
                               '${featured.length} destacados',
-                              style: GoogleFonts.outfit(fontSize: 11.5, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                              style: GoogleFonts.outfit(
+                                  fontSize: 11.5,
+                                  color: isDark
+                                      ? const Color(0xFF94A3B8)
+                                      : const Color(0xFF64748B)),
                             ),
                           ],
                         ),
@@ -1089,7 +1236,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                           child: ListView.separated(
                             scrollDirection: Axis.horizontal,
                             itemCount: featured.length,
-                            separatorBuilder: (_, __) => const SizedBox(width: 12),
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(width: 12),
                             itemBuilder: (ctx, fIdx) {
                               final fStore = featured[fIdx];
                               return _buildFeaturedStoreCard(fStore, isDark);
@@ -1112,13 +1260,16 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                       children: [
                         Text(
                           'Comercios Disponibles',
-                          style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.w700),
+                          style: GoogleFonts.outfit(
+                              fontSize: 17, fontWeight: FontWeight.w700),
                         ),
                         Text(
                           '${_stores.length} disponibles',
                           style: GoogleFonts.outfit(
                             fontSize: 12,
-                            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                            color: isDark
+                                ? const Color(0xFF94A3B8)
+                                : const Color(0xFF64748B),
                           ),
                         ),
                       ],
@@ -1127,35 +1278,60 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                     // 8. STORE VIEW SWITCHER (CARDS vs LIST)
                     Container(
                       decoration: BoxDecoration(
-                        color: isDark ? AppTheme.darkSurface : const Color(0xFFF1F5F9),
+                        color: isDark
+                            ? AppTheme.darkSurface
+                            : const Color(0xFFF1F5F9),
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder),
+                        border: Border.all(
+                            color: isDark
+                                ? AppTheme.darkBorder
+                                : AppTheme.lightBorder),
                       ),
                       padding: const EdgeInsets.all(2),
                       child: Row(
                         children: [
                           InkWell(
-                            onTap: () => setState(() => _isStoreGridView = false),
+                            onTap: () =>
+                                setState(() => _isStoreGridView = false),
                             borderRadius: BorderRadius.circular(8),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                color: !_isStoreGridView ? AppTheme.primary : Colors.transparent,
+                                color: !_isStoreGridView
+                                    ? AppTheme.primary
+                                    : Colors.transparent,
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: Icon(Icons.view_list_rounded, size: 16, color: !_isStoreGridView ? Colors.white : (isDark ? Colors.white70 : const Color(0xFF64748B))),
+                              child: Icon(Icons.view_list_rounded,
+                                  size: 16,
+                                  color: !_isStoreGridView
+                                      ? Colors.white
+                                      : (isDark
+                                          ? Colors.white70
+                                          : const Color(0xFF64748B))),
                             ),
                           ),
                           InkWell(
-                            onTap: () => setState(() => _isStoreGridView = true),
+                            onTap: () =>
+                                setState(() => _isStoreGridView = true),
                             borderRadius: BorderRadius.circular(8),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                color: _isStoreGridView ? AppTheme.primary : Colors.transparent,
+                                color: _isStoreGridView
+                                    ? AppTheme.primary
+                                    : Colors.transparent,
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: Icon(Icons.grid_view_rounded, size: 16, color: _isStoreGridView ? Colors.white : (isDark ? Colors.white70 : const Color(0xFF64748B))),
+                              child: Icon(Icons.grid_view_rounded,
+                                  size: 16,
+                                  color: _isStoreGridView
+                                      ? Colors.white
+                                      : (isDark
+                                          ? Colors.white70
+                                          : const Color(0xFF64748B))),
                             ),
                           ),
                         ],
@@ -1170,7 +1346,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   _buildStoreSkeletons(isDark)
                 else if (_filterStores().isEmpty)
                   Container(
-                    padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 40, horizontal: 20),
                     alignment: Alignment.center,
                     child: Column(
                       children: [
@@ -1178,12 +1355,14 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                         const SizedBox(height: 12),
                         Text(
                           'No hay comercios en esta categoría',
-                          style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w700),
+                          style: GoogleFonts.outfit(
+                              fontSize: 16, fontWeight: FontWeight.w700),
                         ),
                         const SizedBox(height: 6),
                         Text(
                           'Prueba cambiando de categoría o explorando todos los locales',
-                          style: GoogleFonts.outfit(fontSize: 12.5, color: const Color(0xFF94A3B8)),
+                          style: GoogleFonts.outfit(
+                              fontSize: 12.5, color: const Color(0xFF94A3B8)),
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 16),
@@ -1197,7 +1376,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppTheme.primary,
                             foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
                           ),
                         ),
                       ],
@@ -1228,7 +1408,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
               if (cart.items.isEmpty) return const SizedBox.shrink();
 
               return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     colors: [Color(0xFFEA580C), Color(0xFFF97316)],
@@ -1262,7 +1443,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                               color: Colors.white.withOpacity(0.2),
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: const Icon(Icons.shopping_bag_rounded, color: Colors.white, size: 20),
+                            child: const Icon(Icons.shopping_bag_rounded,
+                                color: Colors.white, size: 20),
                           ),
                           const SizedBox(width: 12),
                           Column(
@@ -1300,7 +1482,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                             ),
                           ),
                           const SizedBox(width: 4),
-                          const Icon(Icons.chevron_right_rounded, color: Colors.white),
+                          const Icon(Icons.chevron_right_rounded,
+                              color: Colors.white),
                         ],
                       ),
                     ],
@@ -1329,10 +1512,12 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
             children: [
               Text(
                 'Mis Pedidos Realizados',
-                style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w800),
+                style: GoogleFonts.outfit(
+                    fontSize: 18, fontWeight: FontWeight.w800),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: AppTheme.primary.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(10),
@@ -1349,34 +1534,38 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
             ],
           ),
           const SizedBox(height: 14),
-
           if (orders.isEmpty)
             Container(
               padding: const EdgeInsets.all(32),
               decoration: BoxDecoration(
                 color: isDark ? AppTheme.darkSurface : Colors.white,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder),
+                border: Border.all(
+                    color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder),
               ),
               child: Center(
                 child: Column(
                   children: [
-                    const Icon(Icons.receipt_long_outlined, size: 48, color: Colors.grey),
+                    const Icon(Icons.receipt_long_outlined,
+                        size: 48, color: Colors.grey),
                     const SizedBox(height: 12),
                     Text(
                       'No tienes pedidos realizados aún',
-                      style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w700),
+                      style: GoogleFonts.outfit(
+                          fontSize: 16, fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(height: 6),
                     Text(
                       'Explora nuestros comercios y confirma tu primer platillo',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xFF94A3B8)),
+                      style: GoogleFonts.outfit(
+                          fontSize: 13, color: const Color(0xFF94A3B8)),
                     ),
                     const SizedBox(height: 16),
                     ElevatedButton(
                       onPressed: () => setState(() => _selectedTab = 0),
-                      style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary),
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primary),
                       child: const Text('Explorar Comercios'),
                     ),
                   ],
@@ -1394,7 +1583,9 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   color: isDark ? AppTheme.darkSurface : Colors.white,
                   borderRadius: BorderRadius.circular(18),
                   border: Border.all(
-                    color: isDelivered ? (isDark ? AppTheme.darkBorder : AppTheme.lightBorder) : AppTheme.primary.withOpacity(0.5),
+                    color: isDelivered
+                        ? (isDark ? AppTheme.darkBorder : AppTheme.lightBorder)
+                        : AppTheme.primary.withOpacity(0.5),
                     width: isDelivered ? 1.0 : 1.5,
                   ),
                 ),
@@ -1409,12 +1600,19 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: (isDelivered ? const Color(0xFF10B981) : AppTheme.primary).withOpacity(0.12),
+                              color: (isDelivered
+                                      ? const Color(0xFF10B981)
+                                      : AppTheme.primary)
+                                  .withOpacity(0.12),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Icon(
-                              isDelivered ? Icons.check_circle_rounded : Icons.moped_rounded,
-                              color: isDelivered ? const Color(0xFF10B981) : AppTheme.primary,
+                              isDelivered
+                                  ? Icons.check_circle_rounded
+                                  : Icons.moped_rounded,
+                              color: isDelivered
+                                  ? const Color(0xFF10B981)
+                                  : AppTheme.primary,
                               size: 20,
                             ),
                           ),
@@ -1427,23 +1625,34 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                                   order.merchantName,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.outfit(fontSize: 14.5, fontWeight: FontWeight.w700),
+                                  style: GoogleFonts.outfit(
+                                      fontSize: 14.5,
+                                      fontWeight: FontWeight.w700),
                                 ),
                                 Text(
                                   order.orderNumber,
-                                  style: GoogleFonts.outfit(fontSize: 11.5, color: const Color(0xFF94A3B8)),
+                                  style: GoogleFonts.outfit(
+                                      fontSize: 11.5,
+                                      color: const Color(0xFF94A3B8)),
                                 ),
                               ],
                             ),
                           ),
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: (isDelivered ? const Color(0xFF10B981) : AppTheme.primary).withOpacity(0.12),
+                              color: (isDelivered
+                                      ? const Color(0xFF10B981)
+                                      : AppTheme.primary)
+                                  .withOpacity(0.12),
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(
-                                color: (isDelivered ? const Color(0xFF10B981) : AppTheme.primary).withOpacity(0.3),
+                                color: (isDelivered
+                                        ? const Color(0xFF10B981)
+                                        : AppTheme.primary)
+                                    .withOpacity(0.3),
                               ),
                             ),
                             child: Text(
@@ -1453,7 +1662,9 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                               style: GoogleFonts.outfit(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
-                                color: isDelivered ? const Color(0xFF10B981) : AppTheme.primary,
+                                color: isDelivered
+                                    ? const Color(0xFF10B981)
+                                    : AppTheme.primary,
                               ),
                             ),
                           ),
@@ -1462,7 +1673,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                       const SizedBox(height: 12),
                       Text(
                         '${order.items.length} items • Total: \$${order.total.toStringAsFixed(2)} • ${order.paymentMethod}',
-                        style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w600),
+                        style: GoogleFonts.outfit(
+                            fontSize: 12, fontWeight: FontWeight.w600),
                       ),
                       const SizedBox(height: 12),
                       SizedBox(
@@ -1473,19 +1685,26 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                               Expanded(
                                 flex: 6,
                                 child: ElevatedButton.icon(
-                                  onPressed: () => _showOrderTrackingModal(order),
-                                  icon: const Icon(Icons.navigation_rounded, size: 15),
+                                  onPressed: () =>
+                                      _showOrderTrackingModal(order),
+                                  icon: const Icon(Icons.navigation_rounded,
+                                      size: 15),
                                   label: Text(
                                     'Rastrear en Vivo',
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w700),
+                                    style: GoogleFonts.outfit(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700),
                                   ),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: AppTheme.primary,
                                     foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 10),
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(10)),
                                   ),
                                 ),
                               ),
@@ -1494,17 +1713,23 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                             Expanded(
                               flex: isDelivered ? 1 : 5,
                               child: OutlinedButton.icon(
-                                onPressed: () => _showOrderReceiptDialog(context, order),
-                                icon: const Icon(Icons.receipt_long_rounded, size: 15),
+                                onPressed: () =>
+                                    _showOrderReceiptDialog(context, order),
+                                icon: const Icon(Icons.receipt_long_rounded,
+                                    size: 15),
                                 label: Text(
                                   'Ver Detalle',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w600),
+                                  style: GoogleFonts.outfit(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600),
                                 ),
                                 style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10)),
                                 ),
                               ),
                             ),
@@ -1524,7 +1749,9 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   // --- TAB 2: COMERCIOS FAVORITOS ---
   Widget _buildFavoritesTab(bool isDark) {
     final favIds = widget.sessionService.favoriteStoreIds;
-    final favoriteStores = _stores.where((s) => favIds.contains(s['id']?.toString() ?? '')).toList();
+    final favoriteStores = _stores
+        .where((s) => favIds.contains(s['id']?.toString() ?? ''))
+        .toList();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -1536,10 +1763,12 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
             children: [
               Text(
                 'Tus Comercios Favoritos',
-                style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w800),
+                style: GoogleFonts.outfit(
+                    fontSize: 18, fontWeight: FontWeight.w800),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: const Color(0xFFEF4444).withOpacity(0.12),
                   borderRadius: BorderRadius.circular(10),
@@ -1556,34 +1785,38 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
             ],
           ),
           const SizedBox(height: 14),
-
           if (favoriteStores.isEmpty)
             Container(
               padding: const EdgeInsets.all(32),
               decoration: BoxDecoration(
                 color: isDark ? AppTheme.darkSurface : Colors.white,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder),
+                border: Border.all(
+                    color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder),
               ),
               child: Center(
                 child: Column(
                   children: [
-                    const Icon(Icons.favorite_border_rounded, size: 48, color: Color(0xFFEF4444)),
+                    const Icon(Icons.favorite_border_rounded,
+                        size: 48, color: Color(0xFFEF4444)),
                     const SizedBox(height: 12),
                     Text(
                       'No tienes favoritos guardados',
-                      style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w700),
+                      style: GoogleFonts.outfit(
+                          fontSize: 16, fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(height: 6),
                     Text(
                       'Toca el corazón en cualquier comercio para tenerlo siempre a mano',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xFF94A3B8)),
+                      style: GoogleFonts.outfit(
+                          fontSize: 13, color: const Color(0xFF94A3B8)),
                     ),
                     const SizedBox(height: 16),
                     ElevatedButton(
                       onPressed: () => setState(() => _selectedTab = 0),
-                      style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary),
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primary),
                       child: const Text('Explorar Comercios'),
                     ),
                   ],
@@ -1597,7 +1830,9 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 decoration: BoxDecoration(
                   color: isDark ? AppTheme.darkSurface : Colors.white,
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder),
+                  border: Border.all(
+                      color:
+                          isDark ? AppTheme.darkBorder : AppTheme.lightBorder),
                 ),
                 child: ListTile(
                   contentPadding: const EdgeInsets.all(12),
@@ -1610,16 +1845,20 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   ),
                   title: Text(
                     store['name'],
-                    style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w700),
+                    style: GoogleFonts.outfit(
+                        fontSize: 15, fontWeight: FontWeight.w700),
                   ),
                   subtitle: Text(
                     '${store['category']} • Envío ${store['fee']}',
-                    style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFF94A3B8)),
+                    style: GoogleFonts.outfit(
+                        fontSize: 12, color: const Color(0xFF94A3B8)),
                   ),
                   trailing: IconButton(
-                    icon: const Icon(Icons.favorite_rounded, color: Color(0xFFEF4444)),
+                    icon: const Icon(Icons.favorite_rounded,
+                        color: Color(0xFFEF4444)),
                     onPressed: () async {
-                      await widget.sessionService.toggleFavorite(store['id']?.toString() ?? '');
+                      await widget.sessionService
+                          .toggleFavorite(store['id']?.toString() ?? '');
                       if (mounted) setState(() {});
                     },
                   ),
@@ -1642,7 +1881,11 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     );
   }
 
-  Widget _buildAdaptiveImage(String? rawUrl, {double? width, double? height, BoxFit fit = BoxFit.cover, BorderRadius? borderRadius}) {
+  Widget _buildAdaptiveImage(String? rawUrl,
+      {double? width,
+      double? height,
+      BoxFit fit = BoxFit.cover,
+      BorderRadius? borderRadius}) {
     Widget imageWidget;
     final url = (rawUrl ?? '').trim();
     if (url.startsWith('data:image')) {
@@ -1655,10 +1898,18 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
           width: width,
           height: height,
           fit: fit,
-          errorBuilder: (_, __, ___) => Container(width: width, height: height, color: Colors.grey.shade300, child: const Icon(Icons.store, color: Colors.grey)),
+          errorBuilder: (_, __, ___) => Container(
+              width: width,
+              height: height,
+              color: Colors.grey.shade300,
+              child: const Icon(Icons.store, color: Colors.grey)),
         );
       } catch (_) {
-        imageWidget = Container(width: width, height: height, color: Colors.grey.shade300, child: const Icon(Icons.store, color: Colors.grey));
+        imageWidget = Container(
+            width: width,
+            height: height,
+            color: Colors.grey.shade300,
+            child: const Icon(Icons.store, color: Colors.grey));
       }
     } else if (url.startsWith('http://') || url.startsWith('https://')) {
       imageWidget = Image.network(
@@ -1666,7 +1917,11 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
         width: width,
         height: height,
         fit: fit,
-        errorBuilder: (_, __, ___) => Container(width: width, height: height, color: Colors.grey.shade300, child: const Icon(Icons.store, color: Colors.grey)),
+        errorBuilder: (_, __, ___) => Container(
+            width: width,
+            height: height,
+            color: Colors.grey.shade300,
+            child: const Icon(Icons.store, color: Colors.grey)),
       );
     } else {
       imageWidget = Container(
@@ -1701,28 +1956,44 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
             storeCat.contains('restauran');
       }
       if (target == 'farmacias') {
-        return storeCat.contains('farma') || storeCat.contains('salud') || storeName.contains('farma');
+        return storeCat.contains('farma') ||
+            storeCat.contains('salud') ||
+            storeName.contains('farma');
       }
       if (target == 'markets' || target == 'súper') {
-        return storeCat.contains('market') || storeCat.contains('super') || storeName.contains('market');
+        return storeCat.contains('market') ||
+            storeCat.contains('super') ||
+            storeName.contains('market');
       }
       if (target == 'repuestos') {
-        return storeCat.contains('repuesto') || storeCat.contains('moto') || storeCat.contains('auto');
+        return storeCat.contains('repuesto') ||
+            storeCat.contains('moto') ||
+            storeCat.contains('auto');
       }
       if (target == 'juguetes') {
-        return storeCat.contains('juguete') || storeCat.contains('regalo') || storeCat.contains('niño');
+        return storeCat.contains('juguete') ||
+            storeCat.contains('regalo') ||
+            storeCat.contains('niño');
       }
       if (target == 'tecnología') {
-        return storeCat.contains('tecno') || storeCat.contains('comput') || storeCat.contains('celul');
+        return storeCat.contains('tecno') ||
+            storeCat.contains('comput') ||
+            storeCat.contains('celul');
       }
       if (target == 'mascotas') {
         return storeCat.contains('mascota') || storeCat.contains('veterin');
       }
       if (target == 'licores') {
-        return storeCat.contains('licor') || storeCat.contains('vino') || storeCat.contains('cerveza') || storeCat.contains('bodega');
+        return storeCat.contains('licor') ||
+            storeCat.contains('vino') ||
+            storeCat.contains('cerveza') ||
+            storeCat.contains('bodega');
       }
       if (target == 'postres') {
-        return storeCat.contains('postre') || storeCat.contains('dulce') || storeCat.contains('helado') || storeCat.contains('panad');
+        return storeCat.contains('postre') ||
+            storeCat.contains('dulce') ||
+            storeCat.contains('helado') ||
+            storeCat.contains('panad');
       }
       return storeCat.contains(target) || storeName.contains(target);
     }).toList();
@@ -1732,20 +2003,35 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
       final branches = store['branches'] as List<dynamic>? ?? [];
       if (branches.isNotEmpty) {
         for (final b in branches) {
-          final bLat = b is Branch ? b.latitude : (b['latitude'] as num?)?.toDouble();
-          final bLng = b is Branch ? b.longitude : (b['longitude'] as num?)?.toDouble();
-          final bRadius = b is Branch ? b.deliveryRadiusKm : ((b['delivery_radius_km'] ?? b['deliveryRadiusKm']) as num?)?.toDouble() ?? 15.0;
+          final bLat =
+              b is Branch ? b.latitude : (b['latitude'] as num?)?.toDouble();
+          final bLng =
+              b is Branch ? b.longitude : (b['longitude'] as num?)?.toDouble();
+          final bRadius = b is Branch
+              ? b.deliveryRadiusKm
+              : ((b['delivery_radius_km'] ?? b['deliveryRadiusKm']) as num?)
+                      ?.toDouble() ??
+                  15.0;
           if (bLat != null && bLng != null && bLat != 0 && bLng != 0) {
-            final d = ApiService.calculateDistanceKm(bLat, bLng, selectedAddr.latitude, selectedAddr.longitude);
+            final d = ApiService.calculateDistanceKm(
+                bLat, bLng, selectedAddr.latitude, selectedAddr.longitude);
             if (d <= bRadius) return true;
           }
         }
       }
-      final storeLat = (store['lat'] as num?)?.toDouble() ?? (store['latitude'] as num?)?.toDouble();
-      final storeLng = (store['lng'] as num?)?.toDouble() ?? (store['longitude'] as num?)?.toDouble();
-      final maxRadius = (store['delivery_radius_km'] as num?)?.toDouble() ?? (store['deliveryRadiusKm'] as num?)?.toDouble() ?? 15.0;
-      if (storeLat != null && storeLng != null && storeLat != 0 && storeLng != 0) {
-        final dist = ApiService.calculateDistanceKm(storeLat, storeLng, selectedAddr.latitude, selectedAddr.longitude);
+      final storeLat = (store['lat'] as num?)?.toDouble() ??
+          (store['latitude'] as num?)?.toDouble();
+      final storeLng = (store['lng'] as num?)?.toDouble() ??
+          (store['longitude'] as num?)?.toDouble();
+      final maxRadius = (store['delivery_radius_km'] as num?)?.toDouble() ??
+          (store['deliveryRadiusKm'] as num?)?.toDouble() ??
+          15.0;
+      if (storeLat != null &&
+          storeLng != null &&
+          storeLat != 0 &&
+          storeLng != 0) {
+        final dist = ApiService.calculateDistanceKm(
+            storeLat, storeLng, selectedAddr.latitude, selectedAddr.longitude);
         return dist <= maxRadius;
       }
       return true;
@@ -1762,11 +2048,13 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     List<Branch> branches = [];
     if (rawBranches is List) {
       branches = rawBranches
-          .map((b) => b is Branch ? b : Branch.fromJson(b as Map<String, dynamic>))
+          .map((b) =>
+              b is Branch ? b : Branch.fromJson(b as Map<String, dynamic>))
           .toList();
     }
     if (branches.isEmpty) {
-      final fetched = await ApiService().fetchBranchesForCompany(store['id']?.toString() ?? '');
+      final fetched = await ApiService()
+          .fetchBranchesForCompany(store['id']?.toString() ?? '');
       if (fetched.isNotEmpty) branches = fetched;
     }
     branches = branches.where((b) => b.status == 'active').toList();
@@ -1818,7 +2106,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
         decoration: BoxDecoration(
           color: isDark ? AppTheme.darkSurface : Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder),
+          border: Border.all(
+              color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
@@ -1837,20 +2126,25 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   height: 95,
                   width: double.infinity,
                   fit: BoxFit.cover,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(15)),
                 ),
                 Positioned(
                   top: 8,
                   left: 8,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 6, vertical: 2.5),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF59E0B),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
                       'TOP SELECCIÓN',
-                      style: GoogleFonts.outfit(fontSize: 8.5, fontWeight: FontWeight.w900, color: Colors.white),
+                      style: GoogleFonts.outfit(
+                          fontSize: 8.5,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white),
                     ),
                   ),
                 ),
@@ -1858,14 +2152,20 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   top: 8,
                   right: 8,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 6, vertical: 2.5),
                     decoration: BoxDecoration(
-                      color: isOpen ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                      color: isOpen
+                          ? const Color(0xFF10B981)
+                          : const Color(0xFFEF4444),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
                       isOpen ? 'Abierto' : 'Cerrado',
-                      style: GoogleFonts.outfit(fontSize: 8.5, fontWeight: FontWeight.w800, color: Colors.white),
+                      style: GoogleFonts.outfit(
+                          fontSize: 8.5,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white),
                     ),
                   ),
                 ),
@@ -1878,23 +2178,30 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 children: [
                   Text(
                     store['name'] ?? 'Comercio',
-                    style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.w700),
+                    style: GoogleFonts.outfit(
+                        fontSize: 13, fontWeight: FontWeight.w700),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 3),
                   Row(
                     children: [
-                      const Icon(Icons.star_rounded, size: 14, color: AppTheme.amberAccent),
+                      const Icon(Icons.star_rounded,
+                          size: 14, color: AppTheme.amberAccent),
                       const SizedBox(width: 3),
                       Text(
                         store['rating']?.toString() ?? '4.9',
-                        style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w700),
+                        style: GoogleFonts.outfit(
+                            fontSize: 11, fontWeight: FontWeight.w700),
                       ),
                       const SizedBox(width: 8),
                       Text(
                         store['category'] ?? 'Restaurante',
-                        style: GoogleFonts.outfit(fontSize: 10.5, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                        style: GoogleFonts.outfit(
+                            fontSize: 10.5,
+                            color: isDark
+                                ? const Color(0xFF94A3B8)
+                                : const Color(0xFF64748B)),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -1911,12 +2218,16 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
   Widget _buildStoreGridCard(Map<String, dynamic> store, bool isDark) {
     final isOpen = _isStoreOpenNow(store);
-    final isFav = widget.sessionService.isFavorite(store['id']?.toString() ?? '');
+    final isFav =
+        widget.sessionService.isFavorite(store['id']?.toString() ?? '');
     final selectedAddr = CartService().selectedAddress;
-    final sLat = (store['lat'] as num?)?.toDouble() ?? (store['latitude'] as num?)?.toDouble();
-    final sLng = (store['lng'] as num?)?.toDouble() ?? (store['longitude'] as num?)?.toDouble();
+    final sLat = (store['lat'] as num?)?.toDouble() ??
+        (store['latitude'] as num?)?.toDouble();
+    final sLng = (store['lng'] as num?)?.toDouble() ??
+        (store['longitude'] as num?)?.toDouble();
     final storeDist = (sLat != null && sLng != null && sLat != 0 && sLng != 0)
-        ? ApiService.calculateDistanceKm(sLat, sLng, selectedAddr.latitude, selectedAddr.longitude)
+        ? ApiService.calculateDistanceKm(
+            sLat, sLng, selectedAddr.latitude, selectedAddr.longitude)
         : null;
 
     return Container(
@@ -1924,7 +2235,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
       decoration: BoxDecoration(
         color: isDark ? AppTheme.darkSurface : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder),
+        border: Border.all(
+            color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
@@ -1948,20 +2260,27 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                     height: 120,
                     width: double.infinity,
                     fit: BoxFit.cover,
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(15)),
                   ),
                   Positioned(
                     top: 8,
                     left: 8,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 7, vertical: 3),
                       decoration: BoxDecoration(
-                        color: isOpen ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                        color: isOpen
+                            ? const Color(0xFF10B981)
+                            : const Color(0xFFEF4444),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
                         isOpen ? '🟢 Abierto' : '🔴 Cerrado',
-                        style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.w800, color: Colors.white),
+                        style: GoogleFonts.outfit(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white),
                       ),
                     ),
                   ),
@@ -1974,15 +2293,19 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                         shape: BoxShape.circle,
                       ),
                       child: IconButton(
-                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                        constraints:
+                            const BoxConstraints(minWidth: 32, minHeight: 32),
                         padding: EdgeInsets.zero,
                         icon: Icon(
-                          isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                          isFav
+                              ? Icons.favorite_rounded
+                              : Icons.favorite_border_rounded,
                           color: isFav ? const Color(0xFFEF4444) : Colors.white,
                           size: 18,
                         ),
                         onPressed: () async {
-                          await widget.sessionService.toggleFavorite(store['id']?.toString() ?? '');
+                          await widget.sessionService
+                              .toggleFavorite(store['id']?.toString() ?? '');
                           if (mounted) setState(() {});
                         },
                       ),
@@ -1997,27 +2320,38 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   children: [
                     Text(
                       store['name'] ?? 'Comercio',
-                      style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w700),
+                      style: GoogleFonts.outfit(
+                          fontSize: 15, fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(height: 3),
                     Row(
                       children: [
-                        const Icon(Icons.star_rounded, size: 14, color: AppTheme.amberAccent),
+                        const Icon(Icons.star_rounded,
+                            size: 14, color: AppTheme.amberAccent),
                         const SizedBox(width: 3),
                         Text(
                           store['rating']?.toString() ?? '4.8',
-                          style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w700),
+                          style: GoogleFonts.outfit(
+                              fontSize: 12, fontWeight: FontWeight.w700),
                         ),
                         const SizedBox(width: 10),
                         Text(
                           store['category'] ?? 'Restaurante',
-                          style: GoogleFonts.outfit(fontSize: 11.5, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                          style: GoogleFonts.outfit(
+                              fontSize: 11.5,
+                              color: isDark
+                                  ? const Color(0xFF94A3B8)
+                                  : const Color(0xFF64748B)),
                         ),
                         if (storeDist != null) ...[
                           const Spacer(),
                           Text(
                             '${storeDist.toStringAsFixed(1)} km',
-                            style: GoogleFonts.outfit(fontSize: 11.5, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                            style: GoogleFonts.outfit(
+                                fontSize: 11.5,
+                                color: isDark
+                                    ? const Color(0xFF94A3B8)
+                                    : const Color(0xFF64748B)),
                           ),
                         ],
                       ],
@@ -2034,12 +2368,16 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
   Widget _buildStoreListCard(Map<String, dynamic> store, bool isDark) {
     final isOpen = _isStoreOpenNow(store);
-    final isFav = widget.sessionService.isFavorite(store['id']?.toString() ?? '');
+    final isFav =
+        widget.sessionService.isFavorite(store['id']?.toString() ?? '');
     final selectedAddr = CartService().selectedAddress;
-    final sLat = (store['lat'] as num?)?.toDouble() ?? (store['latitude'] as num?)?.toDouble();
-    final sLng = (store['lng'] as num?)?.toDouble() ?? (store['longitude'] as num?)?.toDouble();
+    final sLat = (store['lat'] as num?)?.toDouble() ??
+        (store['latitude'] as num?)?.toDouble();
+    final sLng = (store['lng'] as num?)?.toDouble() ??
+        (store['longitude'] as num?)?.toDouble();
     final storeDist = (sLat != null && sLng != null && sLat != 0 && sLng != 0)
-        ? ApiService.calculateDistanceKm(sLat, sLng, selectedAddr.latitude, selectedAddr.longitude)
+        ? ApiService.calculateDistanceKm(
+            sLat, sLng, selectedAddr.latitude, selectedAddr.longitude)
         : null;
 
     return Container(
@@ -2047,7 +2385,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
       decoration: BoxDecoration(
         color: isDark ? AppTheme.darkSurface : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder),
+        border: Border.all(
+            color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
@@ -2083,15 +2422,19 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                           Expanded(
                             child: Text(
                               store['name'] ?? 'Comercio',
-                              style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w700),
+                              style: GoogleFonts.outfit(
+                                  fontSize: 15, fontWeight: FontWeight.w700),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: isOpen ? const Color(0xFF10B981).withOpacity(0.12) : const Color(0xFFEF4444).withOpacity(0.12),
+                              color: isOpen
+                                  ? const Color(0xFF10B981).withOpacity(0.12)
+                                  : const Color(0xFFEF4444).withOpacity(0.12),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
@@ -2099,7 +2442,9 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                               style: GoogleFonts.outfit(
                                 fontSize: 9.5,
                                 fontWeight: FontWeight.w800,
-                                color: isOpen ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                                color: isOpen
+                                    ? const Color(0xFF10B981)
+                                    : const Color(0xFFEF4444),
                               ),
                             ),
                           ),
@@ -2108,24 +2453,32 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                       const SizedBox(height: 3),
                       Text(
                         store['category'] ?? 'Restaurante',
-                        style: GoogleFonts.outfit(fontSize: 11.5, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                        style: GoogleFonts.outfit(
+                            fontSize: 11.5,
+                            color: isDark
+                                ? const Color(0xFF94A3B8)
+                                : const Color(0xFF64748B)),
                       ),
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          const Icon(Icons.star_rounded, size: 14, color: AppTheme.amberAccent),
+                          const Icon(Icons.star_rounded,
+                              size: 14, color: AppTheme.amberAccent),
                           const SizedBox(width: 3),
                           Text(
                             store['rating']?.toString() ?? '4.8',
-                            style: GoogleFonts.outfit(fontSize: 11.5, fontWeight: FontWeight.w700),
+                            style: GoogleFonts.outfit(
+                                fontSize: 11.5, fontWeight: FontWeight.w700),
                           ),
                           if (storeDist != null) ...[
                             const SizedBox(width: 10),
-                            const Icon(Icons.navigation_rounded, size: 12, color: Colors.grey),
+                            const Icon(Icons.navigation_rounded,
+                                size: 12, color: Colors.grey),
                             const SizedBox(width: 2),
                             Text(
                               '${storeDist.toStringAsFixed(1)} km',
-                              style: GoogleFonts.outfit(fontSize: 11, color: Colors.grey),
+                              style: GoogleFonts.outfit(
+                                  fontSize: 11, color: Colors.grey),
                             ),
                           ],
                         ],
@@ -2135,12 +2488,17 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 ),
                 IconButton(
                   icon: Icon(
-                    isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                    color: isFav ? const Color(0xFFEF4444) : (isDark ? Colors.white38 : Colors.grey.shade400),
+                    isFav
+                        ? Icons.favorite_rounded
+                        : Icons.favorite_border_rounded,
+                    color: isFav
+                        ? const Color(0xFFEF4444)
+                        : (isDark ? Colors.white38 : Colors.grey.shade400),
                     size: 20,
                   ),
                   onPressed: () async {
-                    await widget.sessionService.toggleFavorite(store['id']?.toString() ?? '');
+                    await widget.sessionService
+                        .toggleFavorite(store['id']?.toString() ?? '');
                     if (mounted) setState(() {});
                   },
                 ),
@@ -2161,7 +2519,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
           decoration: BoxDecoration(
             color: isDark ? AppTheme.darkSurface : const Color(0xFFF1F5F9),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder),
+            border: Border.all(
+                color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -2170,7 +2529,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 height: 110,
                 decoration: BoxDecoration(
                   color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(15)),
                 ),
               ),
               Padding(
@@ -2181,7 +2541,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                       width: 120,
                       height: 14,
                       decoration: BoxDecoration(
-                        color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+                        color:
+                            isDark ? Colors.white10 : const Color(0xFFE2E8F0),
                         borderRadius: BorderRadius.circular(4),
                       ),
                     ),
@@ -2190,7 +2551,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                       width: 40,
                       height: 14,
                       decoration: BoxDecoration(
-                        color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+                        color:
+                            isDark ? Colors.white10 : const Color(0xFFE2E8F0),
                         borderRadius: BorderRadius.circular(4),
                       ),
                     ),
@@ -2203,5 +2565,4 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
       }),
     );
   }
-
 }
