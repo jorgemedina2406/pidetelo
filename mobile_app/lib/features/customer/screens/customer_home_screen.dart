@@ -33,6 +33,10 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   bool _isStoreGridView = false;
   List<BannerItem> _banners = [];
   Timer? _liveOrdersSyncTimer;
+  Timer? _notifSyncTimer;
+  int _unreadNotificationsCount = 0;
+  final Set<String> _knownNotificationIds = {};
+  bool _isFirstNotifSync = true;
 
   List<Map<String, dynamic>> _stores = [];
 
@@ -42,6 +46,83 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     _loadTenants();
     _loadBanners();
     _startLiveOrdersSync();
+    _startNotificationsSync();
+  }
+
+  void _startNotificationsSync() {
+    _notifSyncTimer?.cancel();
+    _syncNotifications();
+    _notifSyncTimer = Timer.periodic(const Duration(seconds: 10), (_) => _syncNotifications());
+  }
+
+  Future<void> _syncNotifications() async {
+    try {
+      final notifs = await ApiService().fetchNotifications();
+      if (!mounted || notifs.isEmpty) return;
+
+      int newCount = 0;
+      Map<String, dynamic>? latestNewNotif;
+
+      for (final n in notifs) {
+        final id = n['id']?.toString() ?? '';
+        if (id.isNotEmpty && !_knownNotificationIds.contains(id)) {
+          _knownNotificationIds.add(id);
+          if (!_isFirstNotifSync) {
+            newCount++;
+            latestNewNotif = n;
+          }
+        }
+      }
+
+      if (_isFirstNotifSync) {
+        _isFirstNotifSync = false;
+        if (mounted) {
+          setState(() {
+            _unreadNotificationsCount = notifs.length;
+          });
+        }
+      } else if (newCount > 0 && latestNewNotif != null) {
+        if (mounted) {
+          setState(() {
+            _unreadNotificationsCount += newCount;
+          });
+          HapticFeedback.mediumImpact();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: AppTheme.primary,
+              margin: const EdgeInsets.only(top: 10, left: 16, right: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              duration: const Duration(seconds: 4),
+              content: Row(
+                children: [
+                  const Icon(Icons.notifications_active_rounded, color: Colors.white, size: 24),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          latestNewNotif['title'] ?? 'Nueva Notificación',
+                          style: GoogleFonts.outfit(fontWeight: FontWeight.w800, color: Colors.white, fontSize: 13),
+                        ),
+                        Text(
+                          latestNewNotif['body'] ?? latestNewNotif['message'] ?? '',
+                          style: GoogleFonts.outfit(color: Colors.white.withOpacity(0.9), fontSize: 11),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+      }
+    } catch (_) {}
   }
 
   void _startLiveOrdersSync() {
@@ -64,6 +145,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   @override
   void dispose() {
     _liveOrdersSyncTimer?.cancel();
+    _notifSyncTimer?.cancel();
     super.dispose();
   }
 
@@ -389,10 +471,16 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   }
 
   void _showOrderReceiptDialog(BuildContext context, DeliveryOrder order) {
+    final isDark = widget.sessionService.isDarkMode;
+    final receiptBg = isDark ? const Color(0xFF0F172A) : Colors.white;
+    final receiptText = isDark ? Colors.white : const Color(0xFF0F172A);
+    final receiptDivider = isDark ? Colors.white12 : const Color(0xFFE2E8F0);
+    final receiptCardBg = isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC);
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: receiptBg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
@@ -407,7 +495,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 width: 44,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.white24,
+                  color: isDark ? Colors.white24 : Colors.black26,
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
@@ -424,7 +512,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                       style: GoogleFonts.outfit(
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
-                        color: Colors.white,
+                        color: receiptText,
                       ),
                     ),
                     Text(
@@ -458,7 +546,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            const Divider(color: Colors.white12),
+            Divider(color: receiptDivider),
             const SizedBox(height: 10),
             Text(
               'PLATILLOS DEL PEDIDO',
@@ -480,7 +568,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                         style: GoogleFonts.outfit(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: Colors.white,
+                          color: receiptText,
                         ),
                       ),
                       Text(
@@ -488,20 +576,20 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                         style: GoogleFonts.outfit(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
-                          color: Colors.white70,
+                          color: isDark ? Colors.white70 : Colors.black87,
                         ),
                       ),
                     ],
                   ),
                 )),
-            const Divider(color: Colors.white12, height: 16),
+            Divider(color: receiptDivider, height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text('Subtotal',
                     style: GoogleFonts.outfit(color: const Color(0xFF94A3B8))),
                 Text('\$${order.subtotal.toStringAsFixed(2)}',
-                    style: GoogleFonts.outfit(color: Colors.white)),
+                    style: GoogleFonts.outfit(color: receiptText)),
               ],
             ),
             const SizedBox(height: 4),
@@ -511,7 +599,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 Text('Costo de Envío',
                     style: GoogleFonts.outfit(color: const Color(0xFF94A3B8))),
                 Text('\$${order.deliveryFee.toStringAsFixed(2)}',
-                    style: GoogleFonts.outfit(color: Colors.white)),
+                    style: GoogleFonts.outfit(color: receiptText)),
               ],
             ),
             const SizedBox(height: 4),
@@ -523,7 +611,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   style: GoogleFonts.outfit(
                       fontSize: 15,
                       fontWeight: FontWeight.w800,
-                      color: Colors.white),
+                      color: receiptText),
                 ),
                 Text(
                   '\$${order.total.toStringAsFixed(2)}',
@@ -539,8 +627,9 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFF1E293B),
+                color: receiptCardBg,
                 borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: receiptDivider),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -555,7 +644,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                     style: GoogleFonts.outfit(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white),
+                        color: receiptText),
                   ),
                   const SizedBox(height: 6),
                   Text(
@@ -665,11 +754,55 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
           ],
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_active_outlined,
-                color: AppTheme.primary, size: 22),
-            tooltip: 'Notificaciones y Cupones',
-            onPressed: () => _openNotificationsSheet(context),
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+            decoration: BoxDecoration(
+              color: AppTheme.primary.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppTheme.primary.withOpacity(0.25)),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              'Bs. ${DolarApiService().officialRate.toStringAsFixed(2)}',
+              style: GoogleFonts.outfit(
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+                color: AppTheme.primary,
+              ),
+            ),
+          ),
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.notifications_active_outlined,
+                    color: AppTheme.primary, size: 22),
+                tooltip: 'Notificaciones y Cupones',
+                onPressed: () {
+                  setState(() => _unreadNotificationsCount = 0);
+                  _openNotificationsSheet(context);
+                },
+              ),
+              if (_unreadNotificationsCount > 0)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFEF4444),
+                      shape: BoxShape.circle,
+                    ),
+                    constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                    child: Text(
+                      '$_unreadNotificationsCount',
+                      style: GoogleFonts.outfit(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w900),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
           ),
           IconButton(
             icon: Icon(

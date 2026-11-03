@@ -52,9 +52,9 @@
 }
 
 .sidebar-adaptive {
-  @apply bg-white border-r border-slate-200/90 shadow-xs
-         dark:bg-slate-950 dark:border-slate-800 dark:shadow-none
-         transition-all duration-200;
+  @apply bg-white/95 backdrop-blur-md border-r border-slate-200/80 shadow-[1px_0_12px_rgba(0,0,0,0.03)]
+         dark:bg-slate-950/95 dark:border-slate-800/80 dark:shadow-[1px_0_15px_rgba(0,0,0,0.3)]
+         transition-all duration-300;
 }
 
 .topbar-adaptive {

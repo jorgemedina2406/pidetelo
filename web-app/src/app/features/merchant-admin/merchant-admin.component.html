@@ -207,40 +207,6 @@
           }
         </div>
 
-        <!-- Flota de Repartidores -->
-        <div class="relative group">
-          <button (click)="activeTab.set('riders')" [class.bg-brand-500]="activeTab() === 'riders'"
-            [class.text-white]="activeTab() === 'riders'" [class.shadow-md]="activeTab() === 'riders'"
-            [class.shadow-brand-500/25]="activeTab() === 'riders'" [class.text-slate-600]="activeTab() !== 'riders'"
-            [class.dark:text-slate-400]="activeTab() !== 'riders'" [class.hover:bg-slate-100]="activeTab() !== 'riders'"
-            [class.dark:hover:bg-slate-850]="activeTab() !== 'riders'" [class.justify-center]="!isSidebarExpanded()"
-            [class.w-12]="!isSidebarExpanded()" [class.h-12]="!isSidebarExpanded()"
-            [class.mx-auto]="!isSidebarExpanded()" [class.w-full]="isSidebarExpanded()"
-            [class.px-3]="isSidebarExpanded()" [class.py-2.5]="isSidebarExpanded()"
-            class="flex items-center gap-3 rounded-xl font-bold text-xs transition-all duration-150 active:scale-95">
-            <span class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
-              [class.bg-white/20]="activeTab() === 'riders'" [class.text-white]="activeTab() === 'riders'"
-              [class.bg-slate-100]="activeTab() !== 'riders'" [class.dark:bg-slate-800]="activeTab() !== 'riders'"
-              [class.text-slate-500]="activeTab() !== 'riders'" [class.dark:text-slate-400]="activeTab() !== 'riders'">
-              <app-icon name="bike" [size]="17"></app-icon>
-            </span>
-            @if (isSidebarExpanded()) {
-            <span class="truncate flex-1 text-left font-semibold">{{ i18n.t('ma.riders') }}</span>
-            <span class="px-2 py-0.5 rounded-full text-[10px] font-black" [class.bg-white/30]="activeTab() === 'riders'"
-              [class.bg-slate-200]="activeTab() !== 'riders'" [class.dark:bg-slate-800]="activeTab() !== 'riders'">
-              {{ filteredRiders().length }}
-            </span>
-            }
-          </button>
-
-          @if (!isSidebarExpanded()) {
-          <div
-            class="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 flex items-center gap-2">
-            <span>{{ i18n.t('ma.riders') }}</span>
-            <span class="px-1.5 py-0.2 rounded-full bg-brand-500 text-white text-[10px]">{{ filteredRiders().length }}</span>
-          </div>
-          }
-        </div>
 
         <!-- Radar GPS en Vivo -->
         <div class="relative group">
@@ -386,19 +352,6 @@
     <div
       class="flex-shrink-0 mt-auto p-2.5 border-t border-slate-200 dark:border-slate-800 space-y-2 bg-white dark:bg-slate-950">
 
-      <!-- Quick Environment Switcher -->
-      @if (isSidebarExpanded()) {
-      <div class="px-2 py-0.5 text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">
-        {{ i18n.t('sa.envEnvironments') }}
-      </div>
-      <div class="text-[11px]">
-        <a routerLink="/rider"
-          class="w-full p-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 hover:border-brand-500 text-slate-700 dark:text-slate-300 font-bold flex items-center justify-center gap-1.5 transition-colors">
-          <app-icon name="bike" [size]="13"></app-icon>
-          <span>{{ i18n.t('sb.envRider') }}</span>
-        </a>
-      </div>
-      }
 
       <!-- Theme & Language Switchers -->
       <div
@@ -2941,17 +2894,135 @@
                 <div class="grid grid-cols-2 gap-3">
                   <div>
                     <label class="block text-[11px] font-semibold text-slate-500 mb-1">Latitud</label>
-                    <input type="number" step="0.000001" [(ngModel)]="brandingForm.latitude"
+                    <input type="number" step="0.000001" [(ngModel)]="brandingForm.latitude" (ngModelChange)="updateSettingsLocationFromInputs()"
                            placeholder="Ej: 10.4820"
                            class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
                   </div>
                   <div>
                     <label class="block text-[11px] font-semibold text-slate-500 mb-1">Longitud</label>
-                    <input type="number" step="0.000001" [(ngModel)]="brandingForm.longitude"
+                    <input type="number" step="0.000001" [(ngModel)]="brandingForm.longitude" (ngModelChange)="updateSettingsLocationFromInputs()"
                            placeholder="Ej: -66.8610"
                            class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
                   </div>
                 </div>
+
+                <!-- Selector Interactivo en Mapa Satelital -->
+                <div class="mt-3 space-y-1.5">
+                  <div class="flex items-center justify-between text-[11px] text-slate-500">
+                    <span class="font-bold flex items-center gap-1 text-slate-700 dark:text-slate-300">
+                      <span>🗺️</span>
+                      <span>Seleccionar ubicación en el mapa interactivo</span>
+                    </span>
+                    <span class="text-[10px] text-brand-600 dark:text-brand-400 font-semibold">Haz clic en el mapa o arrastra el marcador</span>
+                  </div>
+                  <div id="settings-location-picker-map" class="w-full h-56 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-xs z-0"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- PANEL 5: HORARIO DE TRABAJO & DÍAS DE ATENCIÓN -->
+            <div class="card-adaptive rounded-2xl p-5 shadow-xs space-y-4 border border-slate-200 dark:border-slate-800 lg:col-span-2">
+              <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
+                    <app-icon name="clock" [size]="18"></app-icon>
+                  </div>
+                  <div>
+                    <h3 class="font-extrabold text-sm text-slate-900 dark:text-white">Horario de Trabajo & Operación Semanal</h3>
+                    <p class="text-[11px] text-slate-500">Define las horas de apertura, cierre y días activos de esta sucursal</p>
+                  </div>
+                </div>
+
+                <!-- Presets Rápidos -->
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="text-[11px] font-bold text-slate-400">Plantillas:</span>
+                  <button type="button" (click)="applySchedulePreset('all')"
+                    class="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-brand-500 hover:text-white transition-colors cursor-pointer">
+                    Todos los días
+                  </button>
+                  <button type="button" (click)="applySchedulePreset('weekdays')"
+                    class="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-brand-500 hover:text-white transition-colors cursor-pointer">
+                    Lunes a Viernes
+                  </button>
+                  <button type="button" (click)="applySchedulePreset('weekends')"
+                    class="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-brand-500 hover:text-white transition-colors cursor-pointer">
+                    Fines de Semana
+                  </button>
+                </div>
+              </div>
+
+              <!-- Horario General y Botón de Aplicar -->
+              <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-3 flex-wrap">
+                  <span class="text-xs font-bold text-slate-700 dark:text-slate-300">Horario Base:</span>
+                  <div class="flex items-center gap-1.5">
+                    <span class="text-[11px] text-slate-400">Apertura:</span>
+                    <input type="text" [(ngModel)]="brandingForm.openTime" placeholder="11:00"
+                      class="w-20 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1 text-xs font-mono font-bold text-center text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
+                  </div>
+                  <div class="flex items-center gap-1.5">
+                    <span class="text-[11px] text-slate-400">Cierre:</span>
+                    <input type="text" [(ngModel)]="brandingForm.closeTime" placeholder="23:00"
+                      class="w-20 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1 text-xs font-mono font-bold text-center text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
+                  </div>
+                </div>
+
+                <button type="button" (click)="copyGeneralHoursToAllDays()"
+                  class="px-3 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer">
+                  <app-icon name="copy" [size]="13"></app-icon>
+                  <span>Copiar a todos los días</span>
+                </button>
+              </div>
+
+              <!-- Días de la semana interactivos -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2.5 pt-1">
+                @for (d of brandingForm.scheduleDays; track d.day) {
+                  <div class="p-3 rounded-xl border transition-all"
+                       [class.bg-white]="d.open"
+                       [class.dark:bg-slate-900]="d.open"
+                       [class.border-brand-500]="d.open"
+                       [class.shadow-xs]="d.open"
+                       [class.bg-slate-100]="!d.open"
+                       [class.dark:bg-slate-800/40]="!d.open"
+                       [class.border-slate-200]="!d.open"
+                       [class.dark:border-slate-800]="!d.open"
+                       [class.opacity-60]="!d.open">
+                    <div class="flex items-center justify-between mb-2">
+                      <span class="font-extrabold text-xs" [class.text-brand-600]="d.open" [class.dark:text-brand-400]="d.open">
+                        {{ d.day }}
+                      </span>
+                      <button type="button" (click)="d.open = !d.open"
+                              class="text-[10px] font-black uppercase px-2 py-0.5 rounded-md cursor-pointer transition-colors"
+                              [class.bg-emerald-500]="d.open"
+                              [class.text-white]="d.open"
+                              [class.bg-slate-300]="!d.open"
+                              [class.text-slate-700]="!d.open"
+                              [class.dark:bg-slate-700]="!d.open"
+                              [class.dark:text-slate-300]="!d.open">
+                        {{ d.open ? 'Abierto' : 'Cerrado' }}
+                      </button>
+                    </div>
+
+                    @if (d.open) {
+                      <div class="space-y-1.5 text-[11px]">
+                        <div>
+                          <span class="text-[10px] text-slate-400 font-semibold block">De:</span>
+                          <input type="text" [(ngModel)]="d.from" placeholder="11:00"
+                            class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
+                        </div>
+                        <div>
+                          <span class="text-[10px] text-slate-400 font-semibold block">A:</span>
+                          <input type="text" [(ngModel)]="d.to" placeholder="23:00"
+                            class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
+                        </div>
+                      </div>
+                    } @else {
+                      <div class="h-16 flex items-center justify-center text-[11px] font-bold text-slate-400 italic">
+                        No laboral
+                      </div>
+                    }
+                  </div>
+                }
               </div>
             </div>
 

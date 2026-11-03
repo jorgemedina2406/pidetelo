@@ -11,7 +11,7 @@ class DolarApiService extends ChangeNotifier {
   static const String _cacheKeyRate = 'dolar_bcv_rate';
   static const String _cacheKeyDate = 'dolar_bcv_date';
 
-  double _officialRate = 36.50; // default fallback
+  double _officialRate = 65.00; // default realistic fallback
   DateTime? _lastUpdated;
   bool _isLoading = false;
 

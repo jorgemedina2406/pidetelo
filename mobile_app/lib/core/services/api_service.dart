@@ -654,8 +654,32 @@ class ApiService {
     ];
   }
 
-  /// Obtiene notificaciones y cupones dirigidos a los clientes
+  /// Obtiene notificaciones y cupones dirigidos a los clientes directamente desde Supabase Cloud
   Future<List<Map<String, dynamic>>> fetchNotifications({String? customerId}) async {
+    try {
+      final supaClient = Supabase.instance.client;
+      final res = await supaClient
+          .from('customer_notifications')
+          .select('*')
+          .order('created_at', ascending: false)
+          .limit(40);
+      if (res is List && res.isNotEmpty) {
+        return List<Map<String, dynamic>>.from(res.map((n) => {
+          'id': n['id'],
+          'title': n['title'] ?? 'Notificación Pídetelo',
+          'body': n['body'] ?? n['message'] ?? '',
+          'message': n['body'] ?? n['message'] ?? '',
+          'type': n['type'] ?? 'coupon',
+          'coupon_code': n['coupon_code'] ?? n['data']?['couponCode'] ?? '',
+          'couponCode': n['coupon_code'] ?? n['data']?['couponCode'] ?? '',
+          'data': n['data'] ?? {},
+          'created_at': n['created_at'] ?? DateTime.now().toIso8601String(),
+        }));
+      }
+    } catch (e) {
+      if (kDebugMode) print('[ApiService] Supabase notifications fetch error: $e');
+    }
+
     final urls = [
       '${AppConfig.backendBaseUrl}/notifications',
       'http://192.168.0.151:3000/api/notifications',
@@ -667,13 +691,25 @@ class ApiService {
         final res = await http.get(Uri.parse(u)).timeout(const Duration(seconds: 4));
         if (res.statusCode == 200) {
           final decoded = jsonDecode(res.body);
-          if (decoded is List) {
+          if (decoded is List && decoded.isNotEmpty) {
             return List<Map<String, dynamic>>.from(decoded);
           }
         }
       } catch (_) {}
     }
-    return [];
+
+    return [
+      {
+        'id': 'welcome_promo',
+        'title': '🎉 ¡Bienvenido a Pídetelo!',
+        'body': 'Disfruta de delivery rápido, tarifas transparentes en Bs. y seguimiento GPS en tiempo real.',
+        'message': 'Disfruta de delivery rápido, tarifas transparentes en Bs. y seguimiento GPS en tiempo real.',
+        'type': 'system',
+        'coupon_code': 'BIENVENIDO',
+        'couponCode': 'BIENVENIDO',
+        'created_at': DateTime.now().toIso8601String(),
+      }
+    ];
   }
 
   /// Update order status in backend

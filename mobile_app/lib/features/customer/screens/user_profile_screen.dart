@@ -133,10 +133,18 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       text: user.deliveryAddress ?? CartService().selectedAddress.address,
     );
 
+    final isDark = widget.sessionService.isDarkMode;
+    final modalBg = isDark ? const Color(0xFF0F172A) : Colors.white;
+    final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final subtextColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final fieldFill = isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9);
+    final fieldBorder = isDark ? Colors.white12 : const Color(0xFFCBD5E1);
+    final handleColor = isDark ? Colors.white24 : const Color(0xFFCBD5E1);
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: modalBg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
@@ -156,7 +164,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 width: 44,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.white24,
+                  color: handleColor,
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
@@ -167,75 +175,75 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               style: GoogleFonts.outfit(
                 fontSize: 18,
                 fontWeight: FontWeight.w800,
-                color: Colors.white,
+                color: textColor,
               ),
             ),
             const SizedBox(height: 6),
             Text(
               'Actualiza tu información personal y de contacto',
-              style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xFF94A3B8)),
+              style: GoogleFonts.outfit(fontSize: 13, color: subtextColor),
             ),
             const SizedBox(height: 20),
             TextField(
               controller: nameCtrl,
-              style: const TextStyle(color: Colors.white, fontSize: 14),
+              style: TextStyle(color: textColor, fontSize: 14),
               decoration: InputDecoration(
                 labelText: 'Nombre y Apellido',
-                labelStyle: const TextStyle(color: Color(0xFF94A3B8)),
+                labelStyle: TextStyle(color: subtextColor),
                 filled: true,
-                fillColor: const Color(0xFF1E293B),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Colors.white12)),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Colors.white12)),
+                fillColor: fieldFill,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: fieldBorder)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: fieldBorder)),
                 focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppTheme.primary, width: 1.5)),
-                prefixIcon: const Icon(Icons.person_outline_rounded, color: Color(0xFF94A3B8), size: 20),
+                prefixIcon: Icon(Icons.person_outline_rounded, color: subtextColor, size: 20),
               ),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: phoneCtrl,
-              style: const TextStyle(color: Colors.white, fontSize: 14),
+              style: TextStyle(color: textColor, fontSize: 14),
               keyboardType: TextInputType.phone,
               decoration: InputDecoration(
                 labelText: 'Teléfono Móvil (WhatsApp)',
-                labelStyle: const TextStyle(color: Color(0xFF94A3B8)),
+                labelStyle: TextStyle(color: subtextColor),
                 filled: true,
-                fillColor: const Color(0xFF1E293B),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Colors.white12)),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Colors.white12)),
+                fillColor: fieldFill,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: fieldBorder)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: fieldBorder)),
                 focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppTheme.primary, width: 1.5)),
-                prefixIcon: const Icon(Icons.phone_outlined, color: Color(0xFF94A3B8), size: 20),
+                prefixIcon: Icon(Icons.phone_outlined, color: subtextColor, size: 20),
               ),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: emailCtrl,
-              style: const TextStyle(color: Colors.white, fontSize: 14),
+              style: TextStyle(color: textColor, fontSize: 14),
               keyboardType: TextInputType.emailAddress,
               decoration: InputDecoration(
                 labelText: 'Correo Electrónico',
-                labelStyle: const TextStyle(color: Color(0xFF94A3B8)),
+                labelStyle: TextStyle(color: subtextColor),
                 filled: true,
-                fillColor: const Color(0xFF1E293B),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Colors.white12)),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Colors.white12)),
+                fillColor: fieldFill,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: fieldBorder)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: fieldBorder)),
                 focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppTheme.primary, width: 1.5)),
-                prefixIcon: const Icon(Icons.email_outlined, color: Color(0xFF94A3B8), size: 20),
+                prefixIcon: Icon(Icons.email_outlined, color: subtextColor, size: 20),
               ),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: addrCtrl,
-              style: const TextStyle(color: Colors.white, fontSize: 14),
+              style: TextStyle(color: textColor, fontSize: 14),
               maxLines: 2,
               decoration: InputDecoration(
                 labelText: 'Dirección Principal de Entrega',
-                labelStyle: const TextStyle(color: Color(0xFF94A3B8)),
+                labelStyle: TextStyle(color: subtextColor),
                 filled: true,
-                fillColor: const Color(0xFF1E293B),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Colors.white12)),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Colors.white12)),
+                fillColor: fieldFill,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: fieldBorder)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: fieldBorder)),
                 focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppTheme.primary, width: 1.5)),
-                prefixIcon: const Icon(Icons.location_on_outlined, color: Color(0xFF94A3B8), size: 20),
+                prefixIcon: Icon(Icons.location_on_outlined, color: subtextColor, size: 20),
               ),
             ),
             const SizedBox(height: 22),
@@ -298,12 +306,20 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: widget.sessionService.isDarkMode
+          ? const Color(0xFF0F172A)
+          : Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) {
+          final isDark = widget.sessionService.isDarkMode;
+          final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+          final subtextColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+          final cardBg = isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9);
+          final cardBorder = isDark ? Colors.white10 : const Color(0xFFCBD5E1);
+          final handleColor = isDark ? Colors.white24 : const Color(0xFFCBD5E1);
           final favStores = allStores.where((s) => favIds.contains(s['id']?.toString())).toList();
 
           return Container(
@@ -316,7 +332,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   child: Container(
                     width: 44,
                     height: 4,
-                    decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)),
+                    decoration: BoxDecoration(color: handleColor, borderRadius: BorderRadius.circular(10)),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -326,14 +342,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     const SizedBox(width: 8),
                     Text(
                       'Mis Comercios Favoritos',
-                      style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.white),
+                      style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w800, color: textColor),
                     ),
                   ],
                 ),
                 const SizedBox(height: 6),
                 Text(
                   'Tus restaurantes preferidos en Cabudare y Barquisimeto',
-                  style: GoogleFonts.outfit(fontSize: 12.5, color: const Color(0xFF94A3B8)),
+                  style: GoogleFonts.outfit(fontSize: 12.5, color: subtextColor),
                 ),
                 const SizedBox(height: 16),
                 if (favStores.isEmpty)
@@ -342,17 +358,17 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.favorite_border_rounded, size: 50, color: Colors.white24),
+                          Icon(Icons.favorite_border_rounded, size: 50, color: subtextColor.withOpacity(0.4)),
                           const SizedBox(height: 12),
                           Text(
                             'No tienes comercios en favoritos aún',
-                            style: GoogleFonts.outfit(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w600),
+                            style: GoogleFonts.outfit(color: textColor, fontSize: 14, fontWeight: FontWeight.w600),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             'Toca el corazón en la tienda que te guste para guardarla aquí',
                             textAlign: TextAlign.center,
-                            style: GoogleFonts.outfit(color: const Color(0xFF94A3B8), fontSize: 12),
+                            style: GoogleFonts.outfit(color: subtextColor, fontSize: 12),
                           ),
                         ],
                       ),
@@ -367,9 +383,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                         final store = favStores[idx];
                         return Container(
                           decoration: BoxDecoration(
-                            color: const Color(0xFF1E293B),
+                            color: cardBg,
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: Colors.white10),
+                            border: Border.all(color: cardBorder),
                           ),
                           child: ListTile(
                             leading: ClipRRect(
@@ -383,11 +399,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                             ),
                             title: Text(
                               store['name'],
-                              style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14),
+                              style: GoogleFonts.outfit(color: textColor, fontWeight: FontWeight.w700, fontSize: 14),
                             ),
                             subtitle: Text(
                               '${store['category']} • ⭐ ${store['rating']}',
-                              style: GoogleFonts.outfit(color: const Color(0xFF94A3B8), fontSize: 12),
+                              style: GoogleFonts.outfit(color: subtextColor, fontSize: 12),
                             ),
                             trailing: IconButton(
                               icon: const Icon(Icons.favorite_rounded, color: Color(0xFFEF4444)),
@@ -426,13 +442,21 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: widget.sessionService.isDarkMode
+          ? const Color(0xFF0F172A)
+          : Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setWalletState) {
-          final bcvRate = 45.50; // Reference rate
+          final isDark = widget.sessionService.isDarkMode;
+          final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+          final subtextColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+          final cardBg = isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9);
+          final cardBorder = isDark ? Colors.white10 : const Color(0xFFCBD5E1);
+          final handleColor = isDark ? Colors.white24 : const Color(0xFFCBD5E1);
+          final bcvRate = DolarApiService().officialRate;
           final inBs = _walletBalance * bcvRate;
 
           return Container(
@@ -446,7 +470,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     child: Container(
                       width: 44,
                       height: 4,
-                      decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)),
+                      decoration: BoxDecoration(color: handleColor, borderRadius: BorderRadius.circular(10)),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -458,8 +482,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                           const Icon(Icons.account_balance_wallet_rounded, color: Color(0xFF10B981), size: 24),
                           const SizedBox(width: 8),
                           Text(
-                            'Billetera DeliveryHub',
-                            style: GoogleFonts.outfit(fontSize: 19, fontWeight: FontWeight.w800, color: Colors.white),
+                            'Billetera Pídetelo',
+                            style: GoogleFonts.outfit(fontSize: 19, fontWeight: FontWeight.w800, color: textColor),
                           ),
                         ],
                       ),
@@ -521,7 +545,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Equivalente: Bs. ${inBs.toStringAsFixed(2)} (Tasa BCV: 45.50)',
+                          'Equivalente: Bs. ${inBs.toStringAsFixed(2)} (Tasa BCV: ${bcvRate.toStringAsFixed(2)})',
                           style: GoogleFonts.outfit(color: Colors.white.withOpacity(0.9), fontSize: 11.5),
                         ),
                       ],
@@ -553,10 +577,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                           onPressed: () {
                             _showCouponDialog(ctx, () => setWalletState(() {}));
                           },
-                          icon: const Icon(Icons.confirmation_number_outlined, size: 18, color: Colors.white),
-                          label: const Text('Canjear Cupón', style: TextStyle(color: Colors.white)),
+                          icon: Icon(Icons.confirmation_number_outlined, size: 18, color: textColor),
+                          label: Text('Canjear Cupón', style: TextStyle(color: textColor)),
                           style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: Colors.white24),
+                            side: BorderSide(color: isDark ? Colors.white24 : const Color(0xFFCBD5E1)),
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                           ),
@@ -571,7 +595,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     style: GoogleFonts.outfit(
                       fontSize: 11,
                       fontWeight: FontWeight.w800,
-                      color: const Color(0xFF94A3B8),
+                      color: subtextColor,
                       letterSpacing: 0.5,
                     ),
                   ),
@@ -581,23 +605,23 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF1E293B),
+                        color: cardBg,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.white10),
+                        border: Border.all(color: cardBorder),
                       ),
                       child: Column(
                         children: [
-                          const Icon(Icons.receipt_long_outlined, size: 36, color: Color(0xFF64748B)),
+                          Icon(Icons.receipt_long_outlined, size: 36, color: subtextColor),
                           const SizedBox(height: 10),
                           Text(
                             'No tienes movimientos en tu billetera',
-                            style: GoogleFonts.outfit(color: Colors.white, fontSize: 13.5, fontWeight: FontWeight.w700),
+                            style: GoogleFonts.outfit(color: textColor, fontSize: 13.5, fontWeight: FontWeight.w700),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             'Tus recargas y compras aparecerán aquí en tiempo real.',
                             textAlign: TextAlign.center,
-                            style: GoogleFonts.outfit(color: const Color(0xFF94A3B8), fontSize: 11.5),
+                            style: GoogleFonts.outfit(color: subtextColor, fontSize: 11.5),
                           ),
                         ],
                       ),
@@ -621,63 +645,72 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   void _showRechargeDialog(BuildContext ctx, VoidCallback onUpdated) {
+    final isDark = widget.sessionService.isDarkMode;
+    final dialogBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final subtextColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final innerBoxBg = isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9);
+    final fieldBorder = isDark ? Colors.white12 : const Color(0xFFCBD5E1);
+
     final amountCtrl = TextEditingController(text: '10.00');
     final refCtrl = TextEditingController();
 
     showDialog(
       context: ctx,
       builder: (dCtx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E293B),
+        backgroundColor: dialogBg,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Recargar Billetera', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.w800)),
+        title: Text('Recargar Billetera', style: GoogleFonts.outfit(color: textColor, fontWeight: FontWeight.w800)),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Datos para Pago Móvil / Transferencia:', style: GoogleFonts.outfit(color: const Color(0xFF94A3B8), fontSize: 13)),
+              Text('Datos para Pago Móvil / Transferencia:', style: GoogleFonts.outfit(color: subtextColor, fontSize: 13)),
               const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: const Color(0xFF0F172A), borderRadius: BorderRadius.circular(12)),
+                decoration: BoxDecoration(color: innerBoxBg, borderRadius: BorderRadius.circular(12)),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('• Banco: Banesco (0134)', style: GoogleFonts.outfit(color: Colors.white, fontSize: 12)),
-                    Text('• Teléfono: 0412-5163118', style: GoogleFonts.outfit(color: Colors.white, fontSize: 12)),
-                    Text('• Cédula/RIF: V-24.891.234', style: GoogleFonts.outfit(color: Colors.white, fontSize: 12)),
+                    Text('• Banco: Banesco (0134)', style: GoogleFonts.outfit(color: textColor, fontSize: 12)),
+                    Text('• Teléfono: 0412-5163118', style: GoogleFonts.outfit(color: textColor, fontSize: 12)),
+                    Text('• Cédula/RIF: V-24.891.234', style: GoogleFonts.outfit(color: textColor, fontSize: 12)),
                     Text('• Tasa Oficial: BCV del día', style: GoogleFonts.outfit(color: AppTheme.amberAccent, fontSize: 12)),
                   ],
                 ),
               ),
               const SizedBox(height: 14),
-              Text('Monto a Recargar (\$ USD):', style: GoogleFonts.outfit(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+              Text('Monto a Recargar (\$ USD):', style: GoogleFonts.outfit(color: textColor, fontSize: 12, fontWeight: FontWeight.w600)),
               const SizedBox(height: 6),
               TextField(
                 controller: amountCtrl,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: textColor),
                 decoration: InputDecoration(
                   prefixText: '\$ ',
                   prefixStyle: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold),
                   filled: true,
-                  fillColor: const Color(0xFF0F172A),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  fillColor: innerBoxBg,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: fieldBorder)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: fieldBorder)),
                 ),
               ),
               const SizedBox(height: 12),
-              Text('N° de Referencia de Pago:', style: GoogleFonts.outfit(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+              Text('N° de Referencia de Pago:', style: GoogleFonts.outfit(color: textColor, fontSize: 12, fontWeight: FontWeight.w600)),
               const SizedBox(height: 6),
               TextField(
                 controller: refCtrl,
                 keyboardType: TextInputType.number,
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: textColor),
                 decoration: InputDecoration(
                   hintText: 'Ej: 489123 (últimos 4 a 6 dígitos)',
-                  hintStyle: const TextStyle(color: Colors.white30, fontSize: 12),
+                  hintStyle: TextStyle(color: subtextColor, fontSize: 12),
                   filled: true,
-                  fillColor: const Color(0xFF0F172A),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  fillColor: innerBoxBg,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: fieldBorder)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: fieldBorder)),
                 ),
               ),
             ],
@@ -686,7 +719,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dCtx),
-            child: const Text('Cancelar', style: TextStyle(color: Colors.white54)),
+            child: Text('Cancelar', style: TextStyle(color: subtextColor)),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -729,31 +762,39 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   void _showCouponDialog(BuildContext ctx, VoidCallback onUpdated) {
+    final isDark = widget.sessionService.isDarkMode;
+    final dialogBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final subtextColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final innerBoxBg = isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9);
+    final fieldBorder = isDark ? Colors.white12 : const Color(0xFFCBD5E1);
+
     final codeCtrl = TextEditingController();
     showDialog(
       context: ctx,
       builder: (dCtx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E293B),
+        backgroundColor: dialogBg,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Canjear Cupón', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.w800)),
+        title: Text('Canjear Cupón', style: GoogleFonts.outfit(color: textColor, fontWeight: FontWeight.w800)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: codeCtrl,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: textColor),
               decoration: InputDecoration(
                 hintText: 'Ingresa código (ej: CABUDARE2026)',
-                hintStyle: const TextStyle(color: Colors.white30, fontSize: 12),
+                hintStyle: TextStyle(color: subtextColor, fontSize: 12),
                 filled: true,
-                fillColor: const Color(0xFF0F172A),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                fillColor: innerBoxBg,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: fieldBorder)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: fieldBorder)),
               ),
             ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dCtx), child: const Text('Cancelar', style: TextStyle(color: Colors.white54))),
+          TextButton(onPressed: () => Navigator.pop(dCtx), child: Text('Cancelar', style: TextStyle(color: subtextColor))),
           ElevatedButton(
             onPressed: () async {
               final code = codeCtrl.text.trim().toUpperCase();
@@ -785,13 +826,19 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   Widget _buildWalletTxItem(String title, String amount, String date, bool isPositive) {
+    final isDark = widget.sessionService.isDarkMode;
+    final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final subtextColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final cardBg = isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9);
+    final cardBorder = isDark ? Colors.white10 : const Color(0xFFE2E8F0);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
+        color: cardBg,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white10),
+        border: Border.all(color: cardBorder),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -799,12 +846,22 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: GoogleFonts.outfit(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w600)),
-              Text(date, style: GoogleFonts.outfit(color: const Color(0xFF94A3B8), fontSize: 11)),
+              Text(title, style: GoogleFonts.outfit(color: textColor, fontSize: 12.5, fontWeight: FontWeight.w600)),
+              Text(date, style: GoogleFonts.outfit(color: subtextColor, fontSize: 11)),
             ],
           ),
           Text(
             amount,
+            style: GoogleFonts.outfit(
+              color: isPositive ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
             style: GoogleFonts.outfit(
               color: isPositive ? const Color(0xFF10B981) : const Color(0xFFEF4444),
               fontSize: 14,
@@ -820,11 +877,19 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: widget.sessionService.isDarkMode
+          ? const Color(0xFF0F172A)
+          : Colors.white,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (ctx) => FutureBuilder<List<Map<String, dynamic>>>(
         future: ApiService().fetchNotifications(),
         builder: (ctx, snapshot) {
+          final isDark = widget.sessionService.isDarkMode;
+          final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+          final subtextColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+          final cardBg = isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9);
+          final cardBorder = isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1);
+          final handleColor = isDark ? Colors.white24 : const Color(0xFFCBD5E1);
           final items = (snapshot.data ?? [])
               .where((n) => n['coupon_code'] != null || n['couponCode'] != null || n['type'] == 'coupon')
               .toList();
@@ -840,7 +905,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   child: Container(
                     width: 44,
                     height: 4,
-                    decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)),
+                    decoration: BoxDecoration(color: handleColor, borderRadius: BorderRadius.circular(10)),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -850,14 +915,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     const SizedBox(width: 8),
                     Text(
                       'Mis Cupones y Promociones',
-                      style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.white),
+                      style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w800, color: textColor),
                     ),
                   ],
                 ),
                 const SizedBox(height: 6),
                 Text(
                   'Cupones disponibles emitidos por la plataforma y tus comercios',
-                  style: GoogleFonts.outfit(fontSize: 12.5, color: const Color(0xFF94A3B8)),
+                  style: GoogleFonts.outfit(fontSize: 12.5, color: subtextColor),
                 ),
                 const SizedBox(height: 16),
                 if (snapshot.connectionState == ConnectionState.waiting)
@@ -870,9 +935,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                         children: [
                           const Text('🏷️', style: TextStyle(fontSize: 40)),
                           const SizedBox(height: 10),
-                          Text('No tienes cupones vigentes', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                          Text('No tienes cupones vigentes', style: GoogleFonts.outfit(color: textColor, fontWeight: FontWeight.bold, fontSize: 15)),
                           const SizedBox(height: 4),
-                          Text('Los cupones y ofertas que recibas aparecerán aquí.', style: GoogleFonts.outfit(color: const Color(0xFF94A3B8), fontSize: 12)),
+                          Text('Los cupones y ofertas que recibas aparecerán aquí.', style: GoogleFonts.outfit(color: subtextColor, fontSize: 12)),
                         ],
                       ),
                     ),
@@ -889,9 +954,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                         return Container(
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF1E293B),
+                            color: cardBg,
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: const Color(0xFF334155)),
+                            border: Border.all(color: cardBorder),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -935,9 +1000,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                                 ],
                               ),
                               const SizedBox(height: 6),
-                              Text(item['title'] ?? 'Cupón de Descuento', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                              Text(item['title'] ?? 'Cupón de Descuento', style: GoogleFonts.outfit(color: textColor, fontWeight: FontWeight.bold, fontSize: 14)),
                               const SizedBox(height: 2),
-                              Text(item['message'] ?? item['body'] ?? '', style: GoogleFonts.outfit(color: const Color(0xFFCBD5E1), fontSize: 12)),
+                              Text(item['message'] ?? item['body'] ?? '', style: GoogleFonts.outfit(color: subtextColor, fontSize: 12)),
                             ],
                           ),
                         );
@@ -956,10 +1021,18 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: widget.sessionService.isDarkMode
+          ? const Color(0xFF0F172A)
+          : Colors.white,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setNotifState) {
+          final isDark = widget.sessionService.isDarkMode;
+          final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+          final subtextColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+          final dividerColor = isDark ? Colors.white12 : const Color(0xFFE2E8F0);
+          final handleColor = isDark ? Colors.white24 : const Color(0xFFCBD5E1);
+
           return Container(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
             child: Column(
@@ -970,7 +1043,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   child: Container(
                     width: 44,
                     height: 4,
-                    decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)),
+                    decoration: BoxDecoration(color: handleColor, borderRadius: BorderRadius.circular(10)),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -980,61 +1053,61 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     const SizedBox(width: 8),
                     Text(
                       'Configuración de Notificaciones',
-                      style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.white),
+                      style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w800, color: textColor),
                     ),
                   ],
                 ),
                 const SizedBox(height: 6),
                 Text(
                   'Elige cómo deseas recibir las alertas de tus entregas',
-                  style: GoogleFonts.outfit(fontSize: 12.5, color: const Color(0xFF94A3B8)),
+                  style: GoogleFonts.outfit(fontSize: 12.5, color: subtextColor),
                 ),
                 const SizedBox(height: 20),
 
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   activeColor: AppTheme.primary,
-                  title: Text('Estatus del Pedido en Tiempo Real', style: GoogleFonts.outfit(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
-                  subtitle: Text('Avisos de confirmación, preparación y despacho', style: GoogleFonts.outfit(color: const Color(0xFF94A3B8), fontSize: 12)),
+                  title: Text('Estatus del Pedido en Tiempo Real', style: GoogleFonts.outfit(color: textColor, fontSize: 14, fontWeight: FontWeight.w600)),
+                  subtitle: Text('Avisos de confirmación, preparación y despacho', style: GoogleFonts.outfit(color: subtextColor, fontSize: 12)),
                   value: _notifyOrders,
                   onChanged: (val) {
                     setNotifState(() => _notifyOrders = val);
                     setState(() => _notifyOrders = val);
                   },
                 ),
-                const Divider(color: Colors.white12),
+                Divider(color: dividerColor),
 
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   activeColor: AppTheme.primary,
-                  title: Text('Llegada del Motorizado', style: GoogleFonts.outfit(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
-                  subtitle: Text('Alerta sonora y vibración cuando el repartidor está a menos de 500 metros', style: GoogleFonts.outfit(color: const Color(0xFF94A3B8), fontSize: 12)),
+                  title: Text('Llegada del Motorizado', style: GoogleFonts.outfit(color: textColor, fontSize: 14, fontWeight: FontWeight.w600)),
+                  subtitle: Text('Alerta sonora y vibración cuando el repartidor está a menos de 500 metros', style: GoogleFonts.outfit(color: subtextColor, fontSize: 12)),
                   value: _notifyRiderNear,
                   onChanged: (val) {
                     setNotifState(() => _notifyRiderNear = val);
                     setState(() => _notifyRiderNear = val);
                   },
                 ),
-                const Divider(color: Colors.white12),
+                Divider(color: dividerColor),
 
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   activeColor: AppTheme.primary,
-                  title: Text('Ofertas y Cupones Flash', style: GoogleFonts.outfit(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
-                  subtitle: Text('Descuentos exclusivos en comercios y tiendas aliadas', style: GoogleFonts.outfit(color: const Color(0xFF94A3B8), fontSize: 12)),
+                  title: Text('Ofertas y Cupones Flash', style: GoogleFonts.outfit(color: textColor, fontSize: 14, fontWeight: FontWeight.w600)),
+                  subtitle: Text('Descuentos exclusivos en comercios y tiendas aliadas', style: GoogleFonts.outfit(color: subtextColor, fontSize: 12)),
                   value: _notifyPromos,
                   onChanged: (val) {
                     setNotifState(() => _notifyPromos = val);
                     setState(() => _notifyPromos = val);
                   },
                 ),
-                const Divider(color: Colors.white12),
+                Divider(color: dividerColor),
 
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   activeColor: AppTheme.primary,
-                  title: Text('Alertas por WhatsApp', style: GoogleFonts.outfit(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
-                  subtitle: Text('Mensaje de respaldo con enlace de rastreo en tu teléfono', style: GoogleFonts.outfit(color: const Color(0xFF94A3B8), fontSize: 12)),
+                  title: Text('Alertas por WhatsApp', style: GoogleFonts.outfit(color: textColor, fontSize: 14, fontWeight: FontWeight.w600)),
+                  subtitle: Text('Mensaje de respaldo con enlace de rastreo en tu teléfono', style: GoogleFonts.outfit(color: subtextColor, fontSize: 12)),
                   value: _notifyWhatsApp,
                   onChanged: (val) {
                     setNotifState(() => _notifyWhatsApp = val);
@@ -1071,10 +1144,15 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   void _showLegalInfoModal() {
+    final isDark = widget.sessionService.isDarkMode;
+    final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final subtextColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final handleColor = isDark ? Colors.white24 : const Color(0xFFCBD5E1);
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (ctx) => DefaultTabController(
         length: 2,
@@ -1088,14 +1166,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 child: Container(
                   width: 44,
                   height: 4,
-                  decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)),
+                  decoration: BoxDecoration(color: handleColor, borderRadius: BorderRadius.circular(10)),
                 ),
               ),
               const SizedBox(height: 16),
               TabBar(
                 indicatorColor: AppTheme.primary,
-                labelColor: Colors.white,
-                unselectedLabelColor: const Color(0xFF94A3B8),
+                labelColor: AppTheme.primary,
+                unselectedLabelColor: subtextColor,
                 tabs: const [
                   Tab(text: 'Términos Billetera'),
                   Tab(text: 'Políticas Privacidad'),
@@ -1110,14 +1188,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Términos y Condiciones de la Billetera DeliveryHub', style: GoogleFonts.outfit(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
+                          Text('Términos y Condiciones de la Billetera Pídetelo', style: GoogleFonts.outfit(color: textColor, fontSize: 15, fontWeight: FontWeight.w800)),
                           const SizedBox(height: 10),
                           Text(
-                            '1. Uso del Saldo:\nEl saldo recargado en tu Billetera DeliveryHub puede ser utilizado exclusivamente para el pago de platillos, tarifas de envío y propinas en todos los comercios afiliados a la plataforma en Cabudare y Barquisimeto.\n\n'
+                            '1. Uso del Saldo:\nEl saldo recargado en tu Billetera Pídetelo puede ser utilizado exclusivamente para el pago de platillos, tarifas de envío y propinas en todos los comercios afiliados a la plataforma en Cabudare y Barquisimeto.\n\n'
                             '2. Recargas y Conversión:\nLas recargas realizadas en Bolívares (VES) mediante Pago Móvil son convertidas a dólares al tipo de cambio oficial publicado por el Banco Central de Venezuela (BCV) al momento de procesar la transacción.\n\n'
                             '3. No Caducidad:\nLos fondos acreditados en tu cuenta no tienen fecha de vencimiento ni generan comisiones por mantenimiento o inactividad.\n\n'
                             '4. Garantía de Entrega y Reembolsos:\nEn caso de que un pedido sea cancelado por el restaurante o no pueda ser completado por factores ajenos al cliente, el importe total será reintegrado de forma instantánea a tu saldo disponible.',
-                            style: GoogleFonts.outfit(color: const Color(0xFF94A3B8), fontSize: 12.5, height: 1.45),
+                            style: GoogleFonts.outfit(color: subtextColor, fontSize: 12.5, height: 1.45),
                           ),
                         ],
                       ),
@@ -1127,14 +1205,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Políticas de Privacidad y Tratamiento de Datos', style: GoogleFonts.outfit(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
+                          Text('Políticas de Privacidad y Tratamiento de Datos', style: GoogleFonts.outfit(color: textColor, fontSize: 15, fontWeight: FontWeight.w800)),
                           const SizedBox(height: 10),
                           Text(
-                            '1. Datos Personales Recolectados:\nDeliveryHub almacena tu nombre, número telefónico y direcciones de entrega con el único propósito de gestionar tus pedidos y permitir la comunicación directa con el repartidor asignado.\n\n'
+                            '1. Datos Personales Recolectados:\nPídetelo almacena tu nombre, número telefónico y direcciones de entrega con el único propósito de gestionar tus pedidos y permitir la comunicación directa con el repartidor asignado.\n\n'
                             '2. Uso de Coordenadas GPS:\nLas coordenadas geográficas capturadas en el mapa se utilizan estrictamente para el cálculo de distancia, costo de despacho y enrutamiento del motorizado hacia tu domicilio.\n\n'
                             '3. Seguridad y Confidencialidad:\nTus credenciales y números de referencia están protegidos mediante cifrado de grado industrial. En ningún momento comercializamos ni compartimos tu información con terceros no autorizados.\n\n'
                             '4. Derechos del Titular:\nPuedes modificar tus datos o solicitar la eliminación definitiva de tu cuenta y registros en cualquier momento desde la sección de ajustes.',
-                            style: GoogleFonts.outfit(color: const Color(0xFF94A3B8), fontSize: 12.5, height: 1.45),
+                            style: GoogleFonts.outfit(color: subtextColor, fontSize: 12.5, height: 1.45),
                           ),
                         ],
                       ),
@@ -1150,15 +1228,20 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   void _logout() async {
+    final isDark = widget.sessionService.isDarkMode;
+    final dialogBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final subtextColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+
     final confirm = await showDialog<bool>(
       context: context,
       builder: (dCtx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E293B),
+        backgroundColor: dialogBg,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Cerrar Sesión', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.w800)),
-        content: Text('¿Estás seguro que deseas cerrar sesión de tu cuenta?', style: GoogleFonts.outfit(color: const Color(0xFF94A3B8), fontSize: 13.5)),
+        title: Text('Cerrar Sesión', style: GoogleFonts.outfit(color: textColor, fontWeight: FontWeight.w800)),
+        content: Text('¿Estás seguro que deseas cerrar sesión de tu cuenta?', style: GoogleFonts.outfit(color: subtextColor, fontSize: 13.5)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dCtx, false), child: const Text('Cancelar', style: TextStyle(color: Colors.white54))),
+          TextButton(onPressed: () => Navigator.pop(dCtx, false), child: Text('Cancelar', style: TextStyle(color: subtextColor))),
           ElevatedButton(
             onPressed: () => Navigator.pop(dCtx, true),
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444)),
@@ -1179,24 +1262,29 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   void _deleteAccount() async {
+    final isDark = widget.sessionService.isDarkMode;
+    final dialogBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final subtextColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+
     final confirm = await showDialog<bool>(
       context: context,
       builder: (dCtx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E293B),
+        backgroundColor: dialogBg,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
             const Icon(Icons.warning_amber_rounded, color: Color(0xFFEF4444)),
             const SizedBox(width: 8),
-            Text('Eliminar Cuenta', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.w800)),
+            Text('Eliminar Cuenta', style: GoogleFonts.outfit(color: textColor, fontWeight: FontWeight.w800)),
           ],
         ),
         content: Text(
           'Esta acción es definitiva e irreversible. Se eliminará tu perfil, direcciones guardadas, historial de pedidos y saldo en billetera. ¿Deseas proceder?',
-          style: GoogleFonts.outfit(color: const Color(0xFF94A3B8), fontSize: 13, height: 1.4),
+          style: GoogleFonts.outfit(color: subtextColor, fontSize: 13, height: 1.4),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dCtx, false), child: const Text('Cancelar', style: TextStyle(color: Colors.white54))),
+          TextButton(onPressed: () => Navigator.pop(dCtx, false), child: Text('Cancelar', style: TextStyle(color: subtextColor))),
           ElevatedButton(
             onPressed: () => Navigator.pop(dCtx, true),
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444)),

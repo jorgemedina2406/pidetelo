@@ -300,7 +300,16 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     displayMode: 'usd_and_bs' as CurrencyDisplayMode,
     exchangeRate: 45.50,
     openTime: '11:00',
-    closeTime: '23:00'
+    closeTime: '23:00',
+    scheduleDays: [
+      { day: 'Lunes', open: true, from: '11:00', to: '23:00' },
+      { day: 'Martes', open: true, from: '11:00', to: '23:00' },
+      { day: 'Miércoles', open: true, from: '11:00', to: '23:00' },
+      { day: 'Jueves', open: true, from: '11:00', to: '23:00' },
+      { day: 'Viernes', open: true, from: '11:00', to: '23:30' },
+      { day: 'Sábado', open: true, from: '11:00', to: '23:30' },
+      { day: 'Domingo', open: true, from: '11:00', to: '22:30' }
+    ]
   };
 
   addDeliveryTier(): void {
@@ -375,6 +384,39 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     this.brandingForm.displayMode = (branch.displayMode || curr?.displayMode || cached?.displayMode || tenant.currencySettings?.displayMode || 'usd_and_bs') as CurrencyDisplayMode;
     this.brandingForm.openTime = branch.businessHours?.open || branch.openTime || (branch as any).open_time || (branch as any).openTime || cached?.openTime || '11:00';
     this.brandingForm.closeTime = branch.businessHours?.close || branch.closeTime || (branch as any).close_time || (branch as any).closeTime || cached?.closeTime || '23:00';
+    if (branch.businessHours?.scheduleDays && Array.isArray(branch.businessHours.scheduleDays)) {
+      this.brandingForm.scheduleDays = JSON.parse(JSON.stringify(branch.businessHours.scheduleDays));
+    } else if ((branch as any).business_hours?.scheduleDays && Array.isArray((branch as any).business_hours.scheduleDays)) {
+      this.brandingForm.scheduleDays = JSON.parse(JSON.stringify((branch as any).business_hours.scheduleDays));
+    } else if (cached?.scheduleDays && Array.isArray(cached.scheduleDays)) {
+      this.brandingForm.scheduleDays = JSON.parse(JSON.stringify(cached.scheduleDays));
+    }
+  }
+
+  applySchedulePreset(preset: 'all' | 'weekdays' | 'weekends'): void {
+    const from = this.brandingForm.openTime || '11:00';
+    const to = this.brandingForm.closeTime || '23:00';
+    this.brandingForm.scheduleDays = this.brandingForm.scheduleDays.map((d: any) => {
+      if (preset === 'all') return { ...d, open: true, from, to };
+      if (preset === 'weekdays') {
+        const isWk = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'].includes(d.day);
+        return { ...d, open: isWk, from, to };
+      }
+      if (preset === 'weekends') {
+        const isWe = ['Sábado', 'Domingo'].includes(d.day);
+        return { ...d, open: isWe, from, to };
+      }
+      return d;
+    });
+  }
+
+  copyGeneralHoursToAllDays(): void {
+    const from = this.brandingForm.openTime || '11:00';
+    const to = this.brandingForm.closeTime || '23:00';
+    this.brandingForm.scheduleDays.forEach((d: any) => {
+      d.from = from;
+      d.to = to;
+    });
   }
 
   onConfigBranchChange(branchId: string): void {
@@ -479,6 +521,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
           this.brandingForm.longitude = Number(pos.coords.longitude.toFixed(6));
           this.isDetectingStoreGps.set(false);
           this.storeGpsMessage.set(`✓ Coordenadas satelitales fijadas: ${this.brandingForm.latitude}, ${this.brandingForm.longitude}`);
+          this.updateSettingsLocationFromInputs();
 
           // Geocodificación inversa automática si la dirección está vacía o corta
           try {
@@ -757,6 +800,18 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
             this.branchesMap.remove();
           } catch (_) {}
           this.branchesMap = undefined;
+        }
+      }
+
+      if (tab === 'settings') {
+        setTimeout(() => this.initSettingsLocationMap(), 200);
+      } else {
+        if (this.settingsLocationMap) {
+          try {
+            this.settingsLocationMap.remove();
+          } catch (_) {}
+          this.settingsLocationMap = undefined;
+          this.settingsLocationMarker = undefined;
         }
       }
     });
@@ -1499,6 +1554,88 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     }, 150);
   }
 
+  // --- SELECTOR DE UBICACIÓN SATELITAL EN MAPA (AJUSTES DE SEDE) ---
+  private settingsLocationMap?: L.Map;
+  private settingsLocationMarker?: L.Marker;
+
+  initSettingsLocationMap(retryCount = 0): void {
+    const container = document.getElementById('settings-location-picker-map');
+    if (!container) {
+      if (retryCount < 8) {
+        setTimeout(() => this.initSettingsLocationMap(retryCount + 1), 120);
+      }
+      return;
+    }
+
+    if (this.settingsLocationMap) {
+      try { this.settingsLocationMap.remove(); } catch (_) {}
+      this.settingsLocationMap = undefined;
+      this.settingsLocationMarker = undefined;
+    }
+
+    if ((container as any)._leaflet_id) {
+      delete (container as any)._leaflet_id;
+    }
+
+    const lat = Number(this.brandingForm.latitude) || 10.0385;
+    const lng = Number(this.brandingForm.longitude) || -69.2482;
+
+    this.settingsLocationMap = L.map(container, {
+      zoomControl: true,
+      attributionControl: false
+    }).setView([lat, lng], 15);
+
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap'
+    }).addTo(this.settingsLocationMap);
+
+    const storeIcon = L.divIcon({
+      className: 'leaflet-branch-marker',
+      html: `
+        <div style="background:${this.brandingForm.accentColor || '#f97316'};color:white;width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 16px rgba(0,0,0,0.3);border:2.5px solid white;cursor:grab;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/></svg>
+        </div>
+      `,
+      iconSize: [42, 42],
+      iconAnchor: [21, 21]
+    });
+
+    this.settingsLocationMarker = L.marker([lat, lng], {
+      icon: storeIcon,
+      draggable: true
+    }).addTo(this.settingsLocationMap);
+
+    this.settingsLocationMarker.on('dragend', (e: any) => {
+      const pos = e.target.getLatLng();
+      this.brandingForm.latitude = Number(pos.lat.toFixed(6));
+      this.brandingForm.longitude = Number(pos.lng.toFixed(6));
+    });
+
+    this.settingsLocationMap.on('click', (e: any) => {
+      const cLat = Number(e.latlng.lat.toFixed(6));
+      const cLng = Number(e.latlng.lng.toFixed(6));
+      this.brandingForm.latitude = cLat;
+      this.brandingForm.longitude = cLng;
+      this.settingsLocationMarker?.setLatLng([cLat, cLng]);
+      this.settingsLocationMap?.panTo([cLat, cLng]);
+    });
+
+    setTimeout(() => this.settingsLocationMap?.invalidateSize(), 150);
+    setTimeout(() => this.settingsLocationMap?.invalidateSize(), 400);
+  }
+
+  updateSettingsLocationFromInputs(): void {
+    const lat = Number(this.brandingForm.latitude);
+    const lng = Number(this.brandingForm.longitude);
+    if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+      if (this.settingsLocationMarker && this.settingsLocationMap) {
+        this.settingsLocationMarker.setLatLng([lat, lng]);
+        this.settingsLocationMap.panTo([lat, lng]);
+      }
+    }
+  }
+
   // --- SEGUIMIENTO DE RUTA REAL (DELEGADO A OrderRouteModalComponent) ---
   openOrderRouteModal(order: Order): void {
     this.selectedRouteOrder.set(order);
@@ -2107,12 +2244,14 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       businessHours: {
         open: this.brandingForm.openTime,
         close: this.brandingForm.closeTime,
-        isOpenToday: true
+        isOpenToday: true,
+        scheduleDays: this.brandingForm.scheduleDays
       },
       business_hours: {
         open: this.brandingForm.openTime,
         close: this.brandingForm.closeTime,
-        isOpenToday: true
+        isOpenToday: true,
+        scheduleDays: this.brandingForm.scheduleDays
       },
       currencySettings: {
         baseCurrency: this.brandingForm.baseCurrency,

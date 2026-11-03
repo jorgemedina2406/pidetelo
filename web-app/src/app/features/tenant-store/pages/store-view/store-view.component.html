@@ -283,7 +283,8 @@
 
                     <button (click)="prod.isAvailable && openProductDetail(prod)"
                             [disabled]="!prod.isAvailable"
-                            class="px-3.5 py-1.5 rounded-xl bg-brand-500 hover:bg-brand-600 active:scale-95 text-white font-bold text-xs shadow-xs transition-all disabled:opacity-40 cursor-pointer">
+                            [style.backgroundColor]="cart.selectedBranch()?.accentColor || store.branding.accentColor || '#ea580c'"
+                            class="px-3.5 py-1.5 rounded-xl active:scale-95 text-white font-bold text-xs shadow-xs transition-all disabled:opacity-40 cursor-pointer hover:opacity-90">
                       Agregar
                     </button>
                   </div>
@@ -346,7 +347,8 @@
 
                 <button (click)="$event.stopPropagation(); prod.isAvailable && openProductDetail(prod)"
                         [disabled]="!prod.isAvailable"
-                        class="px-3.5 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 active:scale-95 text-white font-bold text-xs shadow-xs transition-all disabled:opacity-40 flex-shrink-0 cursor-pointer">
+                        [style.backgroundColor]="cart.selectedBranch()?.accentColor || store.branding.accentColor || '#ea580c'"
+                        class="px-3.5 py-2 rounded-xl active:scale-95 text-white font-bold text-xs shadow-xs transition-all disabled:opacity-40 flex-shrink-0 cursor-pointer hover:opacity-90">
                   + Agregar
                 </button>
               </div>
@@ -364,7 +366,8 @@
       <div class="max-w-5xl mx-auto flex items-center justify-between gap-4">
         <div (click)="cart.openCart()" class="cursor-pointer">
           <div class="flex items-center gap-2">
-            <span class="w-6 h-6 rounded-full bg-brand-500 text-white text-xs font-bold flex items-center justify-center">
+            <span class="w-6 h-6 rounded-full text-white text-xs font-bold flex items-center justify-center shadow-xs"
+                  [style.backgroundColor]="cart.selectedBranch()?.accentColor || store.branding.accentColor || '#ea580c'">
               {{ cart.totalItemsCount() }}
             </span>
             <span class="text-xs font-bold text-slate-900 dark:text-white">Ver Tu Pedido</span>
@@ -375,7 +378,8 @@
         </div>
 
         <button (click)="cart.openCart()"
-                class="bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs px-5 py-3 rounded-xl shadow-md transition-all active:scale-95 cursor-pointer">
+                [style.backgroundColor]="cart.selectedBranch()?.accentColor || store.branding.accentColor || '#ea580c'"
+                class="text-white font-bold text-xs px-5 py-3 rounded-xl shadow-md transition-all active:scale-95 cursor-pointer hover:opacity-90">
           Ir al Carrito →
         </button>
       </div>

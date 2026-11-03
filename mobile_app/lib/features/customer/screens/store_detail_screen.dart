@@ -153,8 +153,16 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
   }
 
   void _openProductSheet(Product product) {
+    final isDark = widget.sessionService?.isDarkMode ?? (Theme.of(context).brightness == Brightness.dark);
+    final sheetBg = isDark ? const Color(0xFF0F172A) : Colors.white;
+    final cardBg = isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC);
+    final sheetText = isDark ? Colors.white : const Color(0xFF0F172A);
+    final sheetSubtext = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final sheetBorder = isDark ? Colors.white12 : const Color(0xFFE2E8F0);
+
     final storeAccent = _parseHexColor(widget.storeData['accentColor']);
-    final rate = (widget.storeData['exchangeRate'] as num?)?.toDouble() ?? DolarApiService().officialRate;
+    final rawRate = (widget.storeData['exchangeRate'] as num?)?.toDouble() ?? 0;
+    final rate = rawRate > 0 ? rawRate : DolarApiService().officialRate;
     final displayMode = widget.storeData['displayMode']?.toString() ?? 'usd_and_bs';
     int quantity = 1;
     final selectedOptions = <ProductOption>[];
@@ -181,7 +189,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: sheetBg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
@@ -264,9 +272,9 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
             constraints: BoxConstraints(
               maxHeight: MediaQuery.of(ctx).size.height * 0.90,
             ),
-            decoration: const BoxDecoration(
-              color: Color(0xFF0F172A),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            decoration: BoxDecoration(
+              color: sheetBg,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -277,7 +285,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                     width: 44,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: Colors.white24,
+                      color: isDark ? Colors.white24 : Colors.black26,
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
@@ -300,8 +308,8 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                             fit: BoxFit.cover,
                             errorBuilder: (_, __, ___) => Container(
                               height: 170,
-                              color: const Color(0xFF1E293B),
-                              child: const Icon(Icons.fastfood_rounded, color: Colors.white30, size: 48),
+                              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+                              child: Icon(Icons.fastfood_rounded, color: isDark ? Colors.white30 : Colors.grey, size: 48),
                             ),
                           ),
                         ),
@@ -312,13 +320,13 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                           style: GoogleFonts.outfit(
                             fontSize: 20,
                             fontWeight: FontWeight.w800,
-                            color: Colors.white,
+                            color: sheetText,
                           ),
                         ),
                         const SizedBox(height: 6),
                         Text(
                           product.description,
-                          style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xFF94A3B8)),
+                          style: GoogleFonts.outfit(fontSize: 13, color: sheetSubtext),
                         ),
                         const SizedBox(height: 16),
 
@@ -428,13 +436,13 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                         decoration: BoxDecoration(
                                           color: isSelected
-                                              ? AppTheme.primary.withOpacity(0.15)
-                                              : const Color(0xFF0F172A),
+                                              ? storeAccent.withOpacity(0.15)
+                                              : (isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9)),
                                           borderRadius: BorderRadius.circular(12),
                                           border: Border.all(
                                             color: isSelected
-                                                ? AppTheme.primary
-                                                : Colors.white.withOpacity(0.08),
+                                                ? storeAccent
+                                                : sheetBorder,
                                             width: isSelected ? 1.5 : 1.0,
                                           ),
                                         ),
@@ -449,7 +457,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                                   : (isSelected
                                                       ? Icons.check_box_rounded
                                                       : Icons.check_box_outline_blank_rounded),
-                                              color: isSelected ? AppTheme.primary : Colors.white38,
+                                              color: isSelected ? storeAccent : (isDark ? Colors.white38 : Colors.black38),
                                               size: 20,
                                             ),
                                             const SizedBox(width: 10),
@@ -461,7 +469,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                                   fontWeight: isSelected
                                                       ? FontWeight.w700
                                                       : FontWeight.w500,
-                                                  color: Colors.white,
+                                                  color: sheetText,
                                                 ),
                                               ),
                                             ),
@@ -473,8 +481,8 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                                 fontSize: 12,
                                                 fontWeight: FontWeight.w700,
                                                 color: opt.priceDelta > 0
-                                                    ? AppTheme.primary
-                                                    : const Color(0xFF94A3B8),
+                                                    ? storeAccent
+                                                    : sheetSubtext,
                                               ),
                                             ),
                                           ],
@@ -562,19 +570,19 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                         const SizedBox(height: 6),
                         TextField(
                           controller: notesCtrl,
-                          style: const TextStyle(color: Colors.white, fontSize: 13),
+                          style: TextStyle(color: sheetText, fontSize: 13),
                           decoration: InputDecoration(
                             hintText: 'Ej: Sin cebolla, salsas aparte, etc.',
-                            hintStyle: const TextStyle(color: Colors.white38, fontSize: 12),
+                            hintStyle: TextStyle(color: sheetSubtext.withOpacity(0.6), fontSize: 12),
                             filled: true,
-                            fillColor: const Color(0xFF1E293B),
+                            fillColor: cardBg,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14),
-                              borderSide: const BorderSide(color: Colors.white12),
+                              borderSide: BorderSide(color: sheetBorder),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14),
-                              borderSide: const BorderSide(color: Colors.white12),
+                              borderSide: BorderSide(color: sheetBorder),
                             ),
                             contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                           ),
@@ -593,22 +601,22 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                     20,
                     MediaQuery.of(ctx).viewInsets.bottom + 16,
                   ),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF0F172A),
-                    border: Border(top: BorderSide(color: Colors.white12)),
+                  decoration: BoxDecoration(
+                    color: sheetBg,
+                    border: Border(top: BorderSide(color: sheetBorder)),
                   ),
                   child: Row(
                     children: [
                       Container(
                         decoration: BoxDecoration(
-                          color: const Color(0xFF1E293B),
+                          color: cardBg,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.white12),
+                          border: Border.all(color: sheetBorder),
                         ),
                         child: Row(
                           children: [
                             IconButton(
-                              icon: const Icon(Icons.remove, color: Colors.white70),
+                              icon: Icon(Icons.remove, color: sheetSubtext),
                               onPressed: () {
                                 if (quantity > 1) {
                                   setSheetState(() => quantity--);
@@ -620,7 +628,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                               style: GoogleFonts.outfit(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w800,
-                                color: Colors.white,
+                                color: sheetText,
                               ),
                             ),
                             IconButton(
@@ -712,8 +720,16 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final store = widget.storeData;
+    final isDark = widget.sessionService?.isDarkMode ?? (Theme.of(context).brightness == Brightness.dark);
+    final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
+    final cardBgColor = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final cardBorderColor = isDark ? Colors.white10 : const Color(0xFFE2E8F0);
+    final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final subtextColor = isDark ? const Color(0xFFCBD5E1) : const Color(0xFF64748B);
+
     final storeAccent = _parseHexColor(store['accentColor']);
-    final rate = (store['exchangeRate'] as num?)?.toDouble() ?? DolarApiService().officialRate;
+    final rawRate = (store['exchangeRate'] as num?)?.toDouble() ?? 0;
+    final rate = rawRate > 0 ? rawRate : DolarApiService().officialRate;
     final displayMode = store['displayMode']?.toString() ?? 'usd_and_bs';
     final categories = ['Todos', ...{..._products.map((p) => p.category)}];
 
@@ -722,7 +738,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
         : _products.where((p) => p.category == _selectedCategory).toList();
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: bgColor,
       body: Stack(
         children: [
           CustomScrollView(
@@ -731,7 +747,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
               SliverAppBar(
                 expandedHeight: 240,
                 pinned: true,
-                backgroundColor: const Color(0xFF0F172A),
+                backgroundColor: bgColor,
                 leading: Container(
                   margin: const EdgeInsets.all(8),
                   decoration: const BoxDecoration(
@@ -813,7 +829,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                             end: Alignment.bottomCenter,
                             colors: [
                               Colors.black.withOpacity(0.3),
-                              const Color(0xFF0F172A),
+                              bgColor,
                             ],
                           ),
                         ),
@@ -835,7 +851,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                         style: GoogleFonts.outfit(
                           fontSize: 26,
                           fontWeight: FontWeight.w800,
-                          color: Colors.white,
+                          color: textColor,
                         ),
                       ),
                       if (store['tagline'] != null && store['tagline'].toString().trim().isNotEmpty) ...[
@@ -845,7 +861,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                           style: GoogleFonts.outfit(
                             fontSize: 13.5,
                             fontStyle: FontStyle.italic,
-                            color: const Color(0xFFCBD5E1),
+                            color: subtextColor,
                           ),
                         ),
                       ],
@@ -1202,9 +1218,16 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                         final prod = filteredProducts[idx];
                         return Container(
                           decoration: BoxDecoration(
-                            color: const Color(0xFF1E293B),
+                            color: cardBgColor,
                             borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: Colors.white10),
+                            border: Border.all(color: cardBorderColor),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
                           child: InkWell(
                             borderRadius: BorderRadius.circular(18),
@@ -1221,7 +1244,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                         height: 110,
                                         width: double.infinity,
                                         fit: BoxFit.cover,
-                                        errorBuilder: (_, __, ___) => Container(height: 110, color: const Color(0xFF334155)),
+                                        errorBuilder: (_, __, ___) => Container(height: 110, color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
                                       ),
                                     ),
                                     if (prod.isOnSale)
@@ -1265,14 +1288,14 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                     children: [
                                       Text(
                                         prod.name,
-                                        style: GoogleFonts.outfit(fontSize: 13.5, fontWeight: FontWeight.w700, color: Colors.white),
+                                        style: GoogleFonts.outfit(fontSize: 13.5, fontWeight: FontWeight.w700, color: textColor),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                       const SizedBox(height: 2),
                                       Text(
                                         prod.description,
-                                        style: GoogleFonts.outfit(fontSize: 11, color: const Color(0xFF94A3B8)),
+                                        style: GoogleFonts.outfit(fontSize: 11, color: subtextColor),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                       ),
@@ -1289,7 +1312,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                               '\$${prod.compareAtPrice!.toStringAsFixed(2)}',
                                               style: GoogleFonts.outfit(
                                                 fontSize: 10.5,
-                                                color: Colors.white38,
+                                                color: isDark ? Colors.white38 : Colors.grey,
                                                 decoration: TextDecoration.lineThrough,
                                               ),
                                             ),
@@ -1322,9 +1345,16 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                         return Container(
                           margin: const EdgeInsets.only(bottom: 14),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF1E293B),
+                            color: cardBgColor,
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: Colors.white10),
+                            border: Border.all(color: cardBorderColor),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
                           child: InkWell(
                             borderRadius: BorderRadius.circular(20),
@@ -1347,8 +1377,8 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                           errorBuilder: (_, __, ___) => Container(
                                             width: 90,
                                             height: 90,
-                                            color: const Color(0xFF334155),
-                                            child: const Icon(Icons.fastfood_rounded, color: Colors.white30),
+                                            color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                                            child: Icon(Icons.fastfood_rounded, color: isDark ? Colors.white30 : Colors.grey),
                                           ),
                                         ),
                                       ),
@@ -1406,7 +1436,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                           style: GoogleFonts.outfit(
                                             fontSize: 16,
                                             fontWeight: FontWeight.w700,
-                                            color: Colors.white,
+                                            color: textColor,
                                           ),
                                         ),
                                         const SizedBox(height: 4),
@@ -1415,6 +1445,10 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                           maxLines: 2,
                                           overflow: TextOverflow.ellipsis,
                                           style: GoogleFonts.outfit(
+                                            fontSize: 12,
+                                            color: subtextColor,
+                                          ),
+                                        ),
                                             fontSize: 12,
                                             color: const Color(0xFF94A3B8),
                                           ),

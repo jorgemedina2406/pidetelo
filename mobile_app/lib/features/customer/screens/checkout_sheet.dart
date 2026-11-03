@@ -31,7 +31,9 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
   void _showAddressPicker(BuildContext context, CartService cart) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? const Color(0xFF0F172A)
+          : Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -199,8 +201,8 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
 
         return Container(
           height: MediaQuery.of(context).size.height * 0.88,
-          decoration: const BoxDecoration(
-            color: Color(0xFF0F172A),
+          decoration: BoxDecoration(
+            color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF0F172A) : Colors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
           ),
           child: Column(
@@ -996,7 +998,7 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                                       ),
                                     ),
                                     Text(
-                                      'Bs. ${(cart.grandTotal * 36.5).toStringAsFixed(2)}',
+                                      'Bs. ${cart.grandTotalBs.toStringAsFixed(2)}',
                                       style: GoogleFonts.outfit(
                                         fontSize: 13,
                                         fontWeight: FontWeight.w800,

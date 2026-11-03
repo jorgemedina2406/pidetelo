@@ -128,7 +128,8 @@
             <!-- Submit Button with Dynamic Total -->
             <button (click)="confirmAdd()"
                     [disabled]="!isValidSelection()"
-                    class="flex-1 bg-brand-500 hover:bg-brand-600 active:scale-[0.99] disabled:opacity-50 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-brand-500/25 flex items-center justify-between transition-all cursor-pointer">
+                    [style.backgroundColor]="cart.selectedBranch()?.accentColor || cart.activeTenant()?.branding?.accentColor || '#ea580c'"
+                    class="flex-1 active:scale-[0.99] disabled:opacity-50 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg flex items-center justify-between transition-all cursor-pointer hover:opacity-90">
               <span>{{ isValidSelection() ? 'Agregar al Pedido' : 'Completa las opciones requeridas' }}</span>
               <div class="bg-black/20 px-2.5 py-1 rounded-lg text-right">
                 <span class="text-sm font-extrabold block leading-tight">${{ calculatedTotal().toFixed(2) }}</span>

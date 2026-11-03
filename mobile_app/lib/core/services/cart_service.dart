@@ -5,6 +5,7 @@ import '../models/order_model.dart';
 import '../models/user_model.dart';
 import '../models/branch_model.dart';
 import 'api_service.dart';
+import 'dolar_api_service.dart';
 
 class RiderPayoutTransaction {
   final String id;
@@ -99,7 +100,7 @@ class CartService extends ChangeNotifier {
   double get effectiveExchangeRate =>
       (_currentStoreExchangeRate != null && _currentStoreExchangeRate! > 0)
           ? _currentStoreExchangeRate!
-          : 45.50;
+          : DolarApiService().officialRate;
 
   DeliveryAddress get selectedAddress => _selectedAddress;
   List<DeliveryAddress> get savedAddresses => List.unmodifiable(_savedAddresses);

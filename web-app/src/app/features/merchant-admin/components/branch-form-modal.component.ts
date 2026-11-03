@@ -1,6 +1,7 @@
 import { Component, Input, Output, EventEmitter, inject, signal, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import * as L from 'leaflet';
 import { Branch } from '../../../core/models/branch.model';
 import { IconComponent } from '../../../shared/components/icon.component';
 import { ApiService } from '../../../core/services/api.service';
@@ -85,14 +86,26 @@ import { ApiService } from '../../../core/services/api.service';
               <div class="grid grid-cols-2 gap-3">
                 <div>
                   <label class="block font-semibold text-[11px] mb-1">Latitud</label>
-                  <input type="number" step="0.000001" [(ngModel)]="form.latitude" name="bLat"
+                  <input type="number" step="0.000001" [(ngModel)]="form.latitude" (ngModelChange)="updateMapFromInputs()" name="bLat"
                     class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 font-mono text-center font-bold" />
                 </div>
                 <div>
                   <label class="block font-semibold text-[11px] mb-1">Longitud</label>
-                  <input type="number" step="0.000001" [(ngModel)]="form.longitude" name="bLng"
+                  <input type="number" step="0.000001" [(ngModel)]="form.longitude" (ngModelChange)="updateMapFromInputs()" name="bLng"
                     class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 font-mono text-center font-bold" />
                 </div>
+              </div>
+
+              <!-- Selector Interactivo en Mapa -->
+              <div class="pt-2">
+                <div class="flex items-center justify-between text-[11px] text-slate-500 mb-1.5">
+                  <span class="font-bold flex items-center gap-1 text-slate-700 dark:text-slate-300">
+                    <span>🗺️</span>
+                    <span>Fijar en mapa satelital interactivo</span>
+                  </span>
+                  <span class="text-[10px] text-brand-600 dark:text-brand-400 font-semibold">Clic o arrastrar marcador</span>
+                </div>
+                <div id="branch-modal-location-map" class="w-full h-44 rounded-xl border border-slate-300 dark:border-slate-700 overflow-hidden shadow-xs z-0"></div>
               </div>
             </div>
 
@@ -320,6 +333,13 @@ export class BranchFormModalComponent implements OnChanges {
         } else {
           this.form = this.getDefaultForm();
         }
+        setTimeout(() => this.initBranchModalMap(), 250);
+      } else {
+        if (this.branchModalMap) {
+          try { this.branchModalMap.remove(); } catch (_) {}
+          this.branchModalMap = undefined;
+          this.branchModalMarker = undefined;
+        }
       }
     }
   }
@@ -360,6 +380,7 @@ export class BranchFormModalComponent implements OnChanges {
           this.form.longitude = lng;
           this.isDetectingGps.set(false);
           this.gpsMessage.set(`✓ Coordenadas satelitales fijadas: ${lat}, ${lng}`);
+          this.updateMapFromInputs();
 
           try {
             const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
@@ -379,6 +400,87 @@ export class BranchFormModalComponent implements OnChanges {
         },
         { enableHighAccuracy: true, timeout: 8000 }
       );
+    }
+  }
+
+  private branchModalMap?: L.Map;
+  private branchModalMarker?: L.Marker;
+
+  initBranchModalMap(retryCount = 0): void {
+    const container = document.getElementById('branch-modal-location-map');
+    if (!container) {
+      if (retryCount < 8) {
+        setTimeout(() => this.initBranchModalMap(retryCount + 1), 100);
+      }
+      return;
+    }
+
+    if (this.branchModalMap) {
+      try { this.branchModalMap.remove(); } catch (_) {}
+      this.branchModalMap = undefined;
+      this.branchModalMarker = undefined;
+    }
+
+    if ((container as any)._leaflet_id) {
+      delete (container as any)._leaflet_id;
+    }
+
+    const lat = Number(this.form.latitude) || 10.06777;
+    const lng = Number(this.form.longitude) || -69.34735;
+
+    this.branchModalMap = L.map(container, {
+      zoomControl: true,
+      attributionControl: false
+    }).setView([lat, lng], 15);
+
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap'
+    }).addTo(this.branchModalMap);
+
+    const storeIcon = L.divIcon({
+      className: 'leaflet-branch-marker',
+      html: `
+        <div style="background:#f97316;color:white;width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 14px rgba(0,0,0,0.3);border:2.5px solid white;cursor:grab;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/></svg>
+        </div>
+      `,
+      iconSize: [38, 38],
+      iconAnchor: [19, 19]
+    });
+
+    this.branchModalMarker = L.marker([lat, lng], {
+      icon: storeIcon,
+      draggable: true
+    }).addTo(this.branchModalMap);
+
+    this.branchModalMarker.on('dragend', (e: any) => {
+      const pos = e.target.getLatLng();
+      this.form.latitude = Number(pos.lat.toFixed(6));
+      this.form.longitude = Number(pos.lng.toFixed(6));
+    });
+
+    this.branchModalMap.on('click', (e: any) => {
+      const cLat = Number(e.latlng.lat.toFixed(6));
+      const cLng = Number(e.latlng.lng.toFixed(6));
+      this.form.latitude = cLat;
+      this.form.longitude = cLng;
+      this.branchModalMarker?.setLatLng([cLat, cLng]);
+      this.branchModalMap?.panTo([cLat, cLng]);
+    });
+
+    setTimeout(() => this.branchModalMap?.invalidateSize(), 150);
+    setTimeout(() => this.branchModalMap?.invalidateSize(), 350);
+  }
+
+  updateMapFromInputs(): void {
+    const lat = Number(this.form.latitude);
+    const lng = Number(this.form.longitude);
+    if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+      if (this.branchModalMarker && this.branchModalMap) {
+        this.branchModalMarker.setLatLng([lat, lng]);
+        this.branchModalMap.panTo([lat, lng]);
+      }
     }
   }
 
