@@ -862,16 +862,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       ),
     );
   }
-            style: GoogleFonts.outfit(
-              color: isPositive ? const Color(0xFF10B981) : const Color(0xFFEF4444),
-              fontSize: 14,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   void _showCouponsModal(BuildContext context) {
     showModalBottomSheet(
