@@ -1215,6 +1215,7 @@
           }
 
           <!-- ================= TAB: USUARIOS REGISTRADOS ================= -->
+          <!-- ================= TAB: USUARIOS REGISTRADOS DE PLATAFORMA ================= -->
           @if (activeTab() === 'users') {
             <div class="space-y-6 animate-fade-in">
               <div class="flex flex-wrap items-center justify-between gap-4">
@@ -1224,7 +1225,7 @@
                     <span>Usuarios Registrados en Pídetelo</span>
                   </h2>
                   <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                    Directorio global de clientes, motorizados, encargados y dueños de locales registrados en la plataforma.
+                    Directorio global completo de clientes, motorizados, administradores y personal de comercios de la plataforma.
                   </p>
                 </div>
 
@@ -1234,22 +1235,43 @@
                 </button>
               </div>
 
+              <!-- KPI Metrics Strip for Users -->
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div (click)="userRoleFilter.set('all')" class="card-adaptive p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-brand-500 transition-all">
+                  <div class="text-[11px] font-bold text-slate-500 dark:text-slate-400">Total Registrados</div>
+                  <div class="text-xl font-black text-slate-900 dark:text-white mt-1">{{ platformUsersCount() }}</div>
+                </div>
+                <div (click)="userRoleFilter.set('CUSTOMER')" class="card-adaptive p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-emerald-500 transition-all">
+                  <div class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">Clientes</div>
+                  <div class="text-xl font-black text-slate-900 dark:text-white mt-1">{{ customerUsersCount() }}</div>
+                </div>
+                <div (click)="userRoleFilter.set('RIDER')" class="card-adaptive p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-blue-500 transition-all">
+                  <div class="text-[11px] font-bold text-blue-600 dark:text-blue-400">Motorizados / Riders</div>
+                  <div class="text-xl font-black text-slate-900 dark:text-white mt-1">{{ riderUsersCount() }}</div>
+                </div>
+                <div (click)="userRoleFilter.set('MERCHANT_OWNER')" class="card-adaptive p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-amber-500 transition-all">
+                  <div class="text-[11px] font-bold text-amber-600 dark:text-amber-400">Personal Comercios</div>
+                  <div class="text-xl font-black text-slate-900 dark:text-white mt-1">{{ merchantUsersCount() }}</div>
+                </div>
+              </div>
+
               <!-- Filtros y Búsqueda -->
               <div class="flex flex-wrap items-center gap-3">
                 <div class="flex-1 min-w-[240px]">
                   <input type="text" [ngModel]="userSearchQuery()" (ngModelChange)="userSearchQuery.set($event)"
-                         placeholder="Buscar por nombre, correo o comercio..."
+                         placeholder="Buscar por nombre, correo, teléfono o comercio..."
                          class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:border-brand-500 font-medium" />
                 </div>
-                <div class="w-48">
+                <div class="w-56">
                   <select [ngModel]="userRoleFilter()" (ngModelChange)="userRoleFilter.set($event)"
                           class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs font-bold focus:outline-none focus:border-brand-500">
-                    <option value="all">Todos los Roles</option>
-                    <option value="SUPER_ADMIN">SuperAdmin</option>
-                    <option value="MERCHANT_OWNER">Dueño Local</option>
-                    <option value="MERCHANT_MANAGER">Encargado</option>
-                    <option value="RIDER">Motorizado / Rider</option>
-                    <option value="CUSTOMER">Cliente</option>
+                    <option value="all">Todos los Roles ({{ platformUsersCount() }})</option>
+                    <option value="CUSTOMER">Clientes ({{ customerUsersCount() }})</option>
+                    <option value="RIDER">Motorizados / Riders ({{ riderUsersCount() }})</option>
+                    <option value="MERCHANT_OWNER">Dueños de Comercio</option>
+                    <option value="MERCHANT_MANAGER">Encargados de Sucursal</option>
+                    <option value="MERCHANT_KITCHEN">Cocina / Personal</option>
+                    <option value="SUPER_ADMIN">Super Administradores</option>
                   </select>
                 </div>
               </div>
@@ -1263,7 +1285,7 @@
                         <th class="p-3.5">Usuario</th>
                         <th class="p-3.5">Contacto</th>
                         <th class="p-3.5 text-center">Rol en Plataforma</th>
-                        <th class="p-3.5">Comercio Asignado</th>
+                        <th class="p-3.5">Comercio / Ubicación</th>
                         <th class="p-3.5 text-center">Fecha Registro</th>
                         <th class="p-3.5 text-center">Estado</th>
                       </tr>
@@ -1287,30 +1309,37 @@
                             <div class="text-[10px] text-slate-400 font-mono">{{ u.phone || 'Sin teléfono' }}</div>
                           </td>
                           <td class="p-3.5 text-center">
-                            <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide"
-                                  [class.bg-purple-100]="u.role === 'SUPER_ADMIN'"
-                                  [class.text-purple-700]="u.role === 'SUPER_ADMIN'"
-                                  [class.dark:bg-purple-950]="u.role === 'SUPER_ADMIN'"
-                                  [class.dark:text-purple-300]="u.role === 'SUPER_ADMIN'"
-                                  [class.bg-brand-100]="u.role === 'MERCHANT_OWNER'"
-                                  [class.text-brand-700]="u.role === 'MERCHANT_OWNER'"
-                                  [class.dark:bg-brand-950]="u.role === 'MERCHANT_OWNER'"
-                                  [class.dark:text-brand-300]="u.role === 'MERCHANT_OWNER'"
-                                  [class.bg-blue-100]="u.role === 'RIDER'"
-                                  [class.text-blue-700]="u.role === 'RIDER'"
-                                  [class.dark:bg-blue-950]="u.role === 'RIDER'"
-                                  [class.dark:text-blue-300]="u.role === 'RIDER'"
-                                  [class.bg-slate-100]="u.role === 'CUSTOMER'"
-                                  [class.text-slate-700]="u.role === 'CUSTOMER'"
-                                  [class.dark:bg-slate-800]="u.role === 'CUSTOMER'"
-                                  [class.dark:text-slate-300]="u.role === 'CUSTOMER'">
+                            <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide inline-flex items-center gap-1"
+                                  [class.bg-purple-100]="(u.role || '').toUpperCase().includes('SUPER')"
+                                  [class.text-purple-700]="(u.role || '').toUpperCase().includes('SUPER')"
+                                  [class.dark:bg-purple-950]="(u.role || '').toUpperCase().includes('SUPER')"
+                                  [class.dark:text-purple-300]="(u.role || '').toUpperCase().includes('SUPER')"
+                                  [class.bg-amber-100]="(u.role || '').toUpperCase().includes('OWNER') || (u.role || '').toUpperCase().includes('ADMIN')"
+                                  [class.text-amber-800]="(u.role || '').toUpperCase().includes('OWNER') || (u.role || '').toUpperCase().includes('ADMIN')"
+                                  [class.dark:bg-amber-950]="(u.role || '').toUpperCase().includes('OWNER') || (u.role || '').toUpperCase().includes('ADMIN')"
+                                  [class.dark:text-amber-300]="(u.role || '').toUpperCase().includes('OWNER') || (u.role || '').toUpperCase().includes('ADMIN')"
+                                  [class.bg-blue-100]="(u.role || '').toUpperCase().includes('RIDER') || (u.role || '').toUpperCase().includes('MOTOR')"
+                                  [class.text-blue-700]="(u.role || '').toUpperCase().includes('RIDER') || (u.role || '').toUpperCase().includes('MOTOR')"
+                                  [class.dark:bg-blue-950]="(u.role || '').toUpperCase().includes('RIDER') || (u.role || '').toUpperCase().includes('MOTOR')"
+                                  [class.dark:text-blue-300]="(u.role || '').toUpperCase().includes('RIDER') || (u.role || '').toUpperCase().includes('MOTOR')"
+                                  [class.bg-emerald-100]="(u.role || '').toUpperCase().includes('CUSTOMER') || (u.role || '').toUpperCase().includes('CLIENT')"
+                                  [class.text-emerald-700]="(u.role || '').toUpperCase().includes('CUSTOMER') || (u.role || '').toUpperCase().includes('CLIENT')"
+                                  [class.dark:bg-emerald-950]="(u.role || '').toUpperCase().includes('CUSTOMER') || (u.role || '').toUpperCase().includes('CLIENT')"
+                                  [class.dark:text-emerald-300]="(u.role || '').toUpperCase().includes('CUSTOMER') || (u.role || '').toUpperCase().includes('CLIENT')"
+                                  [class.bg-indigo-100]="(u.role || '').toUpperCase().includes('MANAGER')"
+                                  [class.text-indigo-700]="(u.role || '').toUpperCase().includes('MANAGER')"
+                                  [class.dark:bg-indigo-950]="(u.role || '').toUpperCase().includes('MANAGER')"
+                                  [class.dark:text-indigo-300]="(u.role || '').toUpperCase().includes('MANAGER')">
                               {{ getRoleLabel(u.role) }}
                             </span>
                           </td>
                           <td class="p-3.5">
-                            <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                              {{ u.tenantName || 'Plataforma Global' }}
-                            </span>
+                            <div class="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                              {{ u.tenantName || 'Pídetelo Global' }}
+                            </div>
+                            @if (u.branchName && u.branchName !== 'Sede Principal') {
+                              <div class="text-[10px] text-slate-400 font-medium">{{ u.branchName }}</div>
+                            }
                           </td>
                           <td class="p-3.5 text-center text-[11px] text-slate-400">
                             {{ u.createdAt ? (u.createdAt | date:'shortDate') : 'Reciente' }}

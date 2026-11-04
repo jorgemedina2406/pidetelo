@@ -158,13 +158,38 @@ export class SuperAdminComponent implements OnInit {
 
   readonly filteredPlatformUsers = computed(() => {
     const q = this.userSearchQuery().toLowerCase().trim();
-    const role = this.userRoleFilter();
+    const filterRole = this.userRoleFilter().toUpperCase().trim();
     return this.platformUsers().filter(u => {
-      const matchQuery = !q || (u.name && u.name.toLowerCase().includes(q)) || (u.email && u.email.toLowerCase().includes(q)) || (u.tenantName && u.tenantName.toLowerCase().includes(q));
-      const matchRole = role === 'all' || u.role === role;
+      const matchQuery = !q ||
+        (u.name && u.name.toLowerCase().includes(q)) ||
+        (u.email && u.email.toLowerCase().includes(q)) ||
+        (u.phone && u.phone.toLowerCase().includes(q)) ||
+        (u.tenantName && u.tenantName.toLowerCase().includes(q)) ||
+        (u.branchName && u.branchName.toLowerCase().includes(q));
+
+      if (filterRole === 'ALL') return matchQuery;
+
+      const userRole = (u.role || '').toUpperCase().trim();
+      const matchRole =
+        userRole === filterRole ||
+        (filterRole === 'MERCHANT_OWNER' && (userRole === 'MERCHANT_ADMIN' || userRole === 'ADMIN' || userRole === 'OWNER')) ||
+        (filterRole === 'MERCHANT_MANAGER' && (userRole === 'BRANCH_MANAGER' || userRole === 'MANAGER')) ||
+        (filterRole === 'MERCHANT_KITCHEN' && (userRole === 'KITCHEN' || userRole === 'COCINA')) ||
+        (filterRole === 'RIDER' && (userRole === 'MOTORIZADO' || userRole === 'REPARTIDOR')) ||
+        (filterRole === 'CUSTOMER' && (userRole === 'CLIENTE')) ||
+        (filterRole === 'SUPER_ADMIN' && (userRole === 'SUPERADMIN'));
+
       return matchQuery && matchRole;
     });
   });
+
+  readonly platformUsersCount = computed(() => this.platformUsers().length);
+  readonly customerUsersCount = computed(() => this.platformUsers().filter(u => (u.role || '').toUpperCase().includes('CUSTOMER') || (u.role || '').toUpperCase().includes('CLIENT')).length);
+  readonly riderUsersCount = computed(() => this.platformUsers().filter(u => (u.role || '').toUpperCase().includes('RIDER') || (u.role || '').toUpperCase().includes('MOTOR')).length);
+  readonly merchantUsersCount = computed(() => this.platformUsers().filter(u => {
+    const r = (u.role || '').toUpperCase();
+    return r.includes('MERCHANT') || r.includes('OWNER') || r.includes('MANAGER') || r.includes('KITCHEN') || r.includes('ADMIN');
+  }).length);
 
   openNewGlobalCouponModal(): void {
     this.editingGlobalCoupon = {
@@ -417,7 +442,15 @@ export class SuperAdminComponent implements OnInit {
 
   getRoleLabel(role: any): string {
     if (!role) return 'Usuario';
-    return this.roleLabels[String(role)] || String(role);
+    const norm = String(role).toUpperCase().trim();
+    if (norm === 'SUPER_ADMIN' || norm === 'SUPERADMIN') return 'SuperAdmin';
+    if (norm === 'MERCHANT_OWNER' || norm === 'MERCHANT_ADMIN' || norm === 'ADMIN' || norm === 'OWNER') return 'Dueño Local';
+    if (norm === 'MERCHANT_MANAGER' || norm === 'BRANCH_MANAGER' || norm === 'MANAGER') return 'Encargado';
+    if (norm === 'MERCHANT_KITCHEN' || norm === 'KITCHEN' || norm === 'COCINA') return 'Cocina';
+    if (norm === 'MERCHANT_DISPATCH' || norm === 'DISPATCH' || norm === 'DESPACHO') return 'Despacho';
+    if (norm === 'RIDER' || norm === 'MOTORIZADO' || norm === 'REPARTIDOR') return 'Motorizado';
+    if (norm === 'CUSTOMER' || norm === 'CLIENTE') return 'Cliente';
+    return this.roleLabels[norm] || String(role);
   }
 
   readonly availablePermissions: { id: Permission; label: string }[] = [

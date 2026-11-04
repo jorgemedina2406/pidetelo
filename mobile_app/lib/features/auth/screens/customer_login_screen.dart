@@ -77,6 +77,21 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
 
         userId = authRes.user?.id ?? 'cust_${DateTime.now().millisecondsSinceEpoch}';
         registeredName = name;
+
+        // Sincronizar de inmediato el perfil en la base de datos de Pídetelo
+        if (authRes.user != null) {
+          try {
+            await supabase.from('profiles').upsert({
+              'id': authRes.user!.id,
+              'full_name': name,
+              'email': email,
+              'phone': phone,
+              'role': 'CUSTOMER',
+              'is_active': true,
+              'updated_at': DateTime.now().toIso8601String(),
+            });
+          } catch (_) {}
+        }
       } else {
         final authRes = await supabase.auth.signInWithPassword(
           email: email,

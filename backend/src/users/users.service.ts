@@ -123,10 +123,96 @@ export class UsersService {
   }
 
   async findAllPlatformUsers() {
-    const allUsers: any[] = [];
+    const usersMap = new Map<string, any>();
     const client = this.supabase.getClient();
 
-    // 1. Dueños y Colaboradores de Comercio
+    const normalizeRole = (role: string | undefined | null): string => {
+      if (!role) return 'CUSTOMER';
+      const r = role.toUpperCase().trim();
+      if (r === 'SUPERADMIN' || r === 'SUPER_ADMIN') return 'SUPER_ADMIN';
+      if (r === 'MERCHANT_ADMIN' || r === 'ADMIN' || r === 'MERCHANT_OWNER' || r === 'OWNER') return 'MERCHANT_OWNER';
+      if (r === 'BRANCH_MANAGER' || r === 'MANAGER' || r === 'MERCHANT_MANAGER') return 'MERCHANT_MANAGER';
+      if (r === 'KITCHEN' || r === 'MERCHANT_KITCHEN' || r === 'COCINA') return 'MERCHANT_KITCHEN';
+      if (r === 'DISPATCH' || r === 'MERCHANT_DISPATCH' || r === 'DESPACHO') return 'MERCHANT_DISPATCH';
+      if (r === 'RIDER' || r === 'MOTORIZADO' || r === 'REPARTIDOR') return 'RIDER';
+      if (r === 'CUSTOMER' || r === 'CLIENTE') return 'CUSTOMER';
+      return r;
+    };
+
+    const getRoleLabel = (role: string): string => {
+      switch (role) {
+        case 'SUPER_ADMIN': return 'Super Administrador';
+        case 'MERCHANT_OWNER': return 'Dueño de Comercio';
+        case 'MERCHANT_MANAGER': return 'Encargado de Sucursal';
+        case 'MERCHANT_KITCHEN': return 'Cocina / Caja';
+        case 'MERCHANT_DISPATCH': return 'Despacho';
+        case 'RIDER': return 'Motorizado / Repartidor';
+        case 'CUSTOMER': return 'Cliente';
+        default: return role;
+      }
+    };
+
+    // 1. Usuarios registrados en Supabase Auth (Clientes App Móvil, Web, etc.)
+    try {
+      const { data: authData } = await client.auth.admin.listUsers({ page: 1, perPage: 1000 });
+      if (authData?.users && authData.users.length > 0) {
+        authData.users.forEach(u => {
+          const rawRole = u.user_metadata?.role || (u.email?.includes('admin@pidetelo') ? 'SUPER_ADMIN' : 'CUSTOMER');
+          const role = normalizeRole(rawRole);
+          const name = u.user_metadata?.full_name || u.user_metadata?.name || (u.email ? u.email.split('@')[0] : 'Usuario Pídetelo');
+          const phone = u.user_metadata?.phone || u.phone || 'N/A';
+          const email = u.email || 'N/A';
+          const emailKey = email.toLowerCase().trim();
+
+          usersMap.set(emailKey, {
+            id: u.id,
+            name,
+            email,
+            phone,
+            role,
+            roleLabel: getRoleLabel(role),
+            tenantName: role === 'CUSTOMER' ? 'Cliente Final' : (role === 'RIDER' ? 'Flota Global' : (role === 'SUPER_ADMIN' ? 'Pídetelo HQ' : 'Comercio')),
+            branchName: role === 'CUSTOMER' ? 'App Móvil / Web' : 'Sede Principal',
+            isActive: !u.banned_until,
+            createdAt: u.created_at || new Date().toISOString()
+          });
+        });
+      }
+    } catch (_) {}
+
+    // 2. Tabla Profiles (Extensión de perfiles en Supabase)
+    try {
+      const { data: profiles } = await client
+        .from('profiles')
+        .select('*, tenants(name), branches(name)')
+        .order('created_at', { ascending: false });
+
+      if (profiles && profiles.length > 0) {
+        profiles.forEach((p: any) => {
+          const email = (p.email || '').toLowerCase().trim();
+          const emailKey = email || p.id;
+          const role = normalizeRole(p.role || 'CUSTOMER');
+          const existing = usersMap.get(emailKey);
+          const tName = Array.isArray(p.tenants) ? p.tenants[0]?.name : p.tenants?.name;
+          const bName = Array.isArray(p.branches) ? p.branches[0]?.name : p.branches?.name;
+
+          usersMap.set(emailKey, {
+            id: p.id || existing?.id,
+            name: p.full_name || p.name || existing?.name || (email ? email.split('@')[0] : 'Usuario Pídetelo'),
+            email: p.email || existing?.email || 'N/A',
+            phone: p.phone || existing?.phone || 'N/A',
+            role: role !== 'CUSTOMER' ? role : (existing?.role || 'CUSTOMER'),
+            roleLabel: getRoleLabel(role !== 'CUSTOMER' ? role : (existing?.role || 'CUSTOMER')),
+            tenantName: tName || existing?.tenantName || (role === 'CUSTOMER' ? 'Cliente Final' : (role === 'RIDER' ? 'Flota Global' : 'Comercio')),
+            branchName: bName || existing?.branchName || (role === 'CUSTOMER' ? 'App Móvil / Web' : 'Sede Principal'),
+            isActive: p.is_active ?? existing?.isActive ?? true,
+            createdAt: p.created_at || existing?.createdAt || new Date().toISOString()
+          });
+        });
+      }
+    } catch (_) {}
+
+    // 3. Dueños y Colaboradores de Comercio (store_collaborators)
     try {
       const { data: collaborators } = await client
         .from('store_collaborators')
@@ -134,81 +220,102 @@ export class UsersService {
         .order('created_at', { ascending: false });
 
       if (collaborators && collaborators.length > 0) {
-        collaborators.forEach(c => {
-          allUsers.push({
-            id: c.id,
-            name: c.name,
-            email: c.email,
-            phone: c.phone || 'N/A',
-            role: c.role || 'merchant_admin',
-            roleLabel: c.role === 'admin' ? 'Administrador Comercio' : (c.role === 'branch_manager' ? 'Encargado de Sucursal' : (c.role === 'kitchen' ? 'Cocina / Caja' : 'Colaborador')),
-            tenantName: c.tenants?.name || 'Comercio',
-            branchName: c.branches?.name || 'Todas las Sedes',
+        collaborators.forEach((c: any) => {
+          const email = (c.email || '').toLowerCase().trim();
+          const emailKey = email || c.id;
+          const role = normalizeRole(c.role || 'MERCHANT_OWNER');
+          const existing = usersMap.get(emailKey);
+          const tName = Array.isArray(c.tenants) ? c.tenants[0]?.name : c.tenants?.name;
+          const bName = Array.isArray(c.branches) ? c.branches[0]?.name : c.branches?.name;
+
+          usersMap.set(emailKey, {
+            id: c.id || existing?.id,
+            name: c.name || existing?.name,
+            email: c.email || existing?.email,
+            phone: c.phone || existing?.phone || 'N/A',
+            role,
+            roleLabel: getRoleLabel(role),
+            tenantName: tName || existing?.tenantName || 'Comercio',
+            branchName: bName || existing?.branchName || 'Todas las Sedes',
             isActive: c.is_active ?? true,
-            createdAt: c.created_at
+            createdAt: c.created_at || existing?.createdAt || new Date().toISOString()
           });
         });
       }
     } catch (_) {}
 
-    // Fallback colaboradores si Supabase no tiene registros
-    if (allUsers.length === 0) {
-      const local = Array.from(this.localUsers.values());
-      local.forEach(u => {
-        allUsers.push({
+    // 4. Motorizados / Riders
+    try {
+      const { data: riders } = await client
+        .from('riders')
+        .select('id, name, email, phone, is_active, vehicle_type, vehicle_plate, plate_number, created_at, tenants(name), branches(name)')
+        .order('created_at', { ascending: false });
+
+      if (riders && riders.length > 0) {
+        riders.forEach((r: any) => {
+          const email = (r.email || '').toLowerCase().trim();
+          const emailKey = email || r.id;
+          const existing = usersMap.get(emailKey);
+          const vehicle = r.vehicle_type ? `${r.vehicle_type} (${r.plate_number || r.vehicle_plate || 'S/P'})` : 'Flota Motorizados';
+          const tName = Array.isArray(r.tenants) ? r.tenants[0]?.name : r.tenants?.name;
+
+          usersMap.set(emailKey, {
+            id: r.id || existing?.id,
+            name: r.name || existing?.name,
+            email: r.email || existing?.email,
+            phone: r.phone || existing?.phone || 'N/A',
+            role: 'RIDER',
+            roleLabel: 'Motorizado / Repartidor',
+            tenantName: tName || 'Flota Global Pídetelo',
+            branchName: vehicle,
+            isActive: r.is_active ?? true,
+            createdAt: r.created_at || existing?.createdAt || new Date().toISOString()
+          });
+        });
+      }
+    } catch (_) {}
+
+    // 5. Fallback colaboradores locales si existen
+    const local = Array.from(this.localUsers.values());
+    local.forEach(u => {
+      const email = (u.email || '').toLowerCase().trim();
+      const emailKey = email || u.id;
+      if (!usersMap.has(emailKey)) {
+        const role = normalizeRole(u.role || 'MERCHANT_OWNER');
+        usersMap.set(emailKey, {
           id: u.id,
           name: u.name,
           email: u.email,
           phone: u.phone || 'N/A',
-          role: u.role || 'merchant_admin',
-          roleLabel: 'Colaborador de Comercio',
-          tenantName: 'Comercio',
+          role,
+          roleLabel: getRoleLabel(role),
+          tenantName: u.tenant_name || 'Comercio',
           branchName: u.branch_name || 'Sede Principal',
           isActive: u.is_active ?? true,
           createdAt: u.created_at || new Date().toISOString()
         });
+      }
+    });
+
+    // 6. Super Administrador Principal Pídetelo
+    const superAdminEmail = 'admin@pidetelo.app';
+    if (!usersMap.has(superAdminEmail)) {
+      usersMap.set(superAdminEmail, {
+        id: 'usr_superadmin',
+        name: 'Super Administrador Pídetelo',
+        email: superAdminEmail,
+        phone: '+58 412-0000000',
+        role: 'SUPER_ADMIN',
+        roleLabel: 'Super Administrador',
+        tenantName: 'Pídetelo HQ',
+        branchName: 'Global',
+        isActive: true,
+        createdAt: '2026-01-01T00:00:00.000Z'
       });
     }
 
-    // 2. Motorizados / Riders
-    try {
-      const { data: riders } = await client
-        .from('riders')
-        .select('id, name, email, phone, is_active, vehicle_type, plate_number, created_at')
-        .order('created_at', { ascending: false });
-
-      if (riders && riders.length > 0) {
-        riders.forEach(r => {
-          allUsers.push({
-            id: r.id,
-            name: r.name,
-            email: r.email,
-            phone: r.phone || 'N/A',
-            role: 'rider',
-            roleLabel: 'Motorizado / Repartidor',
-            tenantName: 'Flota Global',
-            branchName: r.vehicle_type ? `${r.vehicle_type} (${r.plate_number || 'N/A'})` : 'Flota Express',
-            isActive: r.is_active ?? true,
-            createdAt: r.created_at || new Date().toISOString()
-          });
-        });
-      }
-    } catch (_) {}
-
-    // 3. Super Administradores
-    allUsers.unshift({
-      id: 'usr_superadmin',
-      name: 'Super Administrador Pídetelo',
-      email: 'admin@pidetelo.app',
-      phone: '+58 412-0000000',
-      role: 'superadmin',
-      roleLabel: 'Super Administrador',
-      tenantName: 'Pídetelo HQ',
-      branchName: 'Global',
-      isActive: true,
-      createdAt: '2026-01-01T00:00:00.000Z'
-    });
-
+    const allUsers = Array.from(usersMap.values());
+    allUsers.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     return allUsers;
   }
 

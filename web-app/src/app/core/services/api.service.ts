@@ -810,8 +810,164 @@ export class ApiService {
 
   getPlatformUsers(): Observable<any[]> {
     return this.http.get<any[]>(`${this.baseUrl}/users`).pipe(
-      catchError(async () => [])
+      switchMap(users => {
+        if (users && users.length > 0) {
+          return of(users);
+        }
+        return from(this.fetchDirectPlatformUsers());
+      }),
+      catchError(async () => {
+        return await this.fetchDirectPlatformUsers();
+      })
     );
+  }
+
+  async fetchDirectPlatformUsers(): Promise<any[]> {
+    const client = this.supabase.rawClient;
+    if (!client) return [];
+
+    const usersMap = new Map<string, any>();
+
+    const normalizeRole = (role: string | undefined | null): string => {
+      if (!role) return 'CUSTOMER';
+      const r = role.toUpperCase().trim();
+      if (r === 'SUPERADMIN' || r === 'SUPER_ADMIN') return 'SUPER_ADMIN';
+      if (r === 'MERCHANT_ADMIN' || r === 'ADMIN' || r === 'MERCHANT_OWNER' || r === 'OWNER') return 'MERCHANT_OWNER';
+      if (r === 'BRANCH_MANAGER' || r === 'MANAGER' || r === 'MERCHANT_MANAGER') return 'MERCHANT_MANAGER';
+      if (r === 'KITCHEN' || r === 'MERCHANT_KITCHEN' || r === 'COCINA') return 'MERCHANT_KITCHEN';
+      if (r === 'DISPATCH' || r === 'MERCHANT_DISPATCH' || r === 'DESPACHO') return 'MERCHANT_DISPATCH';
+      if (r === 'RIDER' || r === 'MOTORIZADO' || r === 'REPARTIDOR') return 'RIDER';
+      if (r === 'CUSTOMER' || r === 'CLIENTE') return 'CUSTOMER';
+      return r;
+    };
+
+    const getRoleLabel = (role: string): string => {
+      switch (role) {
+        case 'SUPER_ADMIN': return 'Super Administrador';
+        case 'MERCHANT_OWNER': return 'Dueño de Comercio';
+        case 'MERCHANT_MANAGER': return 'Encargado de Sucursal';
+        case 'MERCHANT_KITCHEN': return 'Cocina / Personal';
+        case 'MERCHANT_DISPATCH': return 'Despacho';
+        case 'RIDER': return 'Motorizado / Repartidor';
+        case 'CUSTOMER': return 'Cliente';
+        default: return role;
+      }
+    };
+
+    // 1. Profiles (Clientes y usuarios de plataforma)
+    try {
+      const { data: profiles } = await client
+        .from('profiles')
+        .select('*, tenants(name), branches(name)')
+        .order('created_at', { ascending: false });
+
+      if (profiles && profiles.length > 0) {
+        profiles.forEach((p: any) => {
+          const email = (p.email || '').toLowerCase().trim();
+          const emailKey = email || p.id;
+          const role = normalizeRole(p.role || 'CUSTOMER');
+          const tName = Array.isArray(p.tenants) ? p.tenants[0]?.name : p.tenants?.name;
+          const bName = Array.isArray(p.branches) ? p.branches[0]?.name : p.branches?.name;
+
+          usersMap.set(emailKey, {
+            id: p.id,
+            name: p.full_name || p.name || (email ? email.split('@')[0] : 'Usuario Pídetelo'),
+            email: p.email || 'N/A',
+            phone: p.phone || 'N/A',
+            role,
+            roleLabel: getRoleLabel(role),
+            tenantName: tName || (role === 'CUSTOMER' ? 'Cliente Final' : (role === 'RIDER' ? 'Flota Global' : 'Comercio')),
+            branchName: bName || (role === 'CUSTOMER' ? 'App Móvil / Web' : 'Sede Principal'),
+            isActive: p.is_active ?? true,
+            createdAt: p.created_at || new Date().toISOString()
+          });
+        });
+      }
+    } catch (_) {}
+
+    // 2. Colaboradores de Comercio
+    try {
+      const { data: collabs } = await client
+        .from('store_collaborators')
+        .select('*, tenants(name), branches(name)')
+        .order('created_at', { ascending: false });
+
+      if (collabs && collabs.length > 0) {
+        collabs.forEach((c: any) => {
+          const email = (c.email || '').toLowerCase().trim();
+          const emailKey = email || c.id;
+          const role = normalizeRole(c.role || 'MERCHANT_OWNER');
+          const existing = usersMap.get(emailKey);
+          const tName = Array.isArray(c.tenants) ? c.tenants[0]?.name : c.tenants?.name;
+          const bName = Array.isArray(c.branches) ? c.branches[0]?.name : c.branches?.name;
+
+          usersMap.set(emailKey, {
+            id: c.id || existing?.id,
+            name: c.name || existing?.name,
+            email: c.email || existing?.email,
+            phone: c.phone || existing?.phone || 'N/A',
+            role,
+            roleLabel: getRoleLabel(role),
+            tenantName: tName || existing?.tenantName || 'Comercio',
+            branchName: bName || existing?.branchName || 'Todas las Sedes',
+            isActive: c.is_active ?? true,
+            createdAt: c.created_at || existing?.createdAt || new Date().toISOString()
+          });
+        });
+      }
+    } catch (_) {}
+
+    // 3. Motorizados / Riders
+    try {
+      const { data: riders } = await client
+        .from('riders')
+        .select('id, name, email, phone, is_active, vehicle_type, vehicle_plate, plate_number, created_at, tenants(name), branches(name)')
+        .order('created_at', { ascending: false });
+
+      if (riders && riders.length > 0) {
+        riders.forEach((r: any) => {
+          const email = (r.email || '').toLowerCase().trim();
+          const emailKey = email || r.id;
+          const existing = usersMap.get(emailKey);
+          const vehicle = r.vehicle_type ? `${r.vehicle_type} (${r.plate_number || r.vehicle_plate || 'S/P'})` : 'Flota Motorizados';
+          const tName = Array.isArray(r.tenants) ? r.tenants[0]?.name : r.tenants?.name;
+
+          usersMap.set(emailKey, {
+            id: r.id || existing?.id,
+            name: r.name || existing?.name,
+            email: r.email || existing?.email,
+            phone: r.phone || existing?.phone || 'N/A',
+            role: 'RIDER',
+            roleLabel: 'Motorizado / Repartidor',
+            tenantName: tName || 'Flota Global Pídetelo',
+            branchName: vehicle,
+            isActive: r.is_active ?? true,
+            createdAt: r.created_at || existing?.createdAt || new Date().toISOString()
+          });
+        });
+      }
+    } catch (_) {}
+
+    // 4. Super Admin HQ
+    const superAdminEmail = 'admin@pidetelo.app';
+    if (!usersMap.has(superAdminEmail)) {
+      usersMap.set(superAdminEmail, {
+        id: 'usr_superadmin',
+        name: 'Super Administrador Pídetelo',
+        email: superAdminEmail,
+        phone: '+58 412-0000000',
+        role: 'SUPER_ADMIN',
+        roleLabel: 'Super Administrador',
+        tenantName: 'Pídetelo HQ',
+        branchName: 'Global',
+        isActive: true,
+        createdAt: '2026-01-01T00:00:00.000Z'
+      });
+    }
+
+    const all = Array.from(usersMap.values());
+    all.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return all;
   }
 
   getMetricsSummary(): Observable<any> {

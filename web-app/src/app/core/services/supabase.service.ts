@@ -54,13 +54,28 @@ export class SupabaseService {
     if (!this.client) {
       throw new Error('Supabase no está configurado aún con credenciales reales.');
     }
-    return this.client.auth.signUp({
+    const res = await this.client.auth.signUp({
       email,
       password,
       options: {
         data: { full_name: fullName, role }
       }
     });
+
+    if (res.data?.user) {
+      try {
+        await this.client.from('profiles').upsert({
+          id: res.data.user.id,
+          email: res.data.user.email,
+          full_name: fullName,
+          role: role || 'CUSTOMER',
+          is_active: true,
+          updated_at: new Date().toISOString()
+        });
+      } catch (_) {}
+    }
+
+    return res;
   }
 
   async signOut() {
