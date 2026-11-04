@@ -702,6 +702,17 @@ export class UsersService {
 
     const expectedPass = user.password || user.password_hash || '123456';
     if (!password || expectedPass !== password) {
+      // Intentar validar contraseña directamente con Supabase Auth si fue creada allí
+      try {
+        const { data: sbAuth, error: sbErr } = await this.supabase.getClient().auth.signInWithPassword({
+          email: cleanEmail,
+          password: password || ''
+        });
+        if (sbAuth?.user && !sbErr) {
+          return user;
+        }
+      } catch (_) {}
+
       throw new UnauthorizedException('Contraseña incorrecta');
     }
 
