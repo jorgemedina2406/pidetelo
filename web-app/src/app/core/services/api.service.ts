@@ -490,6 +490,22 @@ export class ApiService {
     );
   }
 
+  getDispatchPool(tenantId: string, branchId?: string, lat?: number, lng?: number): Observable<{ ownRiders: any[]; nearbyRiders: any[] }> {
+    const params: string[] = [`tenantId=${tenantId}`];
+    if (branchId && branchId !== 'all') params.push(`branchId=${branchId}`);
+    if (lat != null) params.push(`lat=${lat}`);
+    if (lng != null) params.push(`lng=${lng}`);
+    const queryStr = `?${params.join('&')}`;
+    const url = `${this.baseUrl}/riders/dispatch-pool${queryStr}`;
+
+    return this.http.get<{ ownRiders: any[]; nearbyRiders: any[] }>(url).pipe(
+      catchError(err => {
+        console.warn('[ApiService] Error obteniendo pool de despacho:', err);
+        return of({ ownRiders: [], nearbyRiders: [] });
+      })
+    );
+  }
+
   createRider(payload: { tenant_id?: string; branch_id?: string; name: string; email?: string; password?: string; phone: string; national_id?: string; vehicle_plate: string; vehicle_type?: string }): Observable<any> {
     return this.http.post<any>(`${this.baseUrl}/riders`, payload).pipe(
       catchError(err => {

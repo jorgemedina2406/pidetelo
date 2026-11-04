@@ -18,6 +18,29 @@ export class RidersController {
     return this.ridersService.findAll(tenantId, branchId);
   }
 
+  @Get('dispatch-pool')
+  @ApiOperation({ summary: 'Obtener motorizados propios y de red cercana para asignación en comercios' })
+  @ApiQuery({ name: 'tenantId', required: true })
+  @ApiQuery({ name: 'branchId', required: false })
+  @ApiQuery({ name: 'lat', required: false })
+  @ApiQuery({ name: 'lng', required: false })
+  findDispatchPool(
+    @Query('tenantId') tenantId: string,
+    @Query('branchId') branchId?: string,
+    @Query('lat') lat?: string,
+    @Query('lng') lng?: string,
+  ) {
+    const numLat = lat ? parseFloat(lat) : undefined;
+    const numLng = lng ? parseFloat(lng) : undefined;
+    return this.ridersService.findDispatchPool(tenantId, branchId, numLat, numLng);
+  }
+
+  @Post('register-with-verification')
+  @ApiOperation({ summary: 'Registrar nuevo repartidor con verificación automática biométrica y de documento' })
+  registerWithVerification(@Body() body: any) {
+    return this.ridersService.registerWithVerification(body);
+  }
+
   @Post()
   @ApiOperation({ summary: 'Registrar nuevo repartidor con credenciales' })
   create(

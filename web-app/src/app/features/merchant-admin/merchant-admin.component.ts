@@ -38,6 +38,10 @@ export interface Rider {
   currentLocation?: { lat: number; lng: number };
   branchId?: string;
   branchName?: string;
+  distanceKm?: number;
+  isIndependent?: boolean;
+  isCertified?: boolean;
+  rating?: number;
 }
 
 @Component({
@@ -708,19 +712,58 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     return all;
   });
 
+  readonly ownRiders = signal<Rider[]>([]);
+  readonly nearbyRiders = signal<Rider[]>([]);
+  readonly isNearbyRidersModalOpen = signal(false);
+  readonly selectedOrderForNearbyDispatch = signal<Order | null>(null);
+
   readonly filteredRiders = computed(() => {
     const branchId = this.activeBranchId();
     if (!branchId) return [];
     const isMain = this.isSelectedBranchMain();
-    return this.riders().filter(r => r.branchId === branchId || (isMain && !r.branchId));
+    return this.riders().filter(r => r.branchId === branchId || (isMain && !r.branchId) || r.isIndependent);
   });
   readonly availableRiders = computed(() => this.filteredRiders());
 
+  getOwnRidersForOrder(order: Order): Rider[] {
+    const list = this.ownRiders();
+    if (list.length > 0) return list;
+    const branchId = this.activeBranchId();
+    if (!branchId) return [];
+    const isMain = this.isSelectedBranchMain();
+    return this.riders().filter(r => (r.branchId === branchId || (isMain && !r.branchId)) && !r.isIndependent);
+  }
+
+  getNearbyRidersForOrder(order: Order): Rider[] {
+    const list = this.nearbyRiders();
+    if (list.length > 0) return list;
+    return this.riders().filter(r => r.isIndependent);
+  }
+
   getRidersForOrder(order: Order): Rider[] {
+    const own = this.getOwnRidersForOrder(order);
+    const nearby = this.getNearbyRidersForOrder(order);
+    if (own.length > 0 || nearby.length > 0) {
+      return [...own, ...nearby];
+    }
     const branchId = this.activeBranchId();
     if (!branchId) return [];
     const isMain = this.isSelectedBranchMain();
     return this.riders().filter(r => r.branchId === branchId || (isMain && !r.branchId));
+  }
+
+  openNearbyRidersModal(order: Order): void {
+    this.selectedOrderForNearbyDispatch.set(order);
+    this.isNearbyRidersModalOpen.set(true);
+    this.refreshRidersLocation();
+  }
+
+  assignNearbyRider(riderId: string): void {
+    const order = this.selectedOrderForNearbyDispatch();
+    if (!order) return;
+    this.assignRiderToOrder(order.id, riderId);
+    this.isNearbyRidersModalOpen.set(false);
+    this.selectedOrderForNearbyDispatch.set(null);
   }
 
   selectBranch(branchId: string): void {
@@ -1213,65 +1256,106 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     });
   }
 
-  // --- REFRESH TELEMETRÍA EN VIVO DE MOTORIZADOS DESDE BASE DE DATOS Y GPS REAL ---
+  // --- REFRESH TELEMETRÍA EN VIVO DE MOTORIZADOS (FLOTA PROPIA + FLOTA LIBRE CERCANA) ---
   refreshRidersLocation(): void {
     const targetBranch = this.activeBranch();
     const activeTenantId = this.auth.currentUser()?.tenantId || this.currentTenant()?.id || targetBranch?.companyId || 'dac59429-fd6f-4d3e-8b2e-ab0e23828c1f';
     if (!activeTenantId) {
       this.riders.set([]);
+      this.ownRiders.set([]);
+      this.nearbyRiders.set([]);
       return;
     }
     const branchFilter = this.activeBranchId();
     if (!branchFilter) {
-      // Si la sede activa aún no está resuelta en memoria, no consultar para evitar traer datos globales
       return;
     }
 
-    this.api.getRiders(activeTenantId, branchFilter).subscribe(riders => {
-      if (riders && riders.length > 0) {
-        const isMain = this.isSelectedBranchMain();
-        // Aislamiento: conservar los motorizados que pertenezcan a la sede activa (o a la principal si no tienen sede asignada)
-        const branchRiders = riders.filter(r => {
-          const rBId = r.branch_id || (r as any).branchId;
-          return rBId === branchFilter || (isMain && !rBId);
-        });
+    const targetLat = targetBranch?.latitude || this.brandingForm.latitude || 10.038;
+    const targetLng = targetBranch?.longitude || this.brandingForm.longitude || -69.266;
 
-        this.riders.set(branchRiders.map((r) => {
-          const rawLat = (r.current_lat !== undefined && r.current_lat !== null) ? Number(r.current_lat) : undefined;
-          const rawLng = (r.current_lng !== undefined && r.current_lng !== null) ? Number(r.current_lng) : undefined;
+    const mapRawToRider = (r: any): Rider => {
+      const rawLat = (r.current_lat !== undefined && r.current_lat !== null) ? Number(r.current_lat) : (r.currentLocation?.lat);
+      const rawLng = (r.current_lng !== undefined && r.current_lng !== null) ? Number(r.current_lng) : (r.currentLocation?.lng);
+      const isValid = typeof rawLat === 'number' && !isNaN(rawLat) && typeof rawLng === 'number' && !isNaN(rawLng);
+      let currentLocation: { lat: number; lng: number } | undefined = undefined;
+      if (isValid) {
+        currentLocation = { lat: Number(rawLat.toFixed(6)), lng: Number(rawLng.toFixed(6)) };
+      }
+      const resolvedRiderBranchId = r.branch_id || (r as any).branchId || branchFilter;
+      const branch = this.branches().find(b => b.id === resolvedRiderBranchId);
 
-          const isValid = typeof rawLat === 'number' && !isNaN(rawLat) && typeof rawLng === 'number' && !isNaN(rawLng);
-          const isCaracas = isValid && rawLat > 10.45 && rawLat < 10.53 && rawLng > -66.95 && rawLng < -66.80;
+      return {
+        id: r.id,
+        name: r.name,
+        phone: r.phone || '',
+        vehiclePlate: r.vehicle_plate || (r as any).vehiclePlate || 'N/D',
+        vehicleType: (r.vehicle_type as any) || (r as any).vehicleType || 'moto',
+        status: (r.status as any) || 'available',
+        branchId: resolvedRiderBranchId,
+        branchName: branch?.name || r.branch_name || (r.is_independent ? 'Flota Libre Pídetelo' : 'Sede Asignada'),
+        currentLocation,
+        distanceKm: r.distanceKm != null ? Number(r.distanceKm) : (r.distance_km != null ? Number(r.distance_km) : undefined),
+        isIndependent: !!(r.is_independent || (r as any).isIndependent),
+        isCertified: !!(r.is_certified || (r as any).isCertified),
+        rating: r.rating != null ? Number(r.rating) : 5.0,
+      };
+    };
 
-          let currentLocation: { lat: number; lng: number } | undefined = undefined;
-          if (isValid && !isCaracas) {
-            currentLocation = { lat: Number(rawLat.toFixed(6)), lng: Number(rawLng.toFixed(6)) };
+    this.api.getDispatchPool(activeTenantId, branchFilter, targetLat, targetLng).subscribe({
+      next: (pool) => {
+        if (pool && ((pool.ownRiders && pool.ownRiders.length > 0) || (pool.nearbyRiders && pool.nearbyRiders.length > 0))) {
+          const mappedOwn = (pool.ownRiders || []).map(mapRawToRider);
+          const mappedNearby = (pool.nearbyRiders || []).map(mapRawToRider);
+
+          this.ownRiders.set(mappedOwn);
+          this.nearbyRiders.set(mappedNearby);
+          this.riders.set([...mappedOwn, ...mappedNearby]);
+
+          if (this.activeTab() === 'gps_map' && this.fleetRadarMap) {
+            this.updateFleetRiderMarkers();
           }
-
-          const resolvedRiderBranchId = r.branch_id || (r as any).branchId || branchFilter;
-          const branch = this.branches().find(b => b.id === resolvedRiderBranchId);
-
-          return {
-            id: r.id,
-            name: r.name,
-            phone: r.phone,
-            vehiclePlate: r.vehicle_plate || (r as any).vehiclePlate || 'AC-8891-X',
-            vehicleType: (r.vehicle_type as any) || (r as any).vehicleType || 'moto',
-            status: (r.status as any) || 'available',
-            branchId: resolvedRiderBranchId,
-            branchName: branch?.name || r.branch_name || 'Sede Asignada',
-            currentLocation
-          };
-        }));
-
-        if (this.activeTab() === 'gps_map' && this.fleetRadarMap) {
-          this.updateFleetRiderMarkers();
+          return;
         }
-      } else {
-        this.riders.set([]);
-        if (this.activeTab() === 'gps_map' && this.fleetRadarMap) {
-          this.updateFleetRiderMarkers();
-        }
+
+        // Fallback standard fetch if pool returned empty
+        this.api.getRiders(activeTenantId, branchFilter).subscribe(riders => {
+          if (riders && riders.length > 0) {
+            const isMain = this.isSelectedBranchMain();
+            const branchRiders = riders.filter(r => {
+              const rBId = r.branch_id || (r as any).branchId;
+              return rBId === branchFilter || (isMain && !rBId) || r.is_independent;
+            });
+            const mapped = branchRiders.map(mapRawToRider);
+            this.riders.set(mapped);
+            this.ownRiders.set(mapped.filter(r => !r.isIndependent));
+            this.nearbyRiders.set(mapped.filter(r => r.isIndependent));
+          } else {
+            this.riders.set([]);
+            this.ownRiders.set([]);
+            this.nearbyRiders.set([]);
+          }
+          if (this.activeTab() === 'gps_map' && this.fleetRadarMap) {
+            this.updateFleetRiderMarkers();
+          }
+        });
+      },
+      error: () => {
+        this.api.getRiders(activeTenantId, branchFilter).subscribe(riders => {
+          if (riders && riders.length > 0) {
+            const mapped = riders.map(mapRawToRider);
+            this.riders.set(mapped);
+            this.ownRiders.set(mapped.filter(r => !r.isIndependent));
+            this.nearbyRiders.set(mapped.filter(r => r.isIndependent));
+          } else {
+            this.riders.set([]);
+            this.ownRiders.set([]);
+            this.nearbyRiders.set([]);
+          }
+          if (this.activeTab() === 'gps_map' && this.fleetRadarMap) {
+            this.updateFleetRiderMarkers();
+          }
+        });
       }
     });
   }

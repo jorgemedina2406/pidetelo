@@ -55,6 +55,10 @@ class RiderUser {
   final String vehiclePlate;
   final bool isOnline;
   final double rating;
+  final bool isCertified;
+  final String verificationStatus;
+  final String? idDocumentUrl;
+  final String? selfieUrl;
   final List<RiderPaymentAccount> paymentAccounts;
 
   const RiderUser({
@@ -69,6 +73,10 @@ class RiderUser {
     this.vehiclePlate = '',
     this.isOnline = true,
     this.rating = 5.0,
+    this.isCertified = false,
+    this.verificationStatus = 'pending',
+    this.idDocumentUrl,
+    this.selfieUrl,
     this.paymentAccounts = const [],
   });
 
@@ -84,6 +92,10 @@ class RiderUser {
     String? vehiclePlate,
     bool? isOnline,
     double? rating,
+    bool? isCertified,
+    String? verificationStatus,
+    String? idDocumentUrl,
+    String? selfieUrl,
     List<RiderPaymentAccount>? paymentAccounts,
   }) {
     return RiderUser(
@@ -98,6 +110,10 @@ class RiderUser {
       vehiclePlate: vehiclePlate ?? this.vehiclePlate,
       isOnline: isOnline ?? this.isOnline,
       rating: rating ?? this.rating,
+      isCertified: isCertified ?? this.isCertified,
+      verificationStatus: verificationStatus ?? this.verificationStatus,
+      idDocumentUrl: idDocumentUrl ?? this.idDocumentUrl,
+      selfieUrl: selfieUrl ?? this.selfieUrl,
       paymentAccounts: paymentAccounts ?? this.paymentAccounts,
     );
   }
@@ -114,6 +130,10 @@ class RiderUser {
         'vehiclePlate': vehiclePlate,
         'isOnline': isOnline,
         'rating': rating,
+        'isCertified': isCertified,
+        'verificationStatus': verificationStatus,
+        'idDocumentUrl': idDocumentUrl,
+        'selfieUrl': selfieUrl,
         'paymentAccounts': paymentAccounts.map((a) => a.toJson()).toList(),
       };
 
@@ -138,6 +158,10 @@ class RiderUser {
       vehiclePlate: json['vehiclePlate'] ?? json['vehicle_plate'] ?? '',
       isOnline: json['isOnline'] ?? json['is_active'] ?? true,
       rating: (json['rating'] as num?)?.toDouble() ?? 5.0,
+      isCertified: json['isCertified'] ?? json['is_certified'] ?? false,
+      verificationStatus: json['verificationStatus'] ?? json['verification_status'] ?? 'pending',
+      idDocumentUrl: json['idDocumentUrl'] ?? json['id_document_url'],
+      selfieUrl: json['selfieUrl'] ?? json['selfie_url'],
       paymentAccounts: accounts,
     );
   }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../core/constants/legal_terms.dart';
 import '../../../core/models/order_model.dart';
 import '../../../core/models/user_model.dart';
 import '../../../core/services/api_service.dart';
@@ -1166,27 +1167,24 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 labelColor: AppTheme.primary,
                 unselectedLabelColor: subtextColor,
                 tabs: const [
-                  Tab(text: 'Términos Billetera'),
-                  Tab(text: 'Políticas Privacidad'),
+                  Tab(text: 'Términos de Servicio'),
+                  Tab(text: 'Política de Privacidad'),
                 ],
               ),
               const SizedBox(height: 16),
               Expanded(
                 child: TabBarView(
                   children: [
-                    // Tab 1: Wallet Terms
+                    // Tab 1: Terms and Conditions
                     SingleChildScrollView(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Términos y Condiciones de la Billetera Pídetelo', style: GoogleFonts.outfit(color: textColor, fontSize: 15, fontWeight: FontWeight.w800)),
+                          Text('Términos y Condiciones Generales', style: GoogleFonts.outfit(color: textColor, fontSize: 15, fontWeight: FontWeight.w800)),
                           const SizedBox(height: 10),
-                          Text(
-                            '1. Uso del Saldo:\nEl saldo recargado en tu Billetera Pídetelo puede ser utilizado exclusivamente para el pago de platillos, tarifas de envío y propinas en todos los comercios afiliados a la plataforma en Cabudare y Barquisimeto.\n\n'
-                            '2. Recargas y Conversión:\nLas recargas realizadas en Bolívares (VES) mediante Pago Móvil son convertidas a dólares al tipo de cambio oficial publicado por el Banco Central de Venezuela (BCV) al momento de procesar la transacción.\n\n'
-                            '3. No Caducidad:\nLos fondos acreditados en tu cuenta no tienen fecha de vencimiento ni generan comisiones por mantenimiento o inactividad.\n\n'
-                            '4. Garantía de Entrega y Reembolsos:\nEn caso de que un pedido sea cancelado por el restaurante o no pueda ser completado por factores ajenos al cliente, el importe total será reintegrado de forma instantánea a tu saldo disponible.',
-                            style: GoogleFonts.outfit(color: subtextColor, fontSize: 12.5, height: 1.45),
+                          SelectableText(
+                            LegalTerms.termsAndConditions,
+                            style: GoogleFonts.outfit(color: subtextColor, fontSize: 12.5, height: 1.5),
                           ),
                         ],
                       ),
@@ -1196,14 +1194,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Políticas de Privacidad y Tratamiento de Datos', style: GoogleFonts.outfit(color: textColor, fontSize: 15, fontWeight: FontWeight.w800)),
+                          Text('Política de Privacidad y Tratamiento de Datos', style: GoogleFonts.outfit(color: textColor, fontSize: 15, fontWeight: FontWeight.w800)),
                           const SizedBox(height: 10),
-                          Text(
-                            '1. Datos Personales Recolectados:\nPídetelo almacena tu nombre, número telefónico y direcciones de entrega con el único propósito de gestionar tus pedidos y permitir la comunicación directa con el repartidor asignado.\n\n'
-                            '2. Uso de Coordenadas GPS:\nLas coordenadas geográficas capturadas en el mapa se utilizan estrictamente para el cálculo de distancia, costo de despacho y enrutamiento del motorizado hacia tu domicilio.\n\n'
-                            '3. Seguridad y Confidencialidad:\nTus credenciales y números de referencia están protegidos mediante cifrado de grado industrial. En ningún momento comercializamos ni compartimos tu información con terceros no autorizados.\n\n'
-                            '4. Derechos del Titular:\nPuedes modificar tus datos o solicitar la eliminación definitiva de tu cuenta y registros en cualquier momento desde la sección de ajustes.',
-                            style: GoogleFonts.outfit(color: subtextColor, fontSize: 12.5, height: 1.45),
+                          SelectableText(
+                            LegalTerms.privacyPolicy,
+                            style: GoogleFonts.outfit(color: subtextColor, fontSize: 12.5, height: 1.5),
                           ),
                         ],
                       ),

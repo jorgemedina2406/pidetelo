@@ -30,6 +30,10 @@
 	<string>Pídetelo necesita tu ubicación en segundo plano para transmitir la telemetría del recorrido.</string>
 	<key>NSLocationAlwaysUsageDescription</key>
 	<string>Pídetelo necesita tu ubicación en segundo plano para transmitir la telemetría del recorrido.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Pídetelo requiere acceso a la cámara para capturar la foto de tu documento de identidad y selfie de validación.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Pídetelo requiere acceso a tu galería para adjuntar tu documento de identidad y certificación de motorizado.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

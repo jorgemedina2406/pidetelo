@@ -1,5 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
+import '../../../core/constants/legal_terms.dart';
 import '../../../core/services/session_service.dart';
 import '../widgets/animated_delivery_mascot.dart';
 import '../../rider/screens/rider_home_screen.dart';
@@ -24,6 +27,12 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
   final _plateController = TextEditingController();
   final String _vehicleType = 'Moto';
 
+  // Biometric & ID Document verification state
+  String? _idDocumentBase64;
+  String? _selfieBase64;
+  bool _acceptedTerms = true;
+  final ImagePicker _picker = ImagePicker();
+
   bool _isLoading = false;
   bool _isRegister = false;
   bool _keepMeSignedIn = true;
@@ -39,6 +48,215 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
     _modelController.dispose();
     _plateController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickDocumentImage(ImageSource source) async {
+    try {
+      final XFile? file = await _picker.pickImage(
+        source: source,
+        imageQuality: 85,
+        maxWidth: 1280,
+        maxHeight: 1280,
+      );
+      if (file != null) {
+        final bytes = await file.readAsBytes();
+        final base64Str = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+        setState(() {
+          _idDocumentBase64 = base64Str;
+        });
+      }
+    } catch (e) {
+      debugPrint('[RiderLogin] Error al capturar documento: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al capturar imagen: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _pickSelfieImage(ImageSource source) async {
+    try {
+      final XFile? file = await _picker.pickImage(
+        source: source,
+        preferredCameraDevice: CameraDevice.front,
+        imageQuality: 85,
+        maxWidth: 1024,
+        maxHeight: 1024,
+      );
+      if (file != null) {
+        final bytes = await file.readAsBytes();
+        final base64Str = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+        setState(() {
+          _selfieBase64 = base64Str;
+        });
+      }
+    } catch (e) {
+      debugPrint('[RiderLogin] Error al capturar selfie: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al capturar selfie: $e')),
+        );
+      }
+    }
+  }
+
+  void _showImageSourceDialog({required bool isSelfie}) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(4)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                isSelfie ? 'Foto Selfie en Vivo' : 'Foto de Cédula de Identidad',
+                style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF1E293B)),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                isSelfie
+                    ? 'Toma una foto frontal nítida de tu rostro con buena iluminación.'
+                    : 'Asegúrate de que la cédula sea legible, completa y sin reflejos.',
+                style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xFF64748B)),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF3F7E24).withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.camera_alt_rounded, color: Color(0xFF2E6B1F)),
+                ),
+                title: Text('Tomar con la Cámara', style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  if (isSelfie) {
+                    _pickSelfieImage(ImageSource.camera);
+                  } else {
+                    _pickDocumentImage(ImageSource.camera);
+                  }
+                },
+              ),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.photo_library_rounded, color: Colors.blue),
+                ),
+                title: Text('Elegir de la Galería', style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  if (isSelfie) {
+                    _pickSelfieImage(ImageSource.gallery);
+                  } else {
+                    _pickDocumentImage(ImageSource.gallery);
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showLegalTermsModal() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+      builder: (ctx) => DefaultTabController(
+        length: 3,
+        child: Container(
+          constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.85),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 44,
+                  height: 4,
+                  decoration: BoxDecoration(color: const Color(0xFFCBD5E1), borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TabBar(
+                indicatorColor: const Color(0xFF2E6B1F),
+                labelColor: const Color(0xFF2E6B1F),
+                unselectedLabelColor: const Color(0xFF64748B),
+                isScrollable: true,
+                tabs: const [
+                  Tab(text: 'Términos Rider'),
+                  Tab(text: 'Términos Generales'),
+                  Tab(text: 'Política Privacidad'),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: TabBarView(
+                  children: [
+                    SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Acuerdo de Prestación de Servicios Rider', style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A))),
+                          const SizedBox(height: 10),
+                          SelectableText(LegalTerms.riderServiceAgreement, style: GoogleFonts.outfit(fontSize: 12.5, height: 1.5, color: const Color(0xFF475569))),
+                        ],
+                      ),
+                    ),
+                    SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Términos y Condiciones Generales', style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A))),
+                          const SizedBox(height: 10),
+                          SelectableText(LegalTerms.termsAndConditions, style: GoogleFonts.outfit(fontSize: 12.5, height: 1.5, color: const Color(0xFF475569))),
+                        ],
+                      ),
+                    ),
+                    SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Política de Privacidad y Tratamiento de Datos', style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A))),
+                          const SizedBox(height: 10),
+                          SelectableText(LegalTerms.privacyPolicy, style: GoogleFonts.outfit(fontSize: 12.5, height: 1.5, color: const Color(0xFF475569))),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _submit() async {
@@ -69,7 +287,30 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
         return;
       }
 
-      final ok = await widget.sessionService.register(
+      // Certificación obligatoria de documentos reales
+      if (_idDocumentBase64 == null || _selfieBase64 == null) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Debes adjuntar la foto de tu Cédula y tu Selfie en vivo para certificar tu cuenta.'),
+            backgroundColor: Colors.deepOrange,
+          ),
+        );
+        return;
+      }
+
+      if (!_acceptedTerms) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Debes aceptar los Términos y Condiciones y Política de Privacidad de Pídetelo.'),
+            backgroundColor: Colors.deepOrange,
+          ),
+        );
+        return;
+      }
+
+      final ok = await widget.sessionService.registerWithVerification(
         name: name,
         email: email,
         password: password,
@@ -78,6 +319,8 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
         vehicleType: _vehicleType,
         vehicleModel: model.isEmpty ? 'Empire Keeway 150cc' : model,
         vehiclePlate: plate,
+        idDocumentBase64: _idDocumentBase64!,
+        selfieBase64: _selfieBase64!,
       );
 
       if (!ok) {
@@ -85,11 +328,43 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('No se pudo registrar el repartidor en la base de datos.'),
+            content: Text('No se pudo completar la certificación. Verifica que las fotos sean nítidas y que tu correo no esté duplicado.'),
             backgroundColor: Colors.redAccent,
           ),
         );
         return;
+      }
+
+      if (mounted) {
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+            title: Row(
+              children: const [
+                Icon(Icons.verified_rounded, color: Color(0xFF16A34A), size: 28),
+                SizedBox(width: 10),
+                Expanded(child: Text('¡Identidad Certificada!')),
+              ],
+            ),
+            content: Text(
+              'Tus datos, cédula de identidad y selfie en vivo han sido verificados con éxito en Pídetelo.\n\nTu cuenta ha sido activada y ya puedes recibir órdenes de comercios y despachos independientes.',
+              style: GoogleFonts.outfit(fontSize: 14, height: 1.45, color: const Color(0xFF334155)),
+            ),
+            actions: [
+              ElevatedButton(
+                onPressed: () => Navigator.pop(ctx),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2E6B1F),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                ),
+                child: Text('Comenzar a Trabajar', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        );
       }
     } else {
       final ok = await widget.sessionService.login(email, password);
@@ -243,6 +518,57 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
                         icon: Icons.pin_outlined,
                       ),
                       const SizedBox(height: 14),
+
+                      // Document & Biometric Identity Certification Box
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0FDF4),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: const Color(0xFF86EFAC), width: 1.2),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.verified_user_rounded, color: Color(0xFF16A34A), size: 20),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Certificación de Identidad Real',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 14.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: const Color(0xFF166534),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Validación real y obligatoria para todos los repartidores de Pídetelo.',
+                              style: GoogleFonts.outfit(fontSize: 11.5, color: const Color(0xFF15803D)),
+                            ),
+                            const SizedBox(height: 12),
+                            _buildVerificationTile(
+                              title: 'Cédula de Identidad',
+                              subtitle: _idDocumentBase64 != null ? 'Cédula capturada y validada' : 'Toca para tomar foto o adjuntar',
+                              icon: Icons.badge_outlined,
+                              isUploaded: _idDocumentBase64 != null,
+                              onTap: () => _showImageSourceDialog(isSelfie: false),
+                            ),
+                            const SizedBox(height: 8),
+                            _buildVerificationTile(
+                              title: 'Foto Selfie en Vivo',
+                              subtitle: _selfieBase64 != null ? 'Biometría facial registrada' : 'Toca para tomar selfie de tu rostro',
+                              icon: Icons.face_rounded,
+                              isUploaded: _selfieBase64 != null,
+                              onTap: () => _showImageSourceDialog(isSelfie: true),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
                     ],
 
                     // Email Input
@@ -305,6 +631,45 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
                           ),
                       ],
                     ),
+                    // Terms of Service & Privacy agreement
+                    if (_isRegister) ...[
+                      const SizedBox(height: 12),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Checkbox(
+                            value: _acceptedTerms,
+                            activeColor: const Color(0xFF3F7E24),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                            onChanged: (v) => setState(() => _acceptedTerms = v ?? true),
+                          ),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: _showLegalTermsModal,
+                              child: RichText(
+                                text: TextSpan(
+                                  style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFF64748B)),
+                                  children: const [
+                                    TextSpan(text: 'Acepto los '),
+                                    TextSpan(
+                                      text: 'Términos de Servicio',
+                                      style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2E6B1F), decoration: TextDecoration.underline),
+                                    ),
+                                    TextSpan(text: ' y la '),
+                                    TextSpan(
+                                      text: 'Política de Privacidad',
+                                      style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2E6B1F), decoration: TextDecoration.underline),
+                                    ),
+                                    TextSpan(text: ' de Pídetelo.'),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+
                     const SizedBox(height: 18),
 
                     // Main Action Button (Gradient Green)
@@ -504,6 +869,86 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
                 color: const Color(0xFF1E293B),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVerificationTile({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required bool isUploaded,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: isUploaded ? const Color(0xFFDCFCE7) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isUploaded ? const Color(0xFF22C55E) : const Color(0xFFCBD5E1),
+            width: isUploaded ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: isUploaded ? const Color(0xFF16A34A) : const Color(0xFFF1F5F9),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                isUploaded ? Icons.check_rounded : icon,
+                color: isUploaded ? Colors.white : const Color(0xFF64748B),
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.outfit(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF0F172A),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.outfit(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w500,
+                      color: isUploaded ? const Color(0xFF15803D) : const Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: isUploaded ? const Color(0xFF22C55E).withOpacity(0.15) : const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                isUploaded ? 'Cargada' : 'Adjuntar',
+                style: GoogleFonts.outfit(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: isUploaded ? const Color(0xFF15803D) : const Color(0xFF334155),
+                ),
               ),
             ),
           ],

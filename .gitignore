@@ -36,6 +36,13 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
-*.png
-*.jpg
+/*.png
+/*.jpg
+
+# Allow mobile app asset icons & images
+!**/Assets.xcassets/**
+!**/res/mipmap-*/**
+!**/res/drawable*/**
+!**/assets/images/**
+!**/assets/icons/**
 

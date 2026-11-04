@@ -703,36 +703,61 @@
                   }
                 </div>
 
-                <!-- Rider Selector -->
+                <!-- Rider Selector (Flota Propia + Flota Libre Cercana) -->
                 <div
-                  class="bg-slate-50 dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 space-y-1">
+                  class="bg-slate-50 dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 space-y-1.5">
                   <div class="flex items-center justify-between">
                     <label class="block text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                       {{ i18n.t('ma.assignRider') }}
                     </label>
-                    @if (o.driverId && o.status === 'at_merchant') {
-                      <span class="text-[9px] font-bold text-amber-600 dark:text-amber-400">¡Llegó al local!</span>
-                    } @else if (o.driverId && o.status === 'picked_up') {
-                      <span class="text-[9px] font-bold text-purple-600 dark:text-purple-400">Listo para despacho</span>
-                    } @else if (o.driverId && o.status === 'assigned_driver' && o.riderAccepted) {
-                      <span class="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                        En camino al local
-                      </span>
-                    } @else if (o.driverId && o.status === 'assigned_driver') {
-                      <span class="text-[9px] text-indigo-500 font-semibold">Esperando aceptación...</span>
-                    } @else if (o.riderRejected) {
-                      <span class="text-[9px] font-bold text-red-600 dark:text-red-400 flex items-center gap-1">
-                        <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
-                        Rechazado {{ o.rejectedRiderName ? 'por ' + o.rejectedRiderName : '' }}
-                      </span>
-                    }
+                    <div class="flex items-center gap-1.5">
+                      <button (click)="openNearbyRidersModal(o)" type="button"
+                        class="text-[9px] text-brand-600 dark:text-brand-400 hover:underline font-bold flex items-center gap-0.5 cursor-pointer">
+                        <app-icon name="map-pin" [size]="10"></app-icon>
+                        Radar Cercano
+                      </button>
+                      @if (o.driverId && o.status === 'at_merchant') {
+                        <span class="text-[9px] font-bold text-amber-600 dark:text-amber-400">¡Llegó al local!</span>
+                      } @else if (o.driverId && o.status === 'picked_up') {
+                        <span class="text-[9px] font-bold text-purple-600 dark:text-purple-400">Listo para despacho</span>
+                      } @else if (o.driverId && o.status === 'assigned_driver' && o.riderAccepted) {
+                        <span class="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                          En camino al local
+                        </span>
+                      } @else if (o.driverId && o.status === 'assigned_driver') {
+                        <span class="text-[9px] text-indigo-500 font-semibold">Esperando aceptación...</span>
+                      } @else if (o.riderRejected) {
+                        <span class="text-[9px] font-bold text-red-600 dark:text-red-400 flex items-center gap-1">
+                          <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                          Rechazado {{ o.rejectedRiderName ? 'por ' + o.rejectedRiderName : '' }}
+                        </span>
+                      }
+                    </div>
                   </div>
                   <select [ngModel]="o.driverId" (ngModelChange)="assignRiderToOrder(o.id, $event)"
                     class="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[11px] rounded p-1.5 focus:outline-none focus:border-brand-500">
                     <option [value]="undefined">{{ i18n.t('ma.assignRider') }}</option>
-                    @for (r of getRidersForOrder(o); track r.id) {
-                    <option [value]="r.id">{{ r.name }} ({{ r.vehiclePlate }})</option>
+                    @if (getOwnRidersForOrder(o).length > 0) {
+                      <optgroup label="🛵 Flota Propia (Sede)">
+                        @for (r of getOwnRidersForOrder(o); track r.id) {
+                          <option [value]="r.id">{{ r.name }} ({{ r.vehiclePlate }})</option>
+                        }
+                      </optgroup>
+                    }
+                    @if (getNearbyRidersForOrder(o).length > 0) {
+                      <optgroup label="🌐 Flota Libre / Motorizados Cercanos">
+                        @for (r of getNearbyRidersForOrder(o); track r.id) {
+                          <option [value]="r.id">
+                            {{ r.name }} ({{ r.vehiclePlate }}) {{ r.distanceKm != null ? '• ' + r.distanceKm.toFixed(1) + ' km' : '' }} ⭐{{ r.rating ?? '5.0' }}
+                          </option>
+                        }
+                      </optgroup>
+                    }
+                    @if (getOwnRidersForOrder(o).length === 0 && getNearbyRidersForOrder(o).length === 0) {
+                      @for (r of riders(); track r.id) {
+                        <option [value]="r.id">{{ r.name }} ({{ r.vehiclePlate }})</option>
+                      }
                     }
                   </select>
                 </div>
@@ -3450,6 +3475,125 @@
             } @else {
               <span>🚀 Enviar Notificación a Clientes</span>
             }
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+  <!-- MODAL: RADAR DE REPARTIDORES CERCANOS Y FLOTA PROPIA PÍDETELO -->
+  @if (isNearbyRidersModalOpen()) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+      <div class="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full p-5 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4">
+        
+        <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+          <div class="flex items-center gap-2.5">
+            <div class="w-9 h-9 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center">
+              <app-icon name="bike" [size]="20"></app-icon>
+            </div>
+            <div>
+              <h3 class="font-extrabold text-base text-slate-900 dark:text-white">Radar de Despacho Pídetelo</h3>
+              <p class="text-xs text-slate-500 dark:text-slate-400">
+                Asigna un repartidor de tu sede o de la red libre más cercana
+              </p>
+            </div>
+          </div>
+          <button (click)="isNearbyRidersModalOpen.set(false)"
+                  class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg">
+            ✕
+          </button>
+        </div>
+
+        @if (selectedOrderForNearbyDispatch(); as ord) {
+          <div class="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-200 dark:border-slate-700/60 flex items-center justify-between">
+            <div>
+              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Pedido a Despachar</span>
+              <p class="text-xs font-bold text-slate-900 dark:text-white">#{{ ord.orderNumber || ord.id.slice(0, 8) }} • {{ ord.customerName }}</p>
+              <p class="text-[11px] text-slate-500 truncate max-w-[280px]">{{ ord.deliveryAddress }}</p>
+            </div>
+            <span class="font-black text-sm text-brand-600 dark:text-brand-400">${{ ord.total.toFixed(2) }}</span>
+          </div>
+        }
+
+        <!-- LIST OF OWN RIDERS & NEARBY RIDERS -->
+        <div class="space-y-2 max-h-[360px] overflow-y-auto pr-1">
+          @if (ownRiders().length > 0) {
+            <div class="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 px-1 pt-1">
+              <span>🛵 Flota Propia de la Sede</span>
+              <span class="bg-slate-200 dark:bg-slate-800 text-[10px] font-bold px-1.5 py-0.5 rounded-full">{{ ownRiders().length }}</span>
+            </div>
+            @for (r of ownRiders(); track r.id) {
+              <div class="p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-brand-500 dark:hover:border-brand-500 bg-white dark:bg-slate-800/80 transition-all flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 flex items-center justify-center font-bold text-xs">
+                    {{ r.name.charAt(0).toUpperCase() }}
+                  </div>
+                  <div>
+                    <div class="flex items-center gap-1.5">
+                      <span class="font-bold text-xs text-slate-900 dark:text-white">{{ r.name }}</span>
+                      <span class="text-[9px] font-extrabold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded">{{ r.vehiclePlate }}</span>
+                    </div>
+                    <span class="text-[10px] text-slate-500 dark:text-slate-400">Repartidor Asignado • {{ r.phone || 'Sin tlf' }}</span>
+                  </div>
+                </div>
+                <button (click)="assignNearbyRider(r.id)"
+                        class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 text-white text-[11px] font-bold cursor-pointer transition-all">
+                  Asignar
+                </button>
+              </div>
+            }
+          }
+
+          <div class="text-[11px] font-extrabold uppercase tracking-wider text-brand-600 dark:text-brand-400 flex items-center gap-1.5 px-1 pt-2">
+            <span>🌐 Flota Libre / Motorizados Cercanos Pídetelo</span>
+            <span class="bg-brand-100 dark:bg-brand-950/60 text-brand-700 dark:text-brand-300 text-[10px] font-bold px-1.5 py-0.5 rounded-full">{{ nearbyRiders().length }}</span>
+          </div>
+
+          @for (r of nearbyRiders(); track r.id) {
+            <div class="p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-brand-500 dark:hover:border-brand-500 bg-white dark:bg-slate-800/80 transition-all flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 flex items-center justify-center font-bold text-xs">
+                  🛵
+                </div>
+                <div>
+                  <div class="flex items-center gap-1.5">
+                    <span class="font-bold text-xs text-slate-900 dark:text-white">{{ r.name }}</span>
+                    <span class="text-[9px] font-extrabold bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-300 px-1.5 py-0.5 rounded">{{ r.vehiclePlate }}</span>
+                    @if (r.isCertified) {
+                      <span class="text-[8px] bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 px-1 py-0.5 rounded font-extrabold">✓ Certificado</span>
+                    }
+                  </div>
+                  <div class="flex items-center gap-2 text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    <span class="font-bold text-brand-600 dark:text-brand-400">
+                      📍 {{ r.distanceKm != null ? (r.distanceKm.toFixed(1) + ' km de distancia') : 'En la zona' }}
+                    </span>
+                    <span>•</span>
+                    <span>⭐ {{ r.rating ?? '5.0' }}</span>
+                  </div>
+                </div>
+              </div>
+              <button (click)="assignNearbyRider(r.id)"
+                      class="px-3 py-1.5 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-[11px] font-bold cursor-pointer shadow-xs transition-all">
+                Asignar
+              </button>
+            </div>
+          }
+
+          @if (ownRiders().length === 0 && nearbyRiders().length === 0) {
+            <div class="py-8 text-center text-xs text-slate-400">
+              <p>No se encontraron motorizados activos disponibles en este momento.</p>
+              <button (click)="refreshRidersLocation()" class="mt-2 text-brand-600 font-bold hover:underline">
+                ↻ Reintentar radar
+              </button>
+            </div>
+          }
+        </div>
+
+        <div class="pt-3 border-t border-slate-200 dark:border-slate-800 flex justify-end">
+          <button (click)="isNearbyRidersModalOpen.set(false)"
+                  class="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">
+            Cerrar
           </button>
         </div>
 
