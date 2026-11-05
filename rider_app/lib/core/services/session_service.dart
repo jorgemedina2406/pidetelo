@@ -294,8 +294,6 @@ class SessionService extends ChangeNotifier {
     }
 
     return false;
-
-    return fallbackOk;
   }
 
   Future<bool> updateAvatar(String avatarUrl) async {
