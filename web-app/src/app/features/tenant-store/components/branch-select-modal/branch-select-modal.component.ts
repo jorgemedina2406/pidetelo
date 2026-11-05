@@ -42,7 +42,7 @@ import { Branch } from '../../../../core/models/branch.model';
                     </h4>
                     <p class="text-xs text-slate-500 line-clamp-1">{{ b.address }}</p>
                     @if (b.deliveryRadiusKm) {
-                      <p class="text-[11px] text-slate-400 mt-0.5">Cobertura hasta {{ b.deliveryRadiusKm }} km • Tarifa ${{ getDeliveryFee(b.baseDeliveryFee) }}</p>
+                      <p class="text-[11px] text-slate-400 mt-0.5">Cobertura hasta {{ b.deliveryRadiusKm }} km • Tarifa \${{ getDeliveryFee(b.baseDeliveryFee) }}</p>
                     }
                   </div>
                 </div>

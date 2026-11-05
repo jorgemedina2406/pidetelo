@@ -22,7 +22,7 @@ export interface DispatchFilterConfig {
           <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
             <div class="flex items-center gap-2.5">
               <div class="w-9 h-9 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center">
-                <app-icon name="sliders" [size]="18"></app-icon>
+                <app-icon name="settings" [size]="18"></app-icon>
               </div>
               <div>
                 <h3 class="font-extrabold text-base text-slate-900 dark:text-white">Filtros de Despacho</h3>

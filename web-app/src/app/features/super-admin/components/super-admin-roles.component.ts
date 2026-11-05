@@ -73,12 +73,13 @@ export class SuperAdminRolesComponent {
   getRoleLabel(role: UserRole): string {
     switch (role) {
       case 'SUPER_ADMIN': return 'Super Admin';
-      case 'MERCHANT_ADMIN': return 'Dueño Local';
-      case 'BRANCH_MANAGER': return 'Gerente Sede';
-      case 'KITCHEN_STAFF': return 'Cocina';
-      case 'DISPATCHER': return 'Despachador';
+      case 'MERCHANT_OWNER': return 'Dueño Local';
+      case 'MERCHANT_MANAGER': return 'Gerente Sede';
+      case 'MERCHANT_KITCHEN': return 'Cocina';
+      case 'MERCHANT_DISPATCH': return 'Despachador';
       case 'RIDER': return 'Motorizado';
       case 'CUSTOMER': return 'Cliente';
+      case 'PLATFORM_SUPPORT': return 'Soporte Plataforma';
       default: return role;
     }
   }

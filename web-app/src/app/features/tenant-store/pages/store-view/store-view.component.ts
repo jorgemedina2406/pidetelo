@@ -101,37 +101,22 @@ export class StoreViewComponent implements OnInit {
     };
   });
 
-  readonly formatPriceBound = (price: number, itemCurrency: 'USD' | 'VES' = 'USD') => {
+  readonly formatPriceBound = (price: number, itemCurrency: 'USD' | 'VES' = 'USD'): { primary: string; secondary: string } => {
     return this.formatPrice(price, itemCurrency);
   };
 
-  formatPrice(price: number, itemCurrency: 'USD' | 'VES' = 'USD') {
+  formatPrice(price: number, itemCurrency: 'USD' | 'VES' = 'USD'): { primary: string; secondary: string } {
     const rate = this.activeBranchRate();
     const branchCurr = this.cart.selectedBranch()?.currencySettings;
-    const displayPrimary = branchCurr?.defaultDisplayCurrency || 'USD';
-
-    let usdPrice = 0;
-    let vesPrice = 0;
-
-    if (itemCurrency === 'VES') {
-      vesPrice = price;
-      usdPrice = rate > 0 ? price / rate : 0;
-    } else {
-      usdPrice = price;
-      vesPrice = price * rate;
-    }
-
-    if (displayPrimary === 'VES') {
-      return {
-        primary: `Bs. ${vesPrice.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-        secondary: `$${usdPrice.toFixed(2)}`
-      };
-    } else {
-      return {
-        primary: `$${usdPrice.toFixed(2)}`,
-        secondary: `Bs. ${vesPrice.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-      };
-    }
+    const settings = {
+      ...(branchCurr || this.tenant()?.currencySettings || {}),
+      exchangeRate: rate
+    } as any;
+    const formatted = this.currency.formatPrice(price, itemCurrency, settings);
+    return {
+      primary: formatted.primary,
+      secondary: formatted.secondary || ''
+    };
   }
 
   readonly filteredProducts = computed(() => {
@@ -177,9 +162,9 @@ export class StoreViewComponent implements OnInit {
           const validBranch = currentSelectedBranch
             ? t.branches.find(b => b.id === currentSelectedBranch.id)
             : (t.branches.find(b => b.isMain) || t.branches[0]);
-          this.cart.setSelectedBranch(validBranch || null);
+          this.cart.setBranch(validBranch || null);
         } else {
-          this.cart.setSelectedBranch(null);
+          this.cart.setBranch(null);
         }
 
         const bId = this.cart.selectedBranch()?.id;
@@ -193,26 +178,24 @@ export class StoreViewComponent implements OnInit {
   }
 
   private fetchLiveBcvRate(): void {
-    this.currency.getUsdExchangeRate().subscribe({
-      next: (rate) => {
-        if (rate && rate > 0) {
-          this.liveBcvRate.set(rate);
-        }
-      },
-      error: () => {}
-    });
+    this.currency.fetchDolarApiRate('oficial').then(liveData => {
+      if (liveData && typeof liveData.promedio === 'number' && liveData.promedio > 0) {
+        this.liveBcvRate.set(Number(liveData.promedio.toFixed(2)));
+      }
+    }).catch(() => {});
   }
 
   private loadCatalog(tenantId: string, branchId?: string): void {
-    this.api.getCategories(tenantId, branchId).subscribe({
+    this.api.getCategories(tenantId).subscribe({
       next: (cats) => {
         this.categories.set(cats || []);
       }
     });
 
-    this.api.getProducts(tenantId, branchId).subscribe({
+    this.api.getProducts(tenantId, branchId, true).subscribe({
       next: (prods) => {
         this.products.set(prods || []);
+        this.cart.setStoreProducts(prods || []);
         this.isLoading.set(false);
       },
       error: () => {
@@ -222,9 +205,22 @@ export class StoreViewComponent implements OnInit {
   }
 
   selectBranch(branch: Branch): void {
-    this.cart.setSelectedBranch(branch);
-    this.isBranchModalOpen.set(false);
     const t = this.tenant();
+    const effectiveRadius = t?.deliverySettings?.deliveryRadiusKm
+      ? Math.max(Number(branch.deliveryRadiusKm) || 0, Number(t.deliverySettings.deliveryRadiusKm))
+      : Number(branch.deliveryRadiusKm) || 8.0;
+    const effectiveTiers = (Array.isArray(t?.deliverySettings?.deliveryTiers) && t.deliverySettings.deliveryTiers.length > 0)
+      ? t.deliverySettings.deliveryTiers
+      : branch.deliveryTiers;
+
+    const enrichedBranch: Branch = {
+      ...branch,
+      deliveryRadiusKm: effectiveRadius,
+      deliveryTiers: effectiveTiers
+    };
+
+    this.cart.setBranch(enrichedBranch);
+    this.isBranchModalOpen.set(false);
     if (t) {
       this.isLoading.set(true);
       this.loadCatalog(t.id, branch.id);
@@ -235,8 +231,8 @@ export class StoreViewComponent implements OnInit {
     this.activeModalProduct.set(product);
   }
 
-  onProductAdd(event: { product: Product; quantity: number; selectedModifiers: any[]; specialInstructions?: string }): void {
-    this.cart.addItem(event.product, event.quantity, event.selectedModifiers, event.specialInstructions);
+  onProductAdd(event: { product: Product; quantity: number; modifiers: any[]; notes?: string }): void {
+    this.cart.addItem(event.product, event.quantity, event.modifiers, event.notes);
     this.activeModalProduct.set(null);
   }
 }

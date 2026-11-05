@@ -1,7 +1,7 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Order } from '../../../core/models/order.model';
-import { Rider } from '../../../core/models/rider.model';
+import { Rider } from '../merchant-admin.component';
 import { IconComponent } from '../../../shared/components/icon.component';
 
 @Component({
@@ -35,8 +35,8 @@ import { IconComponent } from '../../../shared/components/icon.component';
             <div class="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-200 dark:border-slate-700/60 flex items-center justify-between">
               <div>
                 <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Pedido a Despachar</span>
-                <p class="text-xs font-bold text-slate-900 dark:text-white">#{{ order.orderNumber || order.id.slice(0, 8) }} • {{ order.customerName }}</p>
-                <p class="text-[11px] text-slate-500 truncate max-w-[280px]">{{ order.deliveryAddress }}</p>
+                <p class="text-xs font-bold text-slate-900 dark:text-white">#{{ order.orderNumber || order.id.slice(0, 8) }} • {{ order.customer?.name || (order.customer ? order.customer.name : 'Cliente') }}</p>
+                <p class="text-[11px] text-slate-500 truncate max-w-[280px]">{{ order.customer?.deliveryAddress || '' }}</p>
               </div>
               <span class="font-black text-sm text-brand-600 dark:text-brand-400">\${{ order.total.toFixed(2) }}</span>
             </div>
