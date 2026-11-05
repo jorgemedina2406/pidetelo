@@ -19,20 +19,38 @@ export class RidersController {
   }
 
   @Get('dispatch-pool')
-  @ApiOperation({ summary: 'Obtener motorizados propios y de red cercana para asignación en comercios' })
+  @ApiOperation({ summary: 'Obtener motorizados propios y de red cercana para asignación en comercios con filtros reales' })
   @ApiQuery({ name: 'tenantId', required: true })
   @ApiQuery({ name: 'branchId', required: false })
   @ApiQuery({ name: 'lat', required: false })
   @ApiQuery({ name: 'lng', required: false })
+  @ApiQuery({ name: 'minRating', required: false })
+  @ApiQuery({ name: 'maxDistanceKm', required: false })
+  @ApiQuery({ name: 'minDeliveries', required: false })
   findDispatchPool(
     @Query('tenantId') tenantId: string,
     @Query('branchId') branchId?: string,
     @Query('lat') lat?: string,
     @Query('lng') lng?: string,
+    @Query('minRating') minRating?: string,
+    @Query('maxDistanceKm') maxDistanceKm?: string,
+    @Query('minDeliveries') minDeliveries?: string,
   ) {
     const numLat = lat ? parseFloat(lat) : undefined;
     const numLng = lng ? parseFloat(lng) : undefined;
-    return this.ridersService.findDispatchPool(tenantId, branchId, numLat, numLng);
+    const numRating = minRating ? parseFloat(minRating) : undefined;
+    const numMaxDist = maxDistanceKm ? parseFloat(maxDistanceKm) : undefined;
+    const numMinDeliv = minDeliveries ? parseInt(minDeliveries, 10) : undefined;
+    return this.ridersService.findDispatchPool(tenantId, branchId, numLat, numLng, numRating, numMaxDist, numMinDeliv);
+  }
+
+  @Post(':id/rate')
+  @ApiOperation({ summary: 'Calificar servicio del motorizado por parte del cliente al completar entrega' })
+  rateRider(
+    @Param('id') riderId: string,
+    @Body() body: { rating: number; orderId?: string; comment?: string },
+  ) {
+    return this.ridersService.rateRider(riderId, body.rating, body.orderId, body.comment);
   }
 
   @Post('register-with-verification')

@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, InternalServerErrorException, UnauthorizedException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service.js';
+import { BiometricVerificationService } from './biometric-verification.service.js';
 
 import { randomUUID } from 'crypto';
 
@@ -23,7 +24,10 @@ export class RidersService {
   private localRiders = new Map<string, any>();
   private storageFilePath = path.resolve(process.cwd(), 'data', 'riders_storage.json');
 
-  constructor(private supabase: SupabaseService) {
+  constructor(
+    private supabase: SupabaseService,
+    private biometricVerification: BiometricVerificationService,
+  ) {
     this.loadFromDisk();
   }
 
@@ -129,9 +133,23 @@ export class RidersService {
       ? dto.branch_id
       : (((dto as any).branchId && isUuid((dto as any).branchId)) ? (dto as any).branchId : null);
 
-    // 2. Resolve tenant_id to a valid UUID
-    let resolvedTenantId = dto.tenant_id || (dto as any).tenantId;
-    if (!isUuid(resolvedTenantId) && cleanBranchId) {
+    // 2. Resolve tenant_id and branch_id
+    let resolvedTenantId: string | null = null;
+    if (dto.tenant_id && isUuid(dto.tenant_id)) {
+      resolvedTenantId = dto.tenant_id;
+    } else if (dto.tenant_id && !isUuid(dto.tenant_id)) {
+      try {
+        const { data: t } = await this.supabase
+          .getClient()
+          .from('tenants')
+          .select('id')
+          .or(`slug.eq.${dto.tenant_id},name.ilike.%${dto.tenant_id}%`)
+          .maybeSingle();
+        if (t?.id && isUuid(t.id)) resolvedTenantId = t.id;
+      } catch (_) {}
+    }
+
+    if (cleanBranchId && !resolvedTenantId) {
       try {
         const { data: b } = await this.supabase
           .getClient()
@@ -145,47 +163,9 @@ export class RidersService {
       } catch (_) {}
     }
 
-    if (!isUuid(resolvedTenantId)) {
-      try {
-        const { data: t } = await this.supabase
-          .getClient()
-          .from('tenants')
-          .select('id')
-          .or(`slug.eq.${resolvedTenantId},name.ilike.%${resolvedTenantId}%`)
-          .maybeSingle();
-        if (t?.id && isUuid(t.id)) {
-          resolvedTenantId = t.id;
-        } else {
-          const { data: firstTenant } = await this.supabase
-            .getClient()
-            .from('tenants')
-            .select('id')
-            .eq('is_active', true)
-            .limit(1)
-            .maybeSingle();
-          if (firstTenant?.id) {
-            resolvedTenantId = firstTenant.id;
-          } else {
-            resolvedTenantId = 'dac59429-fd6f-4d3e-8b2e-ab0e23828c1f';
-          }
-        }
-      } catch (_) {
-        resolvedTenantId = 'dac59429-fd6f-4d3e-8b2e-ab0e23828c1f';
-      }
-    }
-
-    // 3. Fallback branch to main branch if still null
-    if (!cleanBranchId && isUuid(resolvedTenantId)) {
-      try {
-        const { data: mainB } = await this.supabase
-          .getClient()
-          .from('branches')
-          .select('id')
-          .eq('company_id', resolvedTenantId)
-          .eq('is_main', true)
-          .maybeSingle();
-        if (mainB?.id) cleanBranchId = mainB.id;
-      } catch (_) {}
+    // Si no tiene branch_id válido, dejar cleanBranchId en null
+    if (cleanBranchId && !isUuid(cleanBranchId)) {
+      cleanBranchId = null;
     }
 
     const cleanPlate = ((dto as any).vehicle_plate || (dto as any).vehiclePlate || 'SIN-PLACA').toUpperCase().trim();
@@ -346,37 +326,18 @@ export class RidersService {
           console.log('[RidersService] ✅ Registro en public.riders creado:', riderId);
         } else if (iErr) {
           console.error('[RidersService] Error insertando en public.riders:', iErr.message);
+          throw new InternalServerErrorException(`Error insertando en la base de datos: ${iErr.message}`);
         }
       }
     } catch (e: any) {
       console.error('[RidersService] Excepción gestionando public.riders:', e.message);
+      if (e instanceof InternalServerErrorException) throw e;
+      throw new InternalServerErrorException(`Excepción en base de datos: ${e.message}`);
     }
 
     if (!finalRiderRecord) {
-      finalRiderRecord = {
-        id: randomUUID(),
-        user_id: finalUserId,
-        tenant_id: resolvedTenantId,
-        branch_id: cleanBranchId,
-        name: cleanName,
-        email: cleanEmail,
-        phone: cleanPhone,
-        vehicle_plate: cleanPlate,
-        vehicle_type: cleanType,
-        status: 'available',
-        current_lat: null,
-        current_lng: null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
+      throw new InternalServerErrorException('No se pudo crear el registro del motorizado en Supabase.');
     }
-
-    // Actualizar caché y almacenamiento en disco
-    this.localRiders.set(finalRiderRecord.id, {
-      ...finalRiderRecord,
-      password: cleanPassword
-    });
-    this.saveToDisk();
 
     return {
       ...finalRiderRecord,
@@ -461,17 +422,6 @@ export class RidersService {
         wallet_balance: (r as any).wallet_balance !== undefined ? (r as any).wallet_balance : (cached?.wallet_balance || 0.00)
       };
     });
-
-    // Agregar repartidores registrados localmente que no estén en la lista remota
-    for (const [id, localR] of this.localRiders.entries()) {
-      if (!seenIds.has(id)) {
-        if (!resolvedTenantId || localR.tenant_id === resolvedTenantId) {
-          if (!branchId || branchId === 'all' || localR.branch_id === branchId) {
-            mapped.unshift(localR);
-          }
-        }
-      }
-    }
 
     // Filtrado estricto por sucursal en el retorno consolidado
     if (branchId && branchId !== 'all') {
@@ -783,52 +733,21 @@ export class RidersService {
       throw new BadRequestException('Es indispensable adjuntar la foto del documento de identidad y la selfie frontal para la certificación de seguridad.');
     }
 
-    // --- PROCESO AUTOMÁTICO DE VERIFICACIÓN DE IDENTIDAD ---
-    // 1. Validar integridad de imagen y peso mínimo (evita imágenes corruptas o vacías)
-    const docSize = docImg.length;
-    const selfieSize = selfieImg.length;
+    // --- PROCESO AUTOMÁTICO DE VERIFICACIÓN DE IDENTIDAD BIOMÉTRICA Y DOCUMENTAL ---
+    const verification = await this.biometricVerification.verifyIdentity(
+      docImg,
+      selfieImg,
+      cleanName,
+      cleanNationalId,
+    );
 
-    if (docSize < 500 || selfieSize < 500) {
-      throw new BadRequestException('Las imágenes proporcionadas no tienen la nitidez o resolución requerida para la verificación.');
-    }
-
-    // 2. Comprobar que no se haya enviado la misma foto duplicada para documento y selfie
-    if (docImg.substring(0, 200) === selfieImg.substring(0, 200) && docImg.length === selfieImg.length) {
-      throw new BadRequestException('La selfie y la foto del documento de identidad deben ser fotografías distintas tomadas por separado.');
-    }
-
-    // 3. Validación de documento de identidad
-    const cleanIdDigits = cleanNationalId.replace(/[^0-9]/g, '');
-    if (cleanIdDigits.length < 6 || cleanIdDigits.length > 12) {
-      throw new BadRequestException('El número de documento de identidad no tiene un formato válido.');
-    }
-
-    // 4. Calcular índice de certificación biométrica y documental
-    let score = 95;
-    if (docSize > 5000 && selfieSize > 5000) score += 2;
-    if (cleanPhone.replace(/[^0-9]/g, '').length >= 10) score += 1;
-    if (cleanPlate.length >= 5) score += 1;
-
-    const verificationScore = Math.min(score, 99);
+    const verificationScore = verification.score || 96;
     const certifiedAt = new Date().toISOString();
 
     // Guardar o generar identificadores de documento
     const sb = this.supabase.getClient();
-    let docUrl = docImg.startsWith('http') ? docImg : `https://images.unsplash.com/photo-1544717302-de2939b7ef71?w=400&q=80`;
-    let selfieUrl = selfieImg.startsWith('http') ? selfieImg : `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&q=80`;
-
-    // Intentar subir a Supabase Storage si son imágenes en base64
-    if (docImg.startsWith('data:') || docImg.length > 1000) {
-      try {
-        const fileExt = docImg.includes('png') ? 'png' : 'jpg';
-        const docFileName = `id_docs/${cleanNationalId}_${Date.now()}.${fileExt}`;
-        const selfieFileName = `selfies/${cleanNationalId}_${Date.now()}.${fileExt}`;
-
-        // Almacenar en bucket o guardar URL con hash
-        docUrl = `https://pidetelo.app/storage/docs/${cleanNationalId}_doc.${fileExt}`;
-        selfieUrl = `https://pidetelo.app/storage/selfies/${cleanNationalId}_selfie.${fileExt}`;
-      } catch (_) {}
-    }
+    let docUrl = docImg.startsWith('http') ? docImg : `https://pidetelo.app/storage/docs/${cleanNationalId}_doc.jpg`;
+    let selfieUrl = selfieImg.startsWith('http') ? selfieImg : `https://pidetelo.app/storage/selfies/${cleanNationalId}_selfie.jpg`;
 
     // 5. Registrar usando el flujo centralizado de creación de riders
     const created = await this.create({
@@ -843,37 +762,27 @@ export class RidersService {
       branch_id: payload.branch_id
     } as any);
 
-    // 6. Actualizar certificación en Supabase y caché
+    // 6. Actualizar certificación en Supabase
     const riderId = created.id;
     const isIndependent = !payload.tenant_id;
 
-    try {
-      await sb.from('riders').update({
-        is_certified: true,
-        verification_status: 'verified',
-        verification_score: verificationScore,
-        id_document_url: docUrl,
-        selfie_url: selfieUrl,
-        is_independent: isIndependent,
-        certified_at: certifiedAt,
-        status: 'available',
-        rating: 5.0,
-        vehicle_model: cleanModel
-      }).eq('id', riderId);
-    } catch (_) {}
+    const { error: updateErr } = await sb.from('riders').update({
+      is_certified: true,
+      verification_status: 'verified',
+      verification_score: verificationScore,
+      id_document_url: docUrl,
+      selfie_url: selfieUrl,
+      is_independent: isIndependent,
+      certified_at: certifiedAt,
+      status: 'available',
+      rating: 5.0,
+      total_deliveries: 0,
+      vehicle_model: cleanModel
+    }).eq('id', riderId);
 
-    // Actualizar en caché local
-    const cached = this.localRiders.get(riderId);
-    if (cached) {
-      cached.is_certified = true;
-      cached.verification_status = 'verified';
-      cached.verification_score = verificationScore;
-      cached.id_document_url = docUrl;
-      cached.selfie_url = selfieUrl;
-      cached.is_independent = isIndependent;
-      cached.certified_at = certifiedAt;
-      cached.vehicle_model = cleanModel;
-      this.saveToDisk();
+    if (updateErr) {
+      console.error('[RidersService] Error actualizando certificación en Supabase:', updateErr.message);
+      throw new InternalServerErrorException(`No se pudo persistir la certificación en la base de datos: ${updateErr.message}`);
     }
 
     return {
@@ -898,16 +807,94 @@ export class RidersService {
   }
 
   // ==============================================================================
-  // POOL DE DESPACHO PARA COMERCIOS: FLOTA PROPIA + FLOTA LIBRE CERCANA
+  // CALIFICACIÓN DE MOTORIZADOS POR PARTE DEL CLIENTE (1 A 5 ESTRELLAS)
   // ==============================================================================
-  async findDispatchPool(tenantId: string, branchId?: string, merchantLat?: number, merchantLng?: number) {
-    const isUuid = (val?: string) => Boolean(val && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val));
+  async rateRider(riderId: string, rating: number, orderId?: string, comment?: string) {
+    const sb = this.supabase.getClient();
+    const cleanRating = Math.max(1, Math.min(5, Number(rating)));
 
-    // Coordenadas de referencia (Barquisimeto / Cabudare centro si no vienen especificadas)
+    const { data: rider, error: rErr } = await sb
+      .from('riders')
+      .select('id, name, rating, total_deliveries')
+      .eq('id', riderId)
+      .maybeSingle();
+
+    if (rErr || !rider) {
+      throw new NotFoundException('Motorizado no encontrado para calificar.');
+    }
+
+    const currentTotal = Number(rider.total_deliveries || 0);
+    const currentRating = Number(rider.rating || 5.0);
+    const newTotal = currentTotal + 1;
+    // Promedio ponderado acumulado
+    const newRating = Number(((currentRating * currentTotal + cleanRating) / newTotal).toFixed(1));
+
+    const { error: uErr } = await sb.from('riders').update({
+      rating: newRating,
+      total_deliveries: newTotal,
+      updated_at: new Date().toISOString()
+    }).eq('id', riderId);
+
+    if (uErr) {
+      throw new InternalServerErrorException(`Error guardando valoración: ${uErr.message}`);
+    }
+
+    if (orderId) {
+      try {
+        await sb.from('orders').update({
+          rider_rating: cleanRating,
+          rider_review: comment || null,
+        }).eq('id', orderId);
+      } catch (_) {}
+    }
+
+    return {
+      success: true,
+      riderId,
+      newRating,
+      totalDeliveries: newTotal,
+      message: 'Valoración registrada exitosamente.'
+    };
+  }
+
+  // ==============================================================================
+  // POOL DE DESPACHO PARA COMERCIOS: FLOTA PROPIA + FLOTA LIBRE CERCANA CON FILTROS REALES
+  // ==============================================================================
+  async findDispatchPool(
+    tenantId: string,
+    branchId?: string,
+    merchantLat?: number,
+    merchantLng?: number,
+    minRating?: number,
+    maxDistanceKm?: number,
+    minDeliveries?: number
+  ) {
+    const isUuid = (val?: string) => Boolean(val && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val));
+    const sb = this.supabase.getClient();
+
+    // 1. Obtener IDs de motorizados que se encuentran actualmente ocupados en un despacho
+    let busyDriverIds = new Set<string>();
+    try {
+      const { data: busyOrders } = await sb
+        .from('orders')
+        .select('driver_id')
+        .not('driver_id', 'is', null)
+        .in('status', ['assigned_driver', 'at_merchant', 'picked_up', 'on_the_way']);
+
+      if (busyOrders) {
+        busyOrders.forEach((o: any) => {
+          if (o.driver_id) busyDriverIds.add(o.driver_id);
+        });
+      }
+    } catch (e) {
+      console.warn('[RidersService] Error consultando órdenes activas para exclusión de ocupados:', e);
+    }
+
+    // Coordenadas de referencia del comercio
     const refLat = merchantLat || 10.0400;
     const refLng = merchantLng || -69.2700;
 
-    // Fórmula Haversine para cálculo de distancia en KM
+    // Fórmula Haversine estricta para cálculo de distancia en KM
     const calculateDistanceKm = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
       const R = 6371; // Radio de la Tierra en km
       const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -920,20 +907,56 @@ export class RidersService {
       return Number((R * c).toFixed(1));
     };
 
-    // Obtener todos los motorizados
+    // Obtener motorizados reales de Supabase
     const allRiders = await this.findAll();
 
     const ownRiders: any[] = [];
     const nearbyRiders: any[] = [];
 
     allRiders.forEach((r: any) => {
+      // Regla 9: Motorizados que estén realizando un envío en ese momento NO deben aparecer
+      if (busyDriverIds.has(r.id)) {
+        return;
+      }
+
+      // Regla: Solo motorizados disponibles
+      const status = (r.status || 'available').toLowerCase();
+      if (status !== 'available') {
+        return;
+      }
+
       const rTenant = r.tenant_id || (r as any).tenantId;
       const rBranch = r.branch_id || (r as any).branchId;
-      const rLat = r.current_lat !== undefined && r.current_lat !== null ? Number(r.current_lat) : (refLat + (Math.random() * 0.02 - 0.01));
-      const rLng = r.current_lng !== undefined && r.current_lng !== null ? Number(r.current_lng) : (refLng + (Math.random() * 0.02 - 0.01));
+      const rRating = Number(r.rating != null ? r.rating : 5.0);
+      const rDeliveries = Number(r.total_deliveries || 0);
 
-      const dist = calculateDistanceKm(refLat, refLng, rLat, rLng);
-      const distanceText = dist < 1 ? `${Math.round(dist * 1000)} m` : `${dist} km`;
+      // Filtro 8: Mínima calificación solicitada por el comercio
+      if (minRating != null && rRating < minRating) {
+        return;
+      }
+
+      // Filtro 8: Mínimo de pedidos completados solicitado por el comercio
+      if (minDeliveries != null && rDeliveries < minDeliveries) {
+        return;
+      }
+
+      // Cálculo de distancia real basado en GPS reportado por el motorizado
+      let dist: number | null = null;
+      let distanceText = 'Sin GPS';
+
+      const hasGps = r.current_lat !== undefined && r.current_lat !== null &&
+                     r.current_lng !== undefined && r.current_lng !== null &&
+                     !isNaN(Number(r.current_lat)) && !isNaN(Number(r.current_lng));
+
+      if (hasGps) {
+        dist = calculateDistanceKm(refLat, refLng, Number(r.current_lat), Number(r.current_lng));
+        distanceText = dist < 1 ? `${Math.round(dist * 1000)} m` : `${dist} km`;
+      }
+
+      // Filtro 8: Lejanía máxima (radio en km) configurada por el comercio
+      if (maxDistanceKm != null && dist != null && dist > maxDistanceKm) {
+        return;
+      }
 
       const riderItem = {
         id: r.id,
@@ -942,36 +965,47 @@ export class RidersService {
         vehiclePlate: r.vehicle_plate || (r as any).vehiclePlate || 'S/P',
         vehicleType: r.vehicle_type || (r as any).vehicleType || 'moto',
         vehicleModel: r.vehicle_model || (r as any).vehicleModel || 'Motocicleta',
-        avatarUrl: r.avatar_url || (r as any).avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-        status: r.status || 'available',
-        rating: Number(r.rating || 5.0).toFixed(1),
-        totalDeliveries: r.total_deliveries || 0,
+        avatarUrl: r.avatar_url || (r as any).avatarUrl || '',
+        status: 'available',
+        rating: rRating.toFixed(1),
+        totalDeliveries: rDeliveries,
         isCertified: r.is_certified ?? true,
         verificationStatus: r.verification_status || 'verified',
         isIndependent: r.is_independent ?? (!rTenant || rTenant === 'global'),
         distanceKm: dist,
         distanceText,
-        currentLat: rLat,
-        currentLng: rLng
+        currentLat: hasGps ? Number(r.current_lat) : null,
+        currentLng: hasGps ? Number(r.current_lng) : null,
       };
 
-      // Si pertenece al comercio / sucursal
+      // Si pertenece a la sede del comercio
       if (isUuid(tenantId) && rTenant === tenantId) {
         if (!branchId || branchId === 'all' || !rBranch || rBranch === branchId) {
           ownRiders.push({ ...riderItem, isOwn: true });
           return;
         }
+        // Si pertenece a otra sede del mismo comercio, no se muestra como flota libre
+        return;
       }
 
-      // De lo contrario, clasifica como Flota Libre / Plataforma Pídetelo
-      if (riderItem.status !== 'offline') {
+      // Flota Libre / Red de motorizados independientes de la plataforma Pídetelo
+      // Regla estricta: Solo motorizados que NO pertenezcan a un comercio en específico
+      const isIndependentRider = Boolean(r.is_independent || (!rTenant && !rBranch));
+      if (isIndependentRider) {
         nearbyRiders.push({ ...riderItem, isOwn: false });
       }
     });
 
-    // Ordenar los cercanos por menor distancia
-    nearbyRiders.sort((a, b) => a.distanceKm - b.distanceKm);
-    ownRiders.sort((a, b) => a.distanceKm - b.distanceKm);
+    // Ordenar los motorizados con GPS más cercanos primero
+    const sortDistance = (a: any, b: any) => {
+      if (a.distanceKm == null && b.distanceKm == null) return 0;
+      if (a.distanceKm == null) return 1;
+      if (b.distanceKm == null) return -1;
+      return a.distanceKm - b.distanceKm;
+    };
+
+    nearbyRiders.sort(sortDistance);
+    ownRiders.sort(sortDistance);
 
     return {
       ownRiders,

@@ -715,29 +715,64 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
   readonly ownRiders = signal<Rider[]>([]);
   readonly nearbyRiders = signal<Rider[]>([]);
   readonly isNearbyRidersModalOpen = signal(false);
+  readonly isDispatchConfigModalOpen = signal(false);
   readonly selectedOrderForNearbyDispatch = signal<Order | null>(null);
+
+  readonly dispatchFilterConfig = signal<{
+    maxDistanceKm: number;
+    minRating: number;
+    minDeliveries: number;
+    onlyAvailable: boolean;
+  }>({
+    maxDistanceKm: 15,
+    minRating: 0,
+    minDeliveries: 0,
+    onlyAvailable: true
+  });
+
+  saveDispatchFilterConfig(config: { maxDistanceKm: number; minRating: number; minDeliveries: number; onlyAvailable: boolean }): void {
+    this.dispatchFilterConfig.set(config);
+    try {
+      localStorage.setItem(`pidetelo_dispatch_config_${this.activeBranchId()}`, JSON.stringify(config));
+    } catch (_) {}
+    this.refreshRidersLocation();
+    this.isDispatchConfigModalOpen.set(false);
+  }
+
+  getBusyRiderIds(excludeOrderId?: string): Set<string> {
+    const busy = new Set<string>();
+    this.orders().forEach(o => {
+      if (o.id !== excludeOrderId && o.driverId && ['assigned_driver', 'at_merchant', 'picked_up', 'on_the_way'].includes(o.status)) {
+        busy.add(o.driverId);
+      }
+    });
+    return busy;
+  }
 
   readonly filteredRiders = computed(() => {
     const branchId = this.activeBranchId();
     if (!branchId) return [];
     const isMain = this.isSelectedBranchMain();
-    return this.riders().filter(r => r.branchId === branchId || (isMain && !r.branchId) || r.isIndependent);
+    const busy = this.getBusyRiderIds();
+    return this.riders().filter(r => (r.branchId === branchId || (isMain && !r.branchId) || r.isIndependent) && r.status === 'available' && !busy.has(r.id));
   });
   readonly availableRiders = computed(() => this.filteredRiders());
 
   getOwnRidersForOrder(order: Order): Rider[] {
-    const list = this.ownRiders();
+    const busy = this.getBusyRiderIds(order.id);
+    const list = this.ownRiders().filter(r => r.status === 'available' && !busy.has(r.id));
     if (list.length > 0) return list;
     const branchId = this.activeBranchId();
     if (!branchId) return [];
     const isMain = this.isSelectedBranchMain();
-    return this.riders().filter(r => (r.branchId === branchId || (isMain && !r.branchId)) && !r.isIndependent);
+    return this.riders().filter(r => (r.branchId === branchId || (isMain && !r.branchId)) && !r.isIndependent && r.status === 'available' && !busy.has(r.id));
   }
 
   getNearbyRidersForOrder(order: Order): Rider[] {
-    const list = this.nearbyRiders();
+    const busy = this.getBusyRiderIds(order.id);
+    const list = this.nearbyRiders().filter(r => r.status === 'available' && !busy.has(r.id));
     if (list.length > 0) return list;
-    return this.riders().filter(r => r.isIndependent);
+    return this.riders().filter(r => r.isIndependent && r.status === 'available' && !busy.has(r.id));
   }
 
   getRidersForOrder(order: Order): Rider[] {
@@ -749,7 +784,8 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     const branchId = this.activeBranchId();
     if (!branchId) return [];
     const isMain = this.isSelectedBranchMain();
-    return this.riders().filter(r => r.branchId === branchId || (isMain && !r.branchId));
+    const busy = this.getBusyRiderIds(order.id);
+    return this.riders().filter(r => (r.branchId === branchId || (isMain && !r.branchId)) && r.status === 'available' && !busy.has(r.id));
   }
 
   openNearbyRidersModal(order: Order): void {
@@ -869,6 +905,11 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem('deliveryhub_riders_auth');
+      } catch (_) {}
+    }
     const user = this.auth.currentUser();
     const activeTenantId = user?.tenantId;
 
@@ -1302,7 +1343,16 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       };
     };
 
-    this.api.getDispatchPool(activeTenantId, branchFilter, targetLat, targetLng).subscribe({
+    const cfg = this.dispatchFilterConfig();
+    this.api.getDispatchPool(
+      activeTenantId,
+      branchFilter,
+      targetLat,
+      targetLng,
+      cfg.minRating,
+      cfg.maxDistanceKm,
+      cfg.minDeliveries
+    ).subscribe({
       next: (pool) => {
         if (pool && ((pool.ownRiders && pool.ownRiders.length > 0) || (pool.nearbyRiders && pool.nearbyRiders.length > 0))) {
           const mappedOwn = (pool.ownRiders || []).map(mapRawToRider);
@@ -1789,11 +1839,32 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
   }
 
   assignRiderToOrder(orderId: string, riderId: string): void {
-    const rider = this.riders().find(r => r.id === riderId);
+    if (!riderId) return;
+
+    let targetRiderId = riderId;
+    if (riderId === 'auto_closest') {
+      const order = this.orders().find(o => o.id === orderId);
+      if (!order) return;
+      const candidates = this.getRidersForOrder(order).filter(r => r.status === 'available');
+      const sorted = [...candidates].sort((a, b) => {
+        if (a.distanceKm == null && b.distanceKm == null) return 0;
+        if (a.distanceKm == null) return 1;
+        if (b.distanceKm == null) return -1;
+        return a.distanceKm - b.distanceKm;
+      });
+
+      if (sorted.length === 0) {
+        alert('No hay motorizados disponibles en este momento que cumplan con los filtros de despacho.');
+        return;
+      }
+      targetRiderId = sorted[0].id;
+    }
+
+    const rider = this.riders().find(r => r.id === targetRiderId);
     this.orders.update(list =>
       list.map(o => o.id === orderId ? {
         ...o,
-        driverId: riderId,
+        driverId: targetRiderId,
         driverName: rider?.name,
         driverPhone: rider?.phone,
         status: 'assigned_driver',
@@ -1803,11 +1874,11 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       } : o)
     );
     // 1. Direct Supabase update for immediate Realtime broadcast to mobile apps
-    this.supabase.assignRider(orderId, riderId).then(ok => {
-      if (ok) console.log(`[MerchantAdmin] Repartidor asignado en Supabase: ${orderId} -> ${riderId}`);
+    this.supabase.assignRider(orderId, targetRiderId).then(ok => {
+      if (ok) console.log(`[MerchantAdmin] Repartidor asignado en Supabase: ${orderId} -> ${targetRiderId}`);
     });
     // 2. Backend update
-    this.api.assignRider(orderId, riderId).subscribe({
+    this.api.assignRider(orderId, targetRiderId).subscribe({
       next: () => console.log(`[MerchantAdmin] Repartidor asignado en backend a orden ${orderId}`),
       error: (err) => console.warn('[MerchantAdmin] Error asignando repartidor:', err)
     });
@@ -2089,9 +2160,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
 
     if (typeof window !== 'undefined') {
       try {
-        const localList = JSON.parse(localStorage.getItem('deliveryhub_riders_auth') || '[]');
-        localList.push(formattedPayload);
-        localStorage.setItem('deliveryhub_riders_auth', JSON.stringify(localList));
+        localStorage.removeItem('deliveryhub_riders_auth');
       } catch {}
     }
 

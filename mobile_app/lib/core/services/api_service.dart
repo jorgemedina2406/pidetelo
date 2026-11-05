@@ -299,6 +299,42 @@ class ApiService {
     };
   }
 
+  /// Rate rider after delivery completion
+  Future<bool> rateRider({
+    required String riderId,
+    required double rating,
+    String? orderId,
+    String? comment,
+  }) async {
+    try {
+      final supabase = Supabase.instance.client;
+      final res = await supabase.from('riders').select('rating, total_deliveries').eq('id', riderId).maybeSingle();
+      if (res != null) {
+        final currentTotal = (res['total_deliveries'] as num?)?.toInt() ?? 0;
+        final currentRating = (res['rating'] as num?)?.toDouble() ?? 5.0;
+        final newTotal = currentTotal + 1;
+        final newRating = double.parse(((currentRating * currentTotal + rating) / newTotal).toStringAsFixed(1));
+        await supabase.from('riders').update({
+          'rating': newRating,
+          'total_deliveries': newTotal,
+          'updated_at': DateTime.now().toIso8601String(),
+        }).eq('id', riderId);
+      }
+      if (orderId != null) {
+        try {
+          await supabase.from('orders').update({
+            'rider_rating': rating,
+            'rider_review': comment,
+          }).eq('id', orderId);
+        } catch (_) {}
+      }
+      return true;
+    } catch (e) {
+      debugPrint('[ApiService] Error calificando rider: $e');
+      return false;
+    }
+  }
+
   /// Calculate real distance in km between two coordinate points
   static double calculateDistanceKm(double lat1, double lon1, double lat2, double lon2) {
     const double p = 0.017453292519943295;

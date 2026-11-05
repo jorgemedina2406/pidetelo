@@ -71,3 +71,4 @@ if (Test-Path $androidRes) {
 
 $src.Dispose()
 Write-Host "Done for $AppDir!"
+

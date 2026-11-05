@@ -392,6 +392,7 @@ class DeliveryOrder {
   final String customerAddress;
   final double customerLat;
   final double customerLng;
+  final String riderId;
   final String riderName;
   final String riderPhone;
   final String riderVehicle;
@@ -420,6 +421,7 @@ class DeliveryOrder {
     required this.customerAddress,
     required this.customerLat,
     required this.customerLng,
+    this.riderId = '',
     required this.riderName,
     required this.riderPhone,
     required this.riderVehicle,
@@ -449,6 +451,7 @@ class DeliveryOrder {
         'customerAddress': customerAddress,
         'customerLat': customerLat,
         'customerLng': customerLng,
+        'riderId': riderId,
         'riderName': riderName,
         'riderPhone': riderPhone,
         'riderVehicle': riderVehicle,
@@ -478,10 +481,11 @@ class DeliveryOrder {
         customerAddress: json['customerAddress'] ?? '',
         customerLat: (json['customerLat'] as num?)?.toDouble() ?? 10.034574,
         customerLng: (json['customerLng'] as num?)?.toDouble() ?? -69.237544,
-        riderName: json['riderName'] ?? '',
-        riderPhone: json['riderPhone'] ?? '',
-        riderVehicle: json['riderVehicle'] ?? '',
-        riderPlate: json['riderPlate'] ?? '',
+        riderId: json['riderId'] ?? json['driver_id'] ?? json['driverId'] ?? '',
+        riderName: json['riderName'] ?? json['driver_name'] ?? json['driverName'] ?? '',
+        riderPhone: json['riderPhone'] ?? json['driver_phone'] ?? json['driverPhone'] ?? '',
+        riderVehicle: json['riderVehicle'] ?? json['driver_vehicle'] ?? '',
+        riderPlate: json['riderPlate'] ?? json['driver_plate'] ?? '',
         pin: json['pin'] ?? '1234',
         status: OrderDeliveryStatus.values.firstWhere(
           (s) => s.name == json['status'],

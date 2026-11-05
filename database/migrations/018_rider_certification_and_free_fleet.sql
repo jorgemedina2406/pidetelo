@@ -28,3 +28,4 @@ SET
   verification_score = 100,
   certified_at = COALESCE(certified_at, NOW())
 WHERE verification_status IS NULL OR verification_status = 'pending';
+

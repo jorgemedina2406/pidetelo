@@ -490,11 +490,22 @@ export class ApiService {
     );
   }
 
-  getDispatchPool(tenantId: string, branchId?: string, lat?: number, lng?: number): Observable<{ ownRiders: any[]; nearbyRiders: any[] }> {
+  getDispatchPool(
+    tenantId: string,
+    branchId?: string,
+    lat?: number,
+    lng?: number,
+    minRating?: number,
+    maxDistanceKm?: number,
+    minDeliveries?: number
+  ): Observable<{ ownRiders: any[]; nearbyRiders: any[] }> {
     const params: string[] = [`tenantId=${tenantId}`];
     if (branchId && branchId !== 'all') params.push(`branchId=${branchId}`);
     if (lat != null) params.push(`lat=${lat}`);
     if (lng != null) params.push(`lng=${lng}`);
+    if (minRating != null && minRating > 0) params.push(`minRating=${minRating}`);
+    if (maxDistanceKm != null && maxDistanceKm > 0) params.push(`maxDistanceKm=${maxDistanceKm}`);
+    if (minDeliveries != null && minDeliveries > 0) params.push(`minDeliveries=${minDeliveries}`);
     const queryStr = `?${params.join('&')}`;
     const url = `${this.baseUrl}/riders/dispatch-pool${queryStr}`;
 
@@ -502,6 +513,19 @@ export class ApiService {
       catchError(err => {
         console.warn('[ApiService] Error obteniendo pool de despacho:', err);
         return of({ ownRiders: [], nearbyRiders: [] });
+      })
+    );
+  }
+
+  rateRider(riderId: string, rating: number, orderId?: string, comment?: string): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/riders/${riderId}/rate`, {
+      rating,
+      orderId,
+      comment
+    }).pipe(
+      catchError(err => {
+        console.error('[ApiService] Error calificando repartidor:', err);
+        throw err;
       })
     );
   }

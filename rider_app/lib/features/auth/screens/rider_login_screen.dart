@@ -326,10 +326,13 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
       if (!ok) {
         if (!mounted) return;
         setState(() => _isLoading = false);
+        final errorMsg = widget.sessionService.lastErrorMessage ??
+            'No se pudo completar la certificación. Verifica que las fotos sean nítidas y que tu correo no esté duplicado.';
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No se pudo completar la certificación. Verifica que las fotos sean nítidas y que tu correo no esté duplicado.'),
+          SnackBar(
+            content: Text(errorMsg, style: const TextStyle(fontWeight: FontWeight.w600)),
             backgroundColor: Colors.redAccent,
+            duration: const Duration(seconds: 4),
           ),
         );
         return;
@@ -340,17 +343,28 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
           context: context,
           barrierDismissible: false,
           builder: (ctx) => AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+            backgroundColor: Colors.white,
+            surfaceTintColor: Colors.transparent,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
             title: Row(
-              children: const [
-                Icon(Icons.verified_rounded, color: Color(0xFF16A34A), size: 28),
-                SizedBox(width: 10),
-                Expanded(child: Text('¡Identidad Certificada!')),
+              children: [
+                const Icon(Icons.verified_rounded, color: Color(0xFF16A34A), size: 28),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    '¡Identidad Certificada!',
+                    style: GoogleFonts.outfit(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF0F172A),
+                    ),
+                  ),
+                ),
               ],
             ),
             content: Text(
               'Tus datos, cédula de identidad y selfie en vivo han sido verificados con éxito en Pídetelo.\n\nTu cuenta ha sido activada y ya puedes recibir órdenes de comercios y despachos independientes.',
-              style: GoogleFonts.outfit(fontSize: 14, height: 1.45, color: const Color(0xFF334155)),
+              style: GoogleFonts.outfit(fontSize: 14, height: 1.45, color: const Color(0xFF334155), fontWeight: FontWeight.w500),
             ),
             actions: [
               ElevatedButton(

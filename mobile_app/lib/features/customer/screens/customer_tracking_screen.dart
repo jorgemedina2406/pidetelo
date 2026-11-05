@@ -47,6 +47,37 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
   RealtimeChannel? _telemetryChannel;
   String? _subscribedOrderUuid;
 
+  // Calificación del motorizado
+  bool _hasRatedRider = false;
+  double _selectedRiderRating = 5.0;
+  bool _isSubmittingRating = false;
+  final TextEditingController _ratingCommentController = TextEditingController();
+
+  Future<void> _submitRiderRating() async {
+    final riderId = _order.riderId;
+    if (riderId == null || riderId.isEmpty) return;
+    setState(() => _isSubmittingRating = true);
+    final ok = await ApiService().rateRider(
+      riderId: riderId,
+      rating: _selectedRiderRating,
+      orderId: _order.id,
+      comment: _ratingCommentController.text.trim(),
+    );
+    if (!mounted) return;
+    setState(() {
+      _isSubmittingRating = false;
+      _hasRatedRider = ok;
+    });
+    if (ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('¡Gracias por calificar a tu repartidor de Pídetelo!'),
+          backgroundColor: Color(0xFF10B981),
+        ),
+      );
+    }
+  }
+
   double get _riderProgress {
     if (!_hasRider) return 0.0;
     switch (_order.status) {
@@ -351,6 +382,7 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
             _order = DeliveryOrder(
               id: _order.id,
               orderNumber: _order.orderNumber,
+              riderId: res['driver_id']?.toString() ?? _order.riderId,
               merchantName: dynamicMerchantName,
               merchantPhone: _order.merchantPhone,
               merchantAddress: dynamicMerchantAddress,
@@ -470,6 +502,7 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
 
   @override
   void dispose() {
+    _ratingCommentController.dispose();
     _smoothGlideTimer?.cancel();
     _pollTimer?.cancel();
     _realtimeChannel?.unsubscribe();
@@ -1034,6 +1067,117 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                     ),
 
                   const SizedBox(height: 12),
+
+                  // Calificación de Repartidor cuando el pedido fue entregado
+                  if (_order.status == OrderDeliveryStatus.delivered) ...[
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1E293B),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: _hasRatedRider
+                              ? const Color(0xFF10B981)
+                              : AppTheme.amberAccent.withOpacity(0.5),
+                        ),
+                      ),
+                      child: _hasRatedRider
+                          ? Row(
+                              children: [
+                                const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 24),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    '¡Has calificado a ${_order.riderName.isNotEmpty ? _order.riderName : "tu repartidor"} con ${_selectedRiderRating.toInt()} ⭐! Gracias por tu opinión.',
+                                    style: GoogleFonts.outfit(
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            )
+                          : Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(Icons.star_rounded, color: AppTheme.amberAccent, size: 22),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Califica el servicio de entrega',
+                                      style: GoogleFonts.outfit(
+                                        color: Colors.white,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  '¿Cómo fue tu experiencia con ${_order.riderName.isNotEmpty ? _order.riderName : "el repartidor"}?',
+                                  style: GoogleFonts.outfit(
+                                    color: const Color(0xFF94A3B8),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: List.generate(5, (index) {
+                                    final starValue = (index + 1).toDouble();
+                                    return IconButton(
+                                      onPressed: () {
+                                        setState(() => _selectedRiderRating = starValue);
+                                      },
+                                      icon: Icon(
+                                        starValue <= _selectedRiderRating
+                                            ? Icons.star_rounded
+                                            : Icons.star_outline_rounded,
+                                        color: AppTheme.amberAccent,
+                                        size: 32,
+                                      ),
+                                    );
+                                  }),
+                                ),
+                                const SizedBox(height: 10),
+                                SizedBox(
+                                  width: double.infinity,
+                                  height: 44,
+                                  child: ElevatedButton(
+                                    onPressed: _isSubmittingRating ? null : _submitRiderRating,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppTheme.amberAccent,
+                                      foregroundColor: const Color(0xFF0F172A),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                    child: _isSubmittingRating
+                                        ? const SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Color(0xFF0F172A),
+                                            ),
+                                          )
+                                        : Text(
+                                            'Enviar Valoración',
+                                            style: GoogleFonts.outfit(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                          ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
 
                   // Security PIN Card & Toggle Details Button
                   Row(

@@ -96,3 +96,4 @@ Pídetelo se reserva la facultad de suspender o revocar la certificación y acce
 - Retención indebida de productos o cobros no autorizados al cliente.
 - Calificaciones de servicio reiteradamente deficientes o denuncias de mala conducta.`
 };
+
