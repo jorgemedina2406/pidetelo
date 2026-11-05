@@ -42,7 +42,7 @@ import { Branch } from '../../../../core/models/branch.model';
                     </h4>
                     <p class="text-xs text-slate-500 line-clamp-1">{{ b.address }}</p>
                     @if (b.deliveryRadiusKm) {
-                      <p class="text-[11px] text-slate-400 mt-0.5">Cobertura hasta {{ b.deliveryRadiusKm }} km • Tarifa ${{ ((b.baseDeliveryFee || 2.5)).toFixed(2) }}</p>
+                      <p class="text-[11px] text-slate-400 mt-0.5">Cobertura hasta {{ b.deliveryRadiusKm }} km • Tarifa ${{ getDeliveryFee(b.baseDeliveryFee) }}</p>
                     }
                   </div>
                 </div>
@@ -66,4 +66,9 @@ export class BranchSelectModalComponent {
 
   @Output() close = new EventEmitter<void>();
   @Output() selectBranch = new EventEmitter<Branch>();
+
+  getDeliveryFee(fee?: number): string {
+    return (fee != null && fee > 0 ? fee : 2.5).toFixed(2);
+  }
 }
+

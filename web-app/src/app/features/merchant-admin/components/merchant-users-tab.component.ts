@@ -211,3 +211,4 @@ export class MerchantUsersTabComponent {
   @Output() deleteUser = new EventEmitter<any>();
   @Output() toggleStatus = new EventEmitter<any>();
 }
+

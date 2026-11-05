@@ -111,3 +111,4 @@ export class SuperAdminCategoriesComponent {
   @Output() toggleCategoryActive = new EventEmitter<any>();
   @Output() closeNotice = new EventEmitter<void>();
 }
+

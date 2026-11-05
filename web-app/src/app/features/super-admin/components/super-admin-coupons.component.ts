@@ -93,3 +93,4 @@ export class SuperAdminCouponsComponent {
   @Output() createCoupon = new EventEmitter<void>();
   @Output() deleteCoupon = new EventEmitter<any>();
 }
+

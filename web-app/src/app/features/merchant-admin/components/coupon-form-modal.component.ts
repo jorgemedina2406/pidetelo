@@ -85,3 +85,4 @@ export class MerchantCouponModalComponent {
   @Output() close = new EventEmitter<void>();
   @Output() save = new EventEmitter<any>();
 }
+

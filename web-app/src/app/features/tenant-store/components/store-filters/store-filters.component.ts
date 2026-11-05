@@ -116,3 +116,4 @@ export class StoreFiltersComponent {
   @Output() categoryChange = new EventEmitter<string | null>();
   @Output() specialFilterChange = new EventEmitter<'all' | 'offers' | 'featured'>();
 }
+

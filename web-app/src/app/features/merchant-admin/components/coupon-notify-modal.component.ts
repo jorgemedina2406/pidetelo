@@ -135,3 +135,4 @@ export class MerchantCouponNotifyModalComponent {
   @Output() messageChange = new EventEmitter<string>();
   @Output() send = new EventEmitter<void>();
 }
+

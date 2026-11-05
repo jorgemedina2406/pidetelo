@@ -138,3 +138,4 @@ export class NearbyRidersModalComponent {
   @Output() assignRider = new EventEmitter<string>();
   @Output() refresh = new EventEmitter<void>();
 }
+

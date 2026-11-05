@@ -190,3 +190,4 @@ export class StoreProductGridComponent {
     return { primary: `$${price.toFixed(2)}`, secondary: '' };
   }
 }
+

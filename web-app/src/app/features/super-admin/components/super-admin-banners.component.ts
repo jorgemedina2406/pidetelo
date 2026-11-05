@@ -131,3 +131,4 @@ export class SuperAdminBannersComponent {
   @Output() deleteBanner = new EventEmitter<any>();
   @Output() toggleBannerActive = new EventEmitter<any>();
 }
+

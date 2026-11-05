@@ -90,7 +90,7 @@ import { IconComponent } from '../../../shared/components/icon.component';
                   </td>
 
                   <td class="p-4 font-bold text-sm">
-                    \${{ ((m.deliverySettings?.baseDeliveryFee) || 0).toFixed(2) }}
+                    \${{ getBaseFee(m) }}
                   </td>
 
                   <td class="p-4">
@@ -149,4 +149,9 @@ export class SuperAdminMerchantsComponent {
       (m.category && m.category.toLowerCase().includes(q))
     );
   });
+
+  getBaseFee(m: Tenant): string {
+    return ((m.deliverySettings?.baseDeliveryFee) || 0).toFixed(2);
+  }
 }
+

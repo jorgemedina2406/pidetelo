@@ -71,7 +71,7 @@ import { IconComponent } from '../../../../shared/components/icon.component';
             <span>🛵</span> {{ store.deliverySettings.estimatedDeliveryMinMinutes }}-{{ store.deliverySettings.estimatedDeliveryMaxMinutes }} min
           </div>
           <div class="flex items-center gap-1">
-            <span>💵</span> Delivery: ${{ ((selectedBranch?.baseDeliveryFee ?? store.deliverySettings.baseDeliveryFee) || 0).toFixed(2) }}
+            <span>💵</span> Delivery: ${{ getDeliveryFee(store) }}
           </div>
           <div class="flex items-center gap-1.5 text-slate-700 dark:text-slate-300 font-medium">
             @if (store.branches && store.branches.length > 0) {
@@ -128,4 +128,10 @@ export class StoreHeaderComponent {
   @Input() activeBranchRate: number = 52.80;
 
   @Output() openBranchModal = new EventEmitter<void>();
+
+  getDeliveryFee(store: Tenant): string {
+    const fee = this.selectedBranch?.baseDeliveryFee ?? store.deliverySettings?.baseDeliveryFee ?? 0;
+    return fee.toFixed(2);
+  }
 }
+

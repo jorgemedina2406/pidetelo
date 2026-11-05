@@ -142,3 +142,4 @@ export class MerchantCouponsTabComponent {
   @Output() notifyCoupon = new EventEmitter<Coupon>();
   @Output() closeNotice = new EventEmitter<void>();
 }
+

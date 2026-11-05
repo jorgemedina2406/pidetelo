@@ -125,3 +125,4 @@ export class DispatchConfigModalComponent {
     onlyAvailable: true
   };
 }
+

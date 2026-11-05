@@ -146,3 +146,4 @@ export class SuperAdminBranchesComponent {
   @Output() reject = new EventEmitter<any>();
   @Output() closeNotice = new EventEmitter<void>();
 }
+

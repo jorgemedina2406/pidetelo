@@ -126,3 +126,4 @@ export class MerchantRidersTabComponent {
   @Output() deleteRider = new EventEmitter<Rider>();
   @Output() locateRider = new EventEmitter<Rider>();
 }
+
