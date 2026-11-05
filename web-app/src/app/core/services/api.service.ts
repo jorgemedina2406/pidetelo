@@ -988,23 +988,6 @@ export class ApiService {
       }
     } catch (_) {}
 
-    // 4. Super Admin HQ
-    const superAdminEmail = 'admin@pidetelo.app';
-    if (!usersMap.has(superAdminEmail)) {
-      usersMap.set(superAdminEmail, {
-        id: 'usr_superadmin',
-        name: 'Super Administrador Pídetelo',
-        email: superAdminEmail,
-        phone: '+58 412-0000000',
-        role: 'SUPER_ADMIN',
-        roleLabel: 'Super Administrador',
-        tenantName: 'Pídetelo HQ',
-        branchName: 'Global',
-        isActive: true,
-        createdAt: '2026-01-01T00:00:00.000Z'
-      });
-    }
-
     const all = Array.from(usersMap.values());
     all.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     return all;

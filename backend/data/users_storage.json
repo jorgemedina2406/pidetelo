@@ -1,7 +1,7 @@
 [
   {
     "id": "d1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c99",
-    "tenant_id": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
+    "tenant_id": "0cefc844-f2f2-4fd6-ac8f-aefcd83dd91d",
     "branch_id": null,
     "branch_name": "Todas las Sedes (Acceso Global)",
     "name": "Jorge Medina",
@@ -12,48 +12,6 @@
     "is_active": true,
     "created_at": "2026-10-22T23:09:17.489171+00:00",
     "updated_at": "2026-10-22T23:09:17.489171+00:00"
-  },
-  {
-    "id": "9a9bbc95-7889-436e-b732-4c306510de4e",
-    "tenant_id": "71e475be-8dfd-4fa6-8ee8-de5bb9c8e191",
-    "branch_id": null,
-    "branch_name": "Todas las Sedes (Acceso Global)",
-    "name": "Will Steak",
-    "email": "willsteak@pidetelo.com",
-    "phone": "+58412123456789",
-    "role": "MERCHANT_OWNER",
-    "avatar_url": null,
-    "is_active": true,
-    "created_at": "2026-10-23T01:25:05.066+00:00",
-    "updated_at": "2026-10-23T01:25:05.066+00:00"
-  },
-  {
-    "id": "d88ee745-4c62-4859-9840-70068fea04e2",
-    "tenant_id": "20cb9df3-8291-442b-98ab-f83cad5e9562",
-    "branch_id": null,
-    "branch_name": "Todas las Sedes (Acceso Global)",
-    "name": "McDonalds",
-    "email": "mcdonalds@comercio.com",
-    "phone": "+584129990000",
-    "role": "MERCHANT_OWNER",
-    "avatar_url": null,
-    "is_active": true,
-    "created_at": "2026-10-23T16:30:27.806+00:00",
-    "updated_at": "2026-10-23T16:30:27.806+00:00"
-  },
-  {
-    "id": "01f5708b-8208-4557-8fd1-80d24ef4d48a",
-    "tenant_id": "dac59429-fd6f-4d3e-8b2e-ab0e23828c1f",
-    "branch_id": "abd2ec95-d97c-449a-9c41-fb2489ce5173",
-    "branch_name": "Sede Trinitarias",
-    "name": "Carlos Mendoza",
-    "email": "burgerking2@comercio.com",
-    "phone": "165165161321",
-    "role": "MERCHANT_MANAGER",
-    "avatar_url": "https://images.unsplash.com/photo-1500000000017?w=150&auto=format&fit=crop&q=80",
-    "is_active": true,
-    "created_at": "2026-10-26T13:29:43.326129+00:00",
-    "updated_at": "2026-10-26T13:29:43.326129+00:00"
   },
   {
     "id": "da6d1a1d-39c5-48db-b5f3-c14bd1002b98",

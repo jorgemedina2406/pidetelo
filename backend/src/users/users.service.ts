@@ -62,7 +62,6 @@ export class UsersService {
   }
 
   async findAll(tenantId?: string, branchId?: string) {
-    // 1. Intentar consultar Supabase
     try {
       const client = this.supabase.getClient();
       let query = client
@@ -78,40 +77,27 @@ export class UsersService {
       }
 
       const { data, error } = await query;
-      if (!error && data && data.length > 0) {
-        // Enriquecer y sincronizar en memoria
-        for (const item of data) {
-          const userObj = {
-            id: item.id,
-            tenant_id: item.tenant_id,
-            branch_id: item.branch_id,
-            branch_name: item.branches?.name || (item.branch_id ? 'Sucursal' : 'Todas las Sedes (Acceso Global)'),
-            name: item.name,
-            email: item.email,
-            phone: item.phone,
-            role: item.role,
-            avatar_url: item.avatar_url,
-            is_active: item.is_active,
-            created_at: item.created_at,
-            updated_at: item.updated_at
-          };
-          this.localUsers.set(userObj.id, userObj);
-        }
-        this.saveToDisk();
+      if (!error && data) {
+        return data.map(item => ({
+          id: item.id,
+          tenant_id: item.tenant_id,
+          branch_id: item.branch_id,
+          branch_name: item.branches?.name || (item.branch_id ? 'Sucursal' : 'Todas las Sedes (Acceso Global)'),
+          name: item.name,
+          email: item.email,
+          phone: item.phone,
+          role: item.role,
+          avatar_url: item.avatar_url,
+          is_active: item.is_active,
+          created_at: item.created_at,
+          updated_at: item.updated_at
+        }));
       }
     } catch (e) {
-      // Fallback a memoria local
+      console.warn('[UsersService] Error consultando store_collaborators de Supabase:', e);
     }
 
-    // 2. Retornar desde almacenamiento
-    let list = Array.from(this.localUsers.values());
-    if (tenantId) {
-      list = list.filter(u => u.tenant_id === tenantId);
-    }
-    if (branchId && branchId !== 'all') {
-      list = list.filter(u => u.branch_id === branchId);
-    }
-    return list;
+    return [];
   }
 
   async findById(id: string) {
@@ -274,45 +260,6 @@ export class UsersService {
         });
       }
     } catch (_) {}
-
-    // 5. Fallback colaboradores locales si existen
-    const local = Array.from(this.localUsers.values());
-    local.forEach(u => {
-      const email = (u.email || '').toLowerCase().trim();
-      const emailKey = email || u.id;
-      if (!usersMap.has(emailKey)) {
-        const role = normalizeRole(u.role || 'MERCHANT_OWNER');
-        usersMap.set(emailKey, {
-          id: u.id,
-          name: u.name,
-          email: u.email,
-          phone: u.phone || 'N/A',
-          role,
-          roleLabel: getRoleLabel(role),
-          tenantName: u.tenant_name || 'Comercio',
-          branchName: u.branch_name || 'Sede Principal',
-          isActive: u.is_active ?? true,
-          createdAt: u.created_at || new Date().toISOString()
-        });
-      }
-    });
-
-    // 6. Super Administrador Principal Pídetelo
-    const superAdminEmail = 'admin@pidetelo.app';
-    if (!usersMap.has(superAdminEmail)) {
-      usersMap.set(superAdminEmail, {
-        id: 'usr_superadmin',
-        name: 'Super Administrador Pídetelo',
-        email: superAdminEmail,
-        phone: '+58 412-0000000',
-        role: 'SUPER_ADMIN',
-        roleLabel: 'Super Administrador',
-        tenantName: 'Pídetelo HQ',
-        branchName: 'Global',
-        isActive: true,
-        createdAt: '2026-01-01T00:00:00.000Z'
-      });
-    }
 
     const allUsers = Array.from(usersMap.values());
     allUsers.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
