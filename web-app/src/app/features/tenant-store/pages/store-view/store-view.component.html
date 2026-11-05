@@ -19,7 +19,7 @@
       [specialFilter]="specialFilter()"
       [viewMode]="viewMode()"
       [searchQuery]="searchQuery()"
-      [accentColor]="cart.selectedBranch()?.accentColor || store.branding.accentColor || '#ea580c'"
+      [accentColor]="cart.selectedBranch()?.accentColor || store.branding?.accentColor || '#ea580c'"
       (searchQueryChange)="searchQuery.set($event)"
       (viewModeChange)="viewMode.set($event)"
       (categoryChange)="selectedCategory.set($event)"
@@ -31,7 +31,7 @@
       [products]="filteredProducts()"
       [isLoading]="isLoading()"
       [viewMode]="viewMode()"
-      [accentColor]="cart.selectedBranch()?.accentColor || store.branding.accentColor || '#ea580c'"
+      [accentColor]="cart.selectedBranch()?.accentColor || store.branding?.accentColor || '#ea580c'"
       [formatPriceFn]="formatPriceBound"
       (openProduct)="openProductDetail($event)">
     </app-store-product-grid>
@@ -44,7 +44,7 @@
         <div (click)="cart.openCart()" class="cursor-pointer">
           <div class="flex items-center gap-2">
             <span class="w-6 h-6 rounded-full text-white text-xs font-bold flex items-center justify-center shadow-xs"
-                  [style.backgroundColor]="cart.selectedBranch()?.accentColor || store.branding.accentColor || '#ea580c'">
+                  [style.backgroundColor]="cart.selectedBranch()?.accentColor || store.branding?.accentColor || '#ea580c'">
               {{ cart.totalItemsCount() }}
             </span>
             <span class="text-xs font-bold text-slate-900 dark:text-white">Ver Tu Pedido</span>
@@ -55,18 +55,18 @@
         </div>
 
         <button (click)="cart.openCart()"
-                [style.backgroundColor]="cart.selectedBranch()?.accentColor || store.branding.accentColor || '#ea580c'"
+                [style.backgroundColor]="cart.selectedBranch()?.accentColor || store.branding?.accentColor || '#ea580c'"
                 class="text-white font-bold text-xs px-5 py-3 rounded-xl shadow-md transition-all active:scale-95 cursor-pointer hover:opacity-90">
-          Ir al Carrito →
+          Ir al Carrito &rarr;
         </button>
       </div>
     </div>
   }
 
   <!-- Modals -->
-  @if (activeModalProduct()) {
+  @if (activeModalProduct(); as activeProd) {
     <app-product-detail-modal
-      [product]="activeModalProduct()!"
+      [product]="activeProd"
       (close)="activeModalProduct.set(null)"
       (add)="onProductAdd($event)">
     </app-product-detail-modal>

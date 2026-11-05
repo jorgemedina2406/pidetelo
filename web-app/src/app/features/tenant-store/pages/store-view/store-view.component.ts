@@ -45,6 +45,7 @@ export class StoreViewComponent implements OnInit {
   readonly theme = inject(ThemeService);
 
   readonly tenant = signal<Tenant | null>(null);
+  get store(): Tenant | null { return this.tenant(); }
   readonly categories = signal<ProductCategory[]>([]);
   readonly products = signal<Product[]>([]);
   readonly isLoading = signal<boolean>(true);
