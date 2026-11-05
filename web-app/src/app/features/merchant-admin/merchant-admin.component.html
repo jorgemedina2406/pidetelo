@@ -207,6 +207,45 @@
           }
         </div>
 
+        <!-- Repartidores / Flota de la Sede -->
+        <div class="relative group">
+          <button (click)="activeTab.set('riders')" [class.bg-brand-500]="activeTab() === 'riders'"
+            [class.text-white]="activeTab() === 'riders'" [class.shadow-md]="activeTab() === 'riders'"
+            [class.shadow-brand-500/25]="activeTab() === 'riders'" [class.text-slate-600]="activeTab() !== 'riders'"
+            [class.dark:text-slate-400]="activeTab() !== 'riders'"
+            [class.hover:bg-slate-100]="activeTab() !== 'riders'"
+            [class.dark:hover:bg-slate-850]="activeTab() !== 'riders'" [class.justify-center]="!isSidebarExpanded()"
+            [class.w-12]="!isSidebarExpanded()" [class.h-12]="!isSidebarExpanded()"
+            [class.mx-auto]="!isSidebarExpanded()" [class.w-full]="isSidebarExpanded()"
+            [class.px-3]="isSidebarExpanded()" [class.py-2.5]="isSidebarExpanded()"
+            class="flex items-center gap-3 rounded-xl font-bold text-xs transition-all duration-150 active:scale-95 cursor-pointer">
+            <span class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
+              [class.bg-white/20]="activeTab() === 'riders'" [class.text-white]="activeTab() === 'riders'"
+              [class.bg-slate-100]="activeTab() !== 'riders'" [class.dark:bg-slate-800]="activeTab() !== 'riders'"
+              [class.text-slate-500]="activeTab() !== 'riders'"
+              [class.dark:text-slate-400]="activeTab() !== 'riders'">
+              <app-icon name="bike" [size]="17"></app-icon>
+            </span>
+            @if (isSidebarExpanded()) {
+            <span class="truncate flex-1 text-left font-semibold">
+              {{ i18n.t('ma.riders') }}
+            </span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-black"
+              [class.bg-white/30]="activeTab() === 'riders'" [class.bg-slate-200]="activeTab() !== 'riders'"
+              [class.dark:bg-slate-800]="activeTab() !== 'riders'">
+              {{ ownRiders().length }}
+            </span>
+            }
+          </button>
+
+          @if (!isSidebarExpanded()) {
+          <div
+            class="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 flex items-center gap-2">
+            <span>{{ i18n.t('ma.riders') }}</span>
+            <span class="text-slate-400 text-[10px]">{{ ownRiders().length }}</span>
+          </div>
+          }
+        </div>
 
         <!-- Radar GPS en Vivo -->
         <div class="relative group">
@@ -1678,6 +1717,18 @@
                 }
 
                 <div class="flex items-center gap-1.5 flex-wrap">
+                  <button (click)="selectBranch(branch.id); activeTab.set('riders')"
+                    class="text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-brand-500 dark:hover:text-brand-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
+                    title="Ver motorizados asignados a esta sucursal">
+                    <app-icon name="bike" [size]="12"></app-icon>
+                    <span>Motorizados</span>
+                  </button>
+                  <button (click)="selectBranch(branch.id); openNewRiderModal()"
+                    class="text-xs font-bold text-brand-600 dark:text-brand-400 hover:bg-brand-500 hover:text-white bg-brand-50 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-900/50 px-2.5 py-1 rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
+                    title="Registrar nuevo motorizado en esta sede">
+                    <app-icon name="plus" [size]="12"></app-icon>
+                    <span>+ Rider</span>
+                  </button>
                   <button (click)="openEditBranchModal(branch)" class="text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-brand-500 dark:hover:text-brand-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-lg flex items-center gap-1 cursor-pointer transition-colors">
                     <app-icon name="edit" [size]="12"></app-icon>
                     <span>Editar Sede</span>
@@ -3225,6 +3276,7 @@
   <app-rider-form-modal
     [isOpen]="isRiderModalOpen()"
     [activeBranch]="activeBranch()"
+    [branches]="branches()"
     (close)="isRiderModalOpen.set(false)"
     (save)="onSaveRiderFromModal($event)">
   </app-rider-form-modal>

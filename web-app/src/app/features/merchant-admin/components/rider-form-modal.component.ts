@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, inject } from '@angular/core';
+import { Component, Input, Output, EventEmitter, inject, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Branch } from '../../../core/models/branch.model';
@@ -26,15 +26,15 @@ import { I18nService } from '../../../core/services/i18n.service';
 
         <form (submit)="onSubmit($event)" class="space-y-3.5 text-xs">
           <div>
-            <label class="block font-semibold mb-1">Nombre Completo</label>
-            <input type="text" [(ngModel)]="form.name" name="riderName" required placeholder="Ej: Marcos Pérez"
-              class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-3 focus:outline-none focus:border-brand-500" />
+            <label class="block font-semibold mb-1">Nombre Completo del Motorizado</label>
+            <input type="text" [(ngModel)]="form.name" name="riderName" required placeholder="Ej: Carlos Rodríguez"
+              class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-3 focus:outline-none focus:border-brand-500 font-medium" />
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label class="block font-semibold mb-1">Correo / Usuario de Acceso</label>
-              <input type="email" [(ngModel)]="form.email" name="riderEmail" required placeholder="repartidor@deliveryhub.io"
+              <input type="email" [(ngModel)]="form.email" name="riderEmail" required placeholder="repartidor@pidetelo.com"
                 class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-3 focus:outline-none focus:border-brand-500 font-medium" />
             </div>
             <div>
@@ -64,9 +64,9 @@ import { I18nService } from '../../../core/services/i18n.service';
                 class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-3 font-mono uppercase focus:outline-none focus:border-brand-500" />
             </div>
             <div>
-              <label class="block font-semibold mb-1">Tipo</label>
+              <label class="block font-semibold mb-1">Tipo de Vehículo</label>
               <select [(ngModel)]="form.vehicleType" name="vehicleType"
-                class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-3 focus:outline-none focus:border-brand-500">
+                class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-3 focus:outline-none focus:border-brand-500 font-medium">
                 <option value="moto">Moto</option>
                 <option value="bicicleta">Bicicleta</option>
                 <option value="auto">Auto</option>
@@ -76,20 +76,29 @@ import { I18nService } from '../../../core/services/i18n.service';
 
           <div>
             <label class="block font-semibold mb-1">Sucursal / Sede Asignada</label>
-            <div class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-3 font-bold flex items-center justify-between text-slate-700 dark:text-slate-300">
-              <span class="flex items-center gap-2">
-                <app-icon name="map-pin" [size]="14" className="text-brand-500"></app-icon>
-                <span>{{ activeBranch?.name || 'Sede Principal' }}</span>
-              </span>
-              <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-brand-500/10 text-brand-600 dark:text-brand-400">
-                Exclusivo de esta sede
-              </span>
-            </div>
+            @if (branches && branches.length > 1) {
+              <select [(ngModel)]="selectedBranchId" name="selectedBranch"
+                class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-3 focus:outline-none focus:border-brand-500 font-medium">
+                @for (b of branches; track b.id) {
+                  <option [value]="b.id">{{ b.name }} {{ b.isMain ? '(Sede Principal)' : '' }}</option>
+                }
+              </select>
+            } @else {
+              <div class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-3 font-bold flex items-center justify-between text-slate-700 dark:text-slate-300">
+                <span class="flex items-center gap-2">
+                  <app-icon name="map-pin" [size]="14" className="text-brand-500"></app-icon>
+                  <span>{{ activeBranch?.name || 'Sede Principal' }}</span>
+                </span>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-brand-500/10 text-brand-600 dark:text-brand-400">
+                  Exclusivo de esta sede
+                </span>
+              </div>
+            }
           </div>
 
           <div class="pt-3 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-3">
             <button type="button" (click)="close.emit()"
-              class="px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">
+              class="px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer font-semibold">
               {{ i18n.t('common.cancel') }}
             </button>
             <button type="submit"
@@ -103,14 +112,17 @@ import { I18nService } from '../../../core/services/i18n.service';
     }
   `
 })
-export class RiderFormModalComponent {
+export class RiderFormModalComponent implements OnChanges {
   @Input() isOpen = false;
   @Input() activeBranch: Branch | null = null;
+  @Input() branches: Branch[] = [];
 
   @Output() close = new EventEmitter<void>();
   @Output() save = new EventEmitter<any>();
 
   readonly i18n = inject(I18nService);
+
+  selectedBranchId = '';
 
   form = {
     name: '',
@@ -122,8 +134,17 @@ export class RiderFormModalComponent {
     vehicleType: 'moto' as 'moto' | 'bicicleta' | 'auto'
   };
 
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['activeBranch'] && this.activeBranch) {
+      this.selectedBranchId = this.activeBranch.id;
+    } else if (changes['branches'] && this.branches.length > 0 && !this.selectedBranchId) {
+      this.selectedBranchId = this.activeBranch?.id || this.branches[0].id;
+    }
+  }
+
   onSubmit(e: Event): void {
     e.preventDefault();
+    const effectiveBranchId = this.selectedBranchId || this.activeBranch?.id;
     this.save.emit({
       name: this.form.name.trim(),
       email: this.form.email.trim(),
@@ -135,8 +156,8 @@ export class RiderFormModalComponent {
       vehiclePlate: this.form.vehiclePlate.trim().toUpperCase(),
       vehicle_type: this.form.vehicleType,
       vehicleType: this.form.vehicleType,
-      branch_id: this.activeBranch?.id,
-      branchId: this.activeBranch?.id
+      branch_id: effectiveBranchId,
+      branchId: effectiveBranchId
     });
     this.form = {
       name: '',
