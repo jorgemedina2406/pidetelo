@@ -1,0 +1,192 @@
+import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { Product } from '../../../../core/models/product.model';
+
+@Component({
+  selector: 'app-store-product-grid',
+  standalone: true,
+  imports: [CommonModule],
+  template: `
+    <!-- SKELETON LOADERS DURING PRODUCT LOAD -->
+    @if (isLoading) {
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-pulse">
+        @for (i of [1,2,3,4,5,6]; track i) {
+          <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 space-y-3">
+            <div class="h-40 bg-slate-200 dark:bg-slate-800 rounded-xl"></div>
+            <div class="h-4 bg-slate-200 dark:bg-slate-800 rounded w-3/4"></div>
+            <div class="h-3 bg-slate-200 dark:bg-slate-800 rounded w-1/2"></div>
+            <div class="h-8 bg-slate-100 dark:bg-slate-850 rounded-xl"></div>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Products Content -->
+    @if (!isLoading) {
+      @if (products.length === 0) {
+        <div class="p-12 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-400">
+          <span class="text-4xl">🔍</span>
+          <p class="font-bold text-slate-700 dark:text-slate-200 mt-2">No se encontraron productos</p>
+          <p class="text-xs text-slate-400 mt-1">Prueba con otra palabra clave o selecciona otra categoría.</p>
+        </div>
+      } @else {
+
+        <!-- VISTA EN CUADRÍCULA (GRID VIEW) -->
+        @if (viewMode === 'grid') {
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            @for (prod of products; track prod.id) {
+              <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 shadow-xs hover:shadow-md transition-all flex flex-col justify-between overflow-hidden group"
+                   [class.opacity-75]="!prod.isAvailable">
+                <div class="relative h-44 w-full bg-slate-100 dark:bg-slate-800 overflow-hidden cursor-pointer"
+                     (click)="prod.isAvailable && openProduct.emit(prod)">
+                  <img [src]="prod.imageUrl" [alt]="prod.name"
+                       class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                       [class.grayscale]="!prod.isAvailable" />
+
+                  @if (!prod.isAvailable) {
+                    <div class="absolute inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-2">
+                      <span class="px-3 py-1 rounded-full bg-red-600/90 text-white font-extrabold text-[11px] uppercase tracking-wider shadow-md text-center">
+                        Agotado
+                      </span>
+                    </div>
+                  }
+
+                  <!-- BADGES DE OFERTA Y DESTACADOS -->
+                  <div class="absolute top-2.5 left-2.5 flex flex-wrap gap-1">
+                    @if (prod.isOnSale && prod.isAvailable) {
+                      <span class="px-2 py-0.5 rounded-full bg-rose-600 text-white font-black text-[10px] shadow-sm uppercase tracking-wider">
+                        🔥 {{ prod.discountPercentage ? prod.discountPercentage + '% OFF' : 'OFERTA' }}
+                      </span>
+                    }
+                    @if ((prod.isPopular || prod.isFeatured) && prod.isAvailable) {
+                      <span class="px-2 py-0.5 rounded-full bg-amber-500 text-white font-black text-[10px] shadow-sm uppercase tracking-wider">
+                        ⭐ DESTACADO
+                      </span>
+                    }
+                  </div>
+                </div>
+
+                <div class="p-4 flex-1 flex flex-col justify-between">
+                  <div>
+                    <h3 class="font-bold text-slate-900 dark:text-white text-sm hover:opacity-80 cursor-pointer transition-colors"
+                        (click)="prod.isAvailable && openProduct.emit(prod)">
+                      {{ prod.name }}
+                    </h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2 leading-relaxed">
+                      {{ prod.description }}
+                    </p>
+                  </div>
+
+                  <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                    <div>
+                      @let priceInfo = getPrice(prod.price, prod.currency || 'USD');
+                      <div class="text-base font-extrabold text-brand-600 dark:text-brand-400">
+                        {{ priceInfo.primary }}
+                      </div>
+                      @if (priceInfo.secondary) {
+                        <span class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block">
+                          ≈ {{ priceInfo.secondary }}
+                        </span>
+                      }
+                      @if (prod.compareAtPrice) {
+                        <span class="text-[11px] text-slate-400 line-through block">
+                          {{ getPrice(prod.compareAtPrice, prod.currency || 'USD').primary }}
+                        </span>
+                      }
+                    </div>
+
+                    <button (click)="prod.isAvailable && openProduct.emit(prod)"
+                            [disabled]="!prod.isAvailable"
+                            [style.backgroundColor]="accentColor"
+                            class="px-3.5 py-1.5 rounded-xl active:scale-95 text-white font-bold text-xs shadow-xs transition-all disabled:opacity-40 cursor-pointer hover:opacity-90">
+                      Agregar
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+            }
+          </div>
+        }
+
+        <!-- VISTA EN LISTADO (LIST VIEW) -->
+        @if (viewMode === 'list') {
+          <div class="space-y-3">
+            @for (prod of products; track prod.id) {
+              <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3.5 shadow-xs hover:border-slate-300 dark:hover:border-slate-700 transition-all flex items-center justify-between gap-3.5 group cursor-pointer"
+                   [class.opacity-75]="!prod.isAvailable"
+                   (click)="prod.isAvailable && openProduct.emit(prod)">
+                
+                <div class="flex items-center gap-3.5 min-w-0 flex-1">
+                  <!-- Thumbnail -->
+                  <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 flex-shrink-0 relative border border-slate-200 dark:border-slate-800">
+                    <img [src]="prod.imageUrl" [alt]="prod.name" class="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                    @if (prod.isOnSale && prod.isAvailable) {
+                      <div class="absolute top-1 left-1 px-1.5 py-0.2 rounded bg-rose-600 text-white font-black text-[9px] uppercase">
+                        {{ prod.discountPercentage ? prod.discountPercentage + '%' : 'OFERTA' }}
+                      </div>
+                    }
+                  </div>
+
+                  <div class="space-y-1 min-w-0 flex-1">
+                    <div class="flex items-center gap-2">
+                      <h4 class="font-bold text-sm text-slate-900 dark:text-white truncate group-hover:text-brand-500 transition-colors">
+                        {{ prod.name }}
+                      </h4>
+                      @if (prod.isPopular || prod.isFeatured) {
+                        <span class="px-1.5 py-0.2 bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-[9px] font-black uppercase rounded">
+                          ★ Destacado
+                        </span>
+                      }
+                    </div>
+
+                    <p class="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
+                      {{ prod.description }}
+                    </p>
+
+                    <div class="flex items-center gap-2 pt-0.5">
+                      @let priceInfo = getPrice(prod.price, prod.currency || 'USD');
+                      <span class="text-sm font-extrabold text-brand-600 dark:text-brand-400">{{ priceInfo.primary }}</span>
+                      @if (prod.compareAtPrice) {
+                        <span class="text-xs text-slate-400 line-through">
+                          {{ getPrice(prod.compareAtPrice, prod.currency || 'USD').primary }}
+                        </span>
+                      }
+                      @if (priceInfo.secondary) {
+                        <span class="text-[10px] text-slate-400 font-medium">≈ {{ priceInfo.secondary }}</span>
+                      }
+                    </div>
+                  </div>
+                </div>
+
+                <button (click)="$event.stopPropagation(); prod.isAvailable && openProduct.emit(prod)"
+                        [disabled]="!prod.isAvailable"
+                        [style.backgroundColor]="accentColor"
+                        class="px-3.5 py-2 rounded-xl active:scale-95 text-white font-bold text-xs shadow-xs transition-all disabled:opacity-40 flex-shrink-0 cursor-pointer hover:opacity-90">
+                  + Agregar
+                </button>
+              </div>
+            }
+          </div>
+        }
+
+      }
+    }
+  `
+})
+export class StoreProductGridComponent {
+  @Input() products: Product[] = [];
+  @Input() isLoading = false;
+  @Input() viewMode: 'grid' | 'list' = 'grid';
+  @Input() accentColor = '#ea580c';
+  @Input() formatPriceFn?: (price: number, curr?: 'USD' | 'VES') => { primary: string; secondary: string };
+
+  @Output() openProduct = new EventEmitter<Product>();
+
+  getPrice(price: number, curr: 'USD' | 'VES' = 'USD') {
+    if (this.formatPriceFn) {
+      return this.formatPriceFn(price, curr);
+    }
+    return { primary: `$${price.toFixed(2)}`, secondary: '' };
+  }
+}

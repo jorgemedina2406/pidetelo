@@ -1,0 +1,152 @@
+import { Component, Input, Output, EventEmitter, inject, signal, computed } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
+import { Tenant } from '../../../core/models/tenant.model';
+import { I18nService } from '../../../core/services/i18n.service';
+import { IconComponent } from '../../../shared/components/icon.component';
+
+@Component({
+  selector: 'app-super-admin-merchants',
+  standalone: true,
+  imports: [CommonModule, FormsModule, RouterModule, IconComponent],
+  template: `
+    <div class="space-y-6">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h2 class="text-2xl font-extrabold tracking-tight">{{ i18n.t('sa.merchants') }}</h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">{{ i18n.t('sa.merchantsDesc') }}</p>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+              <app-icon name="search" [size]="14"></app-icon>
+            </span>
+            <input type="text" 
+                   [ngModel]="searchMerchant()" 
+                   (ngModelChange)="searchMerchant.set($event)"
+                   [placeholder]="i18n.t('sa.searchPlaceholder')"
+                   class="text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl pl-9 pr-3 py-2.5 focus:outline-none focus:border-brand-500 w-64 shadow-sm" />
+          </div>
+
+          <button (click)="createMerchant.emit()"
+                  class="bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm flex items-center gap-2 transition-all active:scale-95 cursor-pointer">
+            <app-icon name="plus" [size]="16" className="text-white"></app-icon>
+            <span>{{ i18n.t('sa.newMerchant') }}</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Table Card in Adaptive Glass -->
+      <div class="card-adaptive rounded-2xl overflow-hidden shadow-sm">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-50 dark:bg-slate-900/90 text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800 uppercase font-bold text-[10px] tracking-wider">
+              <tr>
+                <th class="p-4">{{ i18n.t('sa.colMerchant') }}</th>
+                <th class="p-4">{{ i18n.t('sa.colCategory') }}</th>
+                <th class="p-4">{{ i18n.t('sa.colWhatsApp') }}</th>
+                <th class="p-4">{{ i18n.t('sa.colCommission') }}</th>
+                <th class="p-4">{{ i18n.t('sa.colDeliveryFee') }}</th>
+                <th class="p-4">{{ i18n.t('sa.colStatus') }}</th>
+                <th class="p-4 text-right">{{ i18n.t('sa.colManage') }}</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+              @for (m of filteredMerchants(); track m.id) {
+                <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors group">
+                  <td class="p-4">
+                    <div class="flex items-center gap-3">
+                      <img [src]="m.logoUrl" [alt]="m.name" 
+                           class="w-10 h-10 rounded-xl object-cover border border-slate-200 dark:border-slate-800 bg-white shadow-sm flex-shrink-0" />
+                      <div>
+                        <div class="font-bold text-sm group-hover:text-brand-500 transition-colors">{{ m.name }}</div>
+                        <div class="text-[11px] text-slate-400 font-mono">/t/{{ m.slug }}</div>
+                      </div>
+                    </div>
+                  </td>
+
+                  <td class="p-4">
+                    <span class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold text-[11px]">
+                      {{ m.category }}
+                    </span>
+                  </td>
+
+                  <td class="p-4">
+                    <div class="font-mono text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1.5">
+                      <app-icon name="phone" [size]="13"></app-icon>
+                      <span>{{ m.contact?.whatsappNumber }}</span>
+                    </div>
+                    <a [routerLink]="['/t', m.slug]" target="_blank" class="text-brand-500 hover:underline text-[11px] font-semibold flex items-center gap-1 mt-0.5">
+                      <span>WhatsApp</span>
+                      <app-icon name="external-link" [size]="11"></app-icon>
+                    </a>
+                  </td>
+
+                  <td class="p-4">
+                    <div class="font-bold text-sm">5.0%</div>
+                    <span class="text-[10px] text-slate-400">Marketplace</span>
+                  </td>
+
+                  <td class="p-4 font-bold text-sm">
+                    \${{ ((m.deliverySettings?.baseDeliveryFee) || 0).toFixed(2) }}
+                  </td>
+
+                  <td class="p-4">
+                    <button (click)="toggleActive.emit(m.id)"
+                            [class.bg-emerald-50]="m.isActive"
+                            [class.text-emerald-700]="m.isActive"
+                            [class.border-emerald-200]="m.isActive"
+                            [class.dark:bg-emerald-950/40]="m.isActive"
+                            [class.dark:text-emerald-400]="m.isActive"
+                            [class.dark:border-emerald-800]="m.isActive"
+                            [class.bg-slate-100]="!m.isActive"
+                            [class.text-slate-500]="!m.isActive"
+                            [class.border-slate-200]="!m.isActive"
+                            class="px-2.5 py-1 rounded-full text-[11px] font-bold border transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer">
+                      <span class="w-1.5 h-1.5 rounded-full" [class.bg-emerald-500]="m.isActive" [class.bg-slate-400]="!m.isActive"></span>
+                      {{ m.isActive ? i18n.t('common.active') : 'Pausado' }}
+                    </button>
+                  </td>
+
+                  <td class="p-4 text-right">
+                    <button type="button"
+                            (click)="editMerchant.emit(m)"
+                            class="px-3 py-1.5 bg-slate-100 hover:bg-brand-500 text-slate-700 dark:text-slate-300 hover:text-white dark:bg-slate-800 rounded-lg text-xs font-bold transition-all border border-slate-200 dark:border-slate-700 hover:border-brand-500 inline-flex items-center gap-1.5 cursor-pointer">
+                      <app-icon name="clipboard-list" [size]="12"></app-icon>
+                      <span>Actualizar Datos</span>
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `
+})
+export class SuperAdminMerchantsComponent {
+  readonly i18n = inject(I18nService);
+
+  @Input() set merchants(value: Tenant[]) {
+    this._merchants.set(value || []);
+  }
+  @Output() createMerchant = new EventEmitter<void>();
+  @Output() editMerchant = new EventEmitter<Tenant>();
+  @Output() toggleActive = new EventEmitter<string>();
+
+  private readonly _merchants = signal<Tenant[]>([]);
+  readonly searchMerchant = signal('');
+
+  readonly filteredMerchants = computed(() => {
+    const q = this.searchMerchant().toLowerCase().trim();
+    if (!q) return this._merchants();
+    return this._merchants().filter(m =>
+      m.name.toLowerCase().includes(q) ||
+      m.slug.toLowerCase().includes(q) ||
+      (m.category && m.category.toLowerCase().includes(q))
+    );
+  });
+}

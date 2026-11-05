@@ -14,6 +14,14 @@ import { Banner } from '../../core/models/banner.model';
 import { BusinessCategory } from '../../core/models/category.model';
 import { Coupon } from '../../core/models/coupon.model';
 import { IconComponent } from '../../shared/components/icon.component';
+import { SuperAdminUsersComponent } from './components/super-admin-users.component';
+import { SuperAdminMerchantsComponent } from './components/super-admin-merchants.component';
+import { SuperAdminBranchesComponent } from './components/super-admin-branches.component';
+import { SuperAdminRolesComponent } from './components/super-admin-roles.component';
+import { SuperAdminMetricsComponent } from './components/super-admin-metrics.component';
+import { SuperAdminBannersComponent } from './components/super-admin-banners.component';
+import { SuperAdminCategoriesComponent } from './components/super-admin-categories.component';
+import { SuperAdminCouponsComponent } from './components/super-admin-coupons.component';
 
 export interface ToastNotification {
   id: string;
@@ -25,7 +33,20 @@ export interface ToastNotification {
 @Component({
   selector: 'app-super-admin',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, IconComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterModule,
+    IconComponent,
+    SuperAdminUsersComponent,
+    SuperAdminMerchantsComponent,
+    SuperAdminBranchesComponent,
+    SuperAdminRolesComponent,
+    SuperAdminMetricsComponent,
+    SuperAdminBannersComponent,
+    SuperAdminCategoriesComponent,
+    SuperAdminCouponsComponent
+  ],
   templateUrl: './super-admin.component.html'
 })
 export class SuperAdminComponent implements OnInit {
@@ -467,6 +488,12 @@ export class SuperAdminComponent implements OnInit {
     { id: 'accept_deliveries', label: 'Aceptar y Entregar Pedidos (Motorizado)' },
     { id: 'view_reports', label: 'Ver Reportes y Finanzas' }
   ];
+
+  readonly isRolePermittedBound = (role: UserRole, permission: Permission) => this.isRolePermitted(role, permission);
+
+  onTogglePermission(ev: { role: UserRole; permission: Permission }): void {
+    this.togglePermission(ev.role, ev.permission);
+  }
 
   isRolePermitted(role: UserRole, permission: Permission): boolean {
     const list = this.auth.rolePermissions()[role] || [];

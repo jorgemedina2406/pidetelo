@@ -1,363 +1,40 @@
 @if (tenant(); as store) {
 <div class="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 pb-28 transition-colors">
 
-  <!-- Top App Bar / Marketplace Teaser Header -->
-  <header
-    class="bg-slate-900 text-white text-xs px-4 py-2.5 flex items-center justify-between sticky top-0 z-30 shadow-md">
-    <div class="flex items-center gap-2">
-      <span class="w-2 h-2 rounded-full" [class.bg-emerald-400]="isStoreOpen().isOpen" [class.bg-red-500]="!isStoreOpen().isOpen" [class.animate-pulse]="isStoreOpen().isOpen"></span>
-      <span class="font-medium text-slate-300">Tienda Oficial WhatsApp Express</span>
-    </div>
-
-    <div class="flex items-center gap-3">
-      <!-- Dark/Light Theme Switcher -->
-      <button (click)="theme.toggleTheme()"
-              [title]="theme.isDark() ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'"
-              class="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-all cursor-pointer">
-        <app-icon [name]="theme.isDark() ? 'sun' : 'moon'" [size]="14" [className]="theme.isDark() ? 'text-amber-400' : 'text-slate-300'"></app-icon>
-      </button>
-
-      <a routerLink="/explorar"
-        class="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 px-3 py-1 rounded-full text-slate-200 transition-colors">
-        <span>🗺️ Ver más comercios</span>
-      </a>
-      <a routerLink="/admin"
-        class="hidden sm:flex items-center gap-1 text-slate-400 hover:text-white transition-colors">
-        <span>Panel Comercio</span>
-      </a>
-    </div>
-  </header>
-
-  <!-- Store Hero Banner -->
-  <div class="relative h-48 sm:h-64 w-full bg-slate-900 overflow-hidden">
-    <img [src]="cart.selectedBranch()?.bannerUrl || store.bannerUrl" [alt]="cart.selectedBranch()?.name || store.name" class="w-full h-full object-cover opacity-70" />
-    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-900/40 to-transparent"></div>
-
-    <div class="absolute bottom-4 left-4 right-4 max-w-5xl mx-auto flex items-end gap-4">
-      <img [src]="cart.selectedBranch()?.logoUrl || store.logoUrl" [alt]="cart.selectedBranch()?.name || store.name"
-        class="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl border-4 border-white dark:border-slate-800 object-cover shadow-xl flex-shrink-0 bg-white" />
-      <div class="text-white pb-1 min-w-0">
-        <div class="flex items-center gap-2 flex-wrap">
-          <h1 class="text-xl sm:text-2xl font-extrabold truncate">{{ cart.selectedBranch()?.name || store.name }}</h1>
-          <span class="px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider shadow-sm"
-                [class.bg-emerald-500]="isStoreOpen().isOpen"
-                [class.bg-red-600]="!isStoreOpen().isOpen">
-            {{ isStoreOpen().isOpen ? 'Abierto ahora' : 'Cerrado' }}
-          </span>
-        </div>
-        <p class="text-xs sm:text-sm text-slate-200 mt-0.5 line-clamp-1">{{ cart.selectedBranch()?.tagline || store.tagline }}</p>
-      </div>
-    </div>
-  </div>
+  <!-- Store Header (App bar, Hero, Info Card, Horario alert) -->
+  <app-store-header
+    [tenant]="store"
+    [selectedBranch]="cart.selectedBranch()"
+    [isStoreOpen]="isStoreOpen()"
+    [activeBranchRate]="activeBranchRate()"
+    (openBranchModal)="isBranchModalOpen.set(true)">
+  </app-store-header>
 
   <!-- Store Meta & Quick Stats Container -->
   <main class="max-w-5xl mx-auto px-4 mt-3 space-y-4">
-    <!-- Store Info Card -->
-    <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-4">
-      <div class="flex items-center gap-4 text-xs text-slate-600 dark:text-slate-300 flex-wrap">
-        <div class="flex items-center gap-1 font-bold text-amber-500">
-          <span>⭐</span> {{ store.rating }} <span class="text-slate-400 font-normal">({{ store.reviewCount }})</span>
-        </div>
-        <div class="flex items-center gap-1">
-          <span>🛵</span> {{ store.deliverySettings.estimatedDeliveryMinMinutes }}-{{ store.deliverySettings.estimatedDeliveryMaxMinutes }} min
-        </div>
-        <div class="flex items-center gap-1">
-          <span>💵</span> Delivery: ${{ (cart.selectedBranch()?.baseDeliveryFee ?? store.deliverySettings.baseDeliveryFee).toFixed(2) }}
-        </div>
-        <div class="flex items-center gap-1.5 text-slate-700 dark:text-slate-300 font-medium">
-          @if (store.branches && store.branches.length > 0) {
-            <button (click)="isBranchModalOpen.set(true)"
-                    class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-brand-50 hover:bg-brand-100 dark:bg-slate-800 text-brand-700 dark:text-brand-400 border border-brand-200 dark:border-slate-700 text-xs font-bold transition-all cursor-pointer">
-              <span>📍 Sede:</span>
-              <span class="underline decoration-dotted">{{ cart.selectedBranch()?.name || store.contact.address }}</span>
-              <span class="text-[10px]">▼</span>
-            </button>
-          } @else {
-            <span>📍 {{ cart.selectedBranch()?.name || store.contact.address }}</span>
-          }
-        </div>
-      </div>
+    <!-- Store Filters & Search Bar -->
+    <app-store-filters
+      [categories]="categories()"
+      [selectedCategory]="selectedCategory()"
+      [specialFilter]="specialFilter()"
+      [viewMode]="viewMode()"
+      [searchQuery]="searchQuery()"
+      [accentColor]="cart.selectedBranch()?.accentColor || store.branding.accentColor || '#ea580c'"
+      (searchQueryChange)="searchQuery.set($event)"
+      (viewModeChange)="viewMode.set($event)"
+      (categoryChange)="selectedCategory.set($event)"
+      (specialFilterChange)="specialFilter.set($event)">
+    </app-store-filters>
 
-      <div class="flex items-center gap-2 flex-wrap">
-        <div class="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-300 font-bold text-[11px] shadow-sm">
-          <span>🪙</span>
-          <span>Tasa: <strong>1 USD = {{ activeBranchRate() }} Bs.</strong></span>
-        </div>
-
-        <a [href]="'https://wa.me/' + (cart.selectedBranch()?.whatsapp || cart.selectedBranch()?.phone || store.contact.whatsappNumber).replace('+', '')" target="_blank"
-          class="text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 px-3 py-1.5 rounded-xl border border-emerald-200 dark:border-emerald-800 flex items-center gap-1.5 transition-colors cursor-pointer">
-          <app-icon name="message-circle" [size]="14"></app-icon>
-          <span>WhatsApp</span>
-        </a>
-      </div>
-    </div>
-
-    <!-- 9. AVISO PREVENTIVO DE HORARIO SI ESTÁ CERRADO -->
-    @if (!isStoreOpen().isOpen) {
-      <div class="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-400 text-xs font-semibold flex items-center gap-2.5 shadow-xs">
-        <span class="text-base">🔴</span>
-        <div>
-          <span class="font-extrabold">Comercio fuera de horario:</span>
-          <span> Actualmente cerrado. Horario de atención: {{ isStoreOpen().openStr }} a {{ isStoreOpen().closeStr }}. Puedes armar tu pedido y será procesado al reanudar actividades.</span>
-        </div>
-      </div>
-    }
-
-    <!-- Sticky Filter, Categories & View Switcher Bar -->
-    <div class="sticky top-11 z-20 bg-slate-50/95 dark:bg-slate-950/95 backdrop-blur-md pt-3 pb-2 space-y-2.5">
-      <!-- Search bar & View mode switcher row -->
-      <div class="flex items-center gap-2">
-        <div class="relative flex-1">
-          <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 text-sm">
-            <app-icon name="search" [size]="15"></app-icon>
-          </span>
-          <input type="text" [(ngModel)]="searchQuery" placeholder="Buscar producto (ej: hamburguesa, pizza, extra...)"
-            class="w-full text-xs sm:text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white rounded-xl border border-slate-200 dark:border-slate-800 pl-9 p-2.5 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 shadow-sm" />
-        </div>
-
-        <!-- 7. PRODUCT VIEW SWITCHER (GRID vs LIST) -->
-        <div class="flex items-center gap-0.5 bg-slate-200/80 dark:bg-slate-850 p-0.5 rounded-xl border border-slate-300/80 dark:border-slate-800 flex-shrink-0">
-          <button (click)="viewMode.set('grid')"
-                  [class.bg-white]="viewMode() === 'grid'"
-                  [class.dark:bg-slate-800]="viewMode() === 'grid'"
-                  [class.shadow-xs]="viewMode() === 'grid'"
-                  [class.text-brand-500]="viewMode() === 'grid'"
-                  [class.text-slate-500]="viewMode() !== 'grid'"
-                  class="p-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
-                  title="Vista en tarjetas">
-            <app-icon name="grid" [size]="14"></app-icon>
-            <span class="hidden sm:inline text-[11px]">Tarjetas</span>
-          </button>
-
-          <button (click)="viewMode.set('list')"
-                  [class.bg-white]="viewMode() === 'list'"
-                  [class.dark:bg-slate-800]="viewMode() === 'list'"
-                  [class.shadow-xs]="viewMode() === 'list'"
-                  [class.text-brand-500]="viewMode() === 'list'"
-                  [class.text-slate-500]="viewMode() !== 'list'"
-                  class="p-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
-                  title="Vista en lista">
-            <app-icon name="list" [size]="14"></app-icon>
-            <span class="hidden sm:inline text-[11px]">Lista</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Category & Quick Filter Pills -->
-      <div class="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-        <button (click)="selectCategoryFilter(null)"
-          [style.backgroundColor]="selectedCategory() === null && specialFilter() === 'all' ? (store.branding.accentColor || '#ea580c') : ''"
-          [class.text-white]="selectedCategory() === null && specialFilter() === 'all'"
-          [class.bg-white]="selectedCategory() !== null || specialFilter() !== 'all'"
-          [class.dark:bg-slate-900]="selectedCategory() !== null || specialFilter() !== 'all'"
-          [class.text-slate-700]="selectedCategory() !== null || specialFilter() !== 'all'"
-          [class.dark:text-slate-300]="selectedCategory() !== null || specialFilter() !== 'all'"
-          class="px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap shadow-xs border border-slate-200 dark:border-slate-800 transition-all flex-shrink-0 cursor-pointer">
-          Todo el Menú
-        </button>
-
-        <!-- Ofertas Pill -->
-        <button (click)="setSpecialFilter('offers')"
-          [class.bg-rose-600]="specialFilter() === 'offers'"
-          [class.text-white]="specialFilter() === 'offers'"
-          [class.bg-white]="specialFilter() !== 'offers'"
-          [class.dark:bg-slate-900]="specialFilter() !== 'offers'"
-          [class.text-rose-600]="specialFilter() !== 'offers'"
-          class="px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap shadow-xs border border-rose-300 dark:border-rose-800 transition-all flex-shrink-0 flex items-center gap-1 cursor-pointer">
-          <span>🔥</span> Ofertas Flash
-        </button>
-
-        <!-- Destacados Pill -->
-        <button (click)="setSpecialFilter('featured')"
-          [class.bg-amber-500]="specialFilter() === 'featured'"
-          [class.text-white]="specialFilter() === 'featured'"
-          [class.bg-white]="specialFilter() !== 'featured'"
-          [class.dark:bg-slate-900]="specialFilter() !== 'featured'"
-          [class.text-amber-600]="specialFilter() !== 'featured'"
-          class="px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap shadow-xs border border-amber-300 dark:border-amber-800 transition-all flex-shrink-0 flex items-center gap-1 cursor-pointer">
-          <span>⭐</span> Destacados
-        </button>
-
-        @for (cat of categories(); track cat.id) {
-          <button (click)="selectCategoryFilter(cat.id)"
-            [style.backgroundColor]="selectedCategory() === cat.id ? (store.branding.accentColor || '#ea580c') : ''"
-            [class.text-white]="selectedCategory() === cat.id"
-            [class.bg-white]="selectedCategory() !== cat.id"
-            [class.dark:bg-slate-900]="selectedCategory() !== cat.id"
-            [class.text-slate-700]="selectedCategory() !== cat.id"
-            [class.dark:text-slate-300]="selectedCategory() !== cat.id"
-            class="px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap shadow-xs border border-slate-200 dark:border-slate-800 transition-all flex-shrink-0 cursor-pointer">
-            {{ cat.name }}
-          </button>
-        }
-      </div>
-    </div>
-
-    <!-- 6. SKELETON LOADERS DURING PRODUCT LOAD -->
-    @if (isLoading()) {
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-pulse">
-        @for (i of [1,2,3,4,5,6]; track i) {
-          <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 space-y-3">
-            <div class="h-40 bg-slate-200 dark:bg-slate-800 rounded-xl"></div>
-            <div class="h-4 bg-slate-200 dark:bg-slate-800 rounded w-3/4"></div>
-            <div class="h-3 bg-slate-200 dark:bg-slate-800 rounded w-1/2"></div>
-            <div class="h-8 bg-slate-100 dark:bg-slate-850 rounded-xl"></div>
-          </div>
-        }
-      </div>
-    }
-
-    <!-- Products Content -->
-    @if (!isLoading()) {
-      @if (filteredProducts().length === 0) {
-        <div class="p-12 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-400">
-          <span class="text-4xl">🔍</span>
-          <p class="font-bold text-slate-700 dark:text-slate-200 mt-2">No se encontraron productos</p>
-          <p class="text-xs text-slate-400 mt-1">Prueba con otra palabra clave o selecciona otra categoría.</p>
-        </div>
-      } @else {
-
-        <!-- 7A. VISTA EN CUADRÍCULA (GRID VIEW) -->
-        @if (viewMode() === 'grid') {
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            @for (prod of filteredProducts(); track prod.id) {
-              <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 shadow-xs hover:shadow-md transition-all flex flex-col justify-between overflow-hidden group"
-                   [class.opacity-75]="!prod.isAvailable">
-                <div class="relative h-44 w-full bg-slate-100 dark:bg-slate-800 overflow-hidden cursor-pointer"
-                     (click)="prod.isAvailable && openProductDetail(prod)">
-                  <img [src]="prod.imageUrl" [alt]="prod.name"
-                       class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                       [class.grayscale]="!prod.isAvailable" />
-
-                  @if (!prod.isAvailable) {
-                    <div class="absolute inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-2">
-                      <span class="px-3 py-1 rounded-full bg-red-600/90 text-white font-extrabold text-[11px] uppercase tracking-wider shadow-md text-center">
-                        Agotado
-                      </span>
-                    </div>
-                  }
-
-                  <!-- 5. BADGES DE OFERTA Y DESTACADOS -->
-                  <div class="absolute top-2.5 left-2.5 flex flex-wrap gap-1">
-                    @if (prod.isOnSale && prod.isAvailable) {
-                      <span class="px-2 py-0.5 rounded-full bg-rose-600 text-white font-black text-[10px] shadow-sm uppercase tracking-wider">
-                        🔥 {{ prod.discountPercentage ? prod.discountPercentage + '% OFF' : 'OFERTA' }}
-                      </span>
-                    }
-                    @if ((prod.isPopular || prod.isFeatured) && prod.isAvailable) {
-                      <span class="px-2 py-0.5 rounded-full bg-amber-500 text-white font-black text-[10px] shadow-sm uppercase tracking-wider">
-                        ⭐ DESTACADO
-                      </span>
-                    }
-                  </div>
-                </div>
-
-                <div class="p-4 flex-1 flex flex-col justify-between">
-                  <div>
-                    <h3 class="font-bold text-slate-900 dark:text-white text-sm hover:opacity-80 cursor-pointer transition-colors"
-                        (click)="prod.isAvailable && openProductDetail(prod)">
-                      {{ prod.name }}
-                    </h3>
-                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2 leading-relaxed">
-                      {{ prod.description }}
-                    </p>
-                  </div>
-
-                  <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                    <div>
-                      @let priceInfo = formatPrice(prod.price, prod.currency || 'USD');
-                      <div class="text-base font-extrabold text-brand-600 dark:text-brand-400">
-                        {{ priceInfo.primary }}
-                      </div>
-                      @if (priceInfo.secondary) {
-                        <span class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block">
-                          ≈ {{ priceInfo.secondary }}
-                        </span>
-                      }
-                      @if (prod.compareAtPrice) {
-                        <span class="text-[11px] text-slate-400 line-through block">
-                          {{ formatPrice(prod.compareAtPrice, prod.currency || 'USD').primary }}
-                        </span>
-                      }
-                    </div>
-
-                    <button (click)="prod.isAvailable && openProductDetail(prod)"
-                            [disabled]="!prod.isAvailable"
-                            [style.backgroundColor]="cart.selectedBranch()?.accentColor || store.branding.accentColor || '#ea580c'"
-                            class="px-3.5 py-1.5 rounded-xl active:scale-95 text-white font-bold text-xs shadow-xs transition-all disabled:opacity-40 cursor-pointer hover:opacity-90">
-                      Agregar
-                    </button>
-                  </div>
-                </div>
-
-              </div>
-            }
-          </div>
-        }
-
-        <!-- 7B. VISTA EN LISTADO (LIST VIEW) -->
-        @if (viewMode() === 'list') {
-          <div class="space-y-3">
-            @for (prod of filteredProducts(); track prod.id) {
-              <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3.5 shadow-xs hover:border-slate-300 dark:hover:border-slate-700 transition-all flex items-center justify-between gap-3.5 group cursor-pointer"
-                   [class.opacity-75]="!prod.isAvailable"
-                   (click)="prod.isAvailable && openProductDetail(prod)">
-                
-                <div class="flex items-center gap-3.5 min-w-0 flex-1">
-                  <!-- Thumbnail -->
-                  <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 flex-shrink-0 relative border border-slate-200 dark:border-slate-800">
-                    <img [src]="prod.imageUrl" [alt]="prod.name" class="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                    @if (prod.isOnSale && prod.isAvailable) {
-                      <div class="absolute top-1 left-1 px-1.5 py-0.2 rounded bg-rose-600 text-white font-black text-[9px] uppercase">
-                        {{ prod.discountPercentage ? prod.discountPercentage + '%' : 'OFERTA' }}
-                      </div>
-                    }
-                  </div>
-
-                  <div class="space-y-1 min-w-0 flex-1">
-                    <div class="flex items-center gap-2">
-                      <h4 class="font-bold text-sm text-slate-900 dark:text-white truncate group-hover:text-brand-500 transition-colors">
-                        {{ prod.name }}
-                      </h4>
-                      @if (prod.isPopular || prod.isFeatured) {
-                        <span class="px-1.5 py-0.2 bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-[9px] font-black uppercase rounded">
-                          ★ Destacado
-                        </span>
-                      }
-                    </div>
-
-                    <p class="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
-                      {{ prod.description }}
-                    </p>
-
-                    <div class="flex items-center gap-2 pt-0.5">
-                      @let priceInfo = formatPrice(prod.price, prod.currency || 'USD');
-                      <span class="text-sm font-extrabold text-brand-600 dark:text-brand-400">{{ priceInfo.primary }}</span>
-                      @if (prod.compareAtPrice) {
-                        <span class="text-xs text-slate-400 line-through">
-                          {{ formatPrice(prod.compareAtPrice, prod.currency || 'USD').primary }}
-                        </span>
-                      }
-                      @if (priceInfo.secondary) {
-                        <span class="text-[10px] text-slate-400 font-medium">≈ {{ priceInfo.secondary }}</span>
-                      }
-                    </div>
-                  </div>
-                </div>
-
-                <button (click)="$event.stopPropagation(); prod.isAvailable && openProductDetail(prod)"
-                        [disabled]="!prod.isAvailable"
-                        [style.backgroundColor]="cart.selectedBranch()?.accentColor || store.branding.accentColor || '#ea580c'"
-                        class="px-3.5 py-2 rounded-xl active:scale-95 text-white font-bold text-xs shadow-xs transition-all disabled:opacity-40 flex-shrink-0 cursor-pointer hover:opacity-90">
-                  + Agregar
-                </button>
-              </div>
-            }
-          </div>
-        }
-
-      }
-    }
+    <!-- Store Products (Skeleton, Empty State, Grid, List) -->
+    <app-store-product-grid
+      [products]="filteredProducts()"
+      [isLoading]="isLoading()"
+      [viewMode]="viewMode()"
+      [accentColor]="cart.selectedBranch()?.accentColor || store.branding.accentColor || '#ea580c'"
+      [formatPriceFn]="formatPriceBound"
+      (openProduct)="openProductDetail($event)">
+    </app-store-product-grid>
   </main>
 
   <!-- Sticky Bottom Cart Bar -->
@@ -400,56 +77,13 @@
   <app-order-success-modal></app-order-success-modal>
 
   <!-- Branch Selector Modal -->
-  @if (isBranchModalOpen()) {
-    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
-         (click)="isBranchModalOpen.set(false)">
-      <div class="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4"
-           (click)="$event.stopPropagation()">
-        <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-          <div>
-            <h3 class="font-extrabold text-base text-slate-900 dark:text-white">Seleccionar Sucursal</h3>
-            <p class="text-xs text-slate-500">Elige la sede desde donde deseas pedir</p>
-          </div>
-          <button (click)="isBranchModalOpen.set(false)" class="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 transition-colors">
-            ✕
-          </button>
-        </div>
-
-        <div class="space-y-2.5 max-h-80 overflow-y-auto pr-1">
-          @for (b of store.branches; track b.id) {
-            <div (click)="selectBranch(b)"
-                 [class.border-brand-500]="cart.selectedBranch()?.id === b.id"
-                 [class.bg-brand-50/50]="cart.selectedBranch()?.id === b.id"
-                 [class.dark:bg-brand-950/20]="cart.selectedBranch()?.id === b.id"
-                 class="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-brand-500/50 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all cursor-pointer flex items-center justify-between gap-3">
-              <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-brand-500/10 text-brand-500 flex items-center justify-center text-lg font-bold flex-shrink-0">
-                  📍
-                </div>
-                <div>
-                  <h4 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                    {{ b.name }}
-                    @if (b.isMain) {
-                      <span class="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">Principal</span>
-                    }
-                  </h4>
-                  <p class="text-xs text-slate-500 line-clamp-1">{{ b.address }}</p>
-                  @if (b.deliveryRadiusKm) {
-                    <p class="text-[11px] text-slate-400 mt-0.5">Cobertura hasta {{ b.deliveryRadiusKm }} km • Tarifa ${{ (b.baseDeliveryFee || 2.5).toFixed(2) }}</p>
-                  }
-                </div>
-              </div>
-              @if (cart.selectedBranch()?.id === b.id) {
-                <div class="w-6 h-6 rounded-full bg-brand-500 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
-                  ✓
-                </div>
-              }
-            </div>
-          }
-        </div>
-      </div>
-    </div>
-  }
+  <app-branch-select-modal
+    [isOpen]="isBranchModalOpen()"
+    [branches]="store.branches || []"
+    [selectedBranchId]="cart.selectedBranch()?.id"
+    (close)="isBranchModalOpen.set(false)"
+    (selectBranch)="selectBranch($event)">
+  </app-branch-select-modal>
 
 </div>
 }

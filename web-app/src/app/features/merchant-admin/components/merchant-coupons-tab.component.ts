@@ -1,0 +1,144 @@
+import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { Coupon } from '../../../core/models/coupon.model';
+
+@Component({
+  selector: 'app-merchant-coupons-tab',
+  standalone: true,
+  imports: [CommonModule],
+  template: `
+    <div class="space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-2xl">🎟️</span>
+            <h2 class="text-xl font-black text-slate-900 dark:text-white">Cupones de Oferta y Descuento</h2>
+          </div>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            Crea códigos promocionales exclusivos para tus clientes. Se aplicarán automáticamente al momento de pagar.
+          </p>
+        </div>
+        <button (click)="newCoupon.emit()"
+                class="inline-flex items-center gap-2 px-4 py-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-brand-500/25 transition cursor-pointer">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
+          </svg>
+          <span>+ Nuevo Cupón</span>
+        </button>
+      </div>
+
+      @if (couponActionNotice) {
+        <div class="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-semibold text-emerald-700 dark:text-emerald-300 flex items-center justify-between">
+          <span>{{ couponActionNotice }}</span>
+          <button (click)="closeNotice.emit()" class="text-emerald-500 hover:text-emerald-700 cursor-pointer">✕</button>
+        </div>
+      }
+
+      @if (coupons.length === 0) {
+        <div class="text-center py-16 bg-white dark:bg-slate-800 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+          <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-brand-50 dark:bg-brand-950/40 flex items-center justify-center text-3xl">
+            🏷️
+          </div>
+          <h3 class="text-base font-bold text-slate-800 dark:text-slate-200 mb-1">No tienes cupones creados</h3>
+          <p class="text-xs text-slate-400 dark:text-slate-500 max-w-sm mx-auto mb-6">
+            Impulsa tus ventas ofreciendo descuentos por porcentaje o monto fijo en tus órdenes.
+          </p>
+          <button (click)="newCoupon.emit()"
+                  class="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-bold shadow-md transition cursor-pointer">
+            <span>Crear mi primer cupón</span>
+          </button>
+        </div>
+      } @else {
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          @for (c of coupons; track c.id) {
+            <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm hover:shadow-md transition relative flex flex-col justify-between"
+                 [class.opacity-60]="!c.isActive">
+              <div>
+                <div class="flex items-start justify-between gap-3 mb-3">
+                  <div class="flex items-center gap-2">
+                    <span class="px-3 py-1 font-mono font-black text-sm tracking-wider rounded-lg border-2 border-dashed bg-brand-50 dark:bg-brand-950/50 border-brand-400 text-brand-600 dark:text-brand-400">
+                      {{ c.code }}
+                    </span>
+                    @if (c.isActive) {
+                      <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">
+                        Activo
+                      </span>
+                    } @else {
+                      <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400">
+                        Pausado
+                      </span>
+                    }
+                  </div>
+                  <div class="flex items-center gap-1">
+                    <button (click)="editCoupon.emit(c)"
+                            class="p-1.5 text-slate-400 hover:text-brand-600 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition cursor-pointer">
+                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                    </button>
+                    <button (click)="deleteCoupon.emit(c)"
+                            class="p-1.5 text-slate-400 hover:text-red-500 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition cursor-pointer">
+                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    </button>
+                  </div>
+                </div>
+                <div class="mb-3">
+                  <div class="text-2xl font-black text-slate-900 dark:text-white">
+                    @if (c.discountType === 'percentage') {
+                      <span>{{ c.discountValue }}% OFF</span>
+                    } @else {
+                      <span>\${{ c.discountValue | number:'1.2-2' }} OFF</span>
+                    }
+                  </div>
+                  @if (c.description) {
+                    <p class="text-xs text-slate-600 dark:text-slate-300 mt-1 line-clamp-2">{{ c.description }}</p>
+                  }
+                </div>
+                <div class="space-y-1 text-[11px] text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-700/60 pt-3">
+                  <div class="flex justify-between">
+                    <span>Compra mínima:</span>
+                    <span class="font-bold text-slate-700 dark:text-slate-300">{{ (c.minOrderAmount && c.minOrderAmount > 0) ? ('$' + c.minOrderAmount) : 'Sin mínimo' }}</span>
+                  </div>
+                  @if (c.maxDiscountAmount || c.maxDiscount) {
+                    <div class="flex justify-between">
+                      <span>Tope máx. desc:</span>
+                      <span class="font-bold text-slate-700 dark:text-slate-300">\${{ c.maxDiscountAmount || c.maxDiscount }}</span>
+                    </div>
+                  }
+                  <div class="flex justify-between">
+                    <span>Límite de uso:</span>
+                    <span class="font-bold text-slate-700 dark:text-slate-300">{{ c.usageLimit ? (c.usageLimit + ' usos') : 'Ilimitado' }}</span>
+                  </div>
+                </div>
+              </div>
+              <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/60 space-y-2">
+                <div class="flex items-center justify-between">
+                  <span class="text-[11px] text-slate-400">Estado</span>
+                  <button (click)="toggleActive.emit(c)" class="text-xs font-bold px-3 py-1 rounded-lg border transition cursor-pointer" [class.border-emerald-500]="c.isActive" [class.text-emerald-600]="c.isActive" [class.bg-emerald-50]="c.isActive" [class.dark:bg-emerald-950/40]="c.isActive" [class.border-slate-300]="!c.isActive" [class.text-slate-500]="!c.isActive">
+                    {{ c.isActive ? 'Desactivar' : 'Activar' }}
+                  </button>
+                </div>
+
+                <!-- Botón Enviar Notificación a Clientes -->
+                <button (click)="notifyCoupon.emit(c)"
+                        class="w-full py-2 px-3 rounded-xl bg-brand-500/10 hover:bg-brand-500 text-brand-600 dark:text-brand-400 hover:text-white border border-brand-500/20 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer">
+                  <span>📢</span>
+                  <span>Notificar a Clientes</span>
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  `
+})
+export class MerchantCouponsTabComponent {
+  @Input() coupons: Coupon[] = [];
+  @Input() couponActionNotice: string | null = null;
+
+  @Output() newCoupon = new EventEmitter<void>();
+  @Output() editCoupon = new EventEmitter<Coupon>();
+  @Output() deleteCoupon = new EventEmitter<Coupon>();
+  @Output() toggleActive = new EventEmitter<Coupon>();
+  @Output() notifyCoupon = new EventEmitter<Coupon>();
+  @Output() closeNotice = new EventEmitter<void>();
+}

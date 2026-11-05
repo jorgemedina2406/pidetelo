@@ -1,0 +1,140 @@
+import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { Order } from '../../../core/models/order.model';
+import { Rider } from '../../../core/models/rider.model';
+import { IconComponent } from '../../../shared/components/icon.component';
+
+@Component({
+  selector: 'app-nearby-riders-modal',
+  standalone: true,
+  imports: [CommonModule, IconComponent],
+  template: `
+    @if (isOpen) {
+      <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+        <div class="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full p-5 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4">
+          
+          <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+            <div class="flex items-center gap-2.5">
+              <div class="w-9 h-9 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center">
+                <app-icon name="bike" [size]="20"></app-icon>
+              </div>
+              <div>
+                <h3 class="font-extrabold text-base text-slate-900 dark:text-white">Radar de Despacho Pídetelo</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">
+                  Asigna un repartidor de tu sede o de la red libre más cercana
+                </p>
+              </div>
+            </div>
+            <button (click)="close.emit()"
+                    class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg cursor-pointer">
+              ✕
+            </button>
+          </div>
+
+          @if (order) {
+            <div class="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-200 dark:border-slate-700/60 flex items-center justify-between">
+              <div>
+                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Pedido a Despachar</span>
+                <p class="text-xs font-bold text-slate-900 dark:text-white">#{{ order.orderNumber || order.id.slice(0, 8) }} • {{ order.customerName }}</p>
+                <p class="text-[11px] text-slate-500 truncate max-w-[280px]">{{ order.deliveryAddress }}</p>
+              </div>
+              <span class="font-black text-sm text-brand-600 dark:text-brand-400">\${{ order.total.toFixed(2) }}</span>
+            </div>
+          }
+
+          <!-- LIST OF OWN RIDERS & NEARBY RIDERS -->
+          <div class="space-y-2 max-h-[360px] overflow-y-auto pr-1">
+            @if (ownRiders.length > 0) {
+              <div class="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 px-1 pt-1">
+                <span>🛵 Flota Propia de la Sede</span>
+                <span class="bg-slate-200 dark:bg-slate-800 text-[10px] font-bold px-1.5 py-0.5 rounded-full">{{ ownRiders.length }}</span>
+              </div>
+              @for (r of ownRiders; track r.id) {
+                <div class="p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-brand-500 dark:hover:border-brand-500 bg-white dark:bg-slate-800/80 transition-all flex items-center justify-between">
+                  <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 flex items-center justify-center font-bold text-xs">
+                      {{ (r.name || 'R').charAt(0).toUpperCase() }}
+                    </div>
+                    <div>
+                      <div class="flex items-center gap-1.5">
+                        <span class="font-bold text-xs text-slate-900 dark:text-white">{{ r.name }}</span>
+                        <span class="text-[9px] font-extrabold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded">{{ r.vehiclePlate }}</span>
+                      </div>
+                      <span class="text-[10px] text-slate-500 dark:text-slate-400">Repartidor Asignado • {{ r.phone || 'Sin tlf' }}</span>
+                    </div>
+                  </div>
+                  <button (click)="assignRider.emit(r.id)"
+                          class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 text-white text-[11px] font-bold cursor-pointer transition-all">
+                    Asignar
+                  </button>
+                </div>
+              }
+            }
+
+            <div class="text-[11px] font-extrabold uppercase tracking-wider text-brand-600 dark:text-brand-400 flex items-center gap-1.5 px-1 pt-2">
+              <span>🌐 Flota Libre / Motorizados Cercanos Pídetelo</span>
+              <span class="bg-brand-100 dark:bg-brand-950/60 text-brand-700 dark:text-brand-300 text-[10px] font-bold px-1.5 py-0.5 rounded-full">{{ nearbyRiders.length }}</span>
+            </div>
+
+            @for (r of nearbyRiders; track r.id) {
+              <div class="p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-brand-500 dark:hover:border-brand-500 bg-white dark:bg-slate-800/80 transition-all flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 flex items-center justify-center font-bold text-xs">
+                    🛵
+                  </div>
+                  <div>
+                    <div class="flex items-center gap-1.5">
+                      <span class="font-bold text-xs text-slate-900 dark:text-white">{{ r.name }}</span>
+                      <span class="text-[9px] font-extrabold bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-300 px-1.5 py-0.5 rounded">{{ r.vehiclePlate }}</span>
+                      @if (r.isCertified) {
+                        <span class="text-[8px] bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 px-1 py-0.5 rounded font-extrabold">✓ Certificado</span>
+                      }
+                    </div>
+                    <div class="flex items-center gap-2 text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                      <span class="font-bold text-brand-600 dark:text-brand-400">
+                        📍 {{ r.distanceKm != null ? (r.distanceKm.toFixed(1) + ' km de distancia') : 'En la zona' }}
+                      </span>
+                      <span>•</span>
+                      <span>⭐ {{ r.rating ?? '5.0' }}</span>
+                    </div>
+                  </div>
+                </div>
+                <button (click)="assignRider.emit(r.id)"
+                        class="px-3 py-1.5 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-[11px] font-bold cursor-pointer shadow-xs transition-all">
+                  Asignar
+                </button>
+              </div>
+            }
+
+            @if (ownRiders.length === 0 && nearbyRiders.length === 0) {
+              <div class="py-8 text-center text-xs text-slate-400">
+                <p>No se encontraron motorizados activos disponibles en este momento.</p>
+                <button (click)="refresh.emit()" class="mt-2 text-brand-600 font-bold hover:underline cursor-pointer">
+                  ↻ Reintentar radar
+                </button>
+              </div>
+            }
+          </div>
+
+          <div class="pt-3 border-t border-slate-200 dark:border-slate-800 flex justify-end">
+            <button (click)="close.emit()"
+                    class="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">
+              Cerrar
+            </button>
+          </div>
+
+        </div>
+      </div>
+    }
+  `
+})
+export class NearbyRidersModalComponent {
+  @Input() isOpen = false;
+  @Input() order: Order | null = null;
+  @Input() ownRiders: Rider[] = [];
+  @Input() nearbyRiders: Rider[] = [];
+
+  @Output() close = new EventEmitter<void>();
+  @Output() assignRider = new EventEmitter<string>();
+  @Output() refresh = new EventEmitter<void>();
+}

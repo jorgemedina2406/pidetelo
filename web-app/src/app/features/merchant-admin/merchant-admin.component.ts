@@ -26,6 +26,13 @@ import { OrderRouteModalComponent } from './components/order-route-modal.compone
 import { OrderDetailModalComponent } from './components/order-detail-modal.component';
 import { RiderFormModalComponent } from './components/rider-form-modal.component';
 import { UserFormModalComponent } from './components/user-form-modal.component';
+import { MerchantCouponModalComponent } from './components/coupon-form-modal.component';
+import { MerchantCouponNotifyModalComponent } from './components/coupon-notify-modal.component';
+import { NearbyRidersModalComponent } from './components/nearby-riders-modal.component';
+import { DispatchConfigModalComponent } from './components/dispatch-config-modal.component';
+import { MerchantCouponsTabComponent } from './components/merchant-coupons-tab.component';
+import { MerchantRidersTabComponent } from './components/merchant-riders-tab.component';
+import { MerchantUsersTabComponent } from './components/merchant-users-tab.component';
 
 export interface Rider {
   id: string;
@@ -60,7 +67,14 @@ export interface Rider {
     OrderRouteModalComponent,
     OrderDetailModalComponent,
     RiderFormModalComponent,
-    UserFormModalComponent
+    UserFormModalComponent,
+    MerchantCouponModalComponent,
+    MerchantCouponNotifyModalComponent,
+    NearbyRidersModalComponent,
+    DispatchConfigModalComponent,
+    MerchantCouponsTabComponent,
+    MerchantRidersTabComponent,
+    MerchantUsersTabComponent
   ],
   templateUrl: './merchant-admin.component.html'
 })

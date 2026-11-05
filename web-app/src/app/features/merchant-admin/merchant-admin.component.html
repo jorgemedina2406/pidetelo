@@ -1819,116 +1819,15 @@
 
         <!-- ================= TAB 3: FLOTA DE REPARTIDORES ================= -->
         @if (activeTab() === 'riders') {
-        <div class="space-y-6">
-
-          <div class="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <div class="flex items-center gap-2">
-                <h2 class="text-2xl font-extrabold tracking-tight">{{ i18n.t('ma.riders') }}</h2>
-                @if (selectedBranch(); as sb) {
-                <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20">
-                  📍 Sede: {{ sb.name }}
-                </span>
-                }
-              </div>
-              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">{{ i18n.t('ma.ridersDesc') }}</p>
-            </div>
-
-            <button (click)="openNewRiderModal()"
-              class="bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm flex items-center gap-2 transition-all active:scale-95 cursor-pointer">
-              <app-icon name="plus" [size]="16" className="text-white"></app-icon>
-              <span>{{ i18n.t('ma.newRider') }}</span>
-            </button>
-          </div>
-
-          @if (filteredRiders().length === 0) {
-          <div class="card-adaptive rounded-2xl p-12 text-center space-y-4 border border-dashed border-slate-300 dark:border-slate-800 animate-fade-in">
-            <div class="w-16 h-16 rounded-2xl bg-brand-500/10 text-brand-500 mx-auto flex items-center justify-center">
-              <app-icon name="bike" [size]="32"></app-icon>
-            </div>
-            <div class="space-y-1">
-              <h3 class="text-base font-extrabold text-slate-900 dark:text-white">Sin Repartidores Registrados</h3>
-              <p class="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
-                No hay repartidores registrados para esta sede. Agrega repartidores a tu flota para asignar y monitorear pedidos en tiempo real.
-              </p>
-            </div>
-            <button (click)="openNewRiderModal()"
-              class="px-4 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs shadow-sm inline-flex items-center gap-2 cursor-pointer transition-all active:scale-95">
-              <app-icon name="plus" [size]="15" className="text-white"></app-icon>
-              <span>Registrar Primer Repartidor</span>
-            </button>
-          </div>
-          } @else {
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            @for (r of filteredRiders(); track r.id) {
-            <div class="card-adaptive rounded-2xl p-5 shadow-sm space-y-4">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                  <div
-                    class="w-11 h-11 rounded-xl bg-brand-500/10 text-brand-500 flex items-center justify-center font-bold">
-                    <app-icon name="bike" [size]="22"></app-icon>
-                  </div>
-                  <div>
-                    <div class="font-bold text-sm">{{ r.name }}</div>
-                    <div class="text-[11px] font-mono text-slate-400 uppercase">{{ r.vehiclePlate }} • {{ r.vehicleType }}</div>
-                  </div>
-                </div>
-
-                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold border"
-                  [class.bg-emerald-50]="r.status === 'available'" [class.text-emerald-700]="r.status === 'available'"
-                  [class.border-emerald-200]="r.status === 'available'"
-                  [class.dark:bg-emerald-950/40]="r.status === 'available'"
-                  [class.dark:text-emerald-400]="r.status === 'available'"
-                  [class.bg-blue-50]="r.status === 'delivering'" [class.text-blue-700]="r.status === 'delivering'"
-                  [class.border-blue-200]="r.status === 'delivering'">
-                  {{ r.status === 'available' ? 'Disponible' : 'En Reparto' }}
-                </span>
-              </div>
-
-              <div
-                class="text-xs text-slate-500 dark:text-slate-400 space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
-                <div class="flex items-center justify-between">
-                  <span>Sede Asignada:</span>
-                  <span class="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1">
-                    <span>📍</span>
-                    <span>{{ r.branchName || getBranchName(r.branchId) }}</span>
-                  </span>
-                </div>
-                <div class="flex items-center justify-between">
-                  <span>Teléfono:</span>
-                  <span class="font-mono text-slate-900 dark:text-white font-semibold">{{ r.phone }}</span>
-                </div>
-                <div class="flex items-center justify-between">
-                  <span>Ubicación GPS:</span>
-                  <span class="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
-                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                    Transmitiendo
-                  </span>
-                </div>
-              </div>
-
-              <div class="pt-2 flex items-center justify-between border-t border-slate-100 dark:border-slate-800">
-                <button (click)="deleteRider(r)"
-                  class="text-xs font-bold text-red-500 hover:text-red-600 hover:underline flex items-center gap-1 transition-colors cursor-pointer"
-                  title="Eliminar motorizado">
-                  <app-icon name="trash" [size]="13"></app-icon>
-                  <span>Eliminar</span>
-                </button>
-                <button (click)="activeTab.set('gps_map'); flyToRider(r)"
-                  class="text-xs font-bold text-brand-500 hover:underline flex items-center gap-1 cursor-pointer">
-                  <app-icon name="map-pin" [size]="13"></app-icon>
-                  <span>Localizar en Mapa</span>
-                </button>
-              </div>
-            </div>
-            }
-          </div>
-          }
-
-        </div>
+          <app-merchant-riders-tab
+            [riders]="filteredRiders()"
+            [selectedBranchName]="selectedBranch()?.name"
+            (newRider)="openNewRiderModal()"
+            (deleteRider)="deleteRider($event)"
+            (locateRider)="activeTab.set('gps_map'); flyToRider($event)">
+          </app-merchant-riders-tab>
         }
 
-        <!-- ================= TAB 4: RADAR GPS EN VIVO (FLOTA DE MOTORIZADOS) ================= -->
         @if (activeTab() === 'gps_map') {
         <div class="space-y-4">
 
@@ -2134,212 +2033,18 @@
 
         <!-- ================= TAB 5: USUARIOS & ENCARGADOS DE SUCURSAL ================= -->
         @if (activeTab() === 'users') {
-        <div class="space-y-6 animate-fade-in">
-
-          <!-- Header con Acción Principal -->
-          <div class="flex flex-wrap items-center justify-between gap-4 pb-2 border-b border-slate-200 dark:border-slate-800">
-            <div>
-              <div class="flex items-center gap-2">
-                <h2 class="text-2xl font-extrabold tracking-tight">Equipo & Encargados de Sucursal</h2>
-                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20">
-                  {{ filteredStoreUsers().length }} Colaborador{{ filteredStoreUsers().length === 1 ? '' : 'es' }}
-                </span>
-              </div>
-              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                Registra y asigna encargados de sede, cocineros y despachadores a cada sucursal física de tu comercio.
-              </p>
-            </div>
-
-            <div class="flex items-center gap-2">
-              <button (click)="openCreateUserModal()"
-                class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white font-bold text-xs shadow-md shadow-brand-500/25 transition-all flex items-center gap-2 cursor-pointer active:scale-95">
-                <app-icon name="user-plus" [size]="15"></app-icon>
-                <span>+ Nuevo Colaborador</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- Filtros de Rol y Ámbito de Sucursal -->
-          <div class="flex flex-wrap items-center justify-between gap-3 p-3 bg-slate-50 dark:bg-slate-850/60 rounded-2xl border border-slate-200/80 dark:border-slate-800">
-            <!-- Selector de Roles -->
-            <div class="flex flex-wrap items-center gap-1.5 text-xs">
-              <span class="text-slate-400 font-bold uppercase text-[10px] mr-1">Rol:</span>
-              <button (click)="userFilterRole.set('all')"
-                [class.bg-brand-500]="userFilterRole() === 'all'"
-                [class.text-white]="userFilterRole() === 'all'"
-                [class.shadow-sm]="userFilterRole() === 'all'"
-                class="px-3 py-1.5 rounded-lg font-semibold transition-all hover:bg-slate-200 dark:hover:bg-slate-800 cursor-pointer">
-                Todos
-              </button>
-              <button (click)="userFilterRole.set('MERCHANT_MANAGER')"
-                [class.bg-brand-500]="userFilterRole() === 'MERCHANT_MANAGER'"
-                [class.text-white]="userFilterRole() === 'MERCHANT_MANAGER'"
-                [class.shadow-sm]="userFilterRole() === 'MERCHANT_MANAGER'"
-                class="px-3 py-1.5 rounded-lg font-semibold transition-all hover:bg-slate-200 dark:hover:bg-slate-800 cursor-pointer flex items-center gap-1">
-                <span>🏢</span> Encargados de Sede
-              </button>
-              <button (click)="userFilterRole.set('MERCHANT_KITCHEN')"
-                [class.bg-brand-500]="userFilterRole() === 'MERCHANT_KITCHEN'"
-                [class.text-white]="userFilterRole() === 'MERCHANT_KITCHEN'"
-                [class.shadow-sm]="userFilterRole() === 'MERCHANT_KITCHEN'"
-                class="px-3 py-1.5 rounded-lg font-semibold transition-all hover:bg-slate-200 dark:hover:bg-slate-800 cursor-pointer flex items-center gap-1">
-                <span>👨‍🍳</span> Cocina
-              </button>
-              <button (click)="userFilterRole.set('MERCHANT_DISPATCH')"
-                [class.bg-brand-500]="userFilterRole() === 'MERCHANT_DISPATCH'"
-                [class.text-white]="userFilterRole() === 'MERCHANT_DISPATCH'"
-                [class.shadow-sm]="userFilterRole() === 'MERCHANT_DISPATCH'"
-                class="px-3 py-1.5 rounded-lg font-semibold transition-all hover:bg-slate-200 dark:hover:bg-slate-800 cursor-pointer flex items-center gap-1">
-                <span>📦</span> Despacho
-              </button>
-              <button (click)="userFilterRole.set('MERCHANT_OWNER')"
-                [class.bg-brand-500]="userFilterRole() === 'MERCHANT_OWNER'"
-                [class.text-white]="userFilterRole() === 'MERCHANT_OWNER'"
-                [class.shadow-sm]="userFilterRole() === 'MERCHANT_OWNER'"
-                class="px-3 py-1.5 rounded-lg font-semibold transition-all hover:bg-slate-200 dark:hover:bg-slate-800 cursor-pointer flex items-center gap-1">
-                <span>👑</span> Dueños / Socios
-              </button>
-            </div>
-
-            <!-- Indicador de Sucursal Activa -->
-            <div class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-              <span>Sede activa en panel:</span>
-              <span class="px-2 py-0.5 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold text-slate-800 dark:text-slate-200">
-                📍 {{ activeBranch()?.name || 'Sede Principal' }}
-              </span>
-            </div>
-          </div>
-
-          <!-- Grid de Tarjetas de Colaboradores -->
-          @if (filteredStoreUsers().length > 0) {
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            @for (u of filteredStoreUsers(); track u.id) {
-            <div class="card-adaptive rounded-2xl p-5 shadow-sm border border-slate-200/80 dark:border-slate-800/80 flex flex-col justify-between gap-4 transition-all hover:shadow-md">
-              
-              <div class="space-y-3.5">
-                <!-- Header Usuario -->
-                <div class="flex items-start justify-between gap-3">
-                  <div class="flex items-center gap-3">
-                    <img [src]="u.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'"
-                      alt="Avatar"
-                      class="w-11 h-11 rounded-xl object-cover border border-slate-200 dark:border-slate-700 shadow-sm shrink-0" />
-                    <div>
-                      <div class="font-extrabold text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
-                        <span>{{ u.name }}</span>
-                        @if (u.role === 'MERCHANT_OWNER') {
-                        <span title="Dueño de la cuenta" class="text-amber-500 text-xs">👑</span>
-                        }
-                      </div>
-                      <div class="text-[11px] text-slate-400 truncate">{{ u.email }}</div>
-                    </div>
-                  </div>
-
-                  <!-- Toggle Estado Activo -->
-                  <button (click)="toggleStoreUserStatus(u)"
-                    [title]="u.isActive ? 'Desactivar usuario' : 'Activar usuario'"
-                    class="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 transition-all cursor-pointer"
-                    [class.bg-emerald-500/10]="u.isActive"
-                    [class.text-emerald-600]="u.isActive"
-                    [class.dark:text-emerald-400]="u.isActive"
-                    [class.border]="true"
-                    [class.border-emerald-500/20]="u.isActive"
-                    [class.bg-slate-100]="!u.isActive"
-                    [class.text-slate-400]="!u.isActive"
-                    [class.dark:bg-slate-800]="!u.isActive">
-                    <span class="w-1.5 h-1.5 rounded-full" [class.bg-emerald-500]="u.isActive" [class.bg-slate-400]="!u.isActive"></span>
-                    {{ u.isActive ? 'Activo' : 'Inactivo' }}
-                  </button>
-                </div>
-
-                <!-- Detalle de Sucursal Asignada -->
-                <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-850/80 border border-slate-100 dark:border-slate-800 space-y-1">
-                  <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
-                    <app-icon name="map-pin" [size]="11"></app-icon>
-                    <span>Sucursal Asignada:</span>
-                  </div>
-                  <div class="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                    <span class="w-2 h-2 rounded-full bg-brand-500"></span>
-                    <span>{{ u.branchName || activeBranch()?.name || 'Sede Principal' }}</span>
-                  </div>
-                </div>
-
-                <!-- Teléfono si está registrado -->
-                @if (u.phone) {
-                <div class="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                  <app-icon name="phone" [size]="12" class="text-slate-400"></app-icon>
-                  <span>{{ u.phone }}</span>
-                </div>
-                }
-              </div>
-
-              <!-- Footer de Tarjeta con Rol y Acciones -->
-              <div class="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
-                <!-- Badge de Rol -->
-                @if (u.role === 'MERCHANT_MANAGER') {
-                <span class="text-[10px] px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-extrabold border border-indigo-200 dark:border-indigo-800/60 flex items-center gap-1">
-                  <span>🏢</span> Encargado de Sede
-                </span>
-                } @else if (u.role === 'MERCHANT_KITCHEN') {
-                <span class="text-[10px] px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 font-extrabold border border-amber-200 dark:border-amber-800/60 flex items-center gap-1">
-                  <span>👨‍🍳</span> Cocina / KDS
-                </span>
-                } @else if (u.role === 'MERCHANT_DISPATCH') {
-                <span class="text-[10px] px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 font-extrabold border border-blue-200 dark:border-blue-800/60 flex items-center gap-1">
-                  <span>📦</span> Despacho
-                </span>
-                } @else if (u.role === 'MERCHANT_OWNER') {
-                <span class="text-[10px] px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-extrabold border border-emerald-200 dark:border-emerald-800/60 flex items-center gap-1">
-                  <span>👑</span> Propietario
-                </span>
-                } @else {
-                <span class="text-[10px] px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold">
-                  {{ u.role }}
-                </span>
-                }
-
-                <!-- Botones de Acción -->
-                <div class="flex items-center gap-1">
-                  <button (click)="openEditUserModal(u)"
-                    title="Editar colaborador"
-                    class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all cursor-pointer">
-                    <app-icon name="edit" [size]="13"></app-icon>
-                  </button>
-                  @if (u.role !== 'MERCHANT_OWNER') {
-                  <button (click)="deleteStoreUser(u)"
-                    title="Eliminar colaborador"
-                    class="w-7 h-7 rounded-lg bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 flex items-center justify-center transition-all cursor-pointer">
-                    <app-icon name="trash" [size]="13"></app-icon>
-                  </button>
-                  }
-                </div>
-              </div>
-
-            </div>
-            }
-          </div>
-          } @else {
-          <!-- Empty State -->
-          <div class="p-12 text-center card-adaptive rounded-3xl border border-dashed border-slate-300 dark:border-slate-800 space-y-4">
-            <div class="w-14 h-14 mx-auto rounded-2xl bg-brand-500/10 text-brand-500 flex items-center justify-center text-2xl font-bold">
-              👥
-            </div>
-            <div>
-              <h3 class="text-base font-extrabold text-slate-900 dark:text-white">No se encontraron colaboradores</h3>
-              <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-                No hay usuarios que coincidan con la sucursal o el rol seleccionado. Registra al primer encargado de sede.
-              </p>
-            </div>
-            <button (click)="openCreateUserModal()"
-              class="px-5 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs shadow-md transition-all cursor-pointer">
-              + Registrar Primer Colaborador
-            </button>
-          </div>
-          }
-
-        </div>
+          <app-merchant-users-tab
+            [users]="filteredStoreUsers()"
+            [activeBranchName]="activeBranch()?.name"
+            [filterRole]="userFilterRole()"
+            (filterRoleChange)="userFilterRole.set($event)"
+            (createUser)="openCreateUserModal()"
+            (editUser)="openEditUserModal($event)"
+            (deleteUser)="deleteStoreUser($event)"
+            (toggleStatus)="toggleStoreUserStatus($event)">
+          </app-merchant-users-tab>
         }
 
-        <!-- ================= TAB 6: MARCA & MONEDA (CONFIGURACIÓN) ================= -->
         @if (activeTab() === 'settings') {
         <div class="space-y-6 animate-fade-in">
 
@@ -3118,131 +2823,18 @@
 
         <!-- PESTAÑA: CUPONES DE OFERTA -->
         @if (activeTab() === 'coupons') {
-        <div class="space-y-6">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
-            <div>
-              <div class="flex items-center gap-2">
-                <span class="text-2xl">🎟️</span>
-                <h2 class="text-xl font-black text-slate-900 dark:text-white">Cupones de Oferta y Descuento</h2>
-              </div>
-              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                Crea códigos promocionales exclusivos para tus clientes. Se aplicarán automáticamente al momento de pagar.
-              </p>
-            </div>
-            <button (click)="openNewCouponModal()"
-                    class="inline-flex items-center gap-2 px-4 py-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-brand-500/25 transition">
-              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
-              </svg>
-              <span>+ Nuevo Cupón</span>
-            </button>
-          </div>
-
-          @if (couponActionNotice()) {
-            <div class="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-semibold text-emerald-700 dark:text-emerald-300 flex items-center justify-between">
-              <span>{{ couponActionNotice() }}</span>
-              <button (click)="couponActionNotice.set(null)" class="text-emerald-500 hover:text-emerald-700">✕</button>
-            </div>
-          }
-
-          @if (coupons().length === 0) {
-            <div class="text-center py-16 bg-white dark:bg-slate-800 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
-              <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-brand-50 dark:bg-brand-950/40 flex items-center justify-center text-3xl">
-                🏷️
-              </div>
-              <h3 class="text-base font-bold text-slate-800 dark:text-slate-200 mb-1">No tienes cupones creados</h3>
-              <p class="text-xs text-slate-400 dark:text-slate-500 max-w-sm mx-auto mb-6">
-                Impulsa tus ventas ofreciendo descuentos por porcentaje o monto fijo en tus órdenes.
-              </p>
-              <button (click)="openNewCouponModal()"
-                      class="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-bold shadow-md transition">
-                <span>Crear mi primer cupón</span>
-              </button>
-            </div>
-          } @else {
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              @for (c of coupons(); track c.id) {
-                <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm hover:shadow-md transition relative flex flex-col justify-between"
-                     [class.opacity-60]="!c.isActive">
-                  <div>
-                    <div class="flex items-start justify-between gap-3 mb-3">
-                      <div class="flex items-center gap-2">
-                        <span class="px-3 py-1 font-mono font-black text-sm tracking-wider rounded-lg border-2 border-dashed bg-brand-50 dark:bg-brand-950/50 border-brand-400 text-brand-600 dark:text-brand-400">
-                          {{ c.code }}
-                        </span>
-                        @if (c.isActive) {
-                          <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">
-                            Activo
-                          </span>
-                        } @else {
-                          <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400">
-                            Pausado
-                          </span>
-                        }
-                      </div>
-                      <div class="flex items-center gap-1">
-                        <button (click)="openEditCouponModal(c)"
-                                class="p-1.5 text-slate-400 hover:text-brand-600 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition">
-                          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
-                        </button>
-                        <button (click)="deleteCoupon(c)"
-                                class="p-1.5 text-slate-400 hover:text-red-500 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition">
-                          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                        </button>
-                      </div>
-                    </div>
-                    <div class="mb-3">
-                      <div class="text-2xl font-black text-slate-900 dark:text-white">
-                        @if (c.discountType === 'percentage') {
-                          <span>{{ c.discountValue }}% OFF</span>
-                        } @else {
-                          <span>${{ c.discountValue | number:'1.2-2' }} OFF</span>
-                        }
-                      </div>
-                      @if (c.description) {
-                        <p class="text-xs text-slate-600 dark:text-slate-300 mt-1 line-clamp-2">{{ c.description }}</p>
-                      }
-                    </div>
-                    <div class="space-y-1 text-[11px] text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-700/60 pt-3">
-                      <div class="flex justify-between">
-                        <span>Compra mínima:</span>
-                        <span class="font-bold text-slate-700 dark:text-slate-300">{{ (c.minOrderAmount && c.minOrderAmount > 0) ? ('$' + c.minOrderAmount) : 'Sin mínimo' }}</span>
-                      </div>
-                      @if (c.maxDiscountAmount || c.maxDiscount) {
-                        <div class="flex justify-between">
-                          <span>Tope máx. desc:</span>
-                          <span class="font-bold text-slate-700 dark:text-slate-300">${{ c.maxDiscountAmount || c.maxDiscount }}</span>
-                        </div>
-                      }
-                      <div class="flex justify-between">
-                        <span>Límite de uso:</span>
-                        <span class="font-bold text-slate-700 dark:text-slate-300">{{ c.usageLimit ? (c.usageLimit + ' usos') : 'Ilimitado' }}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/60 space-y-2">
-                    <div class="flex items-center justify-between">
-                      <span class="text-[11px] text-slate-400">Estado</span>
-                      <button (click)="toggleCouponActive(c)" class="text-xs font-bold px-3 py-1 rounded-lg border transition cursor-pointer" [class.border-emerald-500]="c.isActive" [class.text-emerald-600]="c.isActive" [class.bg-emerald-50]="c.isActive" [class.dark:bg-emerald-950/40]="c.isActive" [class.border-slate-300]="!c.isActive" [class.text-slate-500]="!c.isActive">
-                        {{ c.isActive ? 'Desactivar' : 'Activar' }}
-                      </button>
-                    </div>
-
-                    <!-- Botón Enviar Notificación a Clientes -->
-                    <button (click)="openNotifyCouponModal(c)"
-                            class="w-full py-2 px-3 rounded-xl bg-brand-500/10 hover:bg-brand-500 text-brand-600 dark:text-brand-400 hover:text-white border border-brand-500/20 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer">
-                      <span>📢</span>
-                      <span>Notificar a Clientes</span>
-                    </button>
-                  </div>
-                </div>
-              }
-            </div>
-          }
-        </div>
+          <app-merchant-coupons-tab
+            [coupons]="coupons()"
+            [couponActionNotice]="couponActionNotice()"
+            (newCoupon)="openNewCouponModal()"
+            (editCoupon)="openEditCouponModal($event)"
+            (deleteCoupon)="deleteCoupon($event)"
+            (toggleActive)="toggleCouponActive($event)"
+            (notifyCoupon)="openNotifyCouponModal($event)"
+            (closeNotice)="couponActionNotice.set(null)">
+          </app-merchant-coupons-tab>
         }
-
-      </main>
+        </main>
 
     </div>
 
@@ -3359,404 +2951,44 @@
   </app-user-form-modal>
 
   <!-- MODAL: CREAR / EDITAR CUPÓN DE DESCUENTO -->
-  @if (isCouponModalOpen()) {
-  <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-    <div class="bg-white dark:bg-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-5 max-h-[90vh] overflow-y-auto">
-      <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-700/60 pb-4">
-        <div class="flex items-center gap-2">
-          <span class="text-2xl">🏷️</span>
-          <div>
-            <h3 class="text-lg font-black text-slate-900 dark:text-white">{{ editingCoupon.id ? 'Editar Cupón' : 'Nuevo Cupón de Oferta' }}</h3>
-            <p class="text-xs text-slate-400">Configura el código y valor del descuento</p>
-          </div>
-        </div>
-        <button (click)="isCouponModalOpen.set(false)" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-white flex items-center justify-center transition">✕</button>
-      </div>
-      <div class="space-y-4">
-        <div>
-          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Código del Cupón <span class="text-rose-500">*</span></label>
-          <input type="text" [(ngModel)]="editingCoupon.code" (input)="editingCoupon.code = editingCoupon.code?.toUpperCase()" placeholder="EJ: VERANO20, FLASH10, HAMBURGUESAS" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm font-mono font-black tracking-wider text-brand-600 dark:text-brand-400 uppercase focus:outline-none focus:border-brand-500" />
-        </div>
-        <div>
-          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Descripción / Leyenda</label>
-          <input type="text" [(ngModel)]="editingCoupon.description" placeholder="Ej: 20% de descuento en pedidos mayores a $15" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
-        </div>
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Tipo de Descuento</label>
-            <select [(ngModel)]="editingCoupon.discountType" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-brand-500">
-              <option value="percentage">Porcentaje (%)</option>
-              <option value="fixed">Monto Fijo ($ USD)</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">{{ editingCoupon.discountType === 'percentage' ? 'Porcentaje (%)' : 'Monto ($ USD)' }} <span class="text-rose-500">*</span></label>
-            <input type="number" min="0.01" step="0.5" [(ngModel)]="editingCoupon.discountValue" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
-          </div>
-        </div>
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Mínimo de Compra ($ USD)</label>
-            <input type="number" min="0" step="1" [(ngModel)]="editingCoupon.minOrderAmount" placeholder="0 (sin mínimo)" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Tope Máx. Desc. ($ USD)</label>
-            <input type="number" min="0" step="1" [(ngModel)]="editingCoupon.maxDiscountAmount" placeholder="Opcional" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
-          </div>
-        </div>
-        <div>
-          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Límite Total de Usos</label>
-          <input type="number" min="1" [(ngModel)]="editingCoupon.usageLimit" placeholder="Ej: 100 (dejar en blanco para ilimitado)" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
-        </div>
-        <div class="flex items-center gap-2 pt-2">
-          <input type="checkbox" id="couponIsActive" [(ngModel)]="editingCoupon.isActive" class="w-4 h-4 text-brand-600 rounded border-slate-300 focus:ring-brand-500 cursor-pointer" />
-          <label for="couponIsActive" class="text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">Cupón activo (habilitado para canjear en el checkout)</label>
-        </div>
-      </div>
-      <div class="flex items-center justify-end gap-3 border-t border-slate-100 dark:border-slate-700/60 pt-4">
-        <button (click)="isCouponModalOpen.set(false)" class="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-600 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition">Cancelar</button>
-        <button (click)="saveCoupon()" [disabled]="!editingCoupon.code || isSavingCoupon()" class="px-5 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white text-xs font-bold shadow-md shadow-brand-500/25 transition flex items-center gap-2">
-          @if (isSavingCoupon()) {
-            <span class="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-            <span>Guardando...</span>
-          } @else {
-            <span>{{ editingCoupon.id ? 'Guardar Cambios' : 'Crear Cupón' }}</span>
-          }
-        </button>
-      </div>
-    </div>
-  </div>
-  }
+  <!-- MODAL: CREAR / EDITAR CUPÓN -->
+  <app-merchant-coupon-modal
+    [isOpen]="isCouponModalOpen()"
+    [coupon]="editingCoupon"
+    [isSaving]="isSavingCoupon()"
+    (close)="isCouponModalOpen.set(false)"
+    (save)="saveCoupon()">
+  </app-merchant-coupon-modal>
 
-  <!-- ================= MODAL: ENVIAR NOTIFICACIÓN DE CUPÓN ================= -->
-  @if (isNotifyCouponModalOpen() && selectedCouponToNotify(); as selCoupon) {
-    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
-         (click)="isNotifyCouponModalOpen.set(false)">
-      <div class="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 w-full max-w-lg rounded-2xl shadow-2xl p-6 border border-slate-200 dark:border-slate-800 space-y-4"
-           (click)="$event.stopPropagation()">
-        
-        <div class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
-          <div>
-            <h3 class="text-base font-bold flex items-center gap-2">
-              <span>📢</span>
-              <span>Enviar Cupón por Notificación Push</span>
-            </h3>
-            <p class="text-xs text-slate-500 dark:text-slate-400">Cupón: <strong class="font-mono text-brand-500">{{ selCoupon.code }}</strong></p>
-          </div>
-          <button (click)="isNotifyCouponModalOpen.set(false)" class="text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer">
-            <app-icon name="x" [size]="18"></app-icon>
-          </button>
-        </div>
-
-        <div class="p-3 bg-brand-50 dark:bg-brand-950/30 border border-brand-200 dark:border-brand-800/60 rounded-xl text-xs space-y-1">
-          <div class="font-bold text-brand-700 dark:text-brand-300 flex items-center gap-1.5">
-            <app-icon name="shield" [size]="14"></app-icon>
-            <span>Privacidad de Clientes Protegida</span>
-          </div>
-          <p class="text-[11px] text-slate-600 dark:text-slate-400">
-            Como comercio, tus datos no exponen información privada de clientes. El sistema inteligente de Pídetelo segmenta y entrega automáticamente la notificación en la app móvil y web a los usuarios que cumplan la condición seleccionada.
-          </p>
-        </div>
-
-        <div class="space-y-3 text-xs">
-          <div>
-            <label class="block font-bold mb-1.5 text-slate-700 dark:text-slate-300">
-              ¿A qué clientes deseas enviar este cupón?
-            </label>
-            <div class="space-y-2">
-              <label class="flex items-start gap-2.5 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-850"
-                     [class.border-brand-500]="notificationCondition() === 'all'"
-                     [class.bg-brand-500/5]="notificationCondition() === 'all'">
-                <input type="radio" [(ngModel)]="notificationCondition" value="all" name="cond" class="mt-0.5 accent-brand-500" />
-                <div>
-                  <div class="font-bold text-xs text-slate-900 dark:text-white">Todos los Clientes en Cobertura</div>
-                  <div class="text-[11px] text-slate-400">Notifica a todos los clientes registrados en tu radio de delivery</div>
-                </div>
-              </label>
-
-              <label class="flex items-start gap-2.5 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-850"
-                     [class.border-brand-500]="notificationCondition() === 'new_customers'"
-                     [class.bg-brand-500/5]="notificationCondition() === 'new_customers'">
-                <input type="radio" [(ngModel)]="notificationCondition" value="new_customers" name="cond" class="mt-0.5 accent-brand-500" />
-                <div>
-                  <div class="font-bold text-xs text-slate-900 dark:text-white">Clientes Nuevos</div>
-                  <div class="text-[11px] text-slate-400">Clientes que aún no han hecho su primera orden en tu local</div>
-                </div>
-              </label>
-
-              <label class="flex items-start gap-2.5 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-850"
-                     [class.border-brand-500]="notificationCondition() === 'frequent_customers'"
-                     [class.bg-brand-500/5]="notificationCondition() === 'frequent_customers'">
-                <input type="radio" [(ngModel)]="notificationCondition" value="frequent_customers" name="cond" class="mt-0.5 accent-brand-500" />
-                <div>
-                  <div class="font-bold text-xs text-slate-900 dark:text-white">Clientes Frecuentes (+5 compras)</div>
-                  <div class="text-[11px] text-slate-400">Recompensa la lealtad de tus clientes más fieles</div>
-                </div>
-              </label>
-
-              <label class="flex items-start gap-2.5 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-850"
-                     [class.border-brand-500]="notificationCondition() === 'inactive_customers'"
-                     [class.bg-brand-500/5]="notificationCondition() === 'inactive_customers'">
-                <input type="radio" [(ngModel)]="notificationCondition" value="inactive_customers" name="cond" class="mt-0.5 accent-brand-500" />
-                <div>
-                  <div class="font-bold text-xs text-slate-900 dark:text-white">Clientes Inactivos (+15 días sin comprar)</div>
-                  <div class="text-[11px] text-slate-400">Reactiva clientes enviándoles un incentivo directo</div>
-                </div>
-              </label>
-
-              <label class="flex items-start gap-2.5 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-850"
-                     [class.border-brand-500]="notificationCondition() === 'high_spenders'"
-                     [class.bg-brand-500/5]="notificationCondition() === 'high_spenders'">
-                <input type="radio" [(ngModel)]="notificationCondition" value="high_spenders" name="cond" class="mt-0.5 accent-brand-500" />
-                <div>
-                  <div class="font-bold text-xs text-slate-900 dark:text-white">Clientes VIP (Compras > $25)</div>
-                  <div class="text-[11px] text-slate-400">Premia a los clientes con mayor valor de compra promedio</div>
-                </div>
-              </label>
-            </div>
-          </div>
-
-          <div>
-            <label class="block font-semibold mb-1">Mensaje de la Notificación</label>
-            <input type="text" [ngModel]="notificationCustomMessage()" (ngModelChange)="notificationCustomMessage.set($event)"
-                   placeholder="¡Aprovecha este descuento exclusivo hoy!"
-                   class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs focus:outline-none focus:border-brand-500 font-medium" />
-          </div>
-        </div>
-
-        <div class="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-3">
-          <button (click)="isNotifyCouponModalOpen.set(false)"
-                  class="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">
-            Cancelar
-          </button>
-          <button (click)="sendCouponNotification()" [disabled]="isSendingNotification()"
-                  class="px-5 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white text-xs font-bold shadow-md cursor-pointer flex items-center gap-2">
-            @if (isSendingNotification()) {
-              <span>Enviando...</span>
-            } @else {
-              <span>🚀 Enviar Notificación a Clientes</span>
-            }
-          </button>
-        </div>
-
-      </div>
-    </div>
-  }
+  <!-- MODAL: NOTIFICACIÓN DE CUPÓN -->
+  <app-merchant-coupon-notify-modal
+    [isOpen]="isNotifyCouponModalOpen()"
+    [coupon]="selectedCouponToNotify()"
+    [notificationCondition]="notificationCondition()"
+    [customMessage]="notificationCustomMessage()"
+    [isSending]="isSendingNotification()"
+    (close)="isNotifyCouponModalOpen.set(false)"
+    (conditionChange)="notificationCondition.set($event)"
+    (messageChange)="notificationCustomMessage.set($event)"
+    (send)="sendCouponNotification()">
+  </app-merchant-coupon-notify-modal>
 
   <!-- MODAL: RADAR DE REPARTIDORES CERCANOS Y FLOTA PROPIA PÍDETELO -->
-  @if (isNearbyRidersModalOpen()) {
-    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-      <div class="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full p-5 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4">
-        
-        <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-          <div class="flex items-center gap-2.5">
-            <div class="w-9 h-9 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center">
-              <app-icon name="bike" [size]="20"></app-icon>
-            </div>
-            <div>
-              <h3 class="font-extrabold text-base text-slate-900 dark:text-white">Radar de Despacho Pídetelo</h3>
-              <p class="text-xs text-slate-500 dark:text-slate-400">
-                Asigna un repartidor de tu sede o de la red libre más cercana
-              </p>
-            </div>
-          </div>
-          <button (click)="isNearbyRidersModalOpen.set(false)"
-                  class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg">
-            ✕
-          </button>
-        </div>
+  <app-nearby-riders-modal
+    [isOpen]="isNearbyRidersModalOpen()"
+    [order]="selectedOrderForNearbyDispatch()"
+    [ownRiders]="ownRiders()"
+    [nearbyRiders]="nearbyRiders()"
+    (close)="isNearbyRidersModalOpen.set(false)"
+    (assignRider)="assignNearbyRider($event)"
+    (refresh)="refreshRidersLocation()">
+  </app-nearby-riders-modal>
 
-        @if (selectedOrderForNearbyDispatch(); as ord) {
-          <div class="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-200 dark:border-slate-700/60 flex items-center justify-between">
-            <div>
-              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Pedido a Despachar</span>
-              <p class="text-xs font-bold text-slate-900 dark:text-white">#{{ ord.orderNumber || ord.id.slice(0, 8) }} • {{ ord.customerName }}</p>
-              <p class="text-[11px] text-slate-500 truncate max-w-[280px]">{{ ord.deliveryAddress }}</p>
-            </div>
-            <span class="font-black text-sm text-brand-600 dark:text-brand-400">${{ ord.total.toFixed(2) }}</span>
-          </div>
-        }
-
-        <!-- LIST OF OWN RIDERS & NEARBY RIDERS -->
-        <div class="space-y-2 max-h-[360px] overflow-y-auto pr-1">
-          @if (ownRiders().length > 0) {
-            <div class="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 px-1 pt-1">
-              <span>🛵 Flota Propia de la Sede</span>
-              <span class="bg-slate-200 dark:bg-slate-800 text-[10px] font-bold px-1.5 py-0.5 rounded-full">{{ ownRiders().length }}</span>
-            </div>
-            @for (r of ownRiders(); track r.id) {
-              <div class="p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-brand-500 dark:hover:border-brand-500 bg-white dark:bg-slate-800/80 transition-all flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                  <div class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 flex items-center justify-center font-bold text-xs">
-                    {{ r.name.charAt(0).toUpperCase() }}
-                  </div>
-                  <div>
-                    <div class="flex items-center gap-1.5">
-                      <span class="font-bold text-xs text-slate-900 dark:text-white">{{ r.name }}</span>
-                      <span class="text-[9px] font-extrabold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded">{{ r.vehiclePlate }}</span>
-                    </div>
-                    <span class="text-[10px] text-slate-500 dark:text-slate-400">Repartidor Asignado • {{ r.phone || 'Sin tlf' }}</span>
-                  </div>
-                </div>
-                <button (click)="assignNearbyRider(r.id)"
-                        class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 text-white text-[11px] font-bold cursor-pointer transition-all">
-                  Asignar
-                </button>
-              </div>
-            }
-          }
-
-          <div class="text-[11px] font-extrabold uppercase tracking-wider text-brand-600 dark:text-brand-400 flex items-center gap-1.5 px-1 pt-2">
-            <span>🌐 Flota Libre / Motorizados Cercanos Pídetelo</span>
-            <span class="bg-brand-100 dark:bg-brand-950/60 text-brand-700 dark:text-brand-300 text-[10px] font-bold px-1.5 py-0.5 rounded-full">{{ nearbyRiders().length }}</span>
-          </div>
-
-          @for (r of nearbyRiders(); track r.id) {
-            <div class="p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-brand-500 dark:hover:border-brand-500 bg-white dark:bg-slate-800/80 transition-all flex items-center justify-between">
-              <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 flex items-center justify-center font-bold text-xs">
-                  🛵
-                </div>
-                <div>
-                  <div class="flex items-center gap-1.5">
-                    <span class="font-bold text-xs text-slate-900 dark:text-white">{{ r.name }}</span>
-                    <span class="text-[9px] font-extrabold bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-300 px-1.5 py-0.5 rounded">{{ r.vehiclePlate }}</span>
-                    @if (r.isCertified) {
-                      <span class="text-[8px] bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 px-1 py-0.5 rounded font-extrabold">✓ Certificado</span>
-                    }
-                  </div>
-                  <div class="flex items-center gap-2 text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
-                    <span class="font-bold text-brand-600 dark:text-brand-400">
-                      📍 {{ r.distanceKm != null ? (r.distanceKm.toFixed(1) + ' km de distancia') : 'En la zona' }}
-                    </span>
-                    <span>•</span>
-                    <span>⭐ {{ r.rating ?? '5.0' }}</span>
-                  </div>
-                </div>
-              </div>
-              <button (click)="assignNearbyRider(r.id)"
-                      class="px-3 py-1.5 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-[11px] font-bold cursor-pointer shadow-xs transition-all">
-                Asignar
-              </button>
-            </div>
-          }
-
-          @if (ownRiders().length === 0 && nearbyRiders().length === 0) {
-            <div class="py-8 text-center text-xs text-slate-400">
-              <p>No se encontraron motorizados activos disponibles en este momento.</p>
-              <button (click)="refreshRidersLocation()" class="mt-2 text-brand-600 font-bold hover:underline">
-                ↻ Reintentar radar
-              </button>
-            </div>
-          }
-        </div>
-
-        <div class="pt-3 border-t border-slate-200 dark:border-slate-800 flex justify-end">
-          <button (click)="isNearbyRidersModalOpen.set(false)"
-                  class="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">
-            Cerrar
-          </button>
-        </div>
-
-      </div>
-    </div>
-  }
-
-  <!-- MODAL: CONFIGURACIÓN DE FILTROS DE MOTORIZADOS PARA EL COMERCIO -->
-  @if (isDispatchConfigModalOpen()) {
-    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-      <div class="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full p-5 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4">
-        
-        <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-          <div class="flex items-center gap-2.5">
-            <div class="w-9 h-9 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center">
-              <app-icon name="sliders" [size]="18"></app-icon>
-            </div>
-            <div>
-              <h3 class="font-extrabold text-base text-slate-900 dark:text-white">Filtros de Despacho</h3>
-              <p class="text-xs text-slate-500 dark:text-slate-400">Configura qué motorizados mostrar en tus pedidos</p>
-            </div>
-          </div>
-          <button (click)="isDispatchConfigModalOpen.set(false)"
-                  class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg">
-            ✕
-          </button>
-        </div>
-
-        <div class="space-y-3.5 text-xs">
-          <!-- 1. Distancia máxima -->
-          <div>
-            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-              Distancia Máxima de Búsqueda
-            </label>
-            <select [ngModel]="dispatchFilterConfig().maxDistanceKm"
-                    (ngModelChange)="dispatchFilterConfig.update(c => ({ ...c, maxDistanceKm: +$event }))"
-                    class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs font-semibold">
-              <option [value]="3">Hasta 3 km a la redonda (Ultra cercano)</option>
-              <option [value]="5">Hasta 5 km (Recomendado zonas urbanas)</option>
-              <option [value]="10">Hasta 10 km (Interurbano / Amplio)</option>
-              <option [value]="15">Hasta 15 km (Toda la ciudad)</option>
-              <option [value]="30">Hasta 30 km (Sin restricción de distancia)</option>
-            </select>
-          </div>
-
-          <!-- 2. Calificación mínima -->
-          <div>
-            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-              Calificación Mínima del Motorizado
-            </label>
-            <select [ngModel]="dispatchFilterConfig().minRating"
-                    (ngModelChange)="dispatchFilterConfig.update(c => ({ ...c, minRating: +$event }))"
-                    class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs font-semibold">
-              <option [value]="0">Cualquier calificación (Todos los verificados)</option>
-              <option [value]="4.0">⭐ 4.0 estrellas o más</option>
-              <option [value]="4.5">⭐ 4.5 estrellas o más (Alta reputación)</option>
-              <option [value]="4.8">⭐ 4.8 estrellas o más (Solo los mejores)</option>
-            </select>
-          </div>
-
-          <!-- 3. Entregas mínimas -->
-          <div>
-            <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-              Experiencia Mínima en Entregas
-            </label>
-            <select [ngModel]="dispatchFilterConfig().minDeliveries"
-                    (ngModelChange)="dispatchFilterConfig.update(c => ({ ...c, minDeliveries: +$event }))"
-                    class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs font-semibold">
-              <option [value]="0">Sin requisito (Incluye recién certificados)</option>
-              <option [value]="5">Al menos 5 pedidos completados</option>
-              <option [value]="20">Al menos 20 pedidos completados (Veteranos)</option>
-            </select>
-          </div>
-
-          <!-- 4. Disponibilidad -->
-          <div class="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-200 dark:border-slate-700/60 space-y-1.5">
-            <label class="flex items-center gap-2 cursor-pointer font-bold text-slate-800 dark:text-slate-200">
-              <input type="checkbox" [checked]="dispatchFilterConfig().onlyAvailable"
-                     (change)="dispatchFilterConfig.update(c => ({ ...c, onlyAvailable: !c.onlyAvailable }))"
-                     class="rounded text-brand-600 focus:ring-brand-500">
-              <span>Solo motorizados en línea y desocupados</span>
-            </label>
-            <p class="text-[10px] text-slate-500 dark:text-slate-400 pl-5">
-              Oculta automáticamente a motorizados que ya tengan una entrega en camino.
-            </p>
-          </div>
-        </div>
-
-        <div class="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2.5">
-          <button (click)="isDispatchConfigModalOpen.set(false)"
-                  class="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">
-            Cancelar
-          </button>
-          <button (click)="saveDispatchFilterConfig(dispatchFilterConfig())"
-                  class="px-5 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold shadow-md cursor-pointer">
-            Guardar y Aplicar
-          </button>
-        </div>
-
-      </div>
-    </div>
-  }
-
+  <!-- MODAL: CONFIGURACIÓN DE FILTROS DE MOTORIZADOS -->
+  <app-dispatch-config-modal
+    [isOpen]="isDispatchConfigModalOpen()"
+    [config]="dispatchFilterConfig()"
+    (close)="isDispatchConfigModalOpen.set(false)"
+    (save)="saveDispatchFilterConfig($event)">
+  </app-dispatch-config-modal>
 </div>
-

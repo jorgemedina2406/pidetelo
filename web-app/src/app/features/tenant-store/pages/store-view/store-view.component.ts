@@ -13,7 +13,10 @@ import { OrderSuccessModalComponent } from '../../components/order-success-modal
 import { CurrencyService } from '../../../../core/services/currency.service';
 import { ThemeService } from '../../../../core/services/theme.service';
 import { Branch } from '../../../../core/models/branch.model';
-import { IconComponent } from '../../../../shared/components/icon.component';
+import { StoreHeaderComponent } from '../../components/store-header/store-header.component';
+import { StoreFiltersComponent } from '../../components/store-filters/store-filters.component';
+import { StoreProductGridComponent } from '../../components/store-product-grid/store-product-grid.component';
+import { BranchSelectModalComponent } from '../../components/branch-select-modal/branch-select-modal.component';
 
 @Component({
   selector: 'app-store-view',
@@ -26,7 +29,10 @@ import { IconComponent } from '../../../../shared/components/icon.component';
     CartDrawerComponent,
     CheckoutModalComponent,
     OrderSuccessModalComponent,
-    IconComponent
+    StoreHeaderComponent,
+    StoreFiltersComponent,
+    StoreProductGridComponent,
+    BranchSelectModalComponent
   ],
   templateUrl: './store-view.component.html'
 })
@@ -48,7 +54,7 @@ export class StoreViewComponent implements OnInit {
   readonly selectedCategory = signal<string | null>(null);
   readonly specialFilter = signal<'all' | 'offers' | 'featured'>('all');
   readonly viewMode = signal<'grid' | 'list'>('grid');
-  searchQuery = '';
+  readonly searchQuery = signal<string>('');
   
   readonly activeModalProduct = signal<Product | null>(null);
 
@@ -95,257 +101,142 @@ export class StoreViewComponent implements OnInit {
     };
   });
 
+  readonly formatPriceBound = (price: number, itemCurrency: 'USD' | 'VES' = 'USD') => {
+    return this.formatPrice(price, itemCurrency);
+  };
+
   formatPrice(price: number, itemCurrency: 'USD' | 'VES' = 'USD') {
     const rate = this.activeBranchRate();
     const branchCurr = this.cart.selectedBranch()?.currencySettings;
-    const settings = {
-      ...(branchCurr || this.tenant()?.currencySettings || {}),
-      exchangeRate: rate
-    } as any;
-    return this.currency.formatPrice(price, itemCurrency, settings);
-  }
+    const displayPrimary = branchCurr?.defaultDisplayCurrency || 'USD';
 
-  selectBranch(branch: Branch): void {
-    const t = this.tenant();
-    const effectiveRadius = t?.deliverySettings?.deliveryRadiusKm
-      ? Math.max(Number(branch.deliveryRadiusKm) || 0, Number(t.deliverySettings.deliveryRadiusKm))
-      : Number(branch.deliveryRadiusKm) || 8.0;
-    const effectiveTiers = (Array.isArray(t?.deliverySettings?.deliveryTiers) && t.deliverySettings.deliveryTiers.length > 0)
-      ? t.deliverySettings.deliveryTiers
-      : branch.deliveryTiers;
+    let usdPrice = 0;
+    let vesPrice = 0;
 
-    const enrichedBranch: Branch = {
-      ...branch,
-      deliveryRadiusKm: effectiveRadius,
-      deliveryTiers: effectiveTiers
-    };
-
-    this.cart.setBranch(enrichedBranch);
-    this.isBranchModalOpen.set(false);
-    if (t) {
-      this.isLoading.set(true);
-      this.api.getProducts(t.id, branch.id, true).subscribe(prods => {
-        this.products.set(prods);
-        this.cart.setStoreProducts(prods);
-        this.isLoading.set(false);
-      });
+    if (itemCurrency === 'VES') {
+      vesPrice = price;
+      usdPrice = rate > 0 ? price / rate : 0;
+    } else {
+      usdPrice = price;
+      vesPrice = price * rate;
     }
-  }
 
-  ngOnInit(): void {
-    this.currency.fetchDolarApiRate('oficial').then(data => {
-      if (data && typeof data.promedio === 'number' && data.promedio > 0) {
-        this.liveBcvRate.set(Number(data.promedio.toFixed(2)));
-      }
-    });
-
-    this.route.paramMap.subscribe(params => {
-      const slug = params.get('slug');
-      if (!slug) {
-        this.isLoading.set(false);
-        this.router.navigate(['/explorar']);
-        return;
-      }
-      this.isLoading.set(true);
-      
-      this.api.getTenantBySlug(slug).subscribe(storeData => {
-        if (storeData) {
-          const cleanStoreData: Tenant = {
-            ...storeData,
-            deliverySettings: { ...storeData.deliverySettings }
-          };
-
-          try {
-            const cached = localStorage.getItem('deliveryhub_branding_' + storeData.id);
-            if (cached) {
-              const parsed = JSON.parse(cached);
-              if (parsed.deliveryRadiusKm) {
-                cleanStoreData.deliverySettings.deliveryRadiusKm = Number(parsed.deliveryRadiusKm);
-              }
-              if (parsed.baseDeliveryFee) {
-                cleanStoreData.deliverySettings.baseDeliveryFee = Number(parsed.baseDeliveryFee);
-              }
-              if (Array.isArray(parsed.deliveryTiers) && parsed.deliveryTiers.length > 0) {
-                cleanStoreData.deliverySettings.deliveryTiers = parsed.deliveryTiers;
-                cleanStoreData.deliveryTiers = parsed.deliveryTiers;
-              }
-            }
-          } catch (_) {}
-
-          // Filtrar únicamente sucursales activas y enriquecer con cobertura y tarifas del comercio
-          const globalRadius = Number(cleanStoreData.deliverySettings?.deliveryRadiusKm) || 8.0;
-          const globalTiers = cleanStoreData.deliverySettings?.deliveryTiers || [];
-
-          const activeBranches: Branch[] = (storeData.branches || []).filter((b: Branch) => {
-            return b.status === 'active';
-          }).map((b: Branch) => {
-            const bRadius = Math.max(Number(b.deliveryRadiusKm) || 0, globalRadius);
-            const bTiers = (Array.isArray(b.deliveryTiers) && b.deliveryTiers.length >= globalTiers.length)
-              ? b.deliveryTiers
-              : (globalTiers.length > 0 ? globalTiers : b.deliveryTiers);
-            return {
-              ...b,
-              deliveryRadiusKm: bRadius > 0 ? bRadius : globalRadius,
-              deliveryTiers: bTiers
-            };
-          });
-
-          cleanStoreData.branches = activeBranches;
-          this.tenant.set(cleanStoreData);
-          this.cart.setTenant(cleanStoreData);
-
-          // Asegurar carga de todas las sedes activas desde el backend si no venian completas
-          this.api.getBranches(storeData.id).subscribe(branches => {
-            if (branches && branches.length > 0) {
-              const active = branches.filter((b: Branch) => b.status === 'active');
-              if (active.length > 0) {
-                const mergedBranches = active.map((b: Branch) => ({
-                  ...b,
-                  deliveryRadiusKm: Math.max(Number(b.deliveryRadiusKm) || 0, globalRadius),
-                  deliveryTiers: (Array.isArray(b.deliveryTiers) && b.deliveryTiers.length >= globalTiers.length)
-                    ? b.deliveryTiers
-                    : (globalTiers.length > 0 ? globalTiers : b.deliveryTiers)
-                }));
-                cleanStoreData.branches = mergedBranches;
-                this.tenant.set({ ...cleanStoreData, branches: mergedBranches });
-              }
-            }
-          });
-
-          // Resolver sucursal desde query param (?branch=slug-o-id o ?sucursal=...)
-          const branchParam = this.route.snapshot.queryParamMap.get('branch') ||
-                              this.route.snapshot.queryParamMap.get('sucursal') ||
-                              this.route.snapshot.queryParamMap.get('branchId');
-
-          let assignedBranch: Branch | null = null;
-
-          if (branchParam && activeBranches.length > 0) {
-            const query = branchParam.toLowerCase().trim();
-            assignedBranch = activeBranches.find((b: Branch) =>
-              b.id === query ||
-              (b.slug && b.slug.toLowerCase() === query) ||
-              (b.name && b.name.toLowerCase().includes(query))
-            ) || null;
-          }
-
-          if (!assignedBranch && activeBranches.length > 0) {
-            assignedBranch = activeBranches.find((b: Branch) => b.isMain || b.name?.toLowerCase().includes('principal')) || activeBranches[0];
-          }
-
-          if (assignedBranch) {
-            const effectiveRadius = cleanStoreData.deliverySettings?.deliveryRadiusKm
-              ? Math.max(Number(assignedBranch.deliveryRadiusKm) || 0, Number(cleanStoreData.deliverySettings.deliveryRadiusKm))
-              : Number(assignedBranch.deliveryRadiusKm) || 8.0;
-            const effectiveTiers = (Array.isArray(cleanStoreData.deliverySettings?.deliveryTiers) && cleanStoreData.deliverySettings.deliveryTiers.length > 0)
-              ? cleanStoreData.deliverySettings.deliveryTiers
-              : assignedBranch.deliveryTiers;
-
-            assignedBranch = {
-              ...assignedBranch,
-              deliveryRadiusKm: effectiveRadius,
-              deliveryTiers: effectiveTiers
-            };
-            this.cart.setBranch(assignedBranch);
-          }
-
-          // Cargar categorías y productos del backend aislados por la sucursal seleccionada
-          this.api.getCategories(storeData.id).subscribe(cats => {
-            this.categories.set(cats);
-          });
-
-          const branchIdToLoad = assignedBranch?.id;
-          this.api.getProducts(storeData.id, branchIdToLoad, true).subscribe(prods => {
-            if (!prods || prods.length === 0) {
-              this.api.getProducts(storeData.id, undefined, true).subscribe(allProds => {
-                this.products.set(allProds || []);
-                this.cart.setStoreProducts(allProds || []);
-                this.isLoading.set(false);
-              });
-            } else {
-              this.products.set(prods);
-              this.cart.setStoreProducts(prods);
-              this.isLoading.set(false);
-            }
-          });
-
-          // Fetch live official BCV rate from dolarapi.com
-          this.currency.fetchDolarApiRate('oficial').then(liveData => {
-            if (liveData && typeof liveData.promedio === 'number' && liveData.promedio > 0) {
-              const current = this.tenant();
-              if (current) {
-                const updatedTenant: Tenant = {
-                  ...current,
-                  currencySettings: {
-                    ...current.currencySettings,
-                    exchangeRate: Number(liveData.promedio.toFixed(2)),
-                    lastRateUpdate: liveData.fechaActualizacion
-                  }
-                };
-                this.tenant.set(updatedTenant);
-                this.cart.setTenant(updatedTenant);
-              }
-            }
-          });
-        } else {
-          this.isLoading.set(false);
-        }
-      });
-    });
+    if (displayPrimary === 'VES') {
+      return {
+        primary: `Bs. ${vesPrice.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        secondary: `$${usdPrice.toFixed(2)}`
+      };
+    } else {
+      return {
+        primary: `$${usdPrice.toFixed(2)}`,
+        secondary: `Bs. ${vesPrice.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+      };
+    }
   }
 
   readonly filteredProducts = computed(() => {
-    let list = this.products();
-    const activeBranch = this.cart.selectedBranch();
-    const isMain = activeBranch?.name?.toLowerCase().includes('principal') || false;
+    const query = this.searchQuery().toLowerCase().trim();
+    const cat = this.selectedCategory();
+    const filter = this.specialFilter();
 
-    if (activeBranch) {
-      list = list.filter(p => {
-        if (p.branchId === activeBranch.id) return true;
-        if (isMain && (!p.branchId || p.branchId === 'all')) return true;
-        return false;
-      });
-    }
+    return this.products().filter(p => {
+      const matchesSearch = !query ||
+        p.name.toLowerCase().includes(query) ||
+        p.description.toLowerCase().includes(query);
 
-    const special = this.specialFilter();
-    if (special === 'offers') {
-      list = list.filter(p => p.isOnSale);
-    } else if (special === 'featured') {
-      list = list.filter(p => p.isPopular || p.isFeatured);
-    } else {
-      const cat = this.selectedCategory();
-      if (cat) {
-        list = list.filter(p => p.categoryId === cat);
+      const matchesCat = !cat || p.categoryId === cat;
+
+      let matchesSpecial = true;
+      if (filter === 'offers') {
+        matchesSpecial = !!(p.isOnSale || (p.compareAtPrice && p.compareAtPrice > p.price));
+      } else if (filter === 'featured') {
+        matchesSpecial = !!(p.isPopular || p.isFeatured);
       }
-    }
 
-    const query = this.searchQuery.trim().toLowerCase();
-    if (query) {
-      list = list.filter(p => 
-        p.name.toLowerCase().includes(query) || 
-        p.description.toLowerCase().includes(query)
-      );
-    }
-
-    return list;
+      return matchesSearch && matchesCat && matchesSpecial;
+    });
   });
 
-  setSpecialFilter(filter: 'all' | 'offers' | 'featured'): void {
-    this.specialFilter.set(filter);
-    if (filter !== 'all') {
-      this.selectedCategory.set(null);
-    }
+  ngOnInit(): void {
+    const tenantSlug = this.route.snapshot.paramMap.get('tenantSlug') || 'burger-lab';
+    this.loadStoreData(tenantSlug);
   }
 
-  selectCategoryFilter(catId: string | null): void {
-    this.selectedCategory.set(catId);
-    this.specialFilter.set('all');
+  private loadStoreData(slug: string): void {
+    this.isLoading.set(true);
+    this.api.getTenantBySlug(slug).subscribe({
+      next: (t) => {
+        if (!t) {
+          this.router.navigate(['/']);
+          return;
+        }
+        this.tenant.set(t);
+
+        const currentSelectedBranch = this.cart.selectedBranch();
+        if (t.branches && t.branches.length > 0) {
+          const validBranch = currentSelectedBranch
+            ? t.branches.find(b => b.id === currentSelectedBranch.id)
+            : (t.branches.find(b => b.isMain) || t.branches[0]);
+          this.cart.setSelectedBranch(validBranch || null);
+        } else {
+          this.cart.setSelectedBranch(null);
+        }
+
+        const bId = this.cart.selectedBranch()?.id;
+        this.loadCatalog(t.id, bId);
+        this.fetchLiveBcvRate();
+      },
+      error: () => {
+        this.router.navigate(['/']);
+      }
+    });
+  }
+
+  private fetchLiveBcvRate(): void {
+    this.currency.getUsdExchangeRate().subscribe({
+      next: (rate) => {
+        if (rate && rate > 0) {
+          this.liveBcvRate.set(rate);
+        }
+      },
+      error: () => {}
+    });
+  }
+
+  private loadCatalog(tenantId: string, branchId?: string): void {
+    this.api.getCategories(tenantId, branchId).subscribe({
+      next: (cats) => {
+        this.categories.set(cats || []);
+      }
+    });
+
+    this.api.getProducts(tenantId, branchId).subscribe({
+      next: (prods) => {
+        this.products.set(prods || []);
+        this.isLoading.set(false);
+      },
+      error: () => {
+        this.isLoading.set(false);
+      }
+    });
+  }
+
+  selectBranch(branch: Branch): void {
+    this.cart.setSelectedBranch(branch);
+    this.isBranchModalOpen.set(false);
+    const t = this.tenant();
+    if (t) {
+      this.isLoading.set(true);
+      this.loadCatalog(t.id, branch.id);
+    }
   }
 
   openProductDetail(product: Product): void {
     this.activeModalProduct.set(product);
   }
 
-  onProductAdd(event: { product: Product; quantity: number; modifiers: any[]; notes?: string }): void {
-    this.cart.addItem(event.product, event.quantity, event.modifiers, event.notes);
+  onProductAdd(event: { product: Product; quantity: number; selectedModifiers: any[]; specialInstructions?: string }): void {
+    this.cart.addItem(event.product, event.quantity, event.selectedModifiers, event.specialInstructions);
+    this.activeModalProduct.set(null);
   }
 }
