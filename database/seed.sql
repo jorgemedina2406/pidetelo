@@ -166,19 +166,7 @@ VALUES
   ('f6666666-6666-4666-8666-666666666666', 'e2222222-2222-4222-8222-222222222222', 'Cebolla Caramelizada', 0.80, true, 3)
 ON CONFLICT (id) DO NOTHING;
 
--- 6. REPARTIDOR (RIDER)
-INSERT INTO riders (id, tenant_id, vehicle_type, vehicle_plate, status, current_lat, current_lng)
-VALUES
-(
-  '91111111-1111-4111-8111-111111111111',
-  'a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d',
-  'moto',
-  'AE4R21G',
-  'available',
-  10.4815,
-  -66.8612
-)
-ON CONFLICT (id) DO NOTHING;
+-- 6. REPARTIDORES: No se insertan riders de prueba. Se registran con datos reales desde la app de repartidores.
 
 -- 7. PEDIDO DE EJEMPLO ACTIVO (PARA COCINA Y MAPA DE RASTREO)
 INSERT INTO orders (

@@ -403,23 +403,22 @@ export class RidersService {
     const seenIds = new Set<string>();
     const mapped = dbRiders.map(r => {
       seenIds.add(r.id);
-      const cached = this.localRiders.get(r.id);
-      const defaultName = r.id === '91111111-1111-4111-8111-111111111111' ? 'Marcos Pérez (Moto 04)' : `Repartidor (${r.vehicle_plate})`;
-      const defaultPhone = r.id === '91111111-1111-4111-8111-111111111111' ? '+584141112233' : '+584141234567';
-      const rBranchId = (r as any).branch_id || (r as any).profiles?.branch_id || cached?.branch_id || undefined;
+      const defaultName = r.vehicle_plate ? `Repartidor (${r.vehicle_plate})` : 'Repartidor';
+      const defaultPhone = '+584140000000';
+      const rBranchId = (r as any).branch_id || (r as any).profiles?.branch_id || undefined;
 
       return {
         ...r,
         branch_id: rBranchId,
         branchId: rBranchId,
-        name: (r as any).name || (r as any).profiles?.full_name || cached?.name || defaultName,
-        email: (r as any).email || cached?.email || '',
-        phone: (r as any).phone || (r as any).profiles?.phone || cached?.phone || defaultPhone,
-        national_id: (r as any).national_id || cached?.national_id || '',
-        vehicle_model: (r as any).vehicle_model || cached?.vehicle_model || '',
-        avatar_url: (r as any).avatar_url || (r as any).profiles?.avatar_url || cached?.avatar_url || '',
-        payment_accounts: (r as any).payment_accounts || cached?.payment_accounts || [],
-        wallet_balance: (r as any).wallet_balance !== undefined ? (r as any).wallet_balance : (cached?.wallet_balance || 0.00)
+        name: (r as any).name || (r as any).profiles?.full_name || defaultName,
+        email: (r as any).email || '',
+        phone: (r as any).phone || (r as any).profiles?.phone || defaultPhone,
+        national_id: (r as any).national_id || '',
+        vehicle_model: (r as any).vehicle_model || '',
+        avatar_url: (r as any).avatar_url || (r as any).profiles?.avatar_url || '',
+        payment_accounts: (r as any).payment_accounts || [],
+        wallet_balance: (r as any).wallet_balance !== undefined ? (r as any).wallet_balance : 0.00
       };
     });
 

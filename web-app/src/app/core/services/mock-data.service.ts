@@ -416,9 +416,7 @@ export class MockDataService {
       discount: 0,
       total: 25.48,
       createdAt: new Date(Date.now() - 15 * 60000).toISOString(),
-      updatedAt: new Date(Date.now() - 5 * 60000).toISOString(),
-      driverName: 'Marcos Pérez (Moto 04)',
-      driverPhone: '+584141112233'
+      updatedAt: new Date(Date.now() - 5 * 60000).toISOString()
     },
     {
       id: 'ord-102',

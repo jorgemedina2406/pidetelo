@@ -273,3 +273,4 @@ Responde ÚNICAMENTE un objeto JSON válido con este formato:
     };
   }
 }
+

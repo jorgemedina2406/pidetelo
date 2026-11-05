@@ -179,18 +179,8 @@ export class SeedService {
       await client.from('modifier_options').upsert(opt, { onConflict: 'id' });
     }
 
-    // 5. Riders
-    const sampleRider = {
-      id: 'r1111111-1111-1111-1111-111111111111',
-      tenant_id: tenants[0].id,
-      vehicle_type: 'moto',
-      vehicle_plate: 'AE4R21G',
-      status: 'available',
-      current_lat: 10.4815,
-      current_lng: -66.8612,
-    };
-    await client.from('riders').upsert(sampleRider, { onConflict: 'id' });
-    this.logger.log('Repartidor registrado.');
+    // 5. Riders: No se generan riders de prueba. Se registran exclusivamente con datos reales desde la app de repartidores.
+    this.logger.log('Omitiendo creación de repartidores de prueba.');
 
     // 6. Sample Order
     const sampleOrder = {
@@ -208,7 +198,7 @@ export class SeedService {
       delivery_address: 'Av. San Juan Bosco, Edif. Altamira Suites, Apto 4-B',
       delivery_lat: 10.4960,
       delivery_lng: -66.8520,
-      driver_id: sampleRider.id,
+      driver_id: null,
       subtotal: 14.00,
       delivery_fee: 2.50,
       discount: 0.00,
@@ -238,17 +228,6 @@ export class SeedService {
         selected_modifiers: [],
       },
     ]);
-
-    // Initial Telemetry point
-    await client.from('rider_telemetry').insert({
-      rider_id: sampleRider.id,
-      order_id: sampleOrder.id,
-      latitude: 10.4850,
-      longitude: -66.8580,
-      speed_kmh: 35.5,
-      heading: 45.0,
-      battery_level: 88,
-    });
 
     this.logger.log('¡Base de datos poblada exitosamente con datos reales!');
     return {
