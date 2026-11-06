@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, InternalServerErrorException, ConflictException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, NotFoundException, InternalServerErrorException, ConflictException, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service.js';
 import { randomUUID } from 'crypto';
 import * as fs from 'fs';
@@ -653,5 +653,39 @@ export class UsersService {
     }
 
     return user;
+  }
+
+  async registerCustomer(payload: { email: string; password: string; name: string; phone?: string }) {
+    const cleanEmail = (payload.email || '').toLowerCase().trim();
+    const cleanName = (payload.name || '').trim() || (cleanEmail ? cleanEmail.split('@')[0] : 'Cliente');
+    const cleanPhone = (payload.phone || '').trim();
+
+    if (!cleanEmail || !payload.password) {
+      throw new BadRequestException('Email y contraseña son obligatorios');
+    }
+
+    const client = this.supabase.getClient();
+    const { data, error } = await client.auth.admin.createUser({
+      email: cleanEmail,
+      password: payload.password,
+      email_confirm: true,
+      user_metadata: {
+        full_name: cleanName,
+        phone: cleanPhone,
+        role: 'CUSTOMER'
+      }
+    });
+
+    if (error) {
+      if (error.message?.toLowerCase().includes('already')) {
+        throw new BadRequestException('Este correo electrónico ya se encuentra registrado');
+      }
+      throw new BadRequestException(error.message);
+    }
+
+    return {
+      success: true,
+      user: data.user
+    };
   }
 }

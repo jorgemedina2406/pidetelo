@@ -62,4 +62,10 @@ export class UsersController {
   login(@Body() body: { email: string; password?: string }) {
     return this.usersService.login(body.email, body.password);
   }
+
+  @Post('auth/register-customer')
+  @ApiOperation({ summary: 'Registrar nuevo cliente con confirmación inmediata (sin límite de correo)' })
+  registerCustomer(@Body() body: { email: string; password: string; name: string; phone?: string }) {
+    return this.usersService.registerCustomer(body);
+  }
 }

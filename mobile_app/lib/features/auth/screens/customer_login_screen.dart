@@ -1,6 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/config/app_config.dart';
 import '../../../core/models/user_model.dart';
 import '../../../core/services/session_service.dart';
 import '../widgets/animated_delivery_mascot.dart';
@@ -65,24 +68,60 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
       final supabase = Supabase.instance.client;
 
       if (_isRegister) {
-        final authRes = await supabase.auth.signUp(
-          email: email,
-          password: password,
-          data: {
-            'full_name': name,
-            'phone': phone,
-            'role': 'CUSTOMER',
-          },
-        );
+        User? createdUser;
+        try {
+          final authRes = await supabase.auth.signUp(
+            email: email,
+            password: password,
+            data: {
+              'full_name': name,
+              'phone': phone,
+              'role': 'CUSTOMER',
+            },
+          );
+          createdUser = authRes.user;
+        } catch (signupErr) {
+          final errStr = signupErr.toString().toLowerCase();
+          // Fallback vía backend Admin API si Supabase alcanza el límite de envío de correos
+          if (errStr.contains('rate') || errStr.contains('429') || errStr.contains('email')) {
+            try {
+              final regUri = Uri.parse('${AppConfig.backendBaseUrl}/auth/register-customer');
+              final resp = await http.post(
+                regUri,
+                headers: {'Content-Type': 'application/json'},
+                body: jsonEncode({
+                  'email': email,
+                  'password': password,
+                  'name': name,
+                  'phone': phone,
+                }),
+              ).timeout(const Duration(seconds: 6));
 
-        userId = authRes.user?.id ?? 'cust_${DateTime.now().millisecondsSinceEpoch}';
+              if (resp.statusCode == 200 || resp.statusCode == 201) {
+                final loginRes = await supabase.auth.signInWithPassword(
+                  email: email,
+                  password: password,
+                );
+                createdUser = loginRes.user;
+              } else {
+                throw signupErr;
+              }
+            } catch (_) {
+              throw signupErr;
+            }
+          } else {
+            rethrow;
+          }
+        }
+
+        userId = createdUser?.id ?? 'cust_${DateTime.now().millisecondsSinceEpoch}';
         registeredName = name;
 
         // Sincronizar de inmediato el perfil en la base de datos de Pídetelo
-        if (authRes.user != null) {
+        if (createdUser != null) {
           try {
             await supabase.from('profiles').upsert({
-              'id': authRes.user!.id,
+              'id': createdUser.id,
               'full_name': name,
               'email': email,
               'phone': phone,
@@ -117,10 +156,15 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
       }
     } catch (e) {
       setState(() => _isLoading = false);
+      String userMessage = e.toString().replaceAll('Exception:', '').replaceAll('AuthException:', '').trim();
+      if (userMessage.toLowerCase().contains('rate') || userMessage.toLowerCase().contains('429')) {
+        userMessage = 'Límite de correos alcanzado en Supabase. En tu panel de Supabase: ve a Authentication -> Providers -> Email y desactiva la opción "Confirm email" para registro directo e ilimitado.';
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error de autenticación: ${e.toString().replaceAll('Exception:', '').trim()}'),
+          content: Text(userMessage),
           backgroundColor: Colors.redAccent,
+          duration: const Duration(seconds: 6),
         ),
       );
       return;
