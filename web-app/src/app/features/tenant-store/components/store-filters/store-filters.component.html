@@ -1,0 +1,92 @@
+<!-- Sticky Filter, Categories & View Switcher Bar -->
+    <div class="sticky top-11 z-20 bg-slate-50/95 dark:bg-slate-950/95 backdrop-blur-md pt-3 pb-2 space-y-2.5">
+      <!-- Search bar & View mode switcher row -->
+      <div class="flex items-center gap-2">
+        <div class="relative flex-1">
+          <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 text-sm">
+            <app-icon name="search" [size]="15"></app-icon>
+          </span>
+          <input type="text"
+            [ngModel]="searchQuery"
+            (ngModelChange)="searchQueryChange.emit($event)"
+            placeholder="Buscar producto (ej: hamburguesa, pizza, extra...)"
+            class="w-full text-xs sm:text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white rounded-xl border border-slate-200 dark:border-slate-800 pl-9 p-2.5 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 shadow-sm" />
+        </div>
+
+        <!-- PRODUCT VIEW SWITCHER (GRID vs LIST) -->
+        <div class="flex items-center gap-0.5 bg-slate-200/80 dark:bg-slate-850 p-0.5 rounded-xl border border-slate-300/80 dark:border-slate-850 flex-shrink-0">
+          <button (click)="viewModeChange.emit('grid')"
+                  [class.bg-white]="viewMode === 'grid'"
+                  [class.dark:bg-slate-800]="viewMode === 'grid'"
+                  [class.shadow-xs]="viewMode === 'grid'"
+                  [class.text-brand-500]="viewMode === 'grid'"
+                  [class.text-slate-500]="viewMode !== 'grid'"
+                  class="p-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                  title="Vista en tarjetas">
+            <app-icon name="grid" [size]="14"></app-icon>
+            <span class="hidden sm:inline text-[11px]">Tarjetas</span>
+          </button>
+
+          <button (click)="viewModeChange.emit('list')"
+                  [class.bg-white]="viewMode === 'list'"
+                  [class.dark:bg-slate-800]="viewMode === 'list'"
+                  [class.shadow-xs]="viewMode === 'list'"
+                  [class.text-brand-500]="viewMode === 'list'"
+                  [class.text-slate-500]="viewMode !== 'list'"
+                  class="p-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                  title="Vista en lista">
+            <app-icon name="list" [size]="14"></app-icon>
+            <span class="hidden sm:inline text-[11px]">Lista</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Category & Quick Filter Pills -->
+      <div class="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+        <button (click)="categoryChange.emit(null); specialFilterChange.emit('all')"
+          [style.backgroundColor]="selectedCategory === null && specialFilter === 'all' ? (accentColor || '#ea580c') : ''"
+          [class.text-white]="selectedCategory === null && specialFilter === 'all'"
+          [class.bg-white]="selectedCategory !== null || specialFilter !== 'all'"
+          [class.dark:bg-slate-900]="selectedCategory !== null || specialFilter !== 'all'"
+          [class.text-slate-700]="selectedCategory !== null || specialFilter !== 'all'"
+          [class.dark:text-slate-300]="selectedCategory !== null || specialFilter !== 'all'"
+          class="px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap shadow-xs border border-slate-200 dark:border-slate-800 transition-all flex-shrink-0 cursor-pointer">
+          Todo el Menú
+        </button>
+
+        <!-- Ofertas Pill -->
+        <button (click)="specialFilterChange.emit('offers')"
+          [class.bg-rose-600]="specialFilter === 'offers'"
+          [class.text-white]="specialFilter === 'offers'"
+          [class.bg-white]="specialFilter !== 'offers'"
+          [class.dark:bg-slate-900]="specialFilter !== 'offers'"
+          [class.text-rose-600]="specialFilter !== 'offers'"
+          class="px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap shadow-xs border border-rose-300 dark:border-rose-800 transition-all flex-shrink-0 flex items-center gap-1 cursor-pointer">
+          <span>🔥</span> Ofertas Flash
+        </button>
+
+        <!-- Destacados Pill -->
+        <button (click)="specialFilterChange.emit('featured')"
+          [class.bg-amber-500]="specialFilter === 'featured'"
+          [class.text-white]="specialFilter === 'featured'"
+          [class.bg-white]="specialFilter !== 'featured'"
+          [class.dark:bg-slate-900]="specialFilter !== 'featured'"
+          [class.text-amber-600]="specialFilter !== 'featured'"
+          class="px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap shadow-xs border border-amber-300 dark:border-amber-800 transition-all flex-shrink-0 flex items-center gap-1 cursor-pointer">
+          <span>⭐</span> Destacados
+        </button>
+
+        @for (cat of categories; track cat.id) {
+          <button (click)="categoryChange.emit(cat.id)"
+            [style.backgroundColor]="selectedCategory === cat.id ? (accentColor || '#ea580c') : ''"
+            [class.text-white]="selectedCategory === cat.id"
+            [class.bg-white]="selectedCategory !== cat.id"
+            [class.dark:bg-slate-900]="selectedCategory !== cat.id"
+            [class.text-slate-700]="selectedCategory !== cat.id"
+            [class.dark:text-slate-300]="selectedCategory !== cat.id"
+            class="px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap shadow-xs border border-slate-200 dark:border-slate-800 transition-all flex-shrink-0 cursor-pointer">
+            {{ cat.name }}
+          </button>
+        }
+      </div>
+    </div>

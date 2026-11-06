@@ -1,0 +1,137 @@
+@if (isOpen && order) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/60 backdrop-blur-sm animate-fade-in"
+      (click)="close.emit()">
+      <div class="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 flex flex-col max-h-[90vh]"
+        (click)="$event.stopPropagation()">
+
+        <!-- Header -->
+        <div class="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-brand-500/10 text-brand-500 flex items-center justify-center font-bold">
+              <app-icon name="clipboard-list" [size]="20"></app-icon>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h3 class="font-black text-lg">Comanda {{ order.orderNumber }}</h3>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase"
+                  [class.bg-emerald-500/15]="order.status === 'delivered'"
+                  [class.text-emerald-600]="order.status === 'delivered'"
+                  [class.bg-red-500/15]="order.status === 'cancelled'"
+                  [class.text-red-600]="order.status === 'cancelled'"
+                  [class.bg-amber-500/15]="order.status !== 'delivered' && order.status !== 'cancelled'"
+                  [class.text-amber-600]="order.status !== 'delivered' && order.status !== 'cancelled'">
+                  {{ order.status === 'delivered' ? 'Entregado' : order.status === 'cancelled' ? 'Cancelado' : order.status }}
+                </span>
+              </div>
+              <p class="text-xs text-slate-400">
+                Registrado el {{ order.createdAt | date:'medium' }}
+                @if (order.branchName) {
+                • Sede: <strong>{{ order.branchName }}</strong>
+                }
+              </p>
+            </div>
+          </div>
+
+          <button (click)="close.emit()"
+            class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors cursor-pointer">
+            ✕
+          </button>
+        </div>
+
+        <!-- Body / Scrollable Content -->
+        <div class="p-5 space-y-5 overflow-y-auto flex-1 text-xs">
+
+          <!-- Cliente & Despacho -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 bg-slate-50 dark:bg-slate-850 rounded-2xl border border-slate-100 dark:border-slate-800">
+            <div>
+              <span class="text-[10px] uppercase font-bold text-slate-400">Datos del Cliente</span>
+              <div class="font-extrabold text-slate-800 dark:text-white mt-0.5">{{ order.customer.name }}</div>
+              <div class="font-mono text-slate-500">{{ order.customer.phone }}</div>
+            </div>
+            <div>
+              <span class="text-[10px] uppercase font-bold text-slate-400">Dirección de Despacho</span>
+              <div class="font-semibold text-slate-700 dark:text-slate-300 mt-0.5">{{ order.customer.deliveryAddress || 'Para Retirar en Local' }}</div>
+            </div>
+          </div>
+
+          <!-- Repartidor -->
+          @if (order.driverName) {
+          <div class="flex items-center justify-between p-3 bg-brand-500/5 rounded-xl border border-brand-500/20">
+            <div class="flex items-center gap-2">
+              <app-icon name="bike" [size]="16" className="text-brand-500"></app-icon>
+              <span>Motorizado Asignado: <strong>{{ order.driverName }}</strong></span>
+            </div>
+            @if (order.status === 'on_the_way') {
+            <button (click)="viewRoute.emit(order)"
+              class="text-[11px] font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1 cursor-pointer">
+              <span>Ver Ruta en Vivo</span>
+              <span>&rarr;</span>
+            </button>
+            }
+          </div>
+          }
+
+          <!-- Ítems del Pedido -->
+          <div class="space-y-2">
+            <span class="text-[10px] uppercase font-black tracking-wider text-slate-400">Detalle de Productos</span>
+            <div class="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-100 dark:border-slate-800 rounded-2xl overflow-hidden">
+              @for (item of order.items; track item.cartItemId) {
+              <div class="p-3 bg-white dark:bg-slate-900 flex items-start justify-between gap-3">
+                <div>
+                  <div class="font-bold text-slate-800 dark:text-white">
+                    {{ item.quantity }}x {{ item.name }}
+                  </div>
+                  @if (getModifiersText(item.selectedModifiers)) {
+                  <div class="text-[11px] text-amber-500 dark:text-amber-400 font-semibold pl-2 mt-0.5">
+                    + {{ getModifiersText(item.selectedModifiers) }}
+                  </div>
+                  }
+                </div>
+                <span class="font-mono font-bold text-slate-900 dark:text-white shrink-0">
+                  \${{ item.itemTotal.toFixed(2) }}
+                </span>
+              </div>
+              }
+            </div>
+          </div>
+
+          <!-- Resumen Financiero -->
+          <div class="p-4 bg-slate-50 dark:bg-slate-850 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-1.5 font-mono">
+            <div class="flex justify-between text-slate-500">
+              <span>Subtotal</span>
+              <span>\${{ order.subtotal.toFixed(2) }}</span>
+            </div>
+            <div class="flex justify-between text-slate-500">
+              <span>Tarifa de Envío</span>
+              <span>\${{ order.deliveryFee.toFixed(2) }}</span>
+            </div>
+            @if (order.discount > 0) {
+            <div class="flex justify-between text-emerald-600">
+              <span>Descuento Promoción</span>
+              <span>-\${{ order.discount.toFixed(2) }}</span>
+            </div>
+            }
+            <div class="pt-2 border-t border-slate-200 dark:border-slate-700 flex justify-between items-center font-black text-sm text-slate-900 dark:text-white">
+              <span class="font-sans">Total Cobrado</span>
+              <div class="text-right">
+                <div>\${{ order.total.toFixed(2) }} USD</div>
+                <div class="text-[11px] font-medium text-slate-400">
+                  Bs. {{ (order.total * activeExchangeRate).toFixed(2) }} (Tasa: {{ activeExchangeRate.toFixed(2) }})
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Footer -->
+        <div class="p-4 bg-slate-100 dark:bg-slate-850 border-t border-slate-200 dark:border-slate-800 flex justify-end">
+          <button (click)="close.emit()"
+            class="px-5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 font-bold text-xs shadow-sm transition-all cursor-pointer">
+            Cerrar
+          </button>
+        </div>
+
+      </div>
+    </div>
+    }

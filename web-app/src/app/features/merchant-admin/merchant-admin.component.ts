@@ -1860,7 +1860,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     });
   }
 
-  assignRiderToOrder(orderId: string, riderId: string): void {
+  assignRiderToOrder(orderId: string, riderId?: string | null): void {
     if (!riderId) return;
 
     let targetRiderId = riderId;

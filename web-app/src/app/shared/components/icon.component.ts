@@ -59,7 +59,10 @@ export type IconName =
   | 'folder'
   | 'upload'
   | 'copy'
-  | 'tag' | 'heart' | 'play' | 'pause';
+  | 'tag'
+  | 'heart'
+  | 'play'
+  | 'pause';
 
 
 
@@ -356,6 +359,16 @@ export type IconName =
         @case ('tag') {
           <path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/>
           <path d="M7 7h.01"/>
+        }
+        @case ('heart') {
+          <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+        }
+        @case ('play') {
+          <polygon points="5 3 19 12 5 21 5 3"/>
+        }
+        @case ('pause') {
+          <rect x="6" y="4" width="4" height="16"/>
+          <rect x="14" y="4" width="4" height="16"/>
         }
       }
     </svg>

@@ -1,0 +1,69 @@
+@if (isOpen && order) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/60 backdrop-blur-sm animate-fade-in"
+      (click)="close.emit()">
+      <div class="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 flex flex-col max-h-[92vh]"
+        (click)="$event.stopPropagation()">
+
+        <!-- Modal Header -->
+        <div class="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between flex-shrink-0">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-orange-500/10 text-brand-500 flex items-center justify-center font-bold">
+              <app-icon name="navigation" [size]="20"></app-icon>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h3 class="font-black text-base sm:text-lg">Ruta en Vivo: {{ order.orderNumber }}</h3>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-orange-500/15 text-orange-600 dark:text-orange-400 border border-orange-500/30">
+                  {{ order.status === 'on_the_way' ? 'En Camino al Cliente' : 'Comanda Despachada' }}
+                </span>
+              </div>
+              <p class="text-xs text-slate-500 dark:text-slate-400">
+                Sede: <strong>{{ order.branchName || branch?.name || fallbackStoreName }}</strong> &rarr; {{ order.customer.deliveryAddress || 'Dirección de Entrega' }}
+              </p>
+            </div>
+          </div>
+
+          <button (click)="close.emit()"
+            class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-500 dark:text-slate-400 flex items-center justify-center transition-colors cursor-pointer">
+            ✕
+          </button>
+        </div>
+
+        <!-- Live Route Map Container -->
+        <div class="relative flex-1 min-h-[380px] sm:min-h-[460px] bg-slate-100 dark:bg-slate-950">
+          <div id="order-route-leaflet-modal-map" class="w-full h-full min-h-[380px] sm:min-h-[460px] z-0"></div>
+
+          <!-- Float Info Pill -->
+          <div class="absolute top-3 left-3 z-[400] bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-3.5 py-2.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-lg text-xs space-y-1">
+            <div class="font-bold flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span>Motorizado: <strong>{{ order.driverName || 'Repartidor de la Red' }}</strong></span>
+            </div>
+            <div class="text-[11px] text-slate-500 dark:text-slate-400">
+              Total del Pedido: <strong class="text-slate-800 dark:text-white font-mono">\${{ order.total.toFixed(2) }}</strong> (Bs. {{ (order.total * activeExchangeRate).toFixed(2) }})
+            </div>
+          </div>
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="p-4 bg-slate-50 dark:bg-slate-850 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 flex-shrink-0">
+          <div class="text-xs text-slate-600 dark:text-slate-300">
+            <span>Cliente: <strong>{{ order.customer.name }}</strong> ({{ order.customer.phone }})</span>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <a [href]="'tel:' + order.customer.phone"
+              class="px-3 py-1.5 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-800 dark:text-slate-200 text-xs font-bold flex items-center gap-1.5 transition-colors">
+              <app-icon name="phone" [size]="12"></app-icon>
+              <span>Llamar Cliente</span>
+            </a>
+            <button (click)="close.emit()"
+              class="px-4 py-1.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-extrabold shadow-sm transition-all cursor-pointer">
+              Cerrar Mapa
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    }

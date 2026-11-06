@@ -6,76 +6,7 @@ import { FormsModule } from '@angular/forms';
   selector: 'app-merchant-coupon-modal',
   standalone: true,
   imports: [CommonModule, FormsModule],
-  template: `
-    @if (isOpen) {
-      <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-        <div class="bg-white dark:bg-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-5 max-h-[90vh] overflow-y-auto">
-          <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-700/60 pb-4">
-            <div class="flex items-center gap-2">
-              <span class="text-2xl">🏷️</span>
-              <div>
-                <h3 class="text-lg font-black text-slate-900 dark:text-white">{{ coupon.id ? 'Editar Cupón' : 'Nuevo Cupón de Oferta' }}</h3>
-                <p class="text-xs text-slate-400">Configura el código y valor del descuento</p>
-              </div>
-            </div>
-            <button (click)="close.emit()" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-white flex items-center justify-center transition cursor-pointer">✕</button>
-          </div>
-          <div class="space-y-4">
-            <div>
-              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Código del Cupón <span class="text-rose-500">*</span></label>
-              <input type="text" [(ngModel)]="coupon.code" (input)="coupon.code = coupon.code?.toUpperCase()" placeholder="EJ: VERANO20, FLASH10, HAMBURGUESAS" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm font-mono font-black tracking-wider text-brand-600 dark:text-brand-400 uppercase focus:outline-none focus:border-brand-500" />
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Descripción / Leyenda</label>
-              <input type="text" [(ngModel)]="coupon.description" placeholder="Ej: 20% de descuento en pedidos mayores a $15" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Tipo de Descuento</label>
-                <select [(ngModel)]="coupon.discountType" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-brand-500">
-                  <option value="percentage">Porcentaje (%)</option>
-                  <option value="fixed">Monto Fijo ($ USD)</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">{{ coupon.discountType === 'percentage' ? 'Porcentaje (%)' : 'Monto ($ USD)' }} <span class="text-rose-500">*</span></label>
-                <input type="number" min="0.01" step="0.5" [(ngModel)]="coupon.discountValue" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
-              </div>
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Mínimo de Compra ($ USD)</label>
-                <input type="number" min="0" step="1" [(ngModel)]="coupon.minOrderAmount" placeholder="0 (sin mínimo)" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Tope Máx. Desc. ($ USD)</label>
-                <input type="number" min="0" step="1" [(ngModel)]="coupon.maxDiscountAmount" placeholder="Opcional" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
-              </div>
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Límite Total de Usos</label>
-              <input type="number" min="1" [(ngModel)]="coupon.usageLimit" placeholder="Ej: 100 (dejar en blanco para ilimitado)" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
-            </div>
-            <div class="flex items-center gap-2 pt-2">
-              <input type="checkbox" id="merchantCouponIsActive" [(ngModel)]="coupon.isActive" class="w-4 h-4 text-brand-600 rounded border-slate-300 focus:ring-brand-500 cursor-pointer" />
-              <label for="merchantCouponIsActive" class="text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">Cupón activo (habilitado para canjear en el checkout)</label>
-            </div>
-          </div>
-          <div class="flex items-center justify-end gap-3 border-t border-slate-100 dark:border-slate-700/60 pt-4">
-            <button (click)="close.emit()" class="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-600 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition cursor-pointer">Cancelar</button>
-            <button (click)="save.emit(coupon)" [disabled]="!coupon.code || isSaving" class="px-5 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white text-xs font-bold shadow-md shadow-brand-500/25 transition flex items-center gap-2 cursor-pointer">
-              @if (isSaving) {
-                <span class="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                <span>Guardando...</span>
-              } @else {
-                <span>{{ coupon.id ? 'Guardar Cambios' : 'Crear Cupón' }}</span>
-              }
-            </button>
-          </div>
-        </div>
-      </div>
-    }
-  `
+  templateUrl: './coupon-form-modal.component.html'
 })
 export class MerchantCouponModalComponent {
   @Input() isOpen = false;

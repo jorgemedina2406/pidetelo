@@ -1,0 +1,266 @@
+@if (isOpen) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
+      (click)="close.emit()">
+      <div
+        class="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl shadow-2xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 space-y-6"
+        (click)="$event.stopPropagation()">
+
+        <div class="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
+          <div>
+            <span class="text-[10px] font-black uppercase tracking-wider text-brand-500 bg-brand-50 dark:bg-brand-950/40 px-2.5 py-1 rounded-full">
+              {{ mode === 'create' ? 'Expansión Multi-Sede' : 'Configuración de Sucursal' }}
+            </span>
+            <h3 class="text-xl font-extrabold mt-1">
+              {{ mode === 'create' ? 'Registrar Nueva Sucursal' : 'Editar Sucursal / Sede' }}
+            </h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+              {{ mode === 'create'
+                ? 'Define la ubicación física y las cuentas directas donde tus clientes pagarán sin comisiones.'
+                : 'Actualiza la dirección física, coordenadas satelitales y radio de cobertura.' }}
+            </p>
+          </div>
+          <button (click)="close.emit()" class="text-slate-400 hover:text-slate-600 dark:hover:text-white p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer">
+            <app-icon name="x" [size]="20"></app-icon>
+          </button>
+        </div>
+
+        @if (errorMessage()) {
+        <div class="bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 p-3 rounded-xl text-xs font-semibold">
+          {{ errorMessage() }}
+        </div>
+        }
+
+        <form (submit)="onSubmit($event)" class="space-y-5 text-xs">
+          
+          <!-- 1. Datos Operativos y Ubicación -->
+          <div class="space-y-3">
+            <h4 class="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-2">
+              <app-icon name="store" [size]="16" className="text-brand-500"></app-icon>
+              <span>1. Datos Operativos y Ubicación</span>
+            </h4>
+
+            <div>
+              <label class="block font-semibold mb-1">Nombre Comercial de la Sucursal *</label>
+              <input type="text" [(ngModel)]="form.name" name="bName" required
+                placeholder="Ej: Sede Principal - Centro"
+                class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-3 focus:outline-none focus:border-brand-500 font-bold" />
+            </div>
+
+            <div>
+              <label class="block font-semibold mb-1">Dirección Física Completa *</label>
+              <input type="text" [(ngModel)]="form.address" name="bAddress" required
+                placeholder="Ej: Av. Libertador con Calle 9, Centro de Cabudare, Local 3"
+                class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-3 focus:outline-none focus:border-brand-500" />
+            </div>
+
+            <!-- GPS Detection Box -->
+            <div class="p-3.5 rounded-xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2.5">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-slate-700 dark:text-slate-300">Coordenadas Satelitales (Latitud / Longitud)</span>
+                <button type="button" (click)="captureGps()" [disabled]="isDetectingGps()"
+                  class="px-3 py-1.5 rounded-lg bg-brand-500 hover:bg-brand-600 text-white font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer">
+                  <app-icon name="crosshair" [size]="14"></app-icon>
+                  <span>{{ isDetectingGps() ? 'Detectando...' : 'Capturar GPS del Local' }}</span>
+                </button>
+              </div>
+
+              @if (gpsMessage()) {
+              <div class="text-[11px] font-semibold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/40 p-2 rounded-lg">
+                {{ gpsMessage() }}
+              </div>
+              }
+
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block font-semibold text-[11px] mb-1">Latitud</label>
+                  <input type="number" step="0.000001" [(ngModel)]="form.latitude" (ngModelChange)="updateMapFromInputs()" name="bLat"
+                    class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 font-mono text-center font-bold" />
+                </div>
+                <div>
+                  <label class="block font-semibold text-[11px] mb-1">Longitud</label>
+                  <input type="number" step="0.000001" [(ngModel)]="form.longitude" (ngModelChange)="updateMapFromInputs()" name="bLng"
+                    class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 font-mono text-center font-bold" />
+                </div>
+              </div>
+
+              <!-- Selector Interactivo en Mapa -->
+              <div class="pt-2">
+                <div class="flex items-center justify-between text-[11px] text-slate-500 mb-1.5">
+                  <span class="font-bold flex items-center gap-1 text-slate-700 dark:text-slate-300">
+                    <span>🗺️</span>
+                    <span>Fijar en mapa satelital interactivo</span>
+                  </span>
+                  <span class="text-[10px] text-brand-600 dark:text-brand-400 font-semibold">Clic o arrastrar marcador</span>
+                </div>
+                <div id="branch-modal-location-map" class="w-full h-44 rounded-xl border border-slate-300 dark:border-slate-700 overflow-hidden shadow-xs z-0"></div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+              <div>
+                <label class="block font-semibold mb-1">Radio Cobertura (km)</label>
+                <input type="number" step="0.5" [(ngModel)]="form.deliveryRadiusKm" name="bRadius"
+                  class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-center font-bold" />
+              </div>
+              <div>
+                <label class="block font-semibold mb-1">Envío Base ($)</label>
+                <input type="number" step="0.5" [(ngModel)]="form.baseDeliveryFee" name="bFee"
+                  class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-center font-bold text-brand-600 dark:text-brand-400" />
+              </div>
+              <div>
+                <label class="block font-semibold mb-1">Hora Apertura</label>
+                <input type="text" [(ngModel)]="form.openTime" name="bOpen" placeholder="11:30"
+                  class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-center font-mono font-bold" />
+              </div>
+              <div>
+                <label class="block font-semibold mb-1">Hora Cierre</label>
+                <input type="text" [(ngModel)]="form.closeTime" name="bClose" placeholder="23:00"
+                  class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-center font-mono font-bold" />
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. Datos Financieros Directos de Esta Sede -->
+          <div class="space-y-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+            <div class="flex items-center justify-between">
+              <h4 class="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-2">
+                <app-icon name="wallet" [size]="16" className="text-orange-500"></app-icon>
+                <span>2. Datos Financieros Directos de Esta Sede</span>
+              </h4>
+              <span class="text-[10px] uppercase font-black tracking-wider bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300 px-2 py-0.5 rounded-md">
+                0% Comisiones
+              </span>
+            </div>
+            <p class="text-[11px] text-slate-400">
+              Los clientes transferirán directamente a estas cuentas cuando ordenen de esta sede. No retenemos ni comisionamos tus ventas.
+            </p>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block font-semibold mb-1">Banco Pago Móvil</label>
+                <input type="text" [(ngModel)]="form.pagoMovilBank" name="bPmBank" required
+                  placeholder="Ej: 0105 - Mercantil"
+                  class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 font-bold" />
+              </div>
+              <div>
+                <label class="block font-semibold mb-1">Teléfono Pago Móvil</label>
+                <input type="text" [(ngModel)]="form.pagoMovilPhone" name="bPmPhone" required
+                  placeholder="0412-9988776"
+                  class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 font-mono font-bold" />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block font-semibold mb-1">Cédula o RIF del Titular</label>
+                <input type="text" [(ngModel)]="form.pagoMovilIdNumber" name="bPmId" required
+                  placeholder="J-501234567 o V-25.123.456"
+                  class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 font-mono font-bold uppercase" />
+              </div>
+              <div>
+                <label class="block font-semibold mb-1">Nombre del Titular de la Cuenta</label>
+                <input type="text" [(ngModel)]="form.pagoMovilAccountName" name="bPmAccount" required
+                  placeholder="Ej: Inversiones Los Andes C.A."
+                  class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 font-bold" />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block font-semibold mb-1">Correo Zelle (Opcional)</label>
+                <input type="email" [(ngModel)]="form.zelleEmail" name="bZelle"
+                  placeholder="pagos@comercio.com"
+                  class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 font-mono" />
+              </div>
+              <div>
+                <label class="block font-semibold mb-1">Titular Zelle (Opcional)</label>
+                <input type="text" [(ngModel)]="form.zelleAccountName" name="bZelleName"
+                  placeholder="Ej: Comercio Group LLC"
+                  class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5" />
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. Credenciales de Acceso Exclusivas para Esta Sucursal -->
+          <div class="space-y-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+            <div class="flex items-center justify-between">
+              <h4 class="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-2">
+                <app-icon name="lock" [size]="16" className="text-brand-500"></app-icon>
+                <span>3. Credenciales de Acceso {{ mode === 'create' ? 'Exclusivas para Esta Sucursal' : 'de Esta Sucursal' }}</span>
+              </h4>
+              <span class="text-[10px] uppercase font-black tracking-wider px-2 py-0.5 rounded-md"
+                [class.bg-brand-100]="mode === 'create'" [class.text-brand-700]="mode === 'create'"
+                [class.bg-blue-100]="mode === 'edit'" [class.text-blue-700]="mode === 'edit'">
+                {{ mode === 'create' ? 'Ingreso Independiente' : 'Seguridad Sede' }}
+              </span>
+            </div>
+            <p class="text-[11px] text-slate-400">
+              Cada sucursal cuenta con su propio correo y contraseña para ingresar. El personal de esta sede solo podrá gestionar sus propios pedidos, stock y configuración local, sin acceso a las demás sucursales.
+            </p>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block font-semibold mb-1">Correo de Acceso Exclusivo {{ mode === 'create' ? '*' : '' }}</label>
+                <input type="email" [(ngModel)]="form.managerEmail" name="bManagerEmail" [required]="mode === 'create'"
+                  placeholder="ej: sede.centro@micomercio.com"
+                  class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 font-bold font-mono text-brand-600 dark:text-brand-400" />
+              </div>
+              <div>
+                <label class="block font-semibold mb-1">
+                  {{ mode === 'create' ? 'Contraseña de Acceso *' : 'Nueva Contraseña (Opcional)' }}
+                </label>
+                <input type="text" [(ngModel)]="form.managerPassword" name="bManagerPass" [required]="mode === 'create'"
+                  [placeholder]="mode === 'create' ? 'Contraseña (mínimo 4 caracteres)' : 'Dejar en blanco para conservar'"
+                  class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 font-bold font-mono" />
+              </div>
+            </div>
+
+            <div>
+              <label class="block font-semibold mb-1">Nombre del Encargado / Responsable</label>
+              <input type="text" [(ngModel)]="form.managerName" name="bManagerName"
+                placeholder="ej: Carlos Mendoza (Gerente de Sede)"
+                class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 font-semibold" />
+            </div>
+          </div>
+
+          @if (mode === 'create') {
+          <div class="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 text-[11px] text-amber-800 dark:text-amber-300 flex items-start gap-2">
+            <app-icon name="alert-triangle" [size]="16" className="text-amber-600 flex-shrink-0 mt-0.5"></app-icon>
+            <span>
+              <strong>Flujo de Aprobación Obligatorio:</strong> La sucursal iniciará en estado <em>Pendiente de Aprobación</em>. Un Super Administrador validará las coordenadas y datos operativos antes de que los clientes la visualicen en la app.
+            </span>
+          </div>
+          }
+
+          <div class="pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3 flex-wrap">
+            @if (mode === 'edit' && isMainBranchOrOwner && branch && !branch.isMain) {
+            <button type="button" (click)="deleteRequested.emit(branch)"
+              class="px-4 py-2.5 rounded-xl border border-red-300 dark:border-red-900/60 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/50 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95">
+              <app-icon name="trash" [size]="14"></app-icon>
+              <span>Eliminar Sucursal</span>
+            </button>
+            } @else {
+              <div></div>
+            }
+
+            <div class="flex items-center gap-3 ml-auto">
+              <button type="button" (click)="close.emit()" [disabled]="isSaving()"
+                class="px-5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold cursor-pointer">
+                Cancelar
+              </button>
+              <button type="submit" [disabled]="isSaving()"
+                class="px-6 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-extrabold shadow-md shadow-brand-500/25 flex items-center gap-2 cursor-pointer active:scale-95 transition-all disabled:opacity-50">
+                @if (isSaving()) {
+                  <span class="animate-spin inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full"></span>
+                  <span>Guardando...</span>
+                } @else {
+                  <span>{{ mode === 'create' ? 'Enviar a Revisión de Super Admin' : 'Guardar Cambios de Sucursal' }}</span>
+                }
+              </button>
+            </div>
+          </div>
+
+        </form>
+      </div>
+    </div>
+    }
