@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CartStore } from '../../stores/cart.store';
@@ -35,8 +35,19 @@ export class CheckoutModalComponent {
                               (tenant as any)?.acceptedPaymentMethods || 
                               (tenant as any)?.accepted_payment_methods || 
                               ['cash_usd', 'mobile_transfer', 'cash_local'];
-    return this.paymentMethods.filter(pm => accepted.includes(pm.id));
+    const filtered = this.paymentMethods.filter(pm => accepted.includes(pm.id));
+    return filtered.length > 0 ? filtered : this.paymentMethods;
   });
+
+  constructor() {
+    effect(() => {
+      const available = this.availablePaymentMethods();
+      const current = this.cart.paymentMethod();
+      if (available.length > 0 && !available.some(m => m.id === current)) {
+        this.cart.setPaymentMethod(available[0].id);
+      }
+    });
+  }
 
   applyCoupon(): void {
     const code = this.cart.couponCodeInput()?.trim().toUpperCase();

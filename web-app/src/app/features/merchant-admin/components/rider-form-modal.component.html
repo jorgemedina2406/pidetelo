@@ -31,9 +31,24 @@
                 class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-3 focus:outline-none focus:border-brand-500 font-medium" />
             </div>
             <div>
-              <label class="block font-semibold mb-1">Contraseña de Acceso</label>
-              <input type="password" [(ngModel)]="form.password" name="riderPassword" required placeholder="Mínimo 6 caracteres"
-                class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-3 focus:outline-none focus:border-brand-500 font-mono" />
+              <label class="block font-semibold mb-1">Contraseña de Acceso *</label>
+              <input type="password" [(ngModel)]="form.password" name="riderPassword" required placeholder="Mínimo 8 dígitos, Mayúscula y Especial"
+                class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-3 focus:outline-none focus:border-brand-500 font-mono font-bold" />
+              <div class="mt-2 p-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 text-[10.5px] space-y-1">
+                <div class="font-bold text-slate-600 dark:text-slate-400">Requisitos de seguridad:</div>
+                <div class="flex items-center gap-1.5" [class.text-emerald-600]="hasMinLength" [class.text-slate-400]="!hasMinLength">
+                  <span>{{ hasMinLength ? '✓' : '○' }}</span>
+                  <span>Mínimo 8 caracteres</span>
+                </div>
+                <div class="flex items-center gap-1.5" [class.text-emerald-600]="hasUppercase" [class.text-slate-400]="!hasUppercase">
+                  <span>{{ hasUppercase ? '✓' : '○' }}</span>
+                  <span>Al menos 1 letra mayúscula (A-Z)</span>
+                </div>
+                <div class="flex items-center gap-1.5" [class.text-emerald-600]="hasSpecialChar" [class.text-slate-400]="!hasSpecialChar">
+                  <span>{{ hasSpecialChar ? '✓' : '○' }}</span>
+                  <span>Al menos 1 carácter especial (*, ., @, etc)</span>
+                </div>
+              </div>
             </div>
           </div>
 

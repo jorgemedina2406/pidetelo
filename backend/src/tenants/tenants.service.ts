@@ -85,6 +85,7 @@ export class TenantsService {
     ];
     const deliveryTiers = t.delivery_tiers ?? meta.delivery_tiers ?? meta.deliveryTiers ?? defaultDeliveryTiers;
     const isFeatured = Boolean(t.is_featured ?? meta.is_featured ?? meta.isFeatured ?? false);
+    const acceptedPaymentMethods = t.accepted_payment_methods ?? meta.accepted_payment_methods ?? meta.acceptedPaymentMethods ?? ['mobile_transfer', 'cash_usd', 'cash_local'];
 
     return {
       ...t,
@@ -100,6 +101,8 @@ export class TenantsService {
       currencySettings,
       delivery_tiers: deliveryTiers,
       deliveryTiers,
+      accepted_payment_methods: acceptedPaymentMethods,
+      acceptedPaymentMethods,
       branding: {
         accentColor: t.accent_color || '#f97316',
         logoUrl: t.logo_url || '',

@@ -33,7 +33,7 @@ export class RiderFormModalComponent implements OnChanges {
   }
   get hasSpecialChar(): boolean {
     const s = this.form.password || '';
-    return s.includes('*') || s.includes('.') || s.includes('@') || s.includes('#') || s.includes('!') || s.includes('?');
+    return /[*@#.!$%^&()_+\-=\[\]{};':"\\|,.<>\/?~]/.test(s);
   }
   get isPasswordValid(): boolean {
     return this.hasMinLength && this.hasUppercase && this.hasSpecialChar;

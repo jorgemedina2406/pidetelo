@@ -493,10 +493,12 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
       if (!ok) {
         if (!mounted) return;
         setState(() => _isLoading = false);
+        final msg = widget.sessionService.lastErrorMessage ?? 'El correo electrónico o la contraseña ingresados son incorrectos. Por favor, verifica tus datos.';
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Credenciales inválidas o no existe repartidor registrado con este correo.'),
+          SnackBar(
+            content: Text(msg),
             backgroundColor: Colors.redAccent,
+            duration: const Duration(seconds: 4),
           ),
         );
         return;
@@ -711,6 +713,38 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
                       obscureText: _obscurePassword,
                       onTogglePassword: () => setState(() => _obscurePassword = !_obscurePassword),
                     ),
+                    if (_isRegister) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: _isPasswordValid
+                                ? const Color(0xFF10B981).withValues(alpha: 0.5)
+                                : const Color(0xFFCBD5E1),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Requisitos de contraseña segura:',
+                              style: GoogleFonts.outfit(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF475569),
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            _buildPasswordReqRow('Mínimo 8 caracteres', _hasMinLength),
+                            _buildPasswordReqRow('Al menos 1 letra mayúscula (A-Z)', _hasUppercase),
+                            _buildPasswordReqRow('Al menos 1 carácter especial (*, ., @, etc)', _hasSpecialChar),
+                          ],
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 14),
 
                     // Keep signed in & Forgot Password in Spanish
@@ -958,6 +992,9 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
         controller: controller,
         obscureText: isPassword && obscureText,
         keyboardType: keyboardType,
+        onChanged: (val) {
+          if (mounted) setState(() {});
+        },
         style: GoogleFonts.outfit(fontSize: 14.5, color: const Color(0xFF0F172A), fontWeight: FontWeight.w600),
         decoration: InputDecoration(
           isDense: true,

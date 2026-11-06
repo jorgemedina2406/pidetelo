@@ -738,7 +738,8 @@ export class UsersService {
         if (fs.existsSync(metadataFile)) {
           const tenantsMeta = JSON.parse(fs.readFileSync(metadataFile, 'utf-8'));
           if (tenantsMeta[user.tenant_id]) {
-            if (tenantsMeta[user.tenant_id].is_active === false || tenantsMeta[user.tenant_id].status === 'inactive') {
+            const tm = tenantsMeta[user.tenant_id];
+            if (tm.is_active === false || tm.is_paused === true || tm.status === 'inactive' || tm.status === 'paused') {
               tenantActive = false;
             }
           }
@@ -749,12 +750,12 @@ export class UsersService {
             .select('is_active, status')
             .eq('id', user.tenant_id)
             .maybeSingle();
-          if (tenantRow && (tenantRow.is_active === false || tenantRow.status === 'inactive')) {
+          if (tenantRow && (tenantRow.is_active === false || tenantRow.status === 'inactive' || tenantRow.status === 'paused' || (tenantRow as any).is_paused === true)) {
             tenantActive = false;
           }
         }
         if (!tenantActive) {
-          throw new UnauthorizedException('El comercio asociado a esta cuenta está desactivado temporalmente. El acceso a sus colaboradores y repartidores está suspendido.');
+          throw new UnauthorizedException('El comercio asociado a esta cuenta se encuentra pausado o desactivado temporalmente. El acceso administrativo y de repartidores a este comercio está bloqueado.');
         }
       } catch (err: any) {
         if (err instanceof UnauthorizedException) throw err;
@@ -763,7 +764,7 @@ export class UsersService {
 
     const expectedPass = user.password || user.password_hash || '123456';
     if (!password || expectedPass !== password) {
-      throw new UnauthorizedException('Contraseña incorrecta');
+      throw new UnauthorizedException('El correo o la contraseña son incorrectos. Por favor, verifica tus datos.');
     }
 
     return user;

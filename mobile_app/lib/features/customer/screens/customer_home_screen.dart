@@ -33,6 +33,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   bool _isLoadingStores = false;
   bool _isStoreGridView = false;
   List<BannerItem> _banners = [];
+  final PageController _bannerController = PageController();
+  int _currentBannerIndex = 0;
   Timer? _liveOrdersSyncTimer;
   Timer? _notifSyncTimer;
   int _unreadNotificationsCount = 0;
@@ -145,6 +147,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
   @override
   void dispose() {
+    _bannerController.dispose();
     _liveOrdersSyncTimer?.cancel();
     _notifSyncTimer?.cancel();
     super.dispose();
@@ -1230,136 +1233,175 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   ),
                 ),
 
-                // 2. BANNERS PROMOCIONALES / FLASH
+                // 2. BANNERS PROMOCIONALES / FLASH (SLIDER HORIZONTAL)
                 if (_banners.isNotEmpty) ...[
                   const SizedBox(height: 18),
-                  ..._banners.map((b) => GestureDetector(
-    onTap: () => _onBannerTapped(b),
-    child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              _parseHexColor(b.bgGradientStart,
-                                  fallback: const Color(0xFFF97316)),
-                              _parseHexColor(b.bgGradientEnd,
-                                  fallback: const Color(0xFFEA580C)),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFFEA580C).withOpacity(0.35),
-                              blurRadius: 14,
-                              offset: const Offset(0, 5),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (b.badgeText != null &&
-                                      b.badgeText!.isNotEmpty)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 8, vertical: 3),
-                                      margin: const EdgeInsets.only(bottom: 6),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.22),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Text(
-                                        b.badgeText!,
-                                        style: GoogleFonts.outfit(
-                                            fontSize: 9.5,
-                                            fontWeight: FontWeight.w800,
-                                            color: Colors.white),
-                                      ),
-                                    ),
-                                  Text(
-                                    b.title,
-                                    style: GoogleFonts.outfit(
-                                        fontSize: 17,
-                                        fontWeight: FontWeight.w900,
-                                        color: Colors.white,
-                                        height: 1.15),
-                                  ),
-                                  if (b.subtitle.isNotEmpty) ...[
-                                    const SizedBox(height: 3),
-                                    Text(
-                                      b.subtitle,
-                                      style: GoogleFonts.outfit(
-                                          fontSize: 11.5,
-                                          color:
-                                              Colors.white.withOpacity(0.92)),
-                                    ),
+                  SizedBox(
+                    height: 155,
+                    child: PageView.builder(
+                      controller: _bannerController,
+                      itemCount: _banners.length,
+                      onPageChanged: (index) {
+                        setState(() => _currentBannerIndex = index);
+                      },
+                      itemBuilder: (context, index) {
+                        final b = _banners[index];
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 2),
+                          child: GestureDetector(
+                            onTap: () => _onBannerTapped(b),
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    _parseHexColor(b.bgGradientStart,
+                                        fallback: const Color(0xFFF97316)),
+                                    _parseHexColor(b.bgGradientEnd,
+                                        fallback: const Color(0xFFEA580C)),
                                   ],
-                                  const SizedBox(height: 10),
-                                  Row(
-                                    children: [
-                                      if (b.couponCode != null &&
-                                          b.couponCode!.isNotEmpty)
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 8, vertical: 3.5),
-                                          margin:
-                                              const EdgeInsets.only(right: 8),
-                                          decoration: BoxDecoration(
-                                            color:
-                                                Colors.black.withOpacity(0.25),
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                          ),
-                                          child: Text(
-                                            'Cupón: ${b.couponCode!}',
-                                            style: GoogleFonts.outfit(
-                                                fontSize: 10.5,
-                                                fontWeight: FontWeight.w800,
-                                                color: const Color(0xFFFDE047)),
-                                          ),
-                                        ),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 10, vertical: 5),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                        ),
-                                        child: Text(
-                                          b.buttonText ?? 'Pedir ahora',
-                                          style: GoogleFonts.outfit(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w800,
-                                              color: const Color(0xFFEA580C)),
-                                        ),
-                                      ),
-                                    ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFFEA580C).withOpacity(0.35),
+                                    blurRadius: 14,
+                                    offset: const Offset(0, 5),
                                   ),
                                 ],
                               ),
-                            ),
-                            if (b.imageUrl != null && b.imageUrl!.isNotEmpty)
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(14),
-                                child: Image.network(
-                                  b.imageUrl!,
-                                  width: 80,
-                                  height: 80,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) =>
-                                      const SizedBox(),
-                                ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        if (b.badgeText != null &&
+                                            b.badgeText!.isNotEmpty)
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 8, vertical: 3),
+                                            margin: const EdgeInsets.only(bottom: 6),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white.withOpacity(0.22),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: Text(
+                                              b.badgeText!,
+                                              style: GoogleFonts.outfit(
+                                                  fontSize: 9.5,
+                                                  fontWeight: FontWeight.w800,
+                                                  color: Colors.white),
+                                            ),
+                                          ),
+                                        Text(
+                                          b.title,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: GoogleFonts.outfit(
+                                              fontSize: 17,
+                                              fontWeight: FontWeight.w900,
+                                              color: Colors.white,
+                                              height: 1.15),
+                                        ),
+                                        if (b.subtitle.isNotEmpty) ...[
+                                          const SizedBox(height: 3),
+                                          Text(
+                                            b.subtitle,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: GoogleFonts.outfit(
+                                                fontSize: 11.5,
+                                                color: Colors.white.withOpacity(0.92)),
+                                          ),
+                                        ],
+                                        const SizedBox(height: 8),
+                                        Row(
+                                          children: [
+                                            if (b.couponCode != null &&
+                                                b.couponCode!.isNotEmpty)
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(
+                                                    horizontal: 8, vertical: 3.5),
+                                                margin: const EdgeInsets.only(right: 8),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.black.withOpacity(0.25),
+                                                  borderRadius: BorderRadius.circular(8),
+                                                ),
+                                                child: Text(
+                                                  'Cupón: ' + b.couponCode!,
+                                                  style: GoogleFonts.outfit(
+                                                      fontSize: 10.5,
+                                                      fontWeight: FontWeight.w800,
+                                                      color: const Color(0xFFFDE047)),
+                                                ),
+                                              ),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                  horizontal: 10, vertical: 5),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              child: Text(
+                                                b.buttonText ?? 'Pedir ahora',
+                                                style: GoogleFonts.outfit(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w800,
+                                                    color: const Color(0xFFEA580C)),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  if (b.imageUrl != null && b.imageUrl!.isNotEmpty) ...[
+                                    const SizedBox(width: 10),
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(14),
+                                      child: Image.network(
+                                        b.imageUrl!,
+                                        width: 80,
+                                        height: 80,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, __, ___) =>
+                                            const SizedBox(),
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
-                          ],
-                        ),
-                      ),
-                    )),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  if (_banners.length > 1) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(_banners.length, (i) {
+                        final isActive = i == _currentBannerIndex;
+                        return AnimatedContainer(
+                          duration: const Duration(milliseconds: 250),
+                          margin: const EdgeInsets.symmetric(horizontal: 3),
+                          width: isActive ? 20 : 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: isActive
+                                ? const Color(0xFFFF521B)
+                                : Colors.grey.withOpacity(0.35),
+                            borderRadius: BorderRadius.circular(3),
+                          ),
+                        );
+                      }),
+                    ),
+                  ],
                 ],
 
                 // 3. COMERCIOS DESTACADOS (TOP SELECCIÓN)

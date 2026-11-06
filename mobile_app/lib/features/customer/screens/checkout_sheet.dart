@@ -692,26 +692,88 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                           ),
                           const SizedBox(height: 10),
 
-                          Row(
-                            children: [
-                              _buildPaymentOption(
-                                id: 'pago_movil',
-                                icon: Icons.phone_android_rounded,
-                                label: 'Pago Móvil',
-                              ),
-                              const SizedBox(width: 8),
-                              _buildPaymentOption(
-                                id: 'efectivo',
-                                icon: Icons.payments_rounded,
-                                label: 'Efectivo',
-                              ),
-                              const SizedBox(width: 8),
-                              _buildPaymentOption(
-                                id: 'tarjeta',
-                                icon: Icons.credit_card_rounded,
-                                label: 'Zelle / Tarjeta',
-                              ),
-                            ],
+                          Builder(
+                            builder: (context) {
+                              final branch = cart.currentBranch;
+                              final accepted = branch?.acceptedPaymentMethods ?? const ['pago_movil', 'cash_usd', 'cash_local', 'mobile_transfer'];
+                              
+                              final bool allowsPagoMovil = accepted.any((m) => m == 'pago_movil' || m == 'mobile_transfer');
+                              final bool allowsEfectivo = accepted.any((m) => m == 'efectivo' || m == 'cash_usd' || m == 'cash_local' || m == 'cash');
+                              final bool allowsTarjeta = accepted.any((m) => m == 'tarjeta' || m == 'card_terminal' || m == 'zelle' || m == 'pos_card');
+
+                              if (!allowsPagoMovil && _selectedPayment == 'pago_movil') {
+                                if (allowsEfectivo) {
+                                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                                    if (mounted) setState(() => _selectedPayment = 'efectivo');
+                                  });
+                                } else if (allowsTarjeta) {
+                                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                                    if (mounted) setState(() => _selectedPayment = 'tarjeta');
+                                  });
+                                }
+                              } else if (!allowsEfectivo && _selectedPayment == 'efectivo') {
+                                if (allowsPagoMovil) {
+                                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                                    if (mounted) setState(() => _selectedPayment = 'pago_movil');
+                                  });
+                                } else if (allowsTarjeta) {
+                                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                                    if (mounted) setState(() => _selectedPayment = 'tarjeta');
+                                  });
+                                }
+                              } else if (!allowsTarjeta && _selectedPayment == 'tarjeta') {
+                                if (allowsPagoMovil) {
+                                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                                    if (mounted) setState(() => _selectedPayment = 'pago_movil');
+                                  });
+                                } else if (allowsEfectivo) {
+                                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                                    if (mounted) setState(() => _selectedPayment = 'efectivo');
+                                  });
+                                }
+                              }
+
+                              final List<Widget> options = [];
+                              if (allowsPagoMovil) {
+                                options.add(_buildPaymentOption(
+                                  id: 'pago_movil',
+                                  icon: Icons.phone_android_rounded,
+                                  label: 'Pago Móvil',
+                                ));
+                              }
+                              if (allowsEfectivo) {
+                                if (options.isNotEmpty) options.add(const SizedBox(width: 8));
+                                options.add(_buildPaymentOption(
+                                  id: 'efectivo',
+                                  icon: Icons.payments_rounded,
+                                  label: 'Efectivo',
+                                ));
+                              }
+                              if (allowsTarjeta) {
+                                if (options.isNotEmpty) options.add(const SizedBox(width: 8));
+                                options.add(_buildPaymentOption(
+                                  id: 'tarjeta',
+                                  icon: Icons.credit_card_rounded,
+                                  label: 'Zelle / Tarjeta',
+                                ));
+                              }
+
+                              if (options.isEmpty) {
+                                options.add(_buildPaymentOption(
+                                  id: 'pago_movil',
+                                  icon: Icons.phone_android_rounded,
+                                  label: 'Pago Móvil',
+                                ));
+                                options.add(const SizedBox(width: 8));
+                                options.add(_buildPaymentOption(
+                                  id: 'efectivo',
+                                  icon: Icons.payments_rounded,
+                                  label: 'Efectivo',
+                                ));
+                              }
+
+                              return Row(children: options);
+                            },
                           ),
 
                           if (_selectedPayment == 'pago_movil') ...[

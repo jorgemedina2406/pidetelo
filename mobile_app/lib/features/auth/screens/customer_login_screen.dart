@@ -265,6 +265,15 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
 
         userId = authRes.user!.id;
         final meta = authRes.user?.userMetadata;
+        final bool isDeactivated = meta?['is_active'] == false || 
+                                   meta?['status'] == 'inactive' || 
+                                   meta?['status'] == 'disabled' || 
+                                   meta?['disabled'] == true;
+        if (isDeactivated) {
+          await supabase.auth.signOut();
+          throw Exception('Tu cuenta ha sido desactivada por la administración de la plataforma. Comunícate con soporte para más información.');
+        }
+
         if (meta != null) {
           final cloudName = meta['full_name'] ?? meta['name'];
           if (cloudName != null && cloudName.toString().trim().isNotEmpty) {
@@ -279,14 +288,21 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
     } catch (e) {
       setState(() => _isLoading = false);
       String userMessage = e.toString().replaceAll('Exception:', '').replaceAll('AuthException:', '').trim();
-      if (userMessage.toLowerCase().contains('rate') || userMessage.toLowerCase().contains('429')) {
+      final lower = userMessage.toLowerCase();
+      if (lower.contains('invalid login credentials') || lower.contains('invalid_grant') || lower.contains('invalid credentials') || lower.contains('credenciales incorrectas')) {
+        userMessage = 'El correo electrónico o la contraseña ingresados son incorrectos. Por favor, verifica tus datos e inténtalo nuevamente.';
+      } else if (lower.contains('rate') || lower.contains('429')) {
         userMessage = 'Límite de correos alcanzado en Supabase. En tu panel de Supabase: ve a Authentication -> Providers -> Email y desactiva la opción "Confirm email" para registro directo e ilimitado.';
+      } else if (lower.contains('desactivada') || lower.contains('inactiva')) {
+        userMessage = 'Tu cuenta se encuentra desactivada por la administración. Comunícate con soporte de Pídetelo para más asistencia.';
+      } else if (lower.contains('network') || lower.contains('socketexception') || lower.contains('connection refused')) {
+        userMessage = 'Error de conexión. Por favor verifica tu acceso a internet e inténtalo de nuevo.';
       }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(userMessage),
           backgroundColor: Colors.redAccent,
-          duration: const Duration(seconds: 6),
+          duration: const Duration(seconds: 5),
         ),
       );
       return;

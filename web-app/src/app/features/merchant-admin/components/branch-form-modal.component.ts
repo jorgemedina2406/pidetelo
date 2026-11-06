@@ -33,7 +33,21 @@ export class BranchFormModalComponent implements OnChanges {
   readonly errorMessage = signal<string | null>(null);
   readonly isSaving = signal(false);
 
-  form: any = this.getDefaultForm();
+  
+  get hasMinLength(): boolean {
+    return (this.form?.managerPassword || '').length >= 8;
+  }
+  get hasUppercase(): boolean {
+    return /[A-Z]/.test(this.form?.managerPassword || '');
+  }
+  get hasSpecialChar(): boolean {
+    const s = this.form?.managerPassword || '';
+    return /[*@#.!$%^&()_+\-=\[\]{};':"\\|,.<>\/?~]/.test(s);
+  }
+  get isPasswordValid(): boolean {
+    return this.hasMinLength && this.hasUppercase && this.hasSpecialChar;
+  }
+form: any = this.getDefaultForm();
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['branch'] || changes['isOpen'] || changes['mode']) {
@@ -248,8 +262,8 @@ export class BranchFormModalComponent implements OnChanges {
       this.errorMessage.set('El formato del correo de acceso no es válido.');
       return;
     }
-    if (!this.form.managerPassword.trim() || this.form.managerPassword.trim().length < 4) {
-      this.errorMessage.set('La contraseña de acceso para la sucursal debe tener al menos 4 caracteres.');
+    if (!this.form.managerPassword?.trim() || !this.isPasswordValid) {
+      this.errorMessage.set('La contraseña de acceso debe tener al menos 8 caracteres, 1 mayúscula y 1 carácter especial (*, ., @, etc).');
       return;
     }
 

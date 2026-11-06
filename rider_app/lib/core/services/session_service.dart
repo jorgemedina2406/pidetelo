@@ -46,16 +46,27 @@ class SessionService extends ChangeNotifier {
 
   Future<bool> login(String email, String password) async {
     final cleanEmail = email.trim().toLowerCase();
+    _lastErrorMessage = null;
 
     // 1. Authenticate with Supabase Cloud Auth
+    bool authSuccess = false;
     try {
       final supabase = Supabase.instance.client;
-      await supabase.auth.signInWithPassword(
+      final authRes = await supabase.auth.signInWithPassword(
         email: cleanEmail,
         password: password,
       );
+      if (authRes.user != null) {
+        authSuccess = true;
+      }
     } catch (authError) {
       debugPrint('[SessionService] Supabase Auth signIn notice: $authError');
+      final errStr = authError.toString().toLowerCase();
+      if (errStr.contains('invalid login credentials') || errStr.contains('invalid_grant')) {
+        _lastErrorMessage = 'El correo electrónico o la contraseña ingresados son incorrectos. Por favor, verifica tus datos.';
+      } else {
+        _lastErrorMessage = 'Error de autenticación: ' + authError.toString().replaceAll('Exception:', '').replaceAll('AuthException:', '').trim();
+      }
     }
 
     // 2. Query Supabase 'riders' table for this real registered rider
@@ -68,15 +79,55 @@ class SessionService extends ChangeNotifier {
           .maybeSingle();
 
       if (res != null) {
+        final isActive = res['is_active'] ?? (res['status'] != 'inactive' && res['status'] != 'disabled');
+        if (isActive == false || res['status'] == 'inactive' || res['status'] == 'disabled') {
+          _lastErrorMessage = 'Tu cuenta de repartidor ha sido desactivada por la administración de la plataforma. Comunícate con soporte para más información.';
+          try { await supabase.auth.signOut(); } catch (_) {}
+          return false;
+        }
+
+        final companyId = res['company_id'] ?? res['companyId'] ?? res['tenant_id'];
+        if (companyId != null && companyId.toString().isNotEmpty) {
+          try {
+            final tenantRes = await supabase
+                .from('tenants')
+                .select('id, name, is_active, status')
+                .eq('id', companyId.toString())
+                .maybeSingle();
+            if (tenantRes != null) {
+              final tenantActive = tenantRes['is_active'] ?? true;
+              final tenantStatus = tenantRes['status']?.toString().toLowerCase();
+              if (tenantActive == false || tenantStatus == 'paused' || tenantStatus == 'inactive') {
+                _lastErrorMessage = 'El comercio al que perteneces (' + (tenantRes['name'] ?? 'comercio') + ') se encuentra temporalmente pausado o inactivo. No es posible iniciar turno en este momento.';
+                try { await supabase.auth.signOut(); } catch (_) {}
+                return false;
+              }
+            }
+          } catch (tenantErr) {
+            debugPrint('[SessionService] Error verificando estado del comercio: $tenantErr');
+          }
+        }
+
+        if (!authSuccess && _lastErrorMessage != null) {
+          return false;
+        }
+
         final rider = RiderUser.fromJson(res);
         await saveRider(rider);
         return true;
+      } else {
+        if (_lastErrorMessage == null) {
+          _lastErrorMessage = 'No se encontró ninguna cuenta de repartidor asociada a este correo electrónico.';
+        }
+        return false;
       }
     } catch (e) {
       debugPrint('[SessionService] Error consultando Supabase riders: $e');
+      if (_lastErrorMessage == null) {
+        _lastErrorMessage = 'Error al consultar la cuenta de repartidor: ' + e.toString();
+      }
     }
 
-    // 3. If no rider found with this email, do not use test defaults
     return false;
   }
 

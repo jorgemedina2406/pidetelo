@@ -1,3 +1,4 @@
+import * as L from 'leaflet';
 import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -258,8 +259,14 @@ export class SuperAdminComponent implements OnInit {
     }
   }
 
-  deleteGlobalCoupon(c: Coupon): void {
-    if (!confirm(`¿Eliminar el cupón global "${c.code}"?`)) return;
+  async deleteGlobalCoupon(c: Coupon): Promise<void> {
+    const ok = await this.confirmModal.confirm({
+      title: '¿Eliminar Cupón Global?',
+      message: '¿Estás seguro de eliminar el cupón global "' + c.code + '"? Los clientes ya no podrán utilizarlo.',
+      confirmText: 'Sí, Eliminar Cupón',
+      isDanger: true
+    });
+    if (!ok) return;
     this.api.deleteCoupon(c.id).subscribe(() => {
       this.loadAllCoupons();
       this.showToast('info', 'Cupón Eliminado', `El cupón ${c.code} fue retirado.`);
@@ -544,7 +551,91 @@ export class SuperAdminComponent implements OnInit {
     return pass.length >= 8 && /[A-Z]/.test(pass) && hasSpecial;
   }
 
-  detectMerchantGps(): void {
+    private merchantCreateMap?: L.Map;
+  private merchantCreateMarker?: L.Marker;
+
+  openCreateMerchantModal(): void {
+    this.isCreateModalOpen.set(true);
+    setTimeout(() => this.initMerchantCreateMap(), 250);
+  }
+
+  closeCreateMerchantModal(): void {
+    if (this.merchantCreateMap) {
+      try { this.merchantCreateMap.remove(); } catch (_) {}
+      this.merchantCreateMap = undefined;
+      this.merchantCreateMarker = undefined;
+    }
+    this.isCreateModalOpen.set(false);
+  }
+
+  initMerchantCreateMap(retryCount = 0): void {
+    const container = document.getElementById('merchant-create-map');
+    if (!container) {
+      if (retryCount < 8) {
+        setTimeout(() => this.initMerchantCreateMap(retryCount + 1), 150);
+      }
+      return;
+    }
+
+    if (this.merchantCreateMap) {
+      try { this.merchantCreateMap.remove(); } catch (_) {}
+      this.merchantCreateMap = undefined;
+      this.merchantCreateMarker = undefined;
+    }
+
+    if ((container as any)._leaflet_id) {
+      delete (container as any)._leaflet_id;
+    }
+
+    const lat = Number(this.newMerchant.latitude) || 10.0777;
+    const lng = Number(this.newMerchant.longitude) || -69.2812;
+
+    this.merchantCreateMap = L.map(container, {
+      zoomControl: true,
+      attributionControl: false
+    }).setView([lat, lng], 14);
+
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap'
+    }).addTo(this.merchantCreateMap);
+
+    const storeIcon = L.divIcon({
+      className: 'leaflet-store-picker-marker',
+      html: '<div style="background:#ea580c;color:white;width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 16px rgba(0,0,0,0.35);border:2.5px solid white;cursor:grab;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/></svg></div>',
+      iconSize: [38, 38],
+      iconAnchor: [19, 19]
+    });
+
+    this.merchantCreateMarker = L.marker([lat, lng], {
+      icon: storeIcon,
+      draggable: true
+    }).addTo(this.merchantCreateMap);
+
+    this.merchantCreateMarker.on('dragend', (e: any) => {
+      const pos = e.target.getLatLng();
+      this.updateMerchantCoords(pos.lat, pos.lng);
+    });
+
+    this.merchantCreateMap.on('click', (e: any) => {
+      const pos = e.latlng;
+      if (this.merchantCreateMarker) {
+        this.merchantCreateMarker.setLatLng(pos);
+      }
+      this.updateMerchantCoords(pos.lat, pos.lng);
+    });
+
+    setTimeout(() => {
+      this.merchantCreateMap?.invalidateSize();
+    }, 200);
+  }
+
+  updateMerchantCoords(lat: number, lng: number): void {
+    this.newMerchant.latitude = Number(lat.toFixed(6));
+    this.newMerchant.longitude = Number(lng.toFixed(6));
+  }
+
+detectMerchantGps(): void {
     if (!navigator.geolocation) {
       this.showToast('error', 'Error', 'Tu navegador no soporta geolocalización.');
       return;
@@ -790,8 +881,14 @@ export class SuperAdminComponent implements OnInit {
     });
   }
 
-  deleteBanner(b: Banner): void {
-    if (!confirm(`¿Eliminar el banner "${b.title}"?`)) return;
+  async deleteBanner(b: Banner): Promise<void> {
+    const ok = await this.confirmModal.confirm({
+      title: '¿Eliminar Banner Promocional?',
+      message: '¿Estás seguro de eliminar el banner "' + b.title + '" de la plataforma?',
+      confirmText: 'Sí, Eliminar Banner',
+      isDanger: true
+    });
+    if (!ok) return;
     this.api.deleteBanner(b.id).subscribe(() => {
       this.banners.update(list => list.filter(item => item.id !== b.id));
       this.bannerActionNotice.set(`Banner "${b.title}" eliminado.`);
@@ -881,8 +978,14 @@ export class SuperAdminComponent implements OnInit {
     });
   }
 
-  deleteCategory(cat: BusinessCategory): void {
-    if (!confirm(`¿Eliminar la categoría "${cat.name}"?`)) return;
+  async deleteCategory(cat: BusinessCategory): Promise<void> {
+    const ok = await this.confirmModal.confirm({
+      title: '¿Eliminar Categoría?',
+      message: '¿Estás seguro de eliminar la categoría "' + cat.name + '"?',
+      confirmText: 'Sí, Eliminar Categoría',
+      isDanger: true
+    });
+    if (!ok) return;
     this.api.deleteBusinessCategory(cat.id).subscribe(() => {
       this.loadBusinessCategories();
       this.categoryActionNotice.set(`Categoría "${cat.name}" eliminada.`);

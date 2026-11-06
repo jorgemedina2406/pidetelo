@@ -11,7 +11,7 @@
       "baseCurrency": "USD",
       "displayMode": "usd_and_bs",
       "exchangeRate": 896.12,
-      "lastRateUpdate": "2026-11-06T10:22:46.061Z"
+      "lastRateUpdate": "2026-11-06T14:18:17.837Z"
     },
     "delivery_tiers": [
       {
@@ -31,6 +31,12 @@
         "maxKm": 8,
         "minKm": 5,
         "price": 4.5
+      },
+      {
+        "id": "tier_1793973080840",
+        "maxKm": 15,
+        "minKm": 8,
+        "price": 6
       }
     ],
     "business_hours": {

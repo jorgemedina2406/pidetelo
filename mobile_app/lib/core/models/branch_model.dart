@@ -104,6 +104,7 @@ class Branch {
   final String? baseCurrency;
   final String? displayMode;
   final bool isFeatured;
+  final List<String> acceptedPaymentMethods;
 
   const Branch({
     required this.id,
@@ -136,6 +137,7 @@ class Branch {
     this.baseCurrency,
     this.displayMode,
     this.isFeatured = false,
+    this.acceptedPaymentMethods = const ['pago_movil', 'cash_usd', 'cash_local', 'mobile_transfer'],
   });
 
   /// Aliases for opening and closing business hours
@@ -262,6 +264,11 @@ class Branch {
       baseCurrency: json['base_currency']?.toString() ?? json['baseCurrency']?.toString(),
       displayMode: json['display_mode']?.toString() ?? json['displayMode']?.toString(),
       isFeatured: json['is_featured'] ?? json['isFeatured'] ?? false,
+      acceptedPaymentMethods: (json['accepted_payment_methods'] is List && (json['accepted_payment_methods'] as List).isNotEmpty)
+          ? (json['accepted_payment_methods'] as List).map((e) => e.toString()).toList()
+          : (json['acceptedPaymentMethods'] is List && (json['acceptedPaymentMethods'] as List).isNotEmpty)
+              ? (json['acceptedPaymentMethods'] as List).map((e) => e.toString()).toList()
+              : const ['pago_movil', 'cash_usd', 'cash_local', 'mobile_transfer'],
     );
   }
 }

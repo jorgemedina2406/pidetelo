@@ -663,13 +663,37 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                   Navigator.pop(ctx);
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                      content: Text(
-                                        '¡${product.name} agregado al carrito!',
-                                        style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+                                      content: Row(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(4),
+                                            decoration: const BoxDecoration(
+                                              color: Colors.white24,
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: const Icon(Icons.check_rounded, color: Colors.white, size: 18),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Text(
+                                              '¡ agregado al carrito!',
+                                              style: GoogleFonts.outfit(
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 14,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                      backgroundColor: const Color(0xFF1E293B),
+                                      backgroundColor: const Color(0xFF059669),
                                       duration: const Duration(seconds: 2),
                                       behavior: SnackBarBehavior.floating,
+                                      elevation: 10,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      margin: const EdgeInsets.fromLTRB(16, 0, 16, 90),
                                     ),
                                   );
                                 }

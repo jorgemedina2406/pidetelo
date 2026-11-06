@@ -71,6 +71,7 @@ export class BranchesService {
     ];
 
     const deliveryTiers = branch.delivery_tiers ?? meta.delivery_tiers ?? meta.deliveryTiers ?? tenant.delivery_tiers ?? defaultDeliveryTiers;
+    const acceptedPaymentMethods = branch.accepted_payment_methods ?? meta.accepted_payment_methods ?? meta.acceptedPaymentMethods ?? tenant.accepted_payment_methods ?? tenant.acceptedPaymentMethods ?? ['mobile_transfer', 'cash_usd', 'cash_local'];
     const businessHours = branch.business_hours ?? meta.business_hours ?? { open: '11:00', close: '23:00', isOpenToday: true };
     const openTime = businessHours?.open || '11:00';
     const closeTime = businessHours?.close || '23:00';
@@ -94,6 +95,8 @@ export class BranchesService {
       currencySettings,
       delivery_tiers: deliveryTiers,
       deliveryTiers,
+      accepted_payment_methods: acceptedPaymentMethods,
+      acceptedPaymentMethods,
       business_hours: businessHours,
       businessHours,
       openTime,
@@ -347,6 +350,10 @@ export class BranchesService {
     }
     if (branchPayload.deliveryTiers !== undefined || branchPayload.delivery_tiers !== undefined) {
       metaToSave.delivery_tiers = branchPayload.deliveryTiers || branchPayload.delivery_tiers;
+    }
+    if (branchPayload.acceptedPaymentMethods !== undefined || branchPayload.accepted_payment_methods !== undefined) {
+      metaToSave.accepted_payment_methods = branchPayload.acceptedPaymentMethods || branchPayload.accepted_payment_methods;
+      metaToSave.acceptedPaymentMethods = metaToSave.accepted_payment_methods;
     }
     if (branchPayload.openTime || branchPayload.closeTime || branchPayload.businessHours || branchPayload.business_hours) {
       const bh = branchPayload.businessHours || branchPayload.business_hours || {};
