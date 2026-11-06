@@ -51,18 +51,25 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
 
+    // Temporizador de rescate inmediato garantizado para evitar pantalla blanca/congelada en iOS
+    _fallbackTimer = Timer(const Duration(milliseconds: 2800), () {
+      if (mounted && !_hasNavigated) {
+        _navigateToNext();
+      }
+    });
+
     _initVideoAndNavigation();
   }
 
   Future<void> _initVideoAndNavigation() async {
     VideoPlayerController? controller;
     try {
-      controller = VideoPlayerController.asset('assets/screen splash.mp4');
-      await controller.initialize();
+      controller = VideoPlayerController.asset('assets/screen_splash.mp4');
+      await controller.initialize().timeout(const Duration(milliseconds: 1500));
     } catch (_) {
       try {
-        controller = VideoPlayerController.asset('assets/screen_splash.mp4');
-        await controller.initialize();
+        controller = VideoPlayerController.asset('assets/screen splash.mp4');
+        await controller.initialize().timeout(const Duration(milliseconds: 1500));
       } catch (e) {
         debugPrint('[SplashScreen] Video initialization fallback: $e');
         controller = null;

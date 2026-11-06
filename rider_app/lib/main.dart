@@ -24,31 +24,40 @@ void main() async {
     ),
   );
 
-  // Initialize Supabase Cloud
+  // Initialize Supabase Cloud con timeout estricto de seguridad para evitar bloqueos en iOS
   try {
     await Supabase.initialize(
       url: AppConfig.supabaseUrl,
       anonKey: AppConfig.supabaseAnonKey,
-    );
+    ).timeout(const Duration(seconds: 4));
   } catch (e) {
     debugPrint('[RiderApp] Supabase init notice: $e');
   }
 
-  // Initialize Session
+  // Initialize Session con timeout
   final sessionService = SessionService();
-  await sessionService.init();
-
-  // Initialize Live BCV DolarApi
-  await DolarApiService().init();
-
-  // Initialize Local Push Notifications for Orders
-  await NotificationService().init();
-
-  // Initialize Background Order Polling Service (runs even when app is minimized or screen off)
-  await BackgroundOrderService().init();
-  if (sessionService.isAuthenticated && sessionService.currentRider?.id != null) {
-    await BackgroundOrderService().startService(sessionService.currentRider!.id);
+  try {
+    await sessionService.init().timeout(const Duration(seconds: 3));
+  } catch (e) {
+    debugPrint('[RiderApp] Session init error: $e');
   }
+
+  // Servicios secundarios en segundo plano para no congelar el frame inicial de Flutter
+  DolarApiService().init().catchError((e) {
+    debugPrint('[RiderApp] DolarApiService error: $e');
+  });
+
+  NotificationService().init().catchError((e) {
+    debugPrint('[RiderApp] NotificationService error: $e');
+  });
+
+  BackgroundOrderService().init().then((_) {
+    if (sessionService.isAuthenticated && sessionService.currentRider?.id != null) {
+      BackgroundOrderService().startService(sessionService.currentRider!.id);
+    }
+  }).catchError((e) {
+    debugPrint('[RiderApp] BackgroundOrderService error: $e');
+  });
 
   runApp(RiderApp(sessionService: sessionService));
 }

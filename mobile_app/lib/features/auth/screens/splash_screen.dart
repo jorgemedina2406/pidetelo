@@ -52,18 +52,23 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
 
+    // Guaranteed fallback timer: NEVER let the user get stuck on splash
+    _fallbackTimer = Timer(const Duration(milliseconds: 2800), () {
+      if (!_hasNavigated && mounted) _navigateToNext();
+    });
+
     _initVideoAndNavigation();
   }
 
   Future<void> _initVideoAndNavigation() async {
     VideoPlayerController? controller;
     try {
-      controller = VideoPlayerController.asset('assets/screen splash.mp4');
-      await controller.initialize();
+      controller = VideoPlayerController.asset('assets/screen_splash.mp4');
+      await controller.initialize().timeout(const Duration(milliseconds: 1500));
     } catch (_) {
       try {
-        controller = VideoPlayerController.asset('assets/screen_splash.mp4');
-        await controller.initialize();
+        controller = VideoPlayerController.asset('assets/screen splash.mp4');
+        await controller.initialize().timeout(const Duration(milliseconds: 1500));
       } catch (e) {
         debugPrint('[SplashScreen] Video initialization fallback: $e');
         controller = null;
@@ -90,14 +95,10 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       final videoDuration = _videoController!.value.duration;
       final maxWait = videoDuration.inMilliseconds > 0
           ? videoDuration + const Duration(milliseconds: 300)
-          : const Duration(seconds: 4);
+          : const Duration(milliseconds: 2800);
 
+      _fallbackTimer?.cancel();
       _fallbackTimer = Timer(maxWait, () {
-        if (!_hasNavigated && mounted) _navigateToNext();
-      });
-    } else {
-      // Fallback timer if video cannot load
-      _fallbackTimer = Timer(const Duration(milliseconds: 3200), () {
         if (!_hasNavigated && mounted) _navigateToNext();
       });
     }

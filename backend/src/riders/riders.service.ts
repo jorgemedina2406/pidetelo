@@ -871,6 +871,18 @@ export class RidersService {
     const isUuid = (val?: string) => Boolean(val && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val));
     const sb = this.supabase.getClient();
 
+    let resolvedTenantId = tenantId && isUuid(tenantId) ? tenantId : undefined;
+    if (tenantId && !resolvedTenantId) {
+      try {
+        const { data: t } = await sb
+          .from('tenants')
+          .select('id')
+          .or(`slug.eq.${tenantId},name.ilike.%${tenantId}%`)
+          .maybeSingle();
+        if (t?.id && isUuid(t.id)) resolvedTenantId = t.id;
+      } catch (_) {}
+    }
+
     // 1. Obtener IDs de motorizados que se encuentran actualmente ocupados en un despacho
     let busyDriverIds = new Set<string>();
     try {
@@ -977,19 +989,25 @@ export class RidersService {
         currentLng: hasGps ? Number(r.current_lng) : null,
       };
 
-      // Si pertenece a la sede del comercio
-      if (isUuid(tenantId) && rTenant === tenantId) {
+      // Si pertenece a la sede del comercio actual
+      const isMatchingTenant = (isUuid(tenantId) && rTenant === tenantId) || (!isUuid(tenantId) && rTenant === resolvedTenantId);
+      if (isMatchingTenant) {
         if (!branchId || branchId === 'all' || !rBranch || rBranch === branchId) {
           ownRiders.push({ ...riderItem, isOwn: true });
           return;
         }
-        // Si pertenece a otra sede del mismo comercio, no se muestra como flota libre
+        // Si pertenece a otra sede del mismo comercio, no se muestra
+        return;
+      }
+
+      // Si pertenece a cualquier otro comercio o sede, NO es flota libre
+      if (rTenant || rBranch) {
         return;
       }
 
       // Flota Libre / Red de motorizados independientes de la plataforma Pídetelo
-      // Regla estricta: Solo motorizados que NO pertenezcan a un comercio en específico
-      const isIndependentRider = Boolean(r.is_independent || (!rTenant && !rBranch));
+      // Regla estricta: Solo motorizados 100% independientes que NO pertenezcan a ningún comercio
+      const isIndependentRider = !rTenant && !rBranch && r.is_independent !== false;
       if (isIndependentRider) {
         nearbyRiders.push({ ...riderItem, isOwn: false });
       }

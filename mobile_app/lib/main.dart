@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/config/app_config.dart';
 import 'core/services/session_service.dart';
@@ -12,25 +13,47 @@ import 'features/customer/screens/customer_home_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Supabase with graceful fallback
+  // Set system UI style immediately to avoid glitches
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+      systemNavigationBarColor: Colors.white,
+      systemNavigationBarIconBrightness: Brightness.dark,
+    ),
+  );
+
+  // Initialize Supabase with graceful fallback and strict timeout
   try {
     await Supabase.initialize(
       url: AppConfig.supabaseUrl,
       anonKey: AppConfig.supabaseAnonKey,
-    );
+    ).timeout(const Duration(seconds: 3));
   } catch (e) {
     debugPrint('[Main] Supabase init fallback/offline mode: $e');
   }
 
-  // Initialize Session Persistence
+  // Initialize Session Persistence with timeout
   final sessionService = SessionService();
-  await sessionService.init();
+  try {
+    await sessionService.init().timeout(const Duration(seconds: 2));
+  } catch (e) {
+    debugPrint('[Main] SessionService init error: $e');
+  }
 
   // Initialize Cart & Orders History Persistence
-  await CartService().init();
+  try {
+    await CartService().init().timeout(const Duration(seconds: 2));
+  } catch (e) {
+    debugPrint('[Main] CartService init error: $e');
+  }
 
-  // Initialize Live BCV DolarApi
-  await DolarApiService().init();
+  // Initialize Live BCV DolarApi asynchronously without blocking UI
+  try {
+    DolarApiService().init();
+  } catch (e) {
+    debugPrint('[Main] DolarApiService init error: $e');
+  }
 
   runApp(DeliveryApp(sessionService: sessionService));
 }
