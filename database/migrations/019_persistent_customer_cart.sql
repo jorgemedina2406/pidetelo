@@ -52,12 +52,12 @@ CREATE POLICY "SuperAdmin y Service Role acceso total a carritos"
   ON public.customer_carts
   FOR ALL
   USING (
-    EXISTS (
-      SELECT 1 FROM public.platform_users
-      WHERE platform_users.user_id = auth.uid()
-      AND platform_users.role = 'SUPER_ADMIN'
+    auth.role() = 'service_role'
+    OR EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.role::text IN ('SUPER_ADMIN', 'super_admin')
     )
-    OR auth.role() = 'service_role'
   );
 
 -- 5. Trigger para actualizar updated_at automáticamente
@@ -74,4 +74,3 @@ CREATE TRIGGER tr_customer_carts_updated_at
   BEFORE UPDATE ON public.customer_carts
   FOR EACH ROW
   EXECUTE FUNCTION public.handle_customer_cart_updated_at();
-
