@@ -31,7 +31,7 @@
 
       <!-- Mobile Backdrop Overlay -->
       @if (isMobileMenuOpen()) {
-        <div (click)="isMobileMenuOpen.set(false)"
+        <div (click)="closeMobileMenu()"
              class="fixed inset-0 bg-black/60 backdrop-blur-xs z-40 lg:hidden animate-fade-in"></div>
       }
 
@@ -43,7 +43,7 @@
              class="sidebar-adaptive fixed inset-y-0 left-0 z-50 lg:static lg:translate-x-0 h-full max-h-screen flex flex-col justify-between transition-all duration-300 ease-in-out flex-shrink-0 select-none overflow-hidden">
         
         <!-- Sleek Floating Edge Toggle Button (Never crowds or cuts off the logo) -->
-        <button (click)="isSidebarExpanded.set(!isSidebarExpanded())"
+        <button (click)="toggleSidebar()"
                 [title]="isSidebarExpanded() ? i18n.t('sb.collapse') : i18n.t('sb.expand')"
                 class="absolute -right-3.5 top-6 w-7 h-7 rounded-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 shadow-md flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-brand-500 dark:hover:text-brand-400 hover:border-brand-500 dark:hover:border-brand-500 hover:scale-110 active:scale-95 transition-all z-50 cursor-pointer">
           <app-icon [name]="isSidebarExpanded() ? 'chevron-left' : 'chevron-right'" [size]="14"></app-icon>
@@ -92,7 +92,7 @@
             
             <!-- Comercios Afiliados -->
             <div class="relative group">
-              <button (click)="activeTab.set('merchants')"
+              <button (click)="setActiveTab('merchants')"
                       [class.bg-brand-500]="activeTab() === 'merchants'"
                       [class.text-white]="activeTab() === 'merchants'"
                       [class.shadow-md]="activeTab() === 'merchants'"
@@ -140,7 +140,7 @@
 
             <!-- Solicitudes de Sedes (Multi-Branch Approvals) -->
             <div class="relative group">
-              <button (click)="activeTab.set('branch_approvals')"
+              <button (click)="setActiveTab('branch_approvals')"
                       [class.bg-brand-500]="activeTab() === 'branch_approvals'"
                       [class.text-white]="activeTab() === 'branch_approvals'"
                       [class.shadow-md]="activeTab() === 'branch_approvals'"
@@ -186,7 +186,7 @@
 
             <!-- Roles & Permisos (RBAC) -->
             <div class="relative group">
-              <button (click)="activeTab.set('roles')"
+              <button (click)="setActiveTab('roles')"
                       [class.bg-brand-500]="activeTab() === 'roles'"
                       [class.text-white]="activeTab() === 'roles'"
                       [class.shadow-md]="activeTab() === 'roles'"
@@ -226,7 +226,7 @@
 
             <!-- Banners & Promociones -->
             <div class="relative group">
-              <button (click)="activeTab.set('banners')"
+              <button (click)="setActiveTab('banners')"
                       [class.bg-brand-500]="activeTab() === 'banners'"
                       [class.text-white]="activeTab() === 'banners'"
                       [class.shadow-md]="activeTab() === 'banners'"
@@ -272,7 +272,7 @@
 
             <!-- Categorías de Negocio -->
             <div class="relative group">
-              <button (click)="activeTab.set('categories')"
+              <button (click)="setActiveTab('categories')"
                       [class.bg-brand-500]="activeTab() === 'categories'"
                       [class.text-white]="activeTab() === 'categories'"
                       [class.shadow-md]="activeTab() === 'categories'"
@@ -318,7 +318,7 @@
 
             <!-- Métricas & Comisiones -->
             <div class="relative group">
-              <button (click)="activeTab.set('metrics')"
+              <button (click)="setActiveTab('metrics')"
                       [class.bg-brand-500]="activeTab() === 'metrics'"
                       [class.text-white]="activeTab() === 'metrics'"
                       [class.shadow-md]="activeTab() === 'metrics'"
@@ -368,7 +368,7 @@
 
             <!-- Usuarios Registrados -->
             <div class="relative group">
-              <button (click)="activeTab.set('users')"
+              <button (click)="setActiveTab('users')"
                       [class.bg-brand-500]="activeTab() === 'users'"
                       [class.text-white]="activeTab() === 'users'"
                       [class.shadow-md]="activeTab() === 'users'"
@@ -414,7 +414,7 @@
 
             <!-- Cupones Globales -->
             <div class="relative group">
-              <button (click)="activeTab.set('global_coupons')"
+              <button (click)="setActiveTab('global_coupons')"
                       [class.bg-brand-500]="activeTab() === 'global_coupons'"
                       [class.text-white]="activeTab() === 'global_coupons'"
                       [class.shadow-md]="activeTab() === 'global_coupons'"
@@ -548,7 +548,7 @@
         <header class="topbar-adaptive px-4 sm:px-8 py-3.5 flex items-center justify-between flex-shrink-0 z-30">
           <div class="flex items-center gap-3">
             <!-- Mobile Menu Toggle Button -->
-            <button (click)="isMobileMenuOpen.set(!isMobileMenuOpen())"
+            <button (click)="toggleMobileMenu()"
                     class="lg:hidden p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:text-brand-500 transition-colors">
               <app-icon name="menu" [size]="18"></app-icon>
             </button>
@@ -592,7 +592,7 @@
               [branchApprovalNotice]="branchApprovalNotice()"
               (approve)="approveBranch($event)"
               (reject)="openRejectModal($event)"
-              (closeNotice)="branchApprovalNotice.set(null)">
+              (closeNotice)="clearBranchApprovalNotice()">
             </app-super-admin-branches>
           }
 
@@ -637,7 +637,7 @@
               (editCategory)="openEditCategoryModal($event)"
               (deleteCategory)="deleteCategory($event)"
               (toggleCategoryActive)="toggleCategoryActive($event)"
-              (closeNotice)="categoryActionNotice.set(null)">
+              (closeNotice)="clearCategoryActionNotice()">
             </app-super-admin-categories>
           }
 
@@ -873,7 +873,7 @@
       <!-- ================= MODAL: ACTUALIZAR DATOS DE COMERCIO ================= -->
       @if (isEditModalOpen()) {
         <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
-             (click)="isEditModalOpen.set(false)">
+             (click)="closeEditMerchantModal()">
           <div class="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 w-full max-w-lg rounded-2xl shadow-2xl p-6 border border-slate-200 dark:border-slate-800 max-h-[90vh] flex flex-col animate-scale-in"
                (click)="$event.stopPropagation()">
             
@@ -885,7 +885,7 @@
                 </h3>
                 <p class="text-xs text-slate-500 dark:text-slate-400">Modifica los datos operativos, comisiones y contacto del comercio</p>
               </div>
-              <button (click)="isEditModalOpen.set(false)" class="text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer">
+              <button (click)="closeEditMerchantModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer">
                 <app-icon name="x" [size]="18"></app-icon>
               </button>
             </div>
@@ -1005,7 +1005,7 @@
               }
 
               <div class="pt-3 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-3">
-                <button type="button" (click)="isEditModalOpen.set(false)" 
+                <button type="button" (click)="closeEditMerchantModal()" 
                         [disabled]="isSavingEdit()"
                         class="px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">
                   {{ i18n.t('common.cancel') }}
@@ -1030,7 +1030,7 @@
       <!-- ================= MODAL: CREDENCIALES CREADAS CON ÉXITO ================= -->
       @if (createdCredentialsModal()) {
         <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
-             (click)="createdCredentialsModal.set(null)">
+             (click)="closeCredentialsModal()">
           <div class="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 w-full max-w-md rounded-2xl shadow-2xl p-6 border border-slate-200 dark:border-slate-800 space-y-5 animate-scale-in"
                (click)="$event.stopPropagation()">
             
@@ -1071,7 +1071,7 @@
                 <span>{{ copiedCredentials() ? '¡Credenciales Copiadas al Portapapeles!' : 'Copiar Credenciales para el Comercio' }}</span>
               </button>
               
-              <button (click)="createdCredentialsModal.set(null)"
+              <button (click)="closeCredentialsModal()"
                       class="w-full py-2.5 px-4 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">
                 Entendido, Cerrar
               </button>
@@ -1084,7 +1084,7 @@
       <!-- ================= MODAL: CREAR / EDITAR BANNER ================= -->
       @if (isBannerModalOpen()) {
         <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
-             (click)="isBannerModalOpen.set(false)">
+             (click)="closeBannerModal()">
           <div class="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 w-full max-w-xl rounded-2xl shadow-2xl p-6 border border-slate-200 dark:border-slate-800 space-y-4 max-h-[90vh] flex flex-col"
                (click)="$event.stopPropagation()">
             
@@ -1093,7 +1093,7 @@
                 <app-icon name="sparkles" [size]="18" className="text-brand-500"></app-icon>
                 <span>{{ editingBanner.id ? 'Editar Banner Promocional' : 'Nuevo Banner Promocional Flash' }}</span>
               </h3>
-              <button (click)="isBannerModalOpen.set(false)" class="text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer">
+              <button (click)="closeBannerModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer">
                 <app-icon name="x" [size]="18"></app-icon>
               </button>
             </div>
@@ -1136,43 +1136,43 @@
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div class="md:col-span-2">
                   <label class="block font-semibold mb-1">Título de la Promoción *</label>
-                  <input type="text" [(ngModel)]="editingBanner.title" placeholder="Ej: 30% OFF en tu primer pedido"
+                  <input type="text" [(ngModel)]="editingBanner.title" name="bannerTitle" placeholder="Ej: 30% OFF en tu primer pedido"
                          class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs focus:outline-none focus:border-brand-500 font-bold" />
                 </div>
 
                 <div class="md:col-span-2">
                   <label class="block font-semibold mb-1">Subtítulo / Bajada</label>
-                  <input type="text" [(ngModel)]="editingBanner.subtitle" placeholder="Ej: Usa el cupón FLASHNOW al momento de pagar"
+                  <input type="text" [(ngModel)]="editingBanner.subtitle" name="bannerSubtitle" placeholder="Ej: Usa el cupón FLASHNOW al momento de pagar"
                          class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs focus:outline-none focus:border-brand-500" />
                 </div>
 
                 <div>
                   <label class="block font-semibold mb-1">Badge Superior</label>
-                  <input type="text" [(ngModel)]="editingBanner.badgeText" placeholder="⚡ ENTREGA FLASH 20 MIN"
+                  <input type="text" [(ngModel)]="editingBanner.badgeText" name="bannerBadge" placeholder="⚡ ENTREGA FLASH 20 MIN"
                          class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs focus:outline-none focus:border-brand-500" />
                 </div>
 
                 <div>
                   <label class="block font-semibold mb-1">Código de Cupón (Opcional)</label>
-                  <input type="text" [(ngModel)]="editingBanner.couponCode" placeholder="FLASHNOW"
+                  <input type="text" [(ngModel)]="editingBanner.couponCode" name="bannerCoupon" placeholder="FLASHNOW"
                          class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs focus:outline-none focus:border-brand-500 font-mono font-bold uppercase" />
                 </div>
 
                 <div>
                   <label class="block font-semibold mb-1">Texto del Botón</label>
-                  <input type="text" [(ngModel)]="editingBanner.buttonText" placeholder="Pedir ahora"
+                  <input type="text" [(ngModel)]="editingBanner.buttonText" name="bannerButton" placeholder="Pedir ahora"
                          class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs focus:outline-none focus:border-brand-500" />
                 </div>
 
                 <div>
                   <label class="block font-semibold mb-1">Enlace de Destino (URL o Ruta)</label>
-                  <input type="text" [(ngModel)]="editingBanner.linkUrl" placeholder="/explorar"
+                  <input type="text" [(ngModel)]="editingBanner.linkUrl" name="bannerLink" placeholder="/explorar"
                          class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs focus:outline-none focus:border-brand-500" />
                 </div>
 
                 <div class="md:col-span-2">
                   <label class="block font-semibold mb-1">URL de Imagen Ilustrativa (PNG con fondo transparente o JPG)</label>
-                  <input type="text" [(ngModel)]="editingBanner.imageUrl" placeholder="https://..."
+                  <input type="text" [(ngModel)]="editingBanner.imageUrl" name="bannerImage" placeholder="https://..."
                          class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs focus:outline-none focus:border-brand-500" />
                 </div>
 
@@ -1194,13 +1194,13 @@
 
                 <div>
                   <label class="block font-semibold mb-1">Orden de Visualización</label>
-                  <input type="number" [(ngModel)]="editingBanner.sortOrder" min="1"
+                  <input type="number" [(ngModel)]="editingBanner.sortOrder" name="bannerSortOrder" min="1"
                          class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs focus:outline-none focus:border-brand-500" />
                 </div>
 
                 <div class="flex items-center gap-3 pt-6">
                   <label class="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" [(ngModel)]="editingBanner.isActive" class="sr-only peer" />
+                    <input type="checkbox" [(ngModel)]="editingBanner.isActive" name="bannerIsActive" class="sr-only peer" />
                     <div class="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-500"></div>
                   </label>
                   <span class="font-bold text-xs">Banner Activo</span>
@@ -1209,7 +1209,7 @@
             </div>
 
             <div class="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-3">
-              <button (click)="isBannerModalOpen.set(false)"
+              <button (click)="closeBannerModal()"
                       class="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">
                 Cancelar
               </button>
@@ -1230,13 +1230,13 @@
       <!-- ================= MODAL: RECHAZAR SOLICITUD DE SEDE ================= -->
       @if (rejectReasonModalOpen()) {
         <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
-             (click)="rejectReasonModalOpen.set(false)">
+             (click)="closeRejectModal()">
           <div class="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 w-full max-w-md rounded-2xl shadow-xl p-6 border border-slate-200 dark:border-slate-800 space-y-4"
                (click)="$event.stopPropagation()">
             
             <div class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
               <h3 class="text-base font-bold text-red-600 dark:text-red-400">Rechazar Solicitud de Sede</h3>
-              <button (click)="rejectReasonModalOpen.set(false)" class="text-slate-400 hover:text-slate-600 dark:hover:text-white">
+              <button (click)="closeRejectModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-white">
                 <app-icon name="x" [size]="18"></app-icon>
               </button>
             </div>
@@ -1247,13 +1247,13 @@
 
             <div>
               <label class="block text-xs font-semibold mb-1">Motivo del Rechazo *</label>
-              <textarea rows="3" [(ngModel)]="rejectionReason"
+              <textarea rows="3" [(ngModel)]="rejectionReason" name="rejectionReasonInput"
                         placeholder="Ej: Coordenadas GPS fuera de rango urbano, teléfono de contacto inválido..."
                         class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-xs focus:outline-none focus:border-red-500"></textarea>
             </div>
 
             <div class="pt-2 flex items-center justify-end gap-3">
-              <button (click)="rejectReasonModalOpen.set(false)"
+              <button (click)="closeRejectModal()"
                       class="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">
                 Cancelar
               </button>
@@ -1270,7 +1270,7 @@
       <!-- ================= MODAL: CREAR / EDITAR CATEGORÍA ================= -->
       @if (isCategoryModalOpen()) {
         <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
-             (click)="isCategoryModalOpen.set(false)">
+             (click)="closeCategoryModal()">
           <div class="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 w-full max-w-lg rounded-2xl shadow-2xl p-6 border border-slate-200 dark:border-slate-800 space-y-4 max-h-[90vh] flex flex-col"
                (click)="$event.stopPropagation()">
             
@@ -1279,7 +1279,7 @@
                 <app-icon name="tag" [size]="18" className="text-brand-500"></app-icon>
                 <span>{{ editingCategory.id ? 'Editar Categoría' : 'Nueva Categoría de Negocio' }}</span>
               </h3>
-              <button (click)="isCategoryModalOpen.set(false)" class="text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer">
+              <button (click)="closeCategoryModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer">
                 <app-icon name="x" [size]="18"></app-icon>
               </button>
             </div>
@@ -1287,7 +1287,7 @@
             <div class="space-y-4 overflow-y-auto flex-1 pr-1 text-xs">
               <div>
                 <label class="block font-semibold mb-1">Nombre de la Categoría *</label>
-                <input type="text" [(ngModel)]="editingCategory.name" placeholder="Ej: Juguetes, Restaurantes, Mascotas..."
+                <input type="text" [(ngModel)]="editingCategory.name" name="catName" placeholder="Ej: Juguetes, Restaurantes, Mascotas..."
                        class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs focus:outline-none focus:border-brand-500 font-bold" />
               </div>
 
@@ -1307,7 +1307,7 @@
                     <span class="text-[11px] font-semibold text-slate-600 dark:text-slate-300 block">
                       Haz clic en cualquiera de los iconos sugeridos abajo, o escribe tu propio emoji:
                     </span>
-                    <input type="text" [(ngModel)]="editingCategory.icon" placeholder="Ej: 🧸 o 🍕"
+                    <input type="text" [(ngModel)]="editingCategory.icon" name="catIcon" placeholder="Ej: 🧸 o 🍕"
                            class="w-28 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1 text-center font-bold text-base focus:outline-none focus:border-brand-500" />
                   </div>
                 </div>
@@ -1316,7 +1316,7 @@
                 <div class="flex gap-1 overflow-x-auto pb-1 scrollbar-thin">
                   @for (cat of iconCategories; track cat.name; let i = $index) {
                     <button type="button"
-                            (click)="selectedIconCategoryIdx.set(i)"
+                            (click)="setSelectedIconCategory(i)"
                             [class.bg-brand-500]="selectedIconCategoryIdx() === i"
                             [class.text-white]="selectedIconCategoryIdx() === i"
                             [class.bg-white]="selectedIconCategoryIdx() !== i"
@@ -1347,7 +1347,7 @@
 
               <div>
                 <label class="block font-semibold mb-1">Slug URL (Identificador)</label>
-                <input type="text" [(ngModel)]="editingCategory.slug" placeholder="restaurantes"
+                <input type="text" [(ngModel)]="editingCategory.slug" name="catSlug" placeholder="restaurantes"
                        class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs font-mono focus:outline-none focus:border-brand-500" />
               </div>
 
@@ -1362,7 +1362,7 @@
                 </p>
 
                 <div class="flex items-center gap-2 pt-1">
-                  <input type="text" [(ngModel)]="newSubcategoryInput" (keyup.enter)="addSubcategoryToEditing()"
+                  <input type="text" [(ngModel)]="newSubcategoryInput" name="newSubcat" (keyup.enter)="addSubcategoryToEditing()"
                          placeholder="Escribe subdivisión y pulsa Enter o Agregar..."
                          class="flex-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-2 text-xs focus:outline-none focus:border-brand-500" />
                   <button type="button" (click)="addSubcategoryToEditing()"
@@ -1386,12 +1386,12 @@
               <div class="grid grid-cols-2 gap-3 items-center pt-2">
                 <div>
                   <label class="block font-semibold mb-1">Orden de Visualización</label>
-                  <input type="number" [(ngModel)]="editingCategory.sort_order" min="1"
+                  <input type="number" [(ngModel)]="editingCategory.sort_order" name="catSortOrder" min="1"
                          class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2 text-xs" />
                 </div>
                 <div class="flex items-center gap-3 pt-4">
                   <label class="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" [(ngModel)]="editingCategory.is_active" class="sr-only peer" />
+                    <input type="checkbox" [(ngModel)]="editingCategory.is_active" name="catIsActive" class="sr-only peer" />
                     <div class="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-500"></div>
                   </label>
                   <span class="font-bold text-xs">Categoría Activa</span>
@@ -1400,7 +1400,7 @@
             </div>
 
             <div class="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-3">
-              <button (click)="isCategoryModalOpen.set(false)"
+              <button (click)="closeCategoryModal()"
                       class="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">
                 Cancelar
               </button>
@@ -1421,7 +1421,7 @@
       <!-- ================= MODAL: CREAR / EDITAR CUPÓN GLOBAL ================= -->
       @if (isGlobalCouponModalOpen()) {
         <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
-             (click)="isGlobalCouponModalOpen.set(false)">
+             (click)="closeGlobalCouponModal()">
           <div class="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 w-full max-w-md rounded-2xl shadow-2xl p-6 border border-slate-200 dark:border-slate-800 space-y-4"
                (click)="$event.stopPropagation()">
             
@@ -1430,7 +1430,7 @@
                 <app-icon name="sparkles" [size]="18" className="text-brand-500"></app-icon>
                 <span>{{ editingGlobalCoupon.id ? 'Editar Cupón Global' : 'Nuevo Cupón Global' }}</span>
               </h3>
-              <button (click)="isGlobalCouponModalOpen.set(false)" class="text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer">
+              <button (click)="closeGlobalCouponModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer">
                 <app-icon name="x" [size]="18"></app-icon>
               </button>
             </div>
@@ -1438,20 +1438,20 @@
             <div class="space-y-3.5 text-xs">
               <div>
                 <label class="block font-semibold mb-1">Código del Cupón *</label>
-                <input type="text" [(ngModel)]="editingGlobalCoupon.code" placeholder="Ej: FLASHNOW, PIDETELO20"
+                <input type="text" [(ngModel)]="editingGlobalCoupon.code" name="couponCode" placeholder="Ej: FLASHNOW, PIDETELO20"
                        class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs font-mono font-bold tracking-wider uppercase focus:outline-none focus:border-brand-500" />
               </div>
 
               <div>
                 <label class="block font-semibold mb-1">Descripción / Leyenda</label>
-                <input type="text" [(ngModel)]="editingGlobalCoupon.description" placeholder="30% OFF en tu primer pedido..."
+                <input type="text" [(ngModel)]="editingGlobalCoupon.description" name="couponDesc" placeholder="30% OFF en tu primer pedido..."
                        class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs focus:outline-none focus:border-brand-500" />
               </div>
 
               <div class="grid grid-cols-2 gap-3">
                 <div>
                   <label class="block font-semibold mb-1">Tipo de Descuento</label>
-                  <select [(ngModel)]="editingGlobalCoupon.discountType"
+                  <select [(ngModel)]="editingGlobalCoupon.discountType" name="couponDiscountType"
                           class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs font-bold">
                     <option value="percentage">Porcentaje (%)</option>
                     <option value="fixed">Monto Fijo ($ USD)</option>
@@ -1459,7 +1459,7 @@
                 </div>
                 <div>
                   <label class="block font-semibold mb-1">Valor del Descuento</label>
-                  <input type="number" [(ngModel)]="editingGlobalCoupon.discountValue" min="1"
+                  <input type="number" [(ngModel)]="editingGlobalCoupon.discountValue" name="couponDiscountVal" min="1"
                          class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs font-bold font-mono" />
                 </div>
               </div>
@@ -1467,12 +1467,12 @@
               <div class="grid grid-cols-2 gap-3">
                 <div>
                   <label class="block font-semibold mb-1">Monto Mínimo de Pedido ($)</label>
-                  <input type="number" [(ngModel)]="editingGlobalCoupon.minOrderAmount" min="0" step="1"
+                  <input type="number" [(ngModel)]="editingGlobalCoupon.minOrderAmount" name="couponMinOrder" min="0" step="1"
                          class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs font-mono" />
                 </div>
                 <div>
                   <label class="block font-semibold mb-1">Descuento Máximo ($ opcional)</label>
-                  <input type="number" [(ngModel)]="editingGlobalCoupon.maxDiscountAmount" min="0" step="1"
+                  <input type="number" [(ngModel)]="editingGlobalCoupon.maxDiscountAmount" name="couponMaxDiscount" min="0" step="1"
                          placeholder="Sin límite"
                          class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs font-mono" />
                 </div>
@@ -1490,7 +1490,7 @@
             </div>
 
             <div class="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-3">
-              <button (click)="isGlobalCouponModalOpen.set(false)"
+              <button (click)="closeGlobalCouponModal()"
                       class="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">
                 Cancelar
               </button>

@@ -998,4 +998,58 @@ detectMerchantGps(): void {
     this.auth.logout();
     this.router.navigate(['/login']);
   }
+
+  // Template Helper Methods (ensures clean Angular Language Service typing)
+  setActiveTab(tab: any): void {
+    this.activeTab.set(tab);
+  }
+
+  toggleSidebar(): void {
+    this.isSidebarExpanded.update(v => !v);
+  }
+
+  toggleMobileMenu(): void {
+    this.isMobileMenuOpen.update(v => !v);
+  }
+
+  closeMobileMenu(): void {
+    this.isMobileMenuOpen.set(false);
+  }
+
+  closeEditMerchantModal(): void {
+    this.isEditModalOpen.set(false);
+  }
+
+  closeBannerModal(): void {
+    this.isBannerModalOpen.set(false);
+  }
+
+  closeCategoryModal(): void {
+    this.isCategoryModalOpen.set(false);
+  }
+
+  closeGlobalCouponModal(): void {
+    this.isGlobalCouponModalOpen.set(false);
+  }
+
+  closeRejectModal(): void {
+    this.rejectReasonModalOpen.set(false);
+  }
+
+  closeCredentialsModal(): void {
+    this.createdCredentialsModal.set(null);
+  }
+
+  setSelectedIconCategory(idx: number): void {
+    this.selectedIconCategoryIdx.set(idx);
+  }
+
+  clearBranchApprovalNotice(): void {
+    this.branchApprovalNotice.set(null);
+  }
+
+  clearCategoryActionNotice(): void {
+    this.categoryActionNotice.set(null);
+  }
+
 }
