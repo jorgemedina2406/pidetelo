@@ -33,6 +33,8 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
   readonly speedKmh = signal<number>(0);
   readonly distanceKm = signal<number>(0);
   readonly gpsProgress = signal<number>(0);
+  readonly searchQuery = signal<string>('');
+  readonly recentGuestOrders = signal<any[]>([]);
 
   // Quick Customer Registration
   readonly regEmail = signal<string>('');
@@ -60,6 +62,7 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
   private currentWaypoints: [number, number][] = [];
 
   ngOnInit(): void {
+    this.loadRecentGuestOrders();
     const orderIdParam = this.route.snapshot.paramMap.get('orderId') || '';
     if (orderIdParam) {
       this.loadOrderDetails(orderIdParam);
@@ -70,6 +73,25 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
         }
       }, 4000);
     }
+  }
+
+  loadRecentGuestOrders(): void {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = localStorage.getItem('pidetelo_recent_web_orders');
+      if (raw) {
+        const list = JSON.parse(raw);
+        if (Array.isArray(list)) {
+          this.recentGuestOrders.set(list);
+        }
+      }
+    } catch (_) {}
+  }
+
+  searchOrder(num?: string): void {
+    const target = (num || this.searchQuery()).trim().replace('#', '');
+    if (!target) return;
+    window.location.href = `/track/${target}`;
   }
 
   private smoothMoveRiderMarker(targetLat: number, targetLng: number): void {

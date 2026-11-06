@@ -37,5 +37,19 @@ export class StoreHeaderComponent {
     const fee = this.selectedBranch?.baseDeliveryFee ?? store.deliverySettings?.baseDeliveryFee ?? 0;
     return fee.toFixed(2);
   }
+
+  get activeGuestOrder(): any {
+    if (typeof window === 'undefined') return null;
+    try {
+      const raw = localStorage.getItem('pidetelo_recent_web_orders');
+      if (!raw) return null;
+      const list = JSON.parse(raw);
+      if (!Array.isArray(list) || list.length === 0) return null;
+      const latest = list[0];
+      const hoursAgo = (Date.now() - new Date(latest.createdAt).getTime()) / (1000 * 60 * 60);
+      if (hoursAgo < 24) return latest;
+    } catch (_) {}
+    return null;
+  }
 }
 

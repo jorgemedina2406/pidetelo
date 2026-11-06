@@ -51,7 +51,7 @@ export class LoginComponent {
     this.isSendingReset.set(true);
     this.resetStatusMessage.set(null);
     try {
-      const { error } = await this.supabase.resetPasswordForEmail(email, window.location.origin + '/login');
+      const { error } = await this.supabase.resetPasswordForEmail(email, window.location.origin + '/reset-password');
       if (error) throw error;
       this.resetStatusMessage.set(`✓ Se ha enviado un enlace de recuperación a ${email}. Revisa tu bandeja de entrada o spam.`);
     } catch (err: any) {

@@ -50,6 +50,113 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     _loadBanners();
     _startLiveOrdersSync();
     _startNotificationsSync();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkPendingCart();
+    });
+  }
+
+  Future<void> _checkPendingCart() async {
+    final cart = CartService();
+    if (cart.items.isNotEmpty) return;
+
+    final user = widget.sessionService.currentUser;
+    final accountKey = user?.email ?? user?.phone ?? 'default';
+    final savedCart = await cart.getPendingSavedCart(identifier: accountKey);
+    if (savedCart == null || !mounted) return;
+
+    final items = savedCart['items'] as List?;
+    final storeName = savedCart['storeName']?.toString() ?? 'el comercio';
+    final count = items?.length ?? 0;
+    if (count == 0) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+          backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withOpacity(0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.shopping_bag_rounded, color: AppTheme.primary, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  '¡Carrito Pendiente!',
+                  style: GoogleFonts.outfit(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            'Tienes $count producto(s) guardado(s) de tu sesión anterior en $storeName.\n\n¿Deseas continuar tu pedido donde lo dejaste o empezar un carrito nuevo?',
+            style: GoogleFonts.outfit(
+              fontSize: 13.5,
+              height: 1.4,
+              color: isDark ? Colors.white70 : const Color(0xFF475569),
+            ),
+          ),
+          actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(ctx);
+                await cart.discardSavedCart(identifier: accountKey);
+              },
+              child: Text(
+                'Empezar de nuevo',
+                style: GoogleFonts.outfit(
+                  color: Colors.redAccent,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.pop(ctx);
+                await cart.restoreSavedCart(identifier: accountKey);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('✓ Se recuperaron $count producto(s) en tu carrito'),
+                      backgroundColor: const Color(0xFF10B981),
+                      duration: const Duration(seconds: 3),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              ),
+              child: Text(
+                'Continuar pedido',
+                style: GoogleFonts.outfit(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _startNotificationsSync() {

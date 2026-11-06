@@ -1,4 +1,19 @@
 @if (tenant; as store) {
+      <!-- Active Guest Order Floating Notice -->
+      @if (activeGuestOrder; as activeOrd) {
+      <div class="bg-gradient-to-r from-orange-600 via-amber-600 to-brand-600 text-white text-xs px-4 py-2.5 flex items-center justify-between sticky top-0 z-40 shadow-lg animate-fade-in">
+        <div class="flex items-center gap-2 truncate">
+          <span class="animate-bounce flex-shrink-0">🛵</span>
+          <span class="truncate">Tienes un pedido activo: <strong>{{ activeOrd.orderNumber }}</strong> ({{ activeOrd.tenantName }})</span>
+        </div>
+        <a [routerLink]="['/track', activeOrd.cleanNumber]"
+           class="bg-white/20 hover:bg-white/30 text-white font-black text-[11px] px-3.5 py-1 rounded-full flex items-center gap-1.5 transition-all flex-shrink-0 shadow-xs cursor-pointer ml-2">
+          <span>Rastrear en Vivo</span>
+          <span>→</span>
+        </a>
+      </div>
+      }
+
       <!-- Top App Bar / Marketplace Teaser Header -->
       <header
         class="bg-slate-900 text-white text-xs px-4 py-2.5 flex items-center justify-between sticky top-0 z-30 shadow-md">

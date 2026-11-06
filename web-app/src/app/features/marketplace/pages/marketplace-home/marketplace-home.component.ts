@@ -274,6 +274,22 @@ export class MarketplaceHomeComponent implements OnInit {
         if (orderData && orderData.id) {
           this.activeOrder.set(orderData);
         }
+      } else {
+        const rawRecent = localStorage.getItem('pidetelo_recent_web_orders');
+        if (rawRecent) {
+          const list = JSON.parse(rawRecent);
+          if (Array.isArray(list) && list.length > 0) {
+            const latest = list[0];
+            const hoursAgo = (Date.now() - new Date(latest.createdAt).getTime()) / (1000 * 60 * 60);
+            if (hoursAgo < 24) {
+              this.activeOrder.set({
+                id: latest.cleanNumber,
+                orderNumber: latest.orderNumber,
+                storeName: latest.tenantName
+              });
+            }
+          }
+        }
       }
     } catch {}
 

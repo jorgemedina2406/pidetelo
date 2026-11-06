@@ -11,7 +11,7 @@
       "baseCurrency": "USD",
       "displayMode": "usd_and_bs",
       "exchangeRate": 896.12,
-      "lastRateUpdate": "2026-11-06T17:12:08.464Z"
+      "lastRateUpdate": "2026-11-06T19:30:25.421Z"
     },
     "delivery_tiers": [
       {
@@ -48,15 +48,15 @@
       "cash_usd",
       "mobile_transfer",
       "cash_local",
-      "card_terminal",
-      "zelle"
+      "zelle",
+      "card_terminal"
     ],
     "acceptedPaymentMethods": [
       "cash_usd",
       "mobile_transfer",
       "cash_local",
-      "card_terminal",
-      "zelle"
+      "zelle",
+      "card_terminal"
     ]
   }
 }

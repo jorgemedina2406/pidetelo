@@ -445,6 +445,7 @@ class CartService extends ChangeNotifier {
       ));
     }
     notifyListeners();
+    saveCartToStorage();
   }
 
   void updateQuantity(int index, int delta) {
@@ -460,6 +461,7 @@ class CartService extends ChangeNotifier {
       }
     }
     notifyListeners();
+    saveCartToStorage();
   }
 
   void removeItem(int index) {
@@ -477,6 +479,7 @@ class CartService extends ChangeNotifier {
         _currentStoreBaseDeliveryFee = null;
       }
       notifyListeners();
+      saveCartToStorage();
     }
   }
 
@@ -492,6 +495,94 @@ class CartService extends ChangeNotifier {
     _currentStoreAccentColor = null;
     _currentStoreBaseDeliveryFee = null;
     notifyListeners();
+    discardSavedCart();
+  }
+
+  static String _getCartKey(String? identifier) => 'customer_pending_cart_${identifier ?? "default"}';
+
+  Future<void> saveCartToStorage() async {
+    try {
+      final key = _getCartKey(_currentAccountKey);
+      final prefs = await SharedPreferences.getInstance();
+      if (_items.isEmpty) {
+        await prefs.remove(key);
+        return;
+      }
+
+      final payload = {
+        'items': _items.map((i) => i.toJson()).toList(),
+        'storeName': _currentStoreName,
+        'branch': _currentBranch?.toJson(),
+        'companyId': _currentCompanyId,
+        'companyName': _currentCompanyName,
+        'exchangeRate': _currentStoreExchangeRate,
+        'displayMode': _currentStoreDisplayMode,
+        'whatsapp': _currentStoreWhatsapp,
+        'accentColor': _currentStoreAccentColor,
+        'baseDeliveryFee': _currentStoreBaseDeliveryFee,
+        'updatedAt': DateTime.now().toIso8601String(),
+      };
+      await prefs.setString(key, jsonEncode(payload));
+    } catch (e) {
+      debugPrint('[CartService] Error saving cart to storage: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>?> getPendingSavedCart({String? identifier}) async {
+    try {
+      final key = _getCartKey(identifier ?? _currentAccountKey);
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(key);
+      if (raw == null) return null;
+      final decoded = jsonDecode(raw) as Map<String, dynamic>;
+      final items = decoded['items'] as List?;
+      if (items == null || items.isEmpty) return null;
+      return decoded;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<bool> restoreSavedCart({String? identifier}) async {
+    try {
+      final data = await getPendingSavedCart(identifier: identifier);
+      if (data == null) return false;
+
+      final itemsRaw = data['items'] as List;
+      _items.clear();
+      for (final i in itemsRaw) {
+        _items.add(CartItem.fromJson(Map<String, dynamic>.from(i as Map)));
+      }
+
+      _currentStoreName = data['storeName']?.toString();
+      _currentCompanyId = data['companyId']?.toString();
+      _currentCompanyName = data['companyName']?.toString();
+      _currentStoreExchangeRate = (data['exchangeRate'] as num?)?.toDouble();
+      _currentStoreDisplayMode = data['displayMode']?.toString();
+      _currentStoreWhatsapp = data['whatsapp']?.toString();
+      _currentStoreAccentColor = data['accentColor']?.toString();
+      _currentStoreBaseDeliveryFee = (data['baseDeliveryFee'] as num?)?.toDouble();
+
+      if (data['branch'] is Map) {
+        _currentBranch = Branch.fromJson(Map<String, dynamic>.from(data['branch'] as Map));
+      }
+
+      notifyListeners();
+      return true;
+    } catch (e) {
+      debugPrint('[CartService] Error restoring cart: $e');
+      return false;
+    }
+  }
+
+  Future<void> discardSavedCart({String? identifier}) async {
+    try {
+      final key = _getCartKey(identifier ?? _currentAccountKey);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(key);
+    } catch (e) {
+      debugPrint('[CartService] Error discarding cart: $e');
+    }
   }
 
   Future<void> _saveAddresses() async {

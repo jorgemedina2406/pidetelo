@@ -559,6 +559,23 @@ export const CartStore = signalStore(
 
       clearCartStorage();
 
+      if (typeof window !== 'undefined') {
+        try {
+          const raw = localStorage.getItem('pidetelo_recent_web_orders');
+          const list: any[] = raw ? JSON.parse(raw) : [];
+          list.unshift({
+            orderNumber: order.orderNumber,
+            cleanNumber: order.orderNumber.replace('#', ''),
+            tenantSlug: tenant?.slug,
+            tenantName: tenant?.name || branch?.companyName || 'Comercio',
+            branchName: branch?.name,
+            total: order.total,
+            createdAt: new Date().toISOString(),
+          });
+          localStorage.setItem('pidetelo_recent_web_orders', JSON.stringify(list.slice(0, 8)));
+        } catch (_) {}
+      }
+
       patchState(store, {
         completedOrder: order,
         items: [],

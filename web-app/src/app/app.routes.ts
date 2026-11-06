@@ -14,6 +14,11 @@ export const routes: Routes = [
     title: 'Iniciar Sesión | Pídetelo'
   },
   {
+    path: 'reset-password',
+    loadComponent: () => import('./features/auth/reset-password/reset-password.component').then(m => m.ResetPasswordComponent),
+    title: 'Restablecer Contraseña | Pídetelo'
+  },
+  {
     path: 'super-admin',
     canActivate: [superAdminGuard],
     loadComponent: () => import('./features/super-admin/super-admin.component').then(m => m.SuperAdminComponent),
@@ -30,6 +35,11 @@ export const routes: Routes = [
     canActivate: [riderGuard],
     loadComponent: () => import('./features/rider-app/rider-app.component').then(m => m.RiderAppComponent),
     title: 'App Motorizados | Pídetelo'
+  },
+  {
+    path: 'track',
+    loadComponent: () => import('./features/customer-tracking/customer-tracking.component').then(m => m.CustomerTrackingComponent),
+    title: 'Rastrear Pedido | Pídetelo'
   },
   {
     path: 'track/:orderId',

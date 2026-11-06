@@ -1804,17 +1804,21 @@ export class ApiService {
     const pm = cred.pago_movil || {};
     const z = cred.zelle || {};
 
-    const bank = pm.bank_name || cred.pago_movil_bank || cred.pagoMovilBank || '0102 - Banco de Venezuela';
+    const rawBank = pm.bank_name || cred.pago_movil_bank || cred.pagoMovilBank || '';
     const bankCode = pm.bank_code ? `${pm.bank_code} - ` : '';
+    const bank = rawBank ? (rawBank.includes(bankCode) ? rawBank : `${bankCode}${rawBank}`) : '';
+    const phone = pm.phone || cred.pago_movil_phone || cred.pagoMovilPhone || '';
+    const idNumber = pm.id_number || cred.pago_movil_id_number || cred.pagoMovilIdNumber || '';
+    const isFake = phone.includes('04121234567') || phone.includes('0412-1234567') || idNumber.includes('50123456');
 
     return {
-      pagoMovilBank: bank.includes(bankCode) ? bank : `${bankCode}${bank}`,
-      pagoMovilPhone: pm.phone || cred.pago_movil_phone || cred.pagoMovilPhone || '0412-1234567',
-      pagoMovilIdNumber: pm.id_number || cred.pago_movil_id_number || cred.pagoMovilIdNumber || 'J-50123456-1',
-      pagoMovilAccountName: pm.account_name || cred.pago_movil_account_name || cred.pagoMovilAccountName || '',
+      pagoMovilBank: isFake ? '' : bank,
+      pagoMovilPhone: isFake ? '' : phone,
+      pagoMovilIdNumber: isFake ? '' : idNumber,
+      pagoMovilAccountName: isFake ? '' : (pm.account_name || cred.pago_movil_account_name || cred.pagoMovilAccountName || ''),
       zelleEmail: z.email || cred.zelle_email || cred.zelleEmail || '',
       zelleAccountName: z.account_name || cred.zelle_account_name || cred.zelleAccountName || '',
-      isActive: pm.enabled ?? cred.is_active ?? true
+      isActive: isFake ? false : (pm.enabled ?? cred.is_active ?? false)
     };
   }
 

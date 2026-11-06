@@ -15,16 +15,20 @@ class CheckoutSheet extends StatefulWidget {
 }
 
 class _CheckoutSheetState extends State<CheckoutSheet> {
-  String _selectedPayment = 'pago_movil'; // 'efectivo', 'pago_movil', 'tarjeta'
+  String _selectedPayment = 'pago_movil';
   final TextEditingController _notesController = TextEditingController();
   final TextEditingController _cashAmountController = TextEditingController();
+  final TextEditingController _cashBsAmountController = TextEditingController();
   final TextEditingController _pagoMovilRefController = TextEditingController();
+  final TextEditingController _zelleRefController = TextEditingController();
 
   @override
   void dispose() {
     _notesController.dispose();
     _cashAmountController.dispose();
+    _cashBsAmountController.dispose();
     _pagoMovilRefController.dispose();
+    _zelleRefController.dispose();
     super.dispose();
   }
 
@@ -169,9 +173,27 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
     }
 
     String paymentLabel = 'Pago Móvil';
-    if (_selectedPayment == 'efectivo') {
+    if (_selectedPayment == 'pago_movil') {
+      paymentLabel = _pagoMovilRefController.text.isNotEmpty
+          ? 'Pago Móvil (Ref: ${_pagoMovilRefController.text.trim()})'
+          : 'Pago Móvil';
+    } else if (_selectedPayment == 'cash_usd') {
       paymentLabel = _cashAmountController.text.isNotEmpty
-          ? 'Efectivo (Paga con \$${_cashAmountController.text})'
+          ? 'Efectivo \$ USD (Paga con \$${_cashAmountController.text.trim()})'
+          : 'Efectivo \$ USD (Exacto)';
+    } else if (_selectedPayment == 'cash_local') {
+      paymentLabel = _cashBsAmountController.text.isNotEmpty
+          ? 'Efectivo Bs. (Paga con Bs. ${_cashBsAmountController.text.trim()})'
+          : 'Efectivo Bs. (Exacto)';
+    } else if (_selectedPayment == 'zelle') {
+      paymentLabel = _zelleRefController.text.isNotEmpty
+          ? 'Zelle Directo (Ref/Titular: ${_zelleRefController.text.trim()})'
+          : 'Zelle Directo';
+    } else if (_selectedPayment == 'card_terminal') {
+      paymentLabel = 'Punto de Venta (Tarjeta al recibir)';
+    } else if (_selectedPayment == 'efectivo') {
+      paymentLabel = _cashAmountController.text.isNotEmpty
+          ? 'Efectivo (Paga con \$${_cashAmountController.text.trim()})'
           : 'Efectivo exacto';
     } else if (_selectedPayment == 'tarjeta') {
       paymentLabel = 'Tarjeta / Zelle';
@@ -695,84 +717,84 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                           Builder(
                             builder: (context) {
                               final branch = cart.currentBranch;
-                              final accepted = branch?.acceptedPaymentMethods ?? const ['pago_movil', 'cash_usd', 'cash_local', 'mobile_transfer'];
+                              final rawAccepted = branch?.acceptedPaymentMethods ?? const ['pago_movil', 'cash_usd', 'cash_local', 'mobile_transfer'];
                               
-                              final bool allowsPagoMovil = accepted.any((m) => m == 'pago_movil' || m == 'mobile_transfer');
-                              final bool allowsEfectivo = accepted.any((m) => m == 'efectivo' || m == 'cash_usd' || m == 'cash_local' || m == 'cash');
-                              final bool allowsTarjeta = accepted.any((m) => m == 'tarjeta' || m == 'card_terminal' || m == 'zelle' || m == 'pos_card');
+                              final allMethodsDef = [
+                                {
+                                  'id': 'pago_movil',
+                                  'title': 'Pago Móvil',
+                                  'subtitle': 'Transferencia bancaria',
+                                  'icon': Icons.phone_android_rounded,
+                                  'color': AppTheme.amberAccent,
+                                  'match': ['pago_movil', 'mobile_transfer'],
+                                },
+                                {
+                                  'id': 'cash_usd',
+                                  'title': 'Efectivo \$ USD',
+                                  'subtitle': 'En divisa al recibir',
+                                  'icon': Icons.attach_money_rounded,
+                                  'color': const Color(0xFF10B981),
+                                  'match': ['cash_usd', 'efectivo', 'cash'],
+                                },
+                                {
+                                  'id': 'cash_local',
+                                  'title': 'Efectivo Bs.',
+                                  'subtitle': 'A tasa oficial BCV',
+                                  'icon': Icons.payments_rounded,
+                                  'color': const Color(0xFFF59E0B),
+                                  'match': ['cash_local', 'cash_bs', 'efectivo'],
+                                },
+                                {
+                                  'id': 'zelle',
+                                  'title': 'Zelle Directo',
+                                  'subtitle': 'Transferencia USA',
+                                  'icon': Icons.bolt_rounded,
+                                  'color': const Color(0xFF8B5CF6),
+                                  'match': ['zelle', 'tarjeta'],
+                                },
+                                {
+                                  'id': 'card_terminal',
+                                  'title': 'Punto de Venta',
+                                  'subtitle': 'Tarjeta al recibir',
+                                  'icon': Icons.credit_card_rounded,
+                                  'color': const Color(0xFF3B82F6),
+                                  'match': ['card_terminal', 'pos_card', 'tarjeta', 'terminal'],
+                                },
+                              ];
 
-                              if (!allowsPagoMovil && _selectedPayment == 'pago_movil') {
-                                if (allowsEfectivo) {
-                                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                                    if (mounted) setState(() => _selectedPayment = 'efectivo');
-                                  });
-                                } else if (allowsTarjeta) {
-                                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                                    if (mounted) setState(() => _selectedPayment = 'tarjeta');
-                                  });
-                                }
-                              } else if (!allowsEfectivo && _selectedPayment == 'efectivo') {
-                                if (allowsPagoMovil) {
-                                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                                    if (mounted) setState(() => _selectedPayment = 'pago_movil');
-                                  });
-                                } else if (allowsTarjeta) {
-                                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                                    if (mounted) setState(() => _selectedPayment = 'tarjeta');
-                                  });
-                                }
-                              } else if (!allowsTarjeta && _selectedPayment == 'tarjeta') {
-                                if (allowsPagoMovil) {
-                                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                                    if (mounted) setState(() => _selectedPayment = 'pago_movil');
-                                  });
-                                } else if (allowsEfectivo) {
-                                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                                    if (mounted) setState(() => _selectedPayment = 'efectivo');
-                                  });
-                                }
-                              }
+                              final availableMethods = allMethodsDef.where((m) {
+                                final matches = m['match'] as List<String>;
+                                return rawAccepted.any((a) => matches.contains(a));
+                              }).toList();
 
-                              final List<Widget> options = [];
-                              if (allowsPagoMovil) {
-                                options.add(_buildPaymentOption(
-                                  id: 'pago_movil',
-                                  icon: Icons.phone_android_rounded,
-                                  label: 'Pago Móvil',
-                                ));
-                              }
-                              if (allowsEfectivo) {
-                                if (options.isNotEmpty) options.add(const SizedBox(width: 8));
-                                options.add(_buildPaymentOption(
-                                  id: 'efectivo',
-                                  icon: Icons.payments_rounded,
-                                  label: 'Efectivo',
-                                ));
-                              }
-                              if (allowsTarjeta) {
-                                if (options.isNotEmpty) options.add(const SizedBox(width: 8));
-                                options.add(_buildPaymentOption(
-                                  id: 'tarjeta',
-                                  icon: Icons.credit_card_rounded,
-                                  label: 'Zelle / Tarjeta',
-                                ));
+                              final effectiveMethods = availableMethods.isNotEmpty
+                                  ? availableMethods
+                                  : allMethodsDef.take(2).toList();
+
+                              if (!effectiveMethods.any((m) => m['id'] == _selectedPayment)) {
+                                WidgetsBinding.instance.addPostFrameCallback((_) {
+                                  if (mounted) setState(() => _selectedPayment = effectiveMethods.first['id'] as String);
+                                });
                               }
 
-                              if (options.isEmpty) {
-                                options.add(_buildPaymentOption(
-                                  id: 'pago_movil',
-                                  icon: Icons.phone_android_rounded,
-                                  label: 'Pago Móvil',
-                                ));
-                                options.add(const SizedBox(width: 8));
-                                options.add(_buildPaymentOption(
-                                  id: 'efectivo',
-                                  icon: Icons.payments_rounded,
-                                  label: 'Efectivo',
-                                ));
-                              }
-
-                              return Row(children: options);
+                              return SizedBox(
+                                height: 82,
+                                child: ListView.separated(
+                                  scrollDirection: Axis.horizontal,
+                                  itemCount: effectiveMethods.length,
+                                  separatorBuilder: (_, __) => const SizedBox(width: 10),
+                                  itemBuilder: (context, idx) {
+                                    final m = effectiveMethods[idx];
+                                    return _buildPaymentCard(
+                                      id: m['id'] as String,
+                                      icon: m['icon'] as IconData,
+                                      title: m['title'] as String,
+                                      subtitle: m['subtitle'] as String,
+                                      color: m['color'] as Color,
+                                    );
+                                  },
+                                ),
+                              );
                             },
                           ),
 
@@ -831,7 +853,7 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                                   ),
                                   if (cart.currentBranchPayment
                                           ?.pagoMovilAccountName !=
-                                      null) ...[
+                                      null && cart.currentBranchPayment!.pagoMovilAccountName.isNotEmpty) ...[
                                     const SizedBox(height: 2),
                                     Text(
                                       'Titular: ${cart.currentBranchPayment!.pagoMovilAccountName}',
@@ -882,7 +904,118 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                             ),
                           ],
 
-                          if (_selectedPayment == 'tarjeta') ...[
+                          if (_selectedPayment == 'cash_usd') ...[
+                            const SizedBox(height: 12),
+                            TextField(
+                              controller: _cashAmountController,
+                              keyboardType: TextInputType.number,
+                              style: TextStyle(
+                                  color: textColor,
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w700),
+                              decoration: InputDecoration(
+                                hintText:
+                                    '¿Con cuántos \$ USD pagas? (Para llevarte cambio)',
+                                hintStyle: TextStyle(
+                                    color: subtextColor, fontSize: 12),
+                                filled: true,
+                                fillColor: inputFill,
+                                isDense: true,
+                                contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 12),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide:
+                                      const BorderSide(color: Colors.white12),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide:
+                                      const BorderSide(color: Colors.white12),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(
+                                      color: Color(0xFF10B981), width: 1.5),
+                                ),
+                              ),
+                            ),
+                          ],
+
+                          if (_selectedPayment == 'cash_local') ...[
+                            const SizedBox(height: 12),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: darkBoxBg,
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: cardBorder),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        'Total en Bolívares (Tasa Oficial):',
+                                        style: GoogleFonts.outfit(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                          color: const Color(0xFFF59E0B),
+                                        ),
+                                      ),
+                                      Text(
+                                        'Bs. ${(cart.grandTotal * (cart.currentStoreExchangeRate ?? 896.12)).toStringAsFixed(2)}',
+                                        style: GoogleFonts.outfit(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w900,
+                                          color: textColor,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  TextField(
+                                    controller: _cashBsAmountController,
+                                    keyboardType: TextInputType.number,
+                                    style: TextStyle(
+                                        color: textColor,
+                                        fontSize: 13.5,
+                                        fontWeight: FontWeight.w700),
+                                    decoration: InputDecoration(
+                                      hintText:
+                                          '¿Con cuántos Bs. pagas? (Para llevarte cambio)',
+                                      hintStyle: TextStyle(
+                                          color: subtextColor, fontSize: 12),
+                                      filled: true,
+                                      fillColor: inputFill,
+                                      isDense: true,
+                                      contentPadding: const EdgeInsets.symmetric(
+                                          horizontal: 14, vertical: 12),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide:
+                                            const BorderSide(color: Colors.white12),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide:
+                                            const BorderSide(color: Colors.white12),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: const BorderSide(
+                                            color: Color(0xFFF59E0B), width: 1.5),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+
+                          if (_selectedPayment == 'zelle') ...[
                             const SizedBox(height: 12),
                             Container(
                               padding: const EdgeInsets.all(12),
@@ -956,14 +1089,14 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                                   ],
                                   const SizedBox(height: 8),
                                   TextField(
-                                    controller: _pagoMovilRefController,
+                                    controller: _zelleRefController,
                                     style: TextStyle(
                                         color: textColor,
                                         fontSize: 13.5,
                                         fontWeight: FontWeight.w700),
                                     decoration: InputDecoration(
                                       hintText:
-                                          'Nombre de la cuenta o referencia Zelle',
+                                          'Nombre del titular o número de confirmación Zelle',
                                       hintStyle: TextStyle(
                                           color: subtextColor, fontSize: 12),
                                       filled: true,
@@ -995,40 +1128,43 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                             ),
                           ],
 
-                          if (_selectedPayment == 'efectivo') ...[
+                          if (_selectedPayment == 'card_terminal') ...[
                             const SizedBox(height: 12),
-                            TextField(
-                              controller: _cashAmountController,
-                              keyboardType: TextInputType.number,
-                              style: TextStyle(
-                                  color: textColor,
-                                  fontSize: 13.5,
-                                  fontWeight: FontWeight.w700),
-                              decoration: InputDecoration(
-                                hintText:
-                                    '¿Con cuánto pagas? (Para llevarte cambio)',
-                                hintStyle: TextStyle(
-                                    color: subtextColor, fontSize: 12),
-                                filled: true,
-                                fillColor: inputFill,
-                                isDense: true,
-                                contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 14, vertical: 12),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide:
-                                      const BorderSide(color: Colors.white12),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide:
-                                      const BorderSide(color: Colors.white12),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(
-                                      color: AppTheme.primary, width: 1.5),
-                                ),
+                            Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF3B82F6).withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: const Color(0xFF3B82F6).withOpacity(0.35)),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.credit_card_rounded, color: Color(0xFF3B82F6), size: 24),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Punto de Venta Inalámbrico',
+                                          style: GoogleFonts.outfit(
+                                            fontSize: 12.5,
+                                            fontWeight: FontWeight.w800,
+                                            color: textColor,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          'El motorizado llevará el punto de venta móvil a tu puerta. Puedes pagar con tarjeta de débito o crédito bancaria al recibir.',
+                                          style: GoogleFonts.outfit(
+                                            fontSize: 11,
+                                            color: subtextColor,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
@@ -1143,48 +1279,85 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
     );
   }
 
-  Widget _buildPaymentOption({
+  Widget _buildPaymentCard({
     required String id,
     required IconData icon,
-    required String label,
+    required String title,
+    required String subtitle,
+    required Color color,
   }) {
     final isSelected = _selectedPayment == id;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardBg = isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9);
     final cardBorder = isDark ? Colors.white10 : const Color(0xFFCBD5E1);
-    final subtextColor = isDark ? Colors.white70 : const Color(0xFF475569);
+    final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final subtextColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
 
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => setState(() => _selectedPayment = id),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? AppTheme.primary.withOpacity(0.15)
-                : cardBg,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: isSelected ? AppTheme.primary : cardBorder,
-              width: isSelected ? 1.5 : 1.0,
+    return GestureDetector(
+      onTap: () => setState(() => _selectedPayment = id),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        width: 135,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withOpacity(0.14) : cardBg,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? color : cardBorder,
+            width: isSelected ? 2.0 : 1.0,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: color.withOpacity(0.18),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  )
+                ]
+              : null,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Icon(icon, color: isSelected ? color : subtextColor, size: 20),
+                if (isSelected)
+                  Container(
+                    width: 16,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.check, size: 11, color: Colors.white),
+                  ),
+              ],
             ),
-          ),
-          child: Column(
-            children: [
-              Icon(icon,
-                  color: isSelected ? AppTheme.primary : subtextColor,
-                  size: 20),
-              const SizedBox(height: 6),
-              Text(
-                label,
-                style: GoogleFonts.outfit(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w700,
-                  color: isSelected ? AppTheme.primary : subtextColor,
-                ),
+            const SizedBox(height: 6),
+            Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.outfit(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: isSelected ? textColor : textColor.withOpacity(0.85),
               ),
-            ],
-          ),
+            ),
+            Text(
+              subtitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.outfit(
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+                color: subtextColor,
+              ),
+            ),
+          ],
         ),
       ),
     );

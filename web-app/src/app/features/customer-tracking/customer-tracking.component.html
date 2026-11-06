@@ -466,6 +466,80 @@
           </div>
 
         </main>
+      } @else {
+        <!-- ================= GUEST ORDER SEARCH & RECENT ORDERS ================= -->
+        <main class="p-6 space-y-6 flex-1 flex flex-col justify-center animate-fade-in">
+          <div class="text-center space-y-2">
+            <div class="w-16 h-16 rounded-3xl bg-brand-500/10 text-brand-600 dark:text-brand-400 mx-auto flex items-center justify-center text-3xl shadow-inner">
+              📍
+            </div>
+            <h2 class="text-xl font-extrabold text-slate-900 dark:text-white">
+              Rastrear tu Pedido en Vivo
+            </h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400 max-w-xs mx-auto leading-relaxed">
+              Ingresa el número de tu orden para ver la preparación y el recorrido GPS del repartidor en tiempo real.
+            </p>
+          </div>
+
+          <!-- Search Box -->
+          <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+              Número de Pedido
+            </label>
+            <div class="flex gap-2">
+              <input type="text"
+                     [ngModel]="searchQuery()"
+                     (ngModelChange)="searchQuery.set($event)"
+                     (keyup.enter)="searchOrder()"
+                     placeholder="Ej: ORD-4921 o PED-1029"
+                     class="flex-1 px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono font-bold focus:outline-none focus:border-brand-500 text-slate-900 dark:text-white" />
+              <button (click)="searchOrder()"
+                      type="button"
+                      class="px-4 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-extrabold text-xs shadow-md transition-colors cursor-pointer flex items-center gap-1.5">
+                <span>Rastrear</span>
+                <span>→</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Recent Guest Orders from this Browser -->
+          @if (recentGuestOrders().length > 0) {
+          <div class="space-y-2.5">
+            <div class="text-xs font-extrabold uppercase tracking-wider text-slate-400">
+              Tus Pedidos Recientes en este Dispositivo:
+            </div>
+            <div class="space-y-2">
+              @for (rec of recentGuestOrders(); track rec.orderNumber) {
+              <div (click)="searchOrder(rec.cleanNumber)"
+                   class="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-brand-500/50 shadow-xs cursor-pointer flex items-center justify-between transition-all group">
+                <div class="min-w-0">
+                  <div class="flex items-center gap-2">
+                    <span class="font-bold text-xs text-slate-900 dark:text-white group-hover:text-brand-500 transition-colors">
+                      {{ rec.orderNumber }}
+                    </span>
+                    <span class="text-[10px] px-1.5 py-0.5 rounded bg-brand-50 dark:bg-brand-950/40 text-brand-600 dark:text-brand-400 font-extrabold">
+                      ${{ rec.total?.toFixed(2) }}
+                    </span>
+                  </div>
+                  <div class="text-[11px] text-slate-500 truncate mt-0.5">
+                    {{ rec.tenantName }} {{ rec.branchName ? '• ' + rec.branchName : '' }}
+                  </div>
+                </div>
+                <span class="text-slate-400 group-hover:text-brand-500 group-hover:translate-x-1 transition-all text-sm font-bold">
+                  →
+                </span>
+              </div>
+              }
+            </div>
+          </div>
+          }
+
+          <div class="text-center pt-2">
+            <a routerLink="/explorar" class="text-xs font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+              ← Explorar otros comercios
+            </a>
+          </div>
+        </main>
       }
 
       <!-- ================= MODAL DESCARGA DE LA APP ================= -->
