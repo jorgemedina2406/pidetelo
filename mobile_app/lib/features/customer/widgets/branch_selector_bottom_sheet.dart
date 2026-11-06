@@ -461,7 +461,7 @@ class BranchSelectorBottomSheet extends StatelessWidget {
                                     const SizedBox(width: 6),
                                     Expanded(
                                       child: Text(
-                                        'Pago Móvil: ${branch.paymentCredentials.pagoMovilBank} • ${branch.paymentCredentials.pagoMovilPhone}',
+                                        branch.paymentCredentials.pagoMovilPhone.isNotEmpty ? 'Pago Móvil: ' + branch.paymentCredentials.pagoMovilBank + ' • ' + branch.paymentCredentials.pagoMovilPhone : 'Acepta Pago Móvil / Efectivo',
                                         style: GoogleFonts.outfit(
                                           fontSize: 10.5,
                                           fontWeight: FontWeight.w500,

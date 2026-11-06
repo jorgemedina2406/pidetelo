@@ -144,8 +144,10 @@ export class StoreViewComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    const tenantSlug = this.route.snapshot.paramMap.get('tenantSlug') || 'burger-lab';
-    this.loadStoreData(tenantSlug);
+    this.route.paramMap.subscribe(params => {
+      const tenantSlug = params.get('slug') || params.get('tenantSlug') || 'burger-king';
+      this.loadStoreData(tenantSlug);
+    });
   }
 
   private loadStoreData(slug: string): void {

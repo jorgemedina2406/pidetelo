@@ -33,6 +33,7 @@ class MapAddressPickerScreen extends StatefulWidget {
 
 class _MapAddressPickerScreenState extends State<MapAddressPickerScreen> {
   final MapController _mapController = MapController();
+  late ll.LatLng _initialLocation;
   late ll.LatLng _selectedLocation;
   late TextEditingController _titleCtrl;
   late TextEditingController _addressCtrl;
@@ -183,14 +184,31 @@ class _MapAddressPickerScreenState extends State<MapAddressPickerScreen> {
   void initState() {
     super.initState();
     final init = widget.initialAddress;
-    _selectedLocation = init != null
+    _initialLocation = init != null
         ? ll.LatLng(init.latitude, init.longitude)
         : const ll.LatLng(10.034574, -69.237544); // Default El Placer
+    _selectedLocation = _initialLocation;
 
     _titleCtrl = TextEditingController(text: init?.title ?? 'Casa');
     _addressCtrl = TextEditingController(text: init?.address ?? 'El Placer, Cabudare');
     _referenceCtrl = TextEditingController(text: init?.reference ?? '');
     _instructionsCtrl = TextEditingController(text: init?.instructions ?? '');
+  }
+
+  void _recenterToCurrentLocation() {
+    FocusScope.of(context).unfocus();
+    _moveToLocation(_initialLocation.latitude, _initialLocation.longitude, _addressCtrl.text);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          '📍 Pin restaurado a tu ubicación inicial',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
+        ),
+        backgroundColor: const Color(0xFF1E293B),
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   @override
@@ -397,7 +415,7 @@ class _MapAddressPickerScreenState extends State<MapAddressPickerScreen> {
             ),
           ),
 
-          // 2. Top Header Controls: Quick Pills + Address Search Bar (Google Maps style)
+          // 2. Top Header Controls: Address Search Bar
           Positioned(
             top: 10,
             left: 14,
@@ -405,37 +423,6 @@ class _MapAddressPickerScreenState extends State<MapAddressPickerScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Quick preset pills
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: _quickLocations.map((loc) {
-                      return Container(
-                        margin: const EdgeInsets.only(right: 8),
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            FocusScope.of(context).unfocus();
-                            _moveToLocation(loc['lat'], loc['lng'], loc['address']);
-                          },
-                          icon: const Icon(Icons.near_me_rounded, size: 13, color: AppTheme.primary),
-                          label: Text(
-                            loc['name'],
-                            style: GoogleFonts.outfit(fontSize: 11.5, fontWeight: FontWeight.w700),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF0F172A).withValues(alpha: 0.92),
-                            foregroundColor: Colors.white,
-                            elevation: 4,
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-                const SizedBox(height: 8),
-
                 // Floating Top Search Input
                 Container(
                   decoration: BoxDecoration(
@@ -557,47 +544,74 @@ class _MapAddressPickerScreenState extends State<MapAddressPickerScreen> {
             ),
           ),
 
-          // 4. Floating GPS Coordinates Chip (bottom right of map)
+          // 4. Floating Recenter GPS Button & Coordinates Chip
           Positioned(
             right: 14,
-            bottom: isKeyboardOpen ? 180 : 230,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: const Color(0xFF0F172A).withValues(alpha: 0.85),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.white12),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.gps_fixed_rounded, size: 12, color: AppTheme.primary),
-                  const SizedBox(width: 5),
-                  Text(
-                    '${_selectedLocation.latitude.toStringAsFixed(5)}, ${_selectedLocation.longitude.toStringAsFixed(5)}',
-                    style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white),
+            bottom: isKeyboardOpen ? viewInsets.bottom + 195 : 240,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Recenter to Current Location Button
+                FloatingActionButton.extended(
+                  heroTag: 'recenter_gps_btn',
+                  onPressed: _recenterToCurrentLocation,
+                  backgroundColor: const Color(0xFF0F172A),
+                  elevation: 6,
+                  icon: const Icon(Icons.my_location_rounded, color: AppTheme.primary, size: 18),
+                  label: Text(
+                    'Mi ubicación actual',
+                    style: GoogleFonts.outfit(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0F172A).withValues(alpha: 0.85),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.white12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.gps_fixed_rounded, size: 12, color: AppTheme.primary),
+                      const SizedBox(width: 5),
+                      Text(
+                        '${_selectedLocation.latitude.toStringAsFixed(5)}, ${_selectedLocation.longitude.toStringAsFixed(5)}',
+                        style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
 
-          // 5. Bottom Form Card for details (Only visible when user is not actively searching)
-          if (_filteredSuggestions.isEmpty && !isKeyboardOpen)
+          // 5. Bottom Form Card for details (Permanece visible con el teclado abierto)
+          if (_filteredSuggestions.isEmpty)
             Positioned(
               left: 0,
               right: 0,
               bottom: 0,
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                decoration: const BoxDecoration(
-                  color: Color(0xFF0F172A),
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black54, blurRadius: 16, offset: Offset(0, -4)),
-                  ],
-                ),
-                child: SingleChildScrollView(
+              child: AnimatedPadding(
+                duration: const Duration(milliseconds: 150),
+                curve: Curves.easeOut,
+                padding: EdgeInsets.only(bottom: viewInsets.bottom),
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF0F172A),
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black54, blurRadius: 16, offset: Offset(0, -4)),
+                    ],
+                  ),
+                  child: SingleChildScrollView(
                   physics: const ClampingScrollPhysics(),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -701,6 +715,7 @@ class _MapAddressPickerScreenState extends State<MapAddressPickerScreen> {
                       ),
                     ),
                   ],
+                ),
                 ),
               ),
             ),

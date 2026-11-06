@@ -79,6 +79,7 @@ import { IconComponent } from '../../../shared/components/icon.component';
                 <th class="p-3.5">Comercio / Ubicación</th>
                 <th class="p-3.5 text-center">Fecha Registro</th>
                 <th class="p-3.5 text-center">Estado</th>
+                <th class="p-3.5 text-center">Acciones</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
@@ -136,10 +137,42 @@ import { IconComponent } from '../../../shared/components/icon.component';
                     {{ u.createdAt ? (u.createdAt | date:'shortDate') : 'Reciente' }}
                   </td>
                   <td class="p-3.5 text-center">
-                    <span class="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                      <span>Activo</span>
-                    </span>
+                    @if (u.isActive !== false) {
+                      <span class="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                        <span>Activo</span>
+                      </span>
+                    } @else {
+                      <span class="inline-flex items-center gap-1 text-[11px] font-bold text-rose-600 dark:text-rose-400">
+                        <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                        <span>Desactivado</span>
+                      </span>
+                    }
+                  </td>
+                  <td class="p-3.5 text-center">
+                    <div class="flex items-center justify-center gap-1.5">
+                      <button type="button"
+                              (click)="toggleActive.emit(u)"
+                              [title]="u.isActive !== false ? 'Desactivar acceso' : 'Reactivar acceso'"
+                              class="p-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer active:scale-95"
+                              [class.text-amber-600]="u.isActive !== false"
+                              [class.bg-amber-50]="u.isActive !== false"
+                              [class.dark:bg-amber-950/40]="u.isActive !== false"
+                              [class.border-amber-200]="u.isActive !== false"
+                              [class.dark:border-amber-900/60]="u.isActive !== false"
+                              [class.text-emerald-600]="u.isActive === false"
+                              [class.bg-emerald-50]="u.isActive === false"
+                              [class.dark:bg-emerald-950/40]="u.isActive === false"
+                              [class.border-emerald-200]="u.isActive === false">
+                        <app-icon [name]="u.isActive !== false ? 'pause' : 'play'" [size]="13"></app-icon>
+                      </button>
+                      <button type="button"
+                              (click)="deleteUser.emit(u)"
+                              title="Eliminar usuario definitivamente"
+                              class="p-1.5 rounded-lg text-rose-600 dark:text-rose-400 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-xs font-bold transition-all cursor-pointer active:scale-95">
+                        <app-icon name="trash" [size]="13"></app-icon>
+                      </button>
+                    </div>
                   </td>
                 </tr>
               } @empty {
@@ -162,6 +195,8 @@ export class SuperAdminUsersComponent {
   }
   @Input() loading = false;
   @Output() refresh = new EventEmitter<void>();
+  @Output() deleteUser = new EventEmitter<any>();
+  @Output() toggleActive = new EventEmitter<any>();
 
   private readonly _users = signal<any[]>([]);
   readonly userSearchQuery = signal('');

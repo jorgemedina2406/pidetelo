@@ -30,6 +30,117 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
   bool _obscurePassword = true;
 
   @override
+  void initState() {
+    super.initState();
+    _passwordController.addListener(() {
+      if (_isRegister && mounted) setState(() {});
+    });
+  }
+
+  bool get _hasMinLength => _passwordController.text.length >= 8;
+  bool get _hasUppercase => RegExp(r'[A-Z]').hasMatch(_passwordController.text);
+  bool get _hasSpecialChar => RegExp(r'[!@#$%^&*(),.?":{}|<>_\-+=[\]\\\/~`]').hasMatch(_passwordController.text);
+  bool get _isPasswordValid => _hasMinLength && _hasUppercase && _hasSpecialChar;
+
+  void _showForgotPasswordDialog() {
+    final emailCtrl = TextEditingController(text: _emailController.text.trim());
+    bool isSending = false;
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlgState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              const Icon(Icons.lock_reset_rounded, color: Color(0xFF4A8F29)),
+              const SizedBox(width: 8),
+              Text('Recuperar Clave', style: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 18)),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Ingresa tu correo registrado para enviarte un enlace de recuperación:',
+                style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xFF64748B)),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: emailCtrl,
+                keyboardType: TextInputType.emailAddress,
+                decoration: InputDecoration(
+                  labelText: 'Correo Electrónico',
+                  hintText: 'ejemplo@correo.com',
+                  prefixIcon: const Icon(Icons.email_outlined),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: isSending ? null : () => Navigator.pop(ctx),
+              child: Text('Cancelar', style: GoogleFonts.outfit(color: const Color(0xFF64748B))),
+            ),
+            ElevatedButton(
+              onPressed: isSending ? null : () async {
+                final email = emailCtrl.text.trim();
+                if (email.isEmpty || !email.contains('@')) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ingresa un correo válido')));
+                  return;
+                }
+                setDlgState(() => isSending = true);
+                try {
+                  await Supabase.instance.client.auth.resetPasswordForEmail(email, redirectTo: 'pidetelo://reset-password');
+                  if (mounted) {
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Enlace enviado a ' + email + '. Revisa tu correo o spam.'),
+                        backgroundColor: const Color(0xFF10B981),
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  setDlgState(() => isSending = false);
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error: ' + e.toString()), backgroundColor: const Color(0xFFEF4444)),
+                    );
+                  }
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF4A8F29),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: isSending
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : Text('Enviar Enlace', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleOAuthLogin(OAuthProvider provider) async {
+    try {
+      setState(() => _isLoading = true);
+      await Supabase.instance.client.auth.signInWithOAuth(provider, redirectTo: 'pidetelo://login-callback');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error con acceso social: ' + e.toString()), backgroundColor: const Color(0xFFEF4444)),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
@@ -47,6 +158,17 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
     if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Por favor ingresa tu correo y contraseña.')),
+      );
+      return;
+    }
+
+    if (_isRegister && !_isPasswordValid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('La contraseña debe tener al menos 8 dígitos, una mayúscula y un carácter especial (*, ., etc).'),
+          backgroundColor: Color(0xFFEF4444),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
       return;
     }
@@ -325,6 +447,44 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
                       obscureText: _obscurePassword,
                       onTogglePassword: () => setState(() => _obscurePassword = !_obscurePassword),
                     ),
+                    if (_isRegister) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: _isPasswordValid ? const Color(0xFF10B981) : const Color(0xFFE2E8F0)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  _isPasswordValid ? Icons.check_circle_rounded : Icons.shield_outlined,
+                                  size: 14,
+                                  color: _isPasswordValid ? const Color(0xFF10B981) : const Color(0xFF64748B),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  _isPasswordValid ? 'Contraseña segura ✓' : 'Requisitos de la contraseña:',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: _isPasswordValid ? const Color(0xFF10B981) : const Color(0xFF475569),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            _buildPasswordReqRow('Mínimo 8 caracteres', _hasMinLength),
+                            _buildPasswordReqRow('Al menos 1 letra mayúscula (A-Z)', _hasUppercase),
+                            _buildPasswordReqRow('Al menos 1 carácter especial (*, ., @, #, etc.)', _hasSpecialChar),
+                          ],
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 14),
 
                     // Keep signed in & Forgot Password in Spanish
@@ -351,11 +511,7 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
                         ),
                         if (!_isRegister)
                           GestureDetector(
-                            onTap: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Contacta a soporte para recuperar tu acceso.')),
-                              );
-                            },
+                            onTap: _showForgotPasswordDialog,
                             child: Text(
                               '¿Olvidaste tu clave?',
                               style: GoogleFonts.outfit(
@@ -436,11 +592,7 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
                             label: 'Google',
                             icon: Icons.g_mobiledata_rounded,
                             iconColor: const Color(0xFFEA4335),
-                            onTap: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Acceso Google disponible vía correo.')),
-                              );
-                            },
+                            onTap: () => _handleOAuthLogin(OAuthProvider.google),
                           ),
                         ),
                         const SizedBox(width: 14),
@@ -449,11 +601,7 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
                             label: 'Apple',
                             icon: Icons.apple_rounded,
                             iconColor: Colors.black,
-                            onTap: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Acceso Apple disponible vía correo.')),
-                              );
-                            },
+                            onTap: () => _handleOAuthLogin(OAuthProvider.apple),
                           ),
                         ),
                       ],
@@ -489,6 +637,30 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildPasswordReqRow(String label, bool satisfied) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 2),
+      child: Row(
+        children: [
+          Icon(
+            satisfied ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+            size: 13,
+            color: satisfied ? const Color(0xFF10B981) : const Color(0xFF94A3B8),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: GoogleFonts.outfit(
+              fontSize: 11,
+              fontWeight: satisfied ? FontWeight.w600 : FontWeight.w400,
+              color: satisfied ? const Color(0xFF15803D) : const Color(0xFF64748B),
+            ),
+          ),
+        ],
       ),
     );
   }

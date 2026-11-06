@@ -126,11 +126,12 @@
                 <app-icon name="search" [size]="16"></app-icon>
               </span>
               <input type="text" 
-                     [(ngModel)]="searchQuery" 
+                     [ngModel]="searchQuery()" 
+                     (ngModelChange)="searchQuery.set($event)"
                      placeholder="Buscar por restaurante, sushi, hamburguesas, pizzas..."
                      class="w-full text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 bg-transparent focus:outline-none py-1.5" />
-              @if (searchQuery) {
-                <button (click)="searchQuery = ''" class="text-slate-400 hover:text-slate-600 px-2 text-xs font-bold">
+              @if (searchQuery()) {
+                <button (click)="searchQuery.set('')" class="text-slate-400 hover:text-slate-600 px-2 text-xs font-bold">
                   ✕
                 </button>
               }
@@ -229,7 +230,7 @@
 
           <div class="flex items-center gap-2 text-xs">
             <span class="text-slate-400">Ordenar por:</span>
-            <select [(ngModel)]="sortBy" 
+            <select [ngModel]="sortBy()" (ngModelChange)="sortBy.set($event)" 
                     class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 focus:outline-none focus:border-brand-500 shadow-xs">
               <option value="nearest">Menor Distancia</option>
               <option value="fastest">Tiempo de Entrega</option>
@@ -284,6 +285,14 @@
                 <!-- Image Banner with subtle 1px border -->
                 <div>
                   <div class="relative h-40 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-800 overflow-hidden">
+
+                    <!-- Heart Favorite Button -->
+                    <button (click)="$event.stopPropagation(); $event.preventDefault(); toggleFavorite(tenant.slug)"
+                            [title]="favorites.isFavorite(tenant.slug) ? 'Quitar de favoritos' : 'Guardar en favoritos'"
+                            class="absolute top-2 left-2 w-8 h-8 rounded-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm border border-slate-200 dark:border-slate-700 flex items-center justify-center transition-all hover:scale-110 active:scale-95 shadow-xs cursor-pointer z-10">
+                      <app-icon name="heart" [size]="15" [className]="favorites.isFavorite(tenant.slug) ? 'fill-red-500 text-red-500' : 'text-slate-400 dark:text-slate-500'"></app-icon>
+                    </button>
+
                     <img [src]="tenant.bannerUrl" 
                          [alt]="tenant.name"
                          class="w-full h-full object-cover" />
@@ -333,8 +342,8 @@
                 <div class="p-4 pt-0">
                   <div class="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-3">
                     <div class="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
-                      <span>Envío: <strong class="text-slate-900 dark:text-white">${{ tenant.computedDeliveryFee.toFixed(2) }}</strong> <span class="text-[10px] text-slate-400">({{ tenant.distanceKm }} km)</span></span>
-                      @if (tenant.deliverySettings.freeDeliveryThreshold) {
+                      <span>Envío: <strong class="text-slate-900 dark:text-white">${{ (tenant.deliverySettings?.baseDeliveryFee ?? tenant.computedDeliveryFee).toFixed(2) }}</strong></span>
+                      @if (tenant.deliverySettings?.freeDeliveryThreshold && tenant.deliverySettings.freeDeliveryThreshold > 0) {
                         <span class="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
                           Gratis > ${{ tenant.deliverySettings.freeDeliveryThreshold }}
                         </span>

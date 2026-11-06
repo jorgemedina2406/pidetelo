@@ -216,9 +216,9 @@
                 <label class="block font-semibold text-slate-700 dark:text-slate-300">
                   {{ i18n.t('auth.password') }}
                 </label>
-                <a href="javascript:void(0)" class="text-[11px] text-brand-500 hover:underline">
+                <button type="button" (click)="openForgotPassword()" class="text-[11px] text-brand-500 hover:underline cursor-pointer bg-transparent border-0 p-0">
                   {{ i18n.t('auth.forgotPassword') }}
-                </a>
+                </button>
               </div>
               <div class="relative">
                 <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">

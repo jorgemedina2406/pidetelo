@@ -119,8 +119,23 @@ import { IconComponent } from '../../../shared/components/icon.component';
           @if (!isEditing) {
           <div class="space-y-1.5">
             <label class="text-[11px] font-bold text-slate-700 dark:text-slate-300">Contraseña Inicial *</label>
-            <input type="password" [(ngModel)]="userForm.password" placeholder="Mínimo 6 caracteres"
-              class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs focus:ring-2 focus:ring-brand-500 outline-none text-slate-900 dark:text-white" />
+            <input type="password" [(ngModel)]="userForm.password" placeholder="Mínimo 8 caracteres"
+              class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs focus:ring-2 focus:ring-brand-500 outline-none text-slate-900 dark:text-white font-mono font-bold" />
+            
+            <div class="mt-2 p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-[10.5px] space-y-1">
+              <div class="flex items-center gap-1.5" [class.text-emerald-600]="hasMinLength" [class.text-slate-400]="!hasMinLength">
+                <span>{{ hasMinLength ? '✓' : '○' }}</span>
+                <span>Mínimo 8 caracteres</span>
+              </div>
+              <div class="flex items-center gap-1.5" [class.text-emerald-600]="hasUppercase" [class.text-slate-400]="!hasUppercase">
+                <span>{{ hasUppercase ? '✓' : '○' }}</span>
+                <span>Al menos 1 letra Mayúscula</span>
+              </div>
+              <div class="flex items-center gap-1.5" [class.text-emerald-600]="hasSpecialChar" [class.text-slate-400]="!hasSpecialChar">
+                <span>{{ hasSpecialChar ? '✓' : '○' }}</span>
+                <span>Al menos 1 carácter especial (*, ., @, #, etc)</span>
+              </div>
+            </div>
           </div>
           }
 
@@ -188,6 +203,18 @@ import { IconComponent } from '../../../shared/components/icon.component';
   `
 })
 export class UserFormModalComponent {
+
+  get hasMinLength(): boolean {
+    return (this.userForm?.password || '').length >= 8;
+  }
+  get hasUppercase(): boolean {
+    return /[A-Z]/.test(this.userForm?.password || '');
+  }
+  get hasSpecialChar(): boolean {
+    const s = this.userForm?.password || '';
+    return s.includes('*') || s.includes('.') || s.includes('@') || s.includes('#') || s.includes('!') || s.includes('?');
+  }
+
   @Input() isOpen = false;
   @Input() isEditing = false;
   @Input() userForm: any = {};

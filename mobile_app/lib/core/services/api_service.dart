@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/app_config.dart';
 import '../models/order_model.dart';
 import '../models/branch_model.dart';
+import 'dolar_api_service.dart';
 
 class ApiService {
   static final ApiService _instance = ApiService._internal();
@@ -419,7 +420,8 @@ class ApiService {
           .toList();
     }
     final baseFee = ((item['base_delivery_fee'] ?? item['deliverySettings']?['baseDeliveryFee']) as num?)?.toDouble() ?? 2.50;
-    final rate = ((item['exchange_rate'] ?? item['currency_settings']?['exchangeRate'] ?? item['currencySettings']?['exchangeRate']) as num?)?.toDouble() ?? 45.50;
+    final rawRate = ((item['exchange_rate'] ?? item['currency_settings']?['exchangeRate'] ?? item['currencySettings']?['exchangeRate']) as num?)?.toDouble();
+    final rate = (rawRate != null && rawRate > 0) ? rawRate : DolarApiService().officialRate;
     final displayMode = item['display_mode'] ?? item['currency_settings']?['displayMode'] ?? item['currencySettings']?['displayMode'] ?? 'usd_and_bs';
     final baseCurrency = item['base_currency'] ?? item['currency_settings']?['baseCurrency'] ?? item['currencySettings']?['baseCurrency'] ?? 'USD';
     final accent = item['accent_color'] ?? item['branding']?['accentColor'] ?? '#ea580c';
@@ -457,6 +459,7 @@ class ApiService {
       'exchangeRate': rate,
       'baseCurrency': baseCurrency,
       'displayMode': displayMode,
+      'acceptedPaymentMethods': item['accepted_payment_methods'] ?? item['payment_methods'] ?? item['paymentMethods'] ?? ['pago_movil', 'cash_usd', 'zelle'],
       'latitude': (item['latitude'] as num?)?.toDouble() ?? 10.077715,
       'longitude': (item['longitude'] as num?)?.toDouble() ?? -69.2812938,
       'delivery_radius_km': deliveryRadius,

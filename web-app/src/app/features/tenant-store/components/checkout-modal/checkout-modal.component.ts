@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CartStore } from '../../stores/cart.store';
@@ -25,6 +25,18 @@ export class CheckoutModalComponent {
     { id: 'card_terminal', label: 'Punto de Venta', icon: '💳', desc: 'Tarjeta al recibir' },
     { id: 'cash_local', label: 'Efectivo Bs', icon: '🪙', desc: 'A tasa del día' }
   ];
+
+
+  readonly availablePaymentMethods = computed(() => {
+    const branch = this.cart.selectedBranch();
+    const tenant = this.cart.activeTenant();
+    const accepted: string[] = (branch as any)?.acceptedPaymentMethods || 
+                              (branch as any)?.accepted_payment_methods || 
+                              (tenant as any)?.acceptedPaymentMethods || 
+                              (tenant as any)?.accepted_payment_methods || 
+                              ['cash_usd', 'mobile_transfer', 'cash_local'];
+    return this.paymentMethods.filter(pm => accepted.includes(pm.id));
+  });
 
   applyCoupon(): void {
     const code = this.cart.couponCodeInput()?.trim().toUpperCase();

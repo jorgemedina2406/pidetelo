@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { ApiService } from '../../../../core/services/api.service';
 import { ThemeService } from '../../../../core/services/theme.service';
+import { FavoritesService } from '../../../../core/services/favorites.service';
 import { I18nService } from '../../../../core/services/i18n.service';
 import { Tenant } from '../../../../core/models/tenant.model';
 import { Banner } from '../../../../core/models/banner.model';
@@ -45,11 +46,13 @@ export class MarketplaceHomeComponent implements OnInit {
   private readonly api = inject(ApiService);
   readonly theme = inject(ThemeService);
   readonly i18n = inject(I18nService);
+  readonly favorites = inject(FavoritesService);
+  private readonly router = inject(Router);
 
-  searchQuery: string = '';
+  readonly searchQuery = signal<string>('');
   readonly selectedCategory = signal<string>('Todos');
   readonly selectedSubcategory = signal<string>('Todos');
-  sortBy: 'nearest' | 'fastest' | 'rating' | 'fee' = 'nearest';
+  readonly sortBy = signal<'nearest' | 'fastest' | 'rating' | 'fee'>('nearest');
   readonly viewMode = signal<'grid' | 'list'>('grid');
   readonly isLoading = signal<boolean>(true);
   readonly activeOrder = signal<{ id: string; orderNumber: string; storeName: string } | null>(null);
@@ -63,6 +66,7 @@ export class MarketplaceHomeComponent implements OnInit {
 
   readonly categories = signal<MarketplaceCategory[]>([
     { id: 'todos', name: 'Todos', icon: '✨', filter: 'Todos' },
+    { id: 'favoritos', name: 'Favoritos', icon: '❤️', filter: 'Favoritos' },
     { id: 'restaurantes', name: 'Restaurantes', icon: '🍽️', filter: 'Restaurantes' },
     { id: 'super', name: 'Súper', icon: '🛒', filter: 'Súper' },
     { id: 'farmacias', name: 'Farmacias', icon: '💊', filter: 'Farmacias' },
@@ -170,7 +174,7 @@ export class MarketplaceHomeComponent implements OnInit {
 
   readonly filteredTenants = computed(() => {
     let list = this.enrichedTenants();
-    const query = this.searchQuery.toLowerCase().trim();
+    const query = this.searchQuery().toLowerCase().trim();
     const cat = this.selectedCategory();
     const sub = this.selectedSubcategory();
 
@@ -180,7 +184,9 @@ export class MarketplaceHomeComponent implements OnInit {
       list = inRange;
     }
 
-    if (cat !== 'Todos') {
+    if (cat === 'Favoritos') {
+      list = list.filter(t => this.favorites.isFavorite(t.slug) || this.favorites.isFavorite(t.id));
+    } else if (cat !== 'Todos') {
       list = list.filter(t => {
         const catLower = (t.category || '').toLowerCase();
         const mainCat = cat.toLowerCase();
@@ -218,13 +224,37 @@ export class MarketplaceHomeComponent implements OnInit {
     return [...list].sort((a, b) => {
       // Comercios abiertos primero
       if (a.isOpenNow !== b.isOpenNow) return a.isOpenNow ? -1 : 1;
-      if (this.sortBy === 'nearest') return a.distanceKm - b.distanceKm;
-      if (this.sortBy === 'fastest') return a.deliveryMinutesMin - b.deliveryMinutesMin;
-      if (this.sortBy === 'rating') return b.rating - a.rating;
-      if (this.sortBy === 'fee') return a.computedDeliveryFee - b.computedDeliveryFee;
+      const s = this.sortBy();
+      if (s === 'nearest') return a.distanceKm - b.distanceKm;
+      if (s === 'fastest') return a.deliveryMinutesMin - b.deliveryMinutesMin;
+      if (s === 'rating') return b.rating - a.rating;
+      if (s === 'fee') return a.computedDeliveryFee - b.computedDeliveryFee;
       return 0;
     });
   });
+
+
+  toggleFavorite(slug: string): void {
+    this.favorites.toggleFavorite(slug);
+  }
+
+  onBannerClicked(b: Banner): void {
+    if (b.couponCode) {
+      navigator.clipboard?.writeText(b.couponCode);
+      this.copiedCouponCode.set(b.couponCode);
+      setTimeout(() => this.copiedCouponCode.set(null), 3000);
+    }
+    if (b.linkUrl) {
+      const clean = b.linkUrl.trim();
+      if (clean.startsWith('http')) {
+        window.open(clean, '_blank');
+      } else if (clean.startsWith('/')) {
+        this.router.navigateByUrl(clean);
+      } else {
+        this.router.navigate(['/t', clean]);
+      }
+    }
+  }
 
   ngOnInit(): void {
     try {

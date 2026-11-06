@@ -65,14 +65,15 @@ class SessionService extends ChangeNotifier {
       }
     }
 
-    // Load favorites specifically for current user
+    // Load favorites specifically for current user or guest
     _favoriteStoreIds.clear();
+    final favKey = _getFavoritesKey(_currentUser?.email.isNotEmpty == true ? _currentUser!.email : _currentUser?.id);
+    final favs = prefs.getStringList(favKey);
+    if (favs != null) {
+      _favoriteStoreIds.addAll(favs);
+    }
+
     if (_currentUser != null) {
-      final favKey = _getFavoritesKey(_currentUser!.email.isNotEmpty ? _currentUser!.email : _currentUser!.id);
-      final favs = prefs.getStringList(favKey);
-      if (favs != null) {
-        _favoriteStoreIds.addAll(favs);
-      }
       // Also load orders specifically for this user
       await CartService().loadUserOrders(
         _currentUser!.email.isNotEmpty ? _currentUser!.email : _currentUser!.id,
@@ -123,18 +124,28 @@ class SessionService extends ChangeNotifier {
     await saveUser(user);
   }
 
-  bool isFavorite(String storeId) {
-    return _favoriteStoreIds.contains(storeId);
+  bool isFavorite(String storeId, {String? slug}) {
+    if (storeId.isEmpty && (slug == null || slug.isEmpty)) return false;
+    return _favoriteStoreIds.contains(storeId) ||
+        (slug != null && slug.isNotEmpty && _favoriteStoreIds.contains(slug));
   }
 
-  Future<void> toggleFavorite(String storeId) async {
-    if (_favoriteStoreIds.contains(storeId)) {
+  Future<void> toggleFavorite(String storeId, {String? slug}) async {
+    final keyToToggle = storeId.isNotEmpty ? storeId : (slug ?? '');
+    if (keyToToggle.isEmpty) return;
+
+    final wasFav = isFavorite(storeId, slug: slug);
+    if (wasFav) {
       _favoriteStoreIds.remove(storeId);
+      if (slug != null) _favoriteStoreIds.remove(slug);
     } else {
-      _favoriteStoreIds.add(storeId);
+      _favoriteStoreIds.add(keyToToggle);
+      if (slug != null && slug.isNotEmpty && slug != keyToToggle) {
+        _favoriteStoreIds.add(slug);
+      }
     }
     final prefs = await SharedPreferences.getInstance();
-    final favKey = _getFavoritesKey(_currentUser?.email ?? _currentUser?.id);
+    final favKey = _getFavoritesKey(_currentUser?.email.isNotEmpty == true ? _currentUser!.email : _currentUser?.id);
     await prefs.setStringList(favKey, _favoriteStoreIds.toList());
     notifyListeners();
   }

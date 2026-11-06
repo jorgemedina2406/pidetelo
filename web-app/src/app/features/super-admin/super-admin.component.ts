@@ -13,6 +13,7 @@ import { Permission, UserRole } from '../../core/models/user.model';
 import { Banner } from '../../core/models/banner.model';
 import { BusinessCategory } from '../../core/models/category.model';
 import { Coupon } from '../../core/models/coupon.model';
+import { ConfirmService } from '../../core/services/confirm.service';
 import { IconComponent } from '../../shared/components/icon.component';
 import { SuperAdminUsersComponent } from './components/super-admin-users.component';
 import { SuperAdminMerchantsComponent } from './components/super-admin-merchants.component';
@@ -55,6 +56,7 @@ export class SuperAdminComponent implements OnInit {
   readonly theme = inject(ThemeService);
   readonly i18n = inject(I18nService);
   private readonly api = inject(ApiService);
+  private readonly confirmModal = inject(ConfirmService);
   private readonly supabase = inject(SupabaseService);
 
   readonly isSidebarExpanded = signal(true);
@@ -290,6 +292,8 @@ export class SuperAdminComponent implements OnInit {
     subcategories: string[];
     whatsapp: string;
     address: string;
+    latitude?: number;
+    longitude?: number;
     deliveryFee: number;
     commission: number;
     ownerName: string;
@@ -515,6 +519,90 @@ export class SuperAdminComponent implements OnInit {
     this.api.updateTenant(id, { is_active: newActive }).subscribe({
       next: () => console.log(`[SuperAdmin] Comercio ${id} estado actualizado a ${newActive}`),
       error: (err) => console.warn('[SuperAdmin] Error actualizando estado en backend:', err)
+    });
+  }
+
+
+  onMerchantNameChanged(name: string): void {
+    this.newMerchant.name = name;
+    const generated = name.toLowerCase()
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+    this.newMerchant.slug = generated;
+  }
+
+  isSlugTaken(slug: string): boolean {
+    if (!slug) return false;
+    const clean = slug.toLowerCase().trim();
+    return this.merchants().some(m => m.slug?.toLowerCase().trim() === clean);
+  }
+
+  isPasswordValid(pass: string): boolean {
+    const specialChars = ['*', '.', '@', '#', '!', '?', '-', '_', '+', '='];
+    const hasSpecial = specialChars.some(c => pass.includes(c));
+    return pass.length >= 8 && /[A-Z]/.test(pass) && hasSpecial;
+  }
+
+  detectMerchantGps(): void {
+    if (!navigator.geolocation) {
+      this.showToast('error', 'Error', 'Tu navegador no soporta geolocalización.');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        (this.newMerchant as any).latitude = Number(pos.coords.latitude.toFixed(6));
+        (this.newMerchant as any).longitude = Number(pos.coords.longitude.toFixed(6));
+        this.showToast('success', 'GPS Detectado', 'Coordenadas: ' + (this.newMerchant as any).latitude + ', ' + (this.newMerchant as any).longitude);
+      },
+      () => {
+        this.showToast('error', 'Error', 'No se pudo obtener la ubicación GPS.');
+      }
+    );
+  }
+
+  async onDeletePlatformUser(user: any): Promise<void> {
+    const ok = await this.confirmModal.confirm({
+      title: '¿Eliminar Usuario de la Plataforma?',
+      message: '¿Estás seguro de purgar al usuario "' + user.name + '" (' + user.email + ')? Se eliminará de Supabase Auth, base de datos y todos los accesos permanentemente.',
+      confirmText: 'Sí, Eliminar Definitivamente',
+      isDanger: true
+    });
+    if (!ok) return;
+
+    this.api.deletePlatformUser(user.id, user.email).subscribe({
+      next: () => {
+        this.showToast('success', 'Usuario Eliminado', 'El usuario ' + user.name + ' ha sido eliminado definitivamente.');
+        this.loadPlatformUsers();
+      },
+      error: (err) => {
+        this.showToast('error', 'Error', err?.error?.message || 'No se pudo eliminar el usuario.');
+      }
+    });
+  }
+
+  async onTogglePlatformUserActive(user: any): Promise<void> {
+    const willDeactivate = user.isActive !== false;
+    const actionText = willDeactivate ? 'Desactivar' : 'Activar';
+
+    const ok = await this.confirmModal.confirm({
+      title: '¿' + actionText + ' Usuario?',
+      message: willDeactivate
+        ? 'Si desactivas a "' + user.name + '", no podrá iniciar sesión en la plataforma y se le indicará que está desactivado.'
+        : '¿Deseas reactivar el acceso para "' + user.name + '"?',
+      confirmText: 'Sí, ' + actionText,
+      isDanger: willDeactivate
+    });
+    if (!ok) return;
+
+    this.api.togglePlatformUserActive(user.id, user.email, !willDeactivate).subscribe({
+      next: () => {
+        this.showToast('success', 'Usuario ' + (willDeactivate ? 'Desactivado' : 'Activado'), 'El acceso de ' + user.name + ' fue actualizado.');
+        this.loadPlatformUsers();
+      },
+      error: (err) => {
+        this.showToast('error', 'Error', err?.error?.message || 'No se pudo actualizar el estado.');
+      }
     });
   }
 

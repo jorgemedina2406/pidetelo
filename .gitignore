@@ -46,3 +46,7 @@ Thumbs.db
 !**/assets/images/**
 !**/assets/icons/**
 
+# Backend uploads
+backend/uploads/
+
+

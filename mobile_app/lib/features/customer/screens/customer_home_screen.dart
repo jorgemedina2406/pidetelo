@@ -150,6 +150,56 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     super.dispose();
   }
 
+  
+  void _onBannerTapped(BannerItem b) {
+    if (b.couponCode != null && b.couponCode!.isNotEmpty) {
+      Clipboard.setData(ClipboardData(text: b.couponCode!));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('¡Cupón "${b.couponCode}" copiado al portapapeles! Úsalo al pagar 🎉'),
+          backgroundColor: const Color(0xFF10B981),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+
+    final link = (b.linkUrl ?? '').trim();
+    if (link.isNotEmpty) {
+      final slug = link.replaceAll('/t/', '').replaceAll('/', '').trim().toLowerCase();
+      final matchedStore = _stores.firstWhere(
+        (s) => (s['slug']?.toString().toLowerCase() == slug) ||
+               (s['id']?.toString() == slug) ||
+               (s['name']?.toString().toLowerCase().contains(slug) == true),
+        orElse: () => <String, dynamic>{},
+      );
+      if (matchedStore.isNotEmpty) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => StoreDetailScreen(
+              storeData: matchedStore,
+              sessionService: widget.sessionService,
+            ),
+          ),
+        );
+        return;
+      }
+    }
+
+    if (_stores.isNotEmpty && (b.couponCode == null || b.couponCode!.isEmpty)) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => StoreDetailScreen(
+            storeData: _stores.first,
+            sessionService: widget.sessionService,
+          ),
+        ),
+      );
+    }
+  }
+
   Future<void> _loadBanners() async {
     final banners = await ApiService().fetchBanners();
     if (mounted) {
@@ -1183,7 +1233,9 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 // 2. BANNERS PROMOCIONALES / FLASH
                 if (_banners.isNotEmpty) ...[
                   const SizedBox(height: 18),
-                  ..._banners.take(1).map((b) => Container(
+                  ..._banners.map((b) => GestureDetector(
+    onTap: () => _onBannerTapped(b),
+    child: Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
@@ -1306,7 +1358,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                               ),
                           ],
                         ),
-                      )),
+                      ),
+                    )),
                 ],
 
                 // 3. COMERCIOS DESTACADOS (TOP SELECCIÓN)

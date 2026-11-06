@@ -145,7 +145,7 @@
           </label>
 
           <div class="grid grid-cols-2 gap-2.5 text-xs">
-            @for (method of paymentMethods; track method.id) {
+            @for (method of availablePaymentMethods(); track method.id) {
               <button type="button"
                       (click)="cart.setPaymentMethod(method.id)"
                       [class.ring-2]="cart.paymentMethod() === method.id"
@@ -176,7 +176,28 @@
                 <span class="text-[10px] text-slate-500 dark:text-slate-400 leading-tight">{{ method.desc }}</span>
               </button>
             }
+
           </div>
+
+          <!-- Pago Móvil Datos Reales del Comercio -->
+          @if (cart.paymentMethod() === 'mobile_transfer') {
+            <div class="mt-2.5 p-3 rounded-xl bg-orange-50/60 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900/40 text-xs space-y-1 animate-fade-in">
+              <div class="font-bold text-orange-800 dark:text-orange-300 flex items-center gap-1 text-[11px]">
+                <span>📲</span> Datos Oficiales de Pago Móvil:
+              </div>
+              @if (cart.selectedBranch()?.paymentCredentials?.pagoMovilPhone) {
+                <div class="font-mono text-[11px] text-slate-700 dark:text-slate-300 leading-tight">
+                  <div><strong>Banco:</strong> {{ cart.selectedBranch()?.paymentCredentials?.pagoMovilBank }}</div>
+                  <div><strong>Teléfono:</strong> {{ cart.selectedBranch()?.paymentCredentials?.pagoMovilPhone }}</div>
+                  <div><strong>RIF/CI:</strong> {{ cart.selectedBranch()?.paymentCredentials?.pagoMovilIdNumber }} ({{ cart.selectedBranch()?.paymentCredentials?.pagoMovilAccountName }})</div>
+                </div>
+              } @else {
+                <p class="text-[11px] text-slate-500 dark:text-slate-400">
+                  Al enviar el pedido por WhatsApp, el comercio te indicará los datos del Pago Móvil para confirmar tu comanda.
+                </p>
+              }
+            </div>
+          }
         </div>
 
         <!-- Notes -->

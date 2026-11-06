@@ -4,6 +4,7 @@ import { RouterModule } from '@angular/router';
 import { Tenant } from '../../../../core/models/tenant.model';
 import { Branch } from '../../../../core/models/branch.model';
 import { ThemeService } from '../../../../core/services/theme.service';
+import { FavoritesService } from '../../../../core/services/favorites.service';
 import { IconComponent } from '../../../../shared/components/icon.component';
 
 @Component({
@@ -93,6 +94,22 @@ import { IconComponent } from '../../../../shared/components/icon.component';
             <span>Tasa: <strong>1 USD = {{ activeBranchRate }} Bs.</strong></span>
           </div>
 
+          <button (click)="toggleFavorite(store.slug)"
+                  [title]="favorites.isFavorite(store.slug) ? 'Quitar de favoritos' : 'Guardar en favoritos'"
+                  class="flex items-center gap-1.5 px-3 py-1 rounded-xl border text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
+                  [class.bg-red-50]="favorites.isFavorite(store.slug)"
+                  [class.dark:bg-red-950/40]="favorites.isFavorite(store.slug)"
+                  [class.border-red-200]="favorites.isFavorite(store.slug)"
+                  [class.text-red-600]="favorites.isFavorite(store.slug)"
+                  [class.bg-slate-100]="!favorites.isFavorite(store.slug)"
+                  [class.dark:bg-slate-800]="!favorites.isFavorite(store.slug)"
+                  [class.border-slate-200]="!favorites.isFavorite(store.slug)"
+                  [class.text-slate-600]="!favorites.isFavorite(store.slug)"
+                  [class.dark:text-slate-300]="!favorites.isFavorite(store.slug)">
+            <app-icon name="heart" [size]="14" [className]="favorites.isFavorite(store.slug) ? 'fill-red-500 text-red-500' : 'text-slate-400'"></app-icon>
+            <span>{{ favorites.isFavorite(store.slug) ? 'Guardado ❤️' : 'Favorito' }}</span>
+          </button>
+
           <a [href]="'https://wa.me/' + (selectedBranch?.whatsapp || selectedBranch?.phone || store.contact.whatsappNumber || '').replace('+', '')" target="_blank"
             class="text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 px-3 py-1.5 rounded-xl border border-emerald-200 dark:border-emerald-800 flex items-center gap-1.5 transition-colors cursor-pointer">
             <app-icon name="message-circle" [size]="14"></app-icon>
@@ -116,6 +133,11 @@ import { IconComponent } from '../../../../shared/components/icon.component';
 })
 export class StoreHeaderComponent {
   readonly theme = inject(ThemeService);
+  readonly favorites = inject(FavoritesService);
+
+  toggleFavorite(slug: string) {
+    this.favorites.toggleFavorite(slug);
+  }
 
   @Input() tenant: Tenant | null = null;
   @Input() selectedBranch: Branch | null = null;

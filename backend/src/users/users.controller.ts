@@ -51,6 +51,21 @@ export class UsersController {
     return this.usersService.delete(id);
   }
 
+  @Delete('users/:id')
+  @ApiOperation({ summary: 'Eliminar usuario globalmente de la plataforma (Super Admin)' })
+  deletePlatformUser(@Param('id') id: string, @Query('email') email?: string) {
+    return this.usersService.deletePlatformUser(id, email);
+  }
+
+  @Put('users/:id/toggle-active')
+  @ApiOperation({ summary: 'Activar o desactivar usuario de la plataforma (Super Admin)' })
+  togglePlatformUserActive(
+    @Param('id') id: string,
+    @Body() body: { email?: string; isActive: boolean },
+  ) {
+    return this.usersService.togglePlatformUserActive(id, body.email, body.isActive);
+  }
+
   @Get('users/:id')
   @ApiOperation({ summary: 'Obtener información de un usuario por su ID' })
   findById(@Param('id') id: string) {

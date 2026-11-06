@@ -78,13 +78,26 @@ class _AnimatedDeliveryMascotState extends State<AnimatedDeliveryMascot>
                 offset: Offset(0, verticalOffset),
                 child: Transform.rotate(
                   angle: tiltAngle,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(28),
-                    child: Image.asset(
-                      'assets/images/courier.png',
-                      width: widget.size * 0.92,
-                      height: widget.size * 0.92,
-                      fit: BoxFit.contain,
+                  child: Container(
+                    width: widget.size * 0.88,
+                    height: widget.size * 0.88,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.15),
+                          blurRadius: 14,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: ClipOval(
+                      child: Image.asset(
+                        'assets/images/logo.png',
+                        fit: BoxFit.contain,
+                      ),
                     ),
                   ),
                 ),

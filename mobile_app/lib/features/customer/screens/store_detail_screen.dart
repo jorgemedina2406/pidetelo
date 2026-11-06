@@ -56,10 +56,16 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
   void initState() {
     super.initState();
     final storeId = widget.storeData['id']?.toString() ?? '';
-    _isFavorite = widget.sessionService?.isFavorite(storeId) ?? false;
+    final storeSlug = widget.storeData['slug']?.toString();
+    _isFavorite = widget.sessionService?.isFavorite(storeId, slug: storeSlug) ?? false;
     _selectedBranch = widget.initialBranch;
     _loadBranches();
     _loadRealProducts();
+
+    // Actualizar tasa en vivo oficial de DolarApi
+    DolarApiService().fetchRate().then((_) {
+      if (mounted) setState(() {});
+    });
   }
 
   Future<void> _loadBranches() async {
@@ -159,7 +165,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
 
     final storeAccent = _parseHexColor(widget.storeData['accentColor']);
     final rawRate = (widget.storeData['exchangeRate'] as num?)?.toDouble() ?? 0;
-    final rate = rawRate > 0 ? rawRate : DolarApiService().officialRate;
+    final rate = (rawRate > 0 && rawRate != 45.50) ? rawRate : DolarApiService().officialRate;
     final displayMode = widget.storeData['displayMode']?.toString() ?? 'usd_and_bs';
     int quantity = 1;
     final selectedOptions = <ProductOption>[];
@@ -726,7 +732,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
 
     final storeAccent = _parseHexColor(store['accentColor']);
     final rawRate = (store['exchangeRate'] as num?)?.toDouble() ?? 0;
-    final rate = rawRate > 0 ? rawRate : DolarApiService().officialRate;
+    final rate = (rawRate > 0 && rawRate != 45.50) ? rawRate : DolarApiService().officialRate;
     final displayMode = store['displayMode']?.toString() ?? 'usd_and_bs';
     final categories = ['Todos', ...{..._products.map((p) => p.category)}];
 

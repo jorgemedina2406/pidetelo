@@ -31,6 +31,36 @@ export class LoginComponent {
   readonly errorMessage = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
   readonly isSignUpMode = signal(false);
+  readonly isForgotPasswordOpen = signal(false);
+  readonly resetEmail = signal('');
+  readonly isSendingReset = signal(false);
+  readonly resetStatusMessage = signal<string | null>(null);
+
+  openForgotPassword(): void {
+    this.resetEmail.set(this.email.trim());
+    this.resetStatusMessage.set(null);
+    this.isForgotPasswordOpen.set(true);
+  }
+
+  async sendPasswordReset(): Promise<void> {
+    const email = this.resetEmail().trim();
+    if (!email || !email.includes('@')) {
+      this.resetStatusMessage.set('Por favor ingresa un correo electrónico válido.');
+      return;
+    }
+    this.isSendingReset.set(true);
+    this.resetStatusMessage.set(null);
+    try {
+      const { error } = await this.supabase.resetPasswordForEmail(email, window.location.origin + '/login');
+      if (error) throw error;
+      this.resetStatusMessage.set(`✓ Se ha enviado un enlace de recuperación a ${email}. Revisa tu bandeja de entrada o spam.`);
+    } catch (err: any) {
+      this.resetStatusMessage.set(err?.message || 'Error al enviar el correo de recuperación.');
+    } finally {
+      this.isSendingReset.set(false);
+    }
+  }
+
 
   email = '';
   password = '';

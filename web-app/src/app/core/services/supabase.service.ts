@@ -43,6 +43,11 @@ export class SupabaseService {
   }
 
   // --- AUTHENTICATION ---
+  async resetPasswordForEmail(email: string, redirectTo?: string) {
+    if (!this.client) throw new Error('Supabase no está configurado');
+    return this.client.auth.resetPasswordForEmail(email, { redirectTo });
+  }
+
   async signInWithEmail(email: string, password: string) {
     if (!this.client) {
       throw new Error('Supabase no está configurado aún con credenciales reales.');

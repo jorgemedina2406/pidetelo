@@ -272,6 +272,13 @@ export class UsersService {
     if (!name || !email) {
       throw new InternalServerErrorException('Nombre y correo electrónico son obligatorios');
     }
+    if (payload.password) {
+      const pass = payload.password;
+      const specialRegex = new RegExp('[!@#$%^&*(),.?":{}|<>_\-+=[\]\\\/~`]');
+      if (pass.length < 8 || !/[A-Z]/.test(pass) || !specialRegex.test(pass)) {
+        throw new BadRequestException('La contraseña debe tener al menos 8 caracteres, incluir al menos una letra mayúscula y un carácter especial (*, ., @, etc).');
+      }
+    }
 
     // 1. Verificar si el correo pertenece al Super Administrador de la plataforma
     if (email === 'jorge@pidetelo.com') {
@@ -520,6 +527,82 @@ export class UsersService {
     return { success: true, message: 'Usuario eliminado correctamente' };
   }
 
+  async deletePlatformUser(id: string, email?: string) {
+    const cleanEmail = email?.toLowerCase().trim();
+
+    if (id) this.localUsers.delete(id);
+    if (cleanEmail) {
+      for (const [k, u] of this.localUsers.entries()) {
+        if (u.email?.toLowerCase() === cleanEmail) {
+          this.localUsers.delete(k);
+        }
+      }
+    }
+    this.saveToDisk();
+
+    const client = this.supabase.getClient();
+    try {
+      if (id) await client.auth.admin.deleteUser(id);
+    } catch (_) {}
+    try {
+      if (id) await client.from('profiles').delete().eq('id', id);
+      if (cleanEmail) await client.from('profiles').delete().eq('email', cleanEmail);
+    } catch (_) {}
+    try {
+      if (id) await client.from('store_collaborators').delete().eq('id', id);
+      if (cleanEmail) await client.from('store_collaborators').delete().eq('email', cleanEmail);
+    } catch (_) {}
+    try {
+      if (id) await client.from('riders').delete().eq('id', id);
+      if (cleanEmail) await client.from('riders').delete().eq('email', cleanEmail);
+    } catch (_) {}
+
+    return { success: true, message: 'Usuario purgado y eliminado correctamente de toda la plataforma' };
+  }
+
+  async togglePlatformUserActive(id: string, email: string | undefined, isActive: boolean) {
+    const cleanEmail = email?.toLowerCase().trim();
+
+    const local = id ? this.localUsers.get(id) : null;
+    if (local) {
+      local.is_active = isActive;
+      this.localUsers.set(id, local);
+    }
+    if (cleanEmail) {
+      for (const [k, u] of this.localUsers.entries()) {
+        if (u.email?.toLowerCase() === cleanEmail) {
+          u.is_active = isActive;
+          this.localUsers.set(k, u);
+        }
+      }
+    }
+    this.saveToDisk();
+
+    const client = this.supabase.getClient();
+    try {
+      if (id) {
+        await client.auth.admin.updateUserById(id, {
+          ban_duration: isActive ? 'none' : '876000h',
+          user_metadata: { is_active: isActive }
+        });
+      }
+    } catch (_) {}
+    try {
+      if (id) await client.from('profiles').update({ is_active: isActive }).eq('id', id);
+      if (cleanEmail) await client.from('profiles').update({ is_active: isActive }).eq('email', cleanEmail);
+    } catch (_) {}
+    try {
+      if (id) await client.from('store_collaborators').update({ is_active: isActive }).eq('id', id);
+      if (cleanEmail) await client.from('store_collaborators').update({ is_active: isActive }).eq('email', cleanEmail);
+    } catch (_) {}
+    try {
+      if (id) await client.from('riders').update({ is_active: isActive }).eq('id', id);
+      if (cleanEmail) await client.from('riders').update({ is_active: isActive }).eq('email', cleanEmail);
+    } catch (_) {}
+
+    return { success: true, isActive, message: isActive ? 'Usuario reactivado correctamente' : 'Usuario desactivado' };
+  }
+
   async login(email: string, password?: string) {
     const cleanEmail = email?.toLowerCase().trim();
     if (!cleanEmail) {
@@ -644,7 +727,38 @@ export class UsersService {
     }
 
     if (user.is_active === false) {
-      throw new UnauthorizedException('Esta cuenta de colaborador ha sido desactivada por el comercio.');
+      throw new UnauthorizedException('Tu cuenta se encuentra desactivada por la administración de Pídetelo. Por favor contacta a soporte.');
+    }
+
+    // Item 16: Si el comercio está desactivado, suspender acceso a sus colaboradores
+    if (user.tenant_id && user.role !== 'SUPER_ADMIN') {
+      try {
+        let tenantActive = true;
+        const metadataFile = path.resolve(process.cwd(), 'data', 'tenants_metadata.json');
+        if (fs.existsSync(metadataFile)) {
+          const tenantsMeta = JSON.parse(fs.readFileSync(metadataFile, 'utf-8'));
+          if (tenantsMeta[user.tenant_id]) {
+            if (tenantsMeta[user.tenant_id].is_active === false || tenantsMeta[user.tenant_id].status === 'inactive') {
+              tenantActive = false;
+            }
+          }
+        }
+        if (tenantActive) {
+          const { data: tenantRow } = await this.supabase.getClient()
+            .from('tenants')
+            .select('is_active, status')
+            .eq('id', user.tenant_id)
+            .maybeSingle();
+          if (tenantRow && (tenantRow.is_active === false || tenantRow.status === 'inactive')) {
+            tenantActive = false;
+          }
+        }
+        if (!tenantActive) {
+          throw new UnauthorizedException('El comercio asociado a esta cuenta está desactivado temporalmente. El acceso a sus colaboradores y repartidores está suspendido.');
+        }
+      } catch (err: any) {
+        if (err instanceof UnauthorizedException) throw err;
+      }
     }
 
     const expectedPass = user.password || user.password_hash || '123456';

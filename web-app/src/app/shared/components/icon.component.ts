@@ -59,7 +59,7 @@ export type IconName =
   | 'folder'
   | 'upload'
   | 'copy'
-  | 'tag';
+  | 'tag' | 'heart' | 'play' | 'pause';
 
 
 

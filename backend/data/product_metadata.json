@@ -12,5 +12,12 @@
     "is_on_sale": false,
     "compare_at_price": null,
     "discount_percentage": 0
+  },
+  "be8bf34a-2307-4cc4-b491-844aa0f62fed": {
+    "is_popular": false,
+    "is_featured": false,
+    "is_on_sale": false,
+    "compare_at_price": null,
+    "discount_percentage": 0
   }
 }

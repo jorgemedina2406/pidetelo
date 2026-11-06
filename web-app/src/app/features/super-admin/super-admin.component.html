@@ -646,7 +646,9 @@
             <app-super-admin-users
               [users]="platformUsers()"
               [loading]="loadingUsers()"
-              (refresh)="loadPlatformUsers()">
+              (refresh)="loadPlatformUsers()"
+              (deleteUser)="onDeletePlatformUser($event)"
+              (toggleActive)="onTogglePlatformUserActive($event)">
             </app-super-admin-users>
           }
 
@@ -665,9 +667,8 @@
 
       <!-- ================= MODAL: DAR DE ALTA COMERCIO ================= -->
       @if (isCreateModalOpen()) {
-        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
-             (click)="isCreateModalOpen.set(false)">
-          <div class="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 w-full max-w-lg rounded-2xl shadow-xl p-6 overflow-hidden max-h-[90vh] flex flex-col border border-slate-200 dark:border-slate-800"
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div class="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 w-full max-w-3xl rounded-3xl shadow-2xl p-6 sm:p-8 overflow-hidden max-h-[92vh] flex flex-col border border-slate-200 dark:border-slate-800 animate-scale-up"
                (click)="$event.stopPropagation()">
             
             <div class="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
@@ -680,19 +681,31 @@
               </button>
             </div>
 
-            <form (submit)="onCreateMerchant($event)" class="overflow-y-auto flex-1 py-4 space-y-4 text-xs">
-              <div>
-                <label class="block font-semibold mb-1">Nombre del Comercio</label>
-                <input type="text" [(ngModel)]="newMerchant.name" name="name" required placeholder="Ej: Pizza Artesanal Romana"
-                       class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-3 focus:outline-none focus:border-brand-500" />
-              </div>
-
-              <div class="grid grid-cols-2 gap-3">
+            <form (submit)="onCreateMerchant($event)" class="overflow-y-auto flex-1 py-4 space-y-4 text-xs pr-1">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label class="block font-semibold mb-1">Slug URL</label>
-                  <input type="text" [(ngModel)]="newMerchant.slug" name="slug" required placeholder="pizza-romana"
-                         class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-3 focus:outline-none focus:border-brand-500 font-mono" />
+                  <label class="block font-bold mb-1 text-slate-700 dark:text-slate-300">Nombre del Comercio *</label>
+                  <input type="text" 
+                         [ngModel]="newMerchant.name" 
+                         (ngModelChange)="onMerchantNameChanged($event)" 
+                         name="name" required placeholder="Ej: Pizza Artesanal Romana"
+                         class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-3 font-semibold focus:outline-none focus:border-brand-500" />
                 </div>
+
+                <div>
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="font-bold text-slate-700 dark:text-slate-300">Slug URL *</label>
+                    @if (isSlugTaken(newMerchant.slug)) {
+                      <span class="text-[10px] font-bold text-rose-500">⚠️ Slug ya ocupado</span>
+                    } @else if (newMerchant.slug) {
+                      <span class="text-[10px] font-bold text-emerald-500">✓ Slug disponible</span>
+                    }
+                  </div>
+                  <input type="text" [(ngModel)]="newMerchant.slug" name="slug" required placeholder="pizza-artesanal-romana"
+                         [class.border-rose-500]="isSlugTaken(newMerchant.slug)"
+                         class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-3 focus:outline-none focus:border-brand-500 font-mono font-bold" />
+                </div>
+              </div>
                 <div>
                   <label class="block font-semibold mb-1">Categoría Principal *</label>
                   <select [(ngModel)]="newMerchant.category" name="category"
@@ -702,7 +715,6 @@
                     }
                   </select>
                 </div>
-              </div>
 
               <!-- Selector de Subdivisiones / Especialidades -->
               <div class="p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-xl space-y-2">
@@ -736,10 +748,26 @@
                        class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-3 focus:outline-none focus:border-brand-500 font-mono" />
               </div>
 
-              <div>
-                <label class="block font-semibold mb-1">Dirección Física del Local</label>
-                <input type="text" [(ngModel)]="newMerchant.address" name="address" required placeholder="Av. Principal, Edif. Gourmet..."
-                       class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-3 focus:outline-none focus:border-brand-500" />
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block font-bold mb-1 text-slate-700 dark:text-slate-300">Dirección Física del Local *</label>
+                  <input type="text" [(ngModel)]="newMerchant.address" name="address" required placeholder="Av. Principal, Edif. Gourmet..."
+                         class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-3 focus:outline-none focus:border-brand-500" />
+                </div>
+                <div>
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="font-bold text-slate-700 dark:text-slate-300">Ubicación GPS Satelital</label>
+                    <button type="button" (click)="detectMerchantGps()" class="text-brand-500 font-bold hover:underline flex items-center gap-1 cursor-pointer">
+                      <span>📍 Detectar GPS actual</span>
+                    </button>
+                  </div>
+                  <div class="grid grid-cols-2 gap-2">
+                    <input type="number" step="0.000001" [(ngModel)]="newMerchant.latitude" name="merchantLat" placeholder="Latitud (10.077)"
+                           class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-3 font-mono text-[11px]" />
+                    <input type="number" step="0.000001" [(ngModel)]="newMerchant.longitude" name="merchantLng" placeholder="Longitud (-69.322)"
+                           class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-3 font-mono text-[11px]" />
+                  </div>
+                </div>
               </div>
 
               <div class="grid grid-cols-2 gap-3">
@@ -778,8 +806,19 @@
                   </div>
                   <div>
                     <label class="block font-semibold mb-1">Contraseña Inicial *</label>
-                    <input type="text" [(ngModel)]="newMerchant.ownerPassword" name="ownerPassword" required placeholder="Ej: 123456"
-                           class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 focus:outline-none focus:border-brand-500 font-mono" />
+                    <input type="text" [(ngModel)]="newMerchant.ownerPassword" name="ownerPassword" required placeholder="Mínimo 8 dígitos, Mayúscula y Especial"
+                           class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 focus:outline-none focus:border-brand-500 font-mono font-bold" />
+                    <div class="mt-2 p-2.5 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 text-[10.5px] space-y-1">
+                      <div class="font-bold text-slate-600 dark:text-slate-400">Requisitos de seguridad:</div>
+                      <div class="flex items-center gap-1.5" [class.text-emerald-600]="(newMerchant.ownerPassword?.length || 0) >= 8" [class.text-slate-400]="(newMerchant.ownerPassword?.length || 0) < 8">
+                        <span>{{ (newMerchant.ownerPassword?.length || 0) >= 8 ? '✓' : '○' }}</span>
+                        <span>Mínimo 8 caracteres</span>
+                      </div>
+                      <div class="flex items-center gap-1.5" [class.text-emerald-600]="newMerchant.ownerPassword && isPasswordValid(newMerchant.ownerPassword)" [class.text-slate-400]="!newMerchant.ownerPassword || !isPasswordValid(newMerchant.ownerPassword)">
+                        <span>{{ isPasswordValid(newMerchant.ownerPassword || '') ? '✓' : '○' }}</span>
+                        <span>1 Mayúscula y 1 Carácter especial (*, ., @, etc)</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

@@ -40,5 +40,42 @@
     "subcategories": [
       "Hamburguesas"
     ]
+  },
+  "3611773f-7d57-4675-af87-9ce4b0002eb5": {
+    "category": "Restaurantes",
+    "subcategories": [
+      "Hamburguesas",
+      "Comida Rápida"
+    ],
+    "tagline": "",
+    "exchange_rate": 896.12,
+    "base_currency": "USD",
+    "display_mode": "usd_and_bs",
+    "delivery_tiers": [
+      {
+        "id": "tier_1",
+        "maxKm": 2,
+        "minKm": 0,
+        "price": 1.5
+      },
+      {
+        "id": "tier_2",
+        "maxKm": 5,
+        "minKm": 2,
+        "price": 3
+      },
+      {
+        "id": "tier_3",
+        "maxKm": 8,
+        "minKm": 5,
+        "price": 4.5
+      }
+    ],
+    "currency_settings": {
+      "baseCurrency": "USD",
+      "displayMode": "usd_and_bs",
+      "exchangeRate": 896.12,
+      "lastRateUpdate": "2026-11-06T10:22:46.061Z"
+    }
   }
 }

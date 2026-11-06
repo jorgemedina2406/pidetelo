@@ -760,7 +760,7 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    '${cart.currentBranchPayment?.pagoMovilPhone ?? "0414-5001122"} • CI/RIF: ${cart.currentBranchPayment?.pagoMovilIdNumber ?? "V-25.123.456"} • ${cart.currentBranchPayment?.pagoMovilBank ?? "Banesco (0134)"}',
+                                    '${(cart.currentBranchPayment?.pagoMovilPhone != null && cart.currentBranchPayment!.pagoMovilPhone.isNotEmpty) ? cart.currentBranchPayment!.pagoMovilPhone : 'Teléfono no configurado'} • CI/RIF: ${(cart.currentBranchPayment?.pagoMovilIdNumber != null && cart.currentBranchPayment!.pagoMovilIdNumber.isNotEmpty) ? cart.currentBranchPayment!.pagoMovilIdNumber : 'N/A'} • ${(cart.currentBranchPayment?.pagoMovilBank != null && cart.currentBranchPayment!.pagoMovilBank.isNotEmpty) ? cart.currentBranchPayment!.pagoMovilBank : 'Banco no especificado'}',
                                     style: GoogleFonts.outfit(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
@@ -871,7 +871,7 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                                             cart.currentBranchPayment!
                                                 .zelleEmail!.isNotEmpty)
                                         ? 'Email: ${cart.currentBranchPayment!.zelleEmail}'
-                                        : 'Email: pagos@burgerlab.com',
+                                        : 'Email no configurado por el comercio',
                                     style: GoogleFonts.outfit(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,

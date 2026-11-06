@@ -118,7 +118,23 @@ export class ApiService {
     return this.http.post<{ success: boolean; url: string; filename: string }>(
       `${this.baseUrl}/uploads`,
       { data, filename }
+    ).pipe(
+      map(res => {
+        let finalUrl = res.url;
+        if (finalUrl && finalUrl.startsWith('/')) {
+          finalUrl = `${this.baseUrl.replace(/\/api$/, '')}${finalUrl}`;
+        }
+        return { ...res, url: finalUrl };
+      })
     );
+  }
+
+  normalizeImageUrl(url?: string | null): string {
+    if (!url) return '';
+    if (url.startsWith('/api/') || url.startsWith('/uploads/')) {
+      return `${this.baseUrl.replace(/\/api$/, '')}${url}`;
+    }
+    return url;
   }
 
   // --- PRODUCTOS ---
@@ -848,6 +864,17 @@ export class ApiService {
     );
   }
 
+
+  deletePlatformUser(id: string, email?: string): Observable<any> {
+    let url = `${this.baseUrl}/users/${id}`;
+    if (email) url += `?email=${encodeURIComponent(email)}`;
+    return this.http.delete(url);
+  }
+
+  togglePlatformUserActive(id: string, email: string | undefined, isActive: boolean): Observable<any> {
+    return this.http.put(`${this.baseUrl}/users/${id}/toggle-active`, { email, isActive });
+  }
+
   getPlatformUsers(): Observable<any[]> {
     return this.http.get<any[]>(`${this.baseUrl}/users`).pipe(
       switchMap(users => {
@@ -1233,15 +1260,11 @@ export class ApiService {
         hasDelivery: true,
         hasPickup: true,
         deliveryRadiusKm: Number(row.delivery_radius_km ?? row.deliveryRadiusKm ?? row.delivery_radius) || 8.0,
-        baseDeliveryFee: Number(row.base_delivery_fee) || 2.50,
-        deliveryTiers: (Array.isArray(row.delivery_tiers) ? row.delivery_tiers : (Array.isArray(row.deliveryTiers) ? row.deliveryTiers : null)) || [
-          { id: 'tier_1', minKm: 0, maxKm: 2, price: 1.50 },
-          { id: 'tier_2', minKm: 2, maxKm: 5, price: 3.00 },
-          { id: 'tier_3', minKm: 5, maxKm: 8, price: 4.50 }
-        ],
+        baseDeliveryFee: Number(row.base_delivery_fee ?? row.baseDeliveryFee ?? row.delivery_fee) || 2.00,
+        deliveryTiers: (Array.isArray(row.delivery_tiers) ? row.delivery_tiers : (Array.isArray(row.deliveryTiers) ? row.deliveryTiers : null)) || [],
         estimatedDeliveryMinMinutes: 30,
         estimatedDeliveryMaxMinutes: 45,
-        freeDeliveryThreshold: 25.00,
+        freeDeliveryThreshold: (row.free_delivery_threshold != null ? Number(row.free_delivery_threshold) : (row.freeDeliveryThreshold != null ? Number(row.freeDeliveryThreshold) : undefined)),
         minOrderAmount: Number(row.min_order_amount) || 8.00,
         currency: 'USD',
         currencySymbol: '$',

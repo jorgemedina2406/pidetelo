@@ -1642,7 +1642,7 @@
                   <div class="flex items-center justify-between">
                     <span class="text-slate-500 font-sans text-[10px]">Correo:</span>
                     <strong class="text-blue-700 dark:text-blue-300 select-all font-semibold">
-                      {{ branch.managerEmail || ('sede.' + branch.slug + '@' + (currentTenant().slug || 'comercio') + '.com') }}
+                      {{ branch.managerEmail || 'Sin correo asignado' }}
                     </strong>
                   </div>
                   @if (branch.managerName) {
@@ -1655,13 +1655,14 @@
               </div>
 
               <!-- Direct Payment Credentials Card -->
+              @if (branch.paymentCredentials?.pagoMovilPhone && branch.paymentCredentials?.pagoMovilBank) {
               <div class="p-3 rounded-xl bg-orange-50/50 dark:bg-orange-950/20 border border-orange-200/60 dark:border-orange-900/30 space-y-1 text-xs">
                 <div class="flex items-center justify-between font-extrabold text-[11px] text-orange-700 dark:text-orange-300">
                   <span class="flex items-center gap-1">
                     <app-icon name="wallet" [size]="12"></app-icon>
-                    Pago Móvil Directo (100% Comercio)
+                    Pago Móvil Directo
                   </span>
-                  <span class="text-[9px] uppercase tracking-wider bg-orange-200/60 dark:bg-orange-900/50 px-1.5 py-0.2 rounded font-black">0% Comisión</span>
+                  <span class="text-[9px] uppercase tracking-wider bg-orange-200/60 dark:bg-orange-900/50 px-1.5 py-0.2 rounded font-black">100% Comercio</span>
                 </div>
                 <div class="font-mono text-[11px] text-slate-700 dark:text-slate-300 leading-tight">
                   <div><strong>Banco:</strong> {{ branch.paymentCredentials.pagoMovilBank }}</div>
@@ -1674,6 +1675,12 @@
                   }
                 </div>
               </div>
+              } @else {
+              <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                <span>💳</span>
+                <span>Pago Móvil no configurado aún para esta sede.</span>
+              </div>
+              }
 
               <!-- Rejection Notice if any -->
               @if (branch.status === 'rejected' && branch.rejectionReason) {
@@ -2541,6 +2548,148 @@
                 <input type="text" [(ngModel)]="brandingForm.address"
                   class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
               </div>
+            </div>
+
+            
+            <!-- PANEL 5: MÉTODOS DE PAGO ACEPTADOS & CUENTAS DE COBRO DIRECTO -->
+            <div class="card-adaptive rounded-2xl p-5 shadow-xs space-y-5 border border-slate-200 dark:border-slate-800">
+              <div class="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div class="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+                  <app-icon name="wallet" [size]="18"></app-icon>
+                </div>
+                <div>
+                  <h3 class="font-extrabold text-sm text-slate-900 dark:text-white">Métodos de Pago Aceptados & Cuentas de Cobro</h3>
+                  <p class="text-[11px] text-slate-500">Selecciona los métodos que tus clientes podrán utilizar al momento de pagar</p>
+                </div>
+              </div>
+
+              <!-- Checkboxes de Métodos Aceptados -->
+              <div class="space-y-2">
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Selecciona los métodos de pago habilitados:
+                </label>
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-1">
+                  
+                  <!-- Pago Móvil -->
+                  <div (click)="togglePaymentMethod('mobile_transfer')"
+                       class="p-3 rounded-xl border cursor-pointer transition-all flex items-center gap-2.5"
+                       [class.border-brand-500]="brandingForm.acceptedPaymentMethods?.includes('mobile_transfer')"
+                       [class.bg-brand-500/5]="brandingForm.acceptedPaymentMethods?.includes('mobile_transfer')"
+                       [class.border-slate-200]="!brandingForm.acceptedPaymentMethods?.includes('mobile_transfer')"
+                       [class.dark:border-slate-800]="!brandingForm.acceptedPaymentMethods?.includes('mobile_transfer')">
+                    <input type="checkbox" [checked]="brandingForm.acceptedPaymentMethods?.includes('mobile_transfer')" class="rounded text-brand-500 pointer-events-none" />
+                    <div>
+                      <div class="font-bold text-xs">📲 Pago Móvil</div>
+                      <div class="text-[10px] text-slate-400">Transferencia bancaria rápida</div>
+                    </div>
+                  </div>
+
+                  <!-- Efectivo USD -->
+                  <div (click)="togglePaymentMethod('cash_usd')"
+                       class="p-3 rounded-xl border cursor-pointer transition-all flex items-center gap-2.5"
+                       [class.border-brand-500]="brandingForm.acceptedPaymentMethods?.includes('cash_usd')"
+                       [class.bg-brand-500/5]="brandingForm.acceptedPaymentMethods?.includes('cash_usd')"
+                       [class.border-slate-200]="!brandingForm.acceptedPaymentMethods?.includes('cash_usd')"
+                       [class.dark:border-slate-800]="!brandingForm.acceptedPaymentMethods?.includes('cash_usd')">
+                    <input type="checkbox" [checked]="brandingForm.acceptedPaymentMethods?.includes('cash_usd')" class="rounded text-brand-500 pointer-events-none" />
+                    <div>
+                      <div class="font-bold text-xs">💵 Efectivo $ (USD)</div>
+                      <div class="text-[10px] text-slate-400">Pago en divisa al recibir</div>
+                    </div>
+                  </div>
+
+                  <!-- Efectivo Bs -->
+                  <div (click)="togglePaymentMethod('cash_local')"
+                       class="p-3 rounded-xl border cursor-pointer transition-all flex items-center gap-2.5"
+                       [class.border-brand-500]="brandingForm.acceptedPaymentMethods?.includes('cash_local')"
+                       [class.bg-brand-500/5]="brandingForm.acceptedPaymentMethods?.includes('cash_local')"
+                       [class.border-slate-200]="!brandingForm.acceptedPaymentMethods?.includes('cash_local')"
+                       [class.dark:border-slate-800]="!brandingForm.acceptedPaymentMethods?.includes('cash_local')">
+                    <input type="checkbox" [checked]="brandingForm.acceptedPaymentMethods?.includes('cash_local')" class="rounded text-brand-500 pointer-events-none" />
+                    <div>
+                      <div class="font-bold text-xs">🪙 Efectivo Bs.</div>
+                      <div class="text-[10px] text-slate-400">Bolívares a tasa oficial</div>
+                    </div>
+                  </div>
+
+                  <!-- Zelle -->
+                  <div (click)="togglePaymentMethod('zelle')"
+                       class="p-3 rounded-xl border cursor-pointer transition-all flex items-center gap-2.5"
+                       [class.border-brand-500]="brandingForm.acceptedPaymentMethods?.includes('zelle')"
+                       [class.bg-brand-500/5]="brandingForm.acceptedPaymentMethods?.includes('zelle')"
+                       [class.border-slate-200]="!brandingForm.acceptedPaymentMethods?.includes('zelle')"
+                       [class.dark:border-slate-800]="!brandingForm.acceptedPaymentMethods?.includes('zelle')">
+                    <input type="checkbox" [checked]="brandingForm.acceptedPaymentMethods?.includes('zelle')" class="rounded text-brand-500 pointer-events-none" />
+                    <div>
+                      <div class="font-bold text-xs">⚡ Zelle Directo</div>
+                      <div class="text-[10px] text-slate-400">Transferencia Zelle USA</div>
+                    </div>
+                  </div>
+
+                  <!-- Punto de Venta -->
+                  <div (click)="togglePaymentMethod('card_terminal')"
+                       class="p-3 rounded-xl border cursor-pointer transition-all flex items-center gap-2.5"
+                       [class.border-brand-500]="brandingForm.acceptedPaymentMethods?.includes('card_terminal')"
+                       [class.bg-brand-500/5]="brandingForm.acceptedPaymentMethods?.includes('card_terminal')"
+                       [class.border-slate-200]="!brandingForm.acceptedPaymentMethods?.includes('card_terminal')"
+                       [class.dark:border-slate-800]="!brandingForm.acceptedPaymentMethods?.includes('card_terminal')">
+                    <input type="checkbox" [checked]="brandingForm.acceptedPaymentMethods?.includes('card_terminal')" class="rounded text-brand-500 pointer-events-none" />
+                    <div>
+                      <div class="font-bold text-xs">💳 Punto de Venta</div>
+                      <div class="text-[10px] text-slate-400">Tarjeta débito/crédito</div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+              <!-- Formulario de Datos Reales de Pago Móvil -->
+              @if (brandingForm.acceptedPaymentMethods?.includes('mobile_transfer')) {
+              <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3">
+                <div class="flex items-center gap-2 font-bold text-xs text-brand-600 dark:text-brand-400">
+                  <app-icon name="phone" [size]="14"></app-icon>
+                  <span>Datos de Pago Móvil Oficiales del Comercio:</span>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-[11px] font-semibold mb-1">Banco Receptor</label>
+                    <input type="text" [(ngModel)]="brandingForm.pagoMovilBank" placeholder="Ej: Banesco (0134) o Mercantil"
+                           class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-500" />
+                  </div>
+                  <div>
+                    <label class="block text-[11px] font-semibold mb-1">Teléfono Pago Móvil</label>
+                    <input type="text" [(ngModel)]="brandingForm.pagoMovilPhone" placeholder="Ej: 04141234567"
+                           class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-500 font-mono" />
+                  </div>
+                  <div>
+                    <label class="block text-[11px] font-semibold mb-1">Cédula / RIF</label>
+                    <input type="text" [(ngModel)]="brandingForm.pagoMovilIdNumber" placeholder="Ej: J-12345678-9 o V-12345678"
+                           class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-500 font-mono" />
+                  </div>
+                  <div>
+                    <label class="block text-[11px] font-semibold mb-1">Nombre del Titular</label>
+                    <input type="text" [(ngModel)]="brandingForm.pagoMovilAccountName" placeholder="Ej: Inversiones Burger Lab C.A."
+                           class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-500" />
+                  </div>
+                </div>
+              </div>
+              }
+
+              <!-- Formulario de Datos Reales de Zelle -->
+              @if (brandingForm.acceptedPaymentMethods?.includes('zelle')) {
+              <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3">
+                <div class="flex items-center gap-2 font-bold text-xs text-purple-600 dark:text-purple-400">
+                  <app-icon name="mail" [size]="14"></app-icon>
+                  <span>Datos de Zelle Oficiales:</span>
+                </div>
+                <div>
+                  <label class="block text-[11px] font-semibold mb-1">Correo Electrónico Zelle</label>
+                  <input type="email" [(ngModel)]="brandingForm.zelleEmail" placeholder="pagos@tucomercio.com"
+                         class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-500 font-mono" />
+                </div>
+              </div>
+              }
+
             </div>
 
             <!-- PANEL 4: TARIFAS DE DELIVERY & COBERTURA -->

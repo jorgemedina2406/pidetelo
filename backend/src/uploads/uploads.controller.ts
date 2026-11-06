@@ -1,5 +1,5 @@
-import { Controller, Post, Get, Param, Body, Res, BadRequestException, NotFoundException } from '@nestjs/common';
-import type { Response } from 'express';
+import { Controller, Post, Get, Param, Body, Res, Req, BadRequestException, NotFoundException } from '@nestjs/common';
+import type { Request, Response } from 'express';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
@@ -15,7 +15,7 @@ export class UploadsController {
   }
 
   @Post()
-  async uploadImage(@Body() body: { data: string; filename?: string }) {
+  async uploadImage(@Body() body: { data: string; filename?: string }, @Req() req: Request) {
     if (!body || !body.data) {
       throw new BadRequestException('Se requiere el campo "data" con la imagen en base64');
     }
@@ -40,10 +40,14 @@ export class UploadsController {
 
     fs.writeFileSync(filePath, buffer);
 
+    const host = req.get('host') || 'localhost:3000';
+    const protocol = req.protocol || 'http';
+    const fullUrl = `${protocol}://${host}/api/uploads/${fileId}`;
+
     return {
       success: true,
       filename: fileId,
-      url: `/api/uploads/${fileId}`
+      url: fullUrl
     };
   }
 

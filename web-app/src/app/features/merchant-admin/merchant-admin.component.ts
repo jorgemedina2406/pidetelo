@@ -1,3 +1,4 @@
+import { ConfirmService } from '../../core/services/confirm.service';
 import { Component, inject, signal, computed, OnInit, OnDestroy, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -85,6 +86,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
   readonly i18n = inject(I18nService);
   readonly currency = inject(CurrencyService);
   private readonly api = inject(ApiService);
+  private readonly confirmModal = inject(ConfirmService);
   private readonly supabase = inject(SupabaseService);
   private realtimeChannel: any = null;
   private ordersPollingInterval: any = null;
@@ -316,7 +318,13 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     ] as DeliveryTier[],
     baseCurrency: 'USD' as 'USD' | 'VES',
     displayMode: 'usd_and_bs' as CurrencyDisplayMode,
-    exchangeRate: 45.50,
+    exchangeRate: 896.12,
+    acceptedPaymentMethods: ['cash_usd', 'mobile_transfer', 'cash_local'] as string[],
+    pagoMovilBank: '',
+    pagoMovilPhone: '',
+    pagoMovilIdNumber: '',
+    pagoMovilAccountName: '',
+    zelleEmail: '',
     openTime: '11:00',
     closeTime: '23:00',
     scheduleDays: [
@@ -2223,10 +2231,9 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     });
   }
 
-  deleteRider(rider: Rider): void {
-    if (!confirm(`¿Estás seguro de que deseas eliminar al motorizado ${rider.name} (${rider.vehiclePlate}) de esta sede?`)) {
-      return;
-    }
+  async deleteRider(rider: Rider): Promise<void> {
+    const confirmed = await this.confirmModal.confirm(`¿Estás seguro de que deseas eliminar al motorizado ${rider.name} (${rider.vehiclePlate}) de esta sede?`);
+    if (!confirmed) return;
 
     const branchFilter = this.isBranchLocked() ? this.auth.currentUser()?.branchId : undefined;
     this.riders.update(list => list.filter(r => r.id !== rider.id));
@@ -2371,6 +2378,18 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     }
   }
 
+
+  togglePaymentMethod(method: string): void {
+    const list = this.brandingForm.acceptedPaymentMethods || [];
+    if (list.includes(method)) {
+      if (list.length > 1) {
+        this.brandingForm.acceptedPaymentMethods = list.filter(m => m !== method);
+      }
+    } else {
+      this.brandingForm.acceptedPaymentMethods = [...list, method];
+    }
+  }
+
   saveSettings(e?: Event): void {
     if (e) e.preventDefault();
     this.isSavingBranding.set(true);
@@ -2416,6 +2435,15 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       base_currency: this.brandingForm.baseCurrency,
       displayMode: this.brandingForm.displayMode,
       display_mode: this.brandingForm.displayMode,
+      acceptedPaymentMethods: this.brandingForm.acceptedPaymentMethods,
+      accepted_payment_methods: this.brandingForm.acceptedPaymentMethods,
+      payment_credentials: {
+        pago_movil_bank: this.brandingForm.pagoMovilBank,
+        pago_movil_phone: this.brandingForm.pagoMovilPhone,
+        pago_movil_id_number: this.brandingForm.pagoMovilIdNumber,
+        pago_movil_account_name: this.brandingForm.pagoMovilAccountName,
+        zelle_email: this.brandingForm.zelleEmail,
+      },
       openTime: this.brandingForm.openTime,
       closeTime: this.brandingForm.closeTime,
       businessHours: {
@@ -2832,8 +2860,9 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     });
   }
 
-  deleteCoupon(c: Coupon): void {
-    if (!confirm(`¿Eliminar el cupón de oferta "${c.code}"?`)) return;
+  async deleteCoupon(c: Coupon): Promise<void> {
+    const confirmed = await this.confirmModal.confirm(`¿Eliminar el cupón de oferta "${c.code}"?`);
+    if (!confirmed) return;
     this.api.deleteCoupon(c.id).subscribe(() => {
       this.coupons.update(list => list.filter(item => item.id !== c.id));
       this.showToast('info', 'Cupón Eliminado', `El cupón "${c.code}" fue eliminado.`);

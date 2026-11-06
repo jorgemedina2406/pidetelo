@@ -25,6 +25,11 @@ import { I18nService } from '../../../core/services/i18n.service';
         </div>
 
         <form (submit)="onSubmit($event)" class="space-y-3.5 text-xs">
+          @if (formError) {
+            <div class="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 text-xs font-semibold">
+              ⚠️ {{ formError }}
+            </div>
+          }
           <div>
             <label class="block font-semibold mb-1">Nombre Completo del Motorizado</label>
             <input type="text" [(ngModel)]="form.name" name="riderName" required placeholder="Ej: Carlos Rodríguez"
@@ -123,6 +128,23 @@ export class RiderFormModalComponent implements OnChanges {
   readonly i18n = inject(I18nService);
 
   selectedBranchId = '';
+
+  formError: string | null = null;
+
+  get hasMinLength(): boolean {
+    return (this.form.password || '').length >= 8;
+  }
+  get hasUppercase(): boolean {
+    return /[A-Z]/.test(this.form.password || '');
+  }
+  get hasSpecialChar(): boolean {
+    const s = this.form.password || '';
+    return s.includes('*') || s.includes('.') || s.includes('@') || s.includes('#') || s.includes('!') || s.includes('?');
+  }
+  get isPasswordValid(): boolean {
+    return this.hasMinLength && this.hasUppercase && this.hasSpecialChar;
+  }
+
 
   form = {
     name: '',
