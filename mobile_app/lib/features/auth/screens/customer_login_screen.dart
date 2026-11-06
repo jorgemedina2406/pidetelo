@@ -613,27 +613,12 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
                     ),
                     const SizedBox(height: 18),
 
-                    // Social Buttons (Google & Apple)
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildSocialButton(
-                            label: 'Google',
-                            icon: Icons.g_mobiledata_rounded,
-                            iconColor: const Color(0xFFEA4335),
-                            onTap: () => _handleOAuthLogin(OAuthProvider.google),
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: _buildSocialButton(
-                            label: 'Apple',
-                            icon: Icons.apple_rounded,
-                            iconColor: Colors.black,
-                            onTap: () => _handleOAuthLogin(OAuthProvider.apple),
-                          ),
-                        ),
-                      ],
+                    // Social Button (Google)
+                    _buildSocialButton(
+                      label: 'Continuar con Google',
+                      icon: Icons.g_mobiledata_rounded,
+                      iconColor: const Color(0xFFEA4335),
+                      onTap: () => _handleOAuthLogin(OAuthProvider.google),
                     ),
                     const SizedBox(height: 24),
 
