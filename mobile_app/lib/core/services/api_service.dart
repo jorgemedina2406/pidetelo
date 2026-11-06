@@ -459,7 +459,7 @@ class ApiService {
       'exchangeRate': rate,
       'baseCurrency': baseCurrency,
       'displayMode': displayMode,
-      'acceptedPaymentMethods': item['accepted_payment_methods'] ?? item['payment_methods'] ?? item['paymentMethods'] ?? ['pago_movil', 'cash_usd', 'zelle'],
+      'acceptedPaymentMethods': item['accepted_payment_methods'] ?? item['payment_methods'] ?? item['paymentMethods'] ?? item['currency_settings']?['acceptedPaymentMethods'] ?? item['currencySettings']?['acceptedPaymentMethods'] ?? ['pago_movil', 'cash_usd', 'zelle'],
       'latitude': (item['latitude'] as num?)?.toDouble() ?? 10.077715,
       'longitude': (item['longitude'] as num?)?.toDouble() ?? -69.2812938,
       'delivery_radius_km': deliveryRadius,

@@ -87,6 +87,42 @@ export class TenantsService {
     const isFeatured = Boolean(t.is_featured ?? meta.is_featured ?? meta.isFeatured ?? false);
     const acceptedPaymentMethods = t.accepted_payment_methods ?? meta.accepted_payment_methods ?? meta.acceptedPaymentMethods ?? ['mobile_transfer', 'cash_usd', 'cash_local'];
 
+    let enrichedBranches = t.branches;
+    if (Array.isArray(t.branches)) {
+      let branchMeta: Record<string, any> = {};
+      try {
+        const bMetaPath = path.resolve(process.cwd(), 'data', 'branch_metadata.json');
+        if (fs.existsSync(bMetaPath)) {
+          branchMeta = JSON.parse(fs.readFileSync(bMetaPath, 'utf-8'));
+        }
+      } catch (_) {}
+
+      enrichedBranches = t.branches.map((b: any) => {
+        const bm = branchMeta[b.id] || {};
+        const bPaymentMethods = b.accepted_payment_methods ?? bm.accepted_payment_methods ?? bm.acceptedPaymentMethods ?? acceptedPaymentMethods;
+        const bTiers = b.delivery_tiers ?? bm.delivery_tiers ?? bm.deliveryTiers ?? deliveryTiers;
+        const bRate = Number(b.exchange_rate ?? bm.exchange_rate ?? bm.currency_settings?.exchangeRate ?? exchangeRate);
+        const bCurrSettings = {
+          baseCurrency: b.base_currency ?? bm.base_currency ?? bm.currency_settings?.baseCurrency ?? baseCurrency,
+          displayMode: b.display_mode ?? bm.display_mode ?? bm.currency_settings?.displayMode ?? displayMode,
+          exchangeRate: bRate,
+          lastRateUpdate: bm.currency_settings?.lastRateUpdate || new Date().toISOString(),
+          acceptedPaymentMethods: bPaymentMethods
+        };
+        return {
+          ...b,
+          exchange_rate: bRate,
+          exchangeRate: bRate,
+          delivery_tiers: bTiers,
+          deliveryTiers: bTiers,
+          accepted_payment_methods: bPaymentMethods,
+          acceptedPaymentMethods: bPaymentMethods,
+          currency_settings: bCurrSettings,
+          currencySettings: bCurrSettings
+        };
+      });
+    }
+
     return {
       ...t,
       category,
@@ -103,6 +139,7 @@ export class TenantsService {
       deliveryTiers,
       accepted_payment_methods: acceptedPaymentMethods,
       acceptedPaymentMethods,
+      branches: enrichedBranches,
       branding: {
         accentColor: t.accent_color || '#f97316',
         logoUrl: t.logo_url || '',
@@ -166,6 +203,10 @@ export class TenantsService {
     }
     if (updateData.delivery_tiers !== undefined || updateData.deliveryTiers !== undefined) {
       metaToSave.delivery_tiers = updateData.delivery_tiers || updateData.deliveryTiers;
+    }
+    if (updateData.accepted_payment_methods !== undefined || updateData.acceptedPaymentMethods !== undefined) {
+      metaToSave.accepted_payment_methods = updateData.accepted_payment_methods || updateData.acceptedPaymentMethods;
+      metaToSave.acceptedPaymentMethods = metaToSave.accepted_payment_methods;
     }
     if (updateData.currency_settings !== undefined || updateData.currencySettings !== undefined) {
       metaToSave.currency_settings = updateData.currency_settings || updateData.currencySettings;
@@ -235,7 +276,10 @@ export class TenantsService {
 
       // 2. Parámetros específicos de la sede principal (contacto, dirección y coordenadas matriz)
       const mainBranchUpdate: any = { updated_at: new Date().toISOString() };
-      if (updateData.name !== undefined) mainBranchUpdate.name = `${updateData.name} (Sede Principal)`;
+      if (updateData.name !== undefined) {
+        const cleanBaseName = updateData.name.replace(/(\s*\(Sede Principal\))+/gi, '').trim();
+        mainBranchUpdate.name = `${cleanBaseName} (Sede Principal)`;
+      }
       if (updateData.address !== undefined) mainBranchUpdate.address = updateData.address;
       if (updateData.latitude !== undefined) mainBranchUpdate.latitude = Number(updateData.latitude);
       if (updateData.longitude !== undefined) mainBranchUpdate.longitude = Number(updateData.longitude);
@@ -306,11 +350,12 @@ export class TenantsService {
     });
 
     // 1.1 Crear automáticamente la Sede Principal en la tabla branches
+    const cleanTenantName = name.replace(/(\s*\(Sede Principal\))+/gi, '').trim();
     const mainBranchId = crypto.randomUUID();
     const mainBranchRecord = {
       id: mainBranchId,
       company_id: tenantId,
-      name: `${name} (Sede Principal)`,
+      name: `${cleanTenantName} (Sede Principal)`,
       slug: `${slug}-sede-principal`,
       phone: payload.whatsapp || payload.phone || '+584120000000',
       whatsapp_number: payload.whatsapp || payload.whatsapp_number || '+584120000000',

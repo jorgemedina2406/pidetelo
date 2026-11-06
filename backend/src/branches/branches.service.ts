@@ -243,14 +243,15 @@ export class BranchesService {
 
     // Insert direct payment credentials
     const credentials = branchPayload.paymentCredentials || branchPayload.payment_credentials || {};
+    const hasPagoMovil = Boolean(credentials.pagoMovilPhone || branchPayload.pagoMovilPhone);
     await client.from('branch_payment_credentials').insert({
       branch_id: newBranch.id,
       pago_movil: {
-        enabled: true,
-        bank_name: credentials.pagoMovilBank || branchPayload.pagoMovilBank || '0102 - Banco de Venezuela',
-        phone: credentials.pagoMovilPhone || branchPayload.pagoMovilPhone || '04121234567',
-        id_number: credentials.pagoMovilIdNumber || branchPayload.pagoMovilIdNumber || 'J-12345678-0',
-        account_name: credentials.pagoMovilAccountName || branchPayload.pagoMovilAccountName || name,
+        enabled: hasPagoMovil,
+        bank_name: credentials.pagoMovilBank || branchPayload.pagoMovilBank || '',
+        phone: credentials.pagoMovilPhone || branchPayload.pagoMovilPhone || '',
+        id_number: credentials.pagoMovilIdNumber || branchPayload.pagoMovilIdNumber || '',
+        account_name: credentials.pagoMovilAccountName || branchPayload.pagoMovilAccountName || '',
       },
       zelle: {
         enabled: Boolean(credentials.zelleEmail || branchPayload.zelleEmail),

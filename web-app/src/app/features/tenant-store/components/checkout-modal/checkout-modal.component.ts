@@ -22,21 +22,34 @@ export class CheckoutModalComponent {
   readonly paymentMethods: { id: PaymentMethod; label: string; icon: string; desc: string }[] = [
     { id: 'cash_usd', label: 'Efectivo $', icon: '💵', desc: 'Pago exacto o con cambio' },
     { id: 'mobile_transfer', label: 'Pago Móvil', icon: '📲', desc: 'Transferencia bancaria rápida' },
+    { id: 'zelle' as PaymentMethod, label: 'Zelle Directo', icon: '⚡', desc: 'Transferencia Zelle' },
     { id: 'card_terminal', label: 'Punto de Venta', icon: '💳', desc: 'Tarjeta al recibir' },
     { id: 'cash_local', label: 'Efectivo Bs', icon: '🪙', desc: 'A tasa del día' }
   ];
 
-
   readonly availablePaymentMethods = computed(() => {
     const branch = this.cart.selectedBranch();
     const tenant = this.cart.activeTenant();
-    const accepted: string[] = (branch as any)?.acceptedPaymentMethods || 
-                              (branch as any)?.accepted_payment_methods || 
-                              (tenant as any)?.acceptedPaymentMethods || 
-                              (tenant as any)?.accepted_payment_methods || 
-                              ['cash_usd', 'mobile_transfer', 'cash_local'];
-    const filtered = this.paymentMethods.filter(pm => accepted.includes(pm.id));
-    return filtered.length > 0 ? filtered : this.paymentMethods;
+    const rawAccepted: any = (branch as any)?.acceptedPaymentMethods || 
+                             (branch as any)?.accepted_payment_methods || 
+                             (branch as any)?.currencySettings?.acceptedPaymentMethods ||
+                             (branch as any)?.currency_settings?.acceptedPaymentMethods ||
+                             (tenant as any)?.acceptedPaymentMethods || 
+                             (tenant as any)?.accepted_payment_methods || 
+                             (tenant as any)?.currencySettings?.acceptedPaymentMethods ||
+                             (tenant as any)?.currency_settings?.acceptedPaymentMethods;
+    
+    if (Array.isArray(rawAccepted) && rawAccepted.length > 0) {
+      const normalizedAccepted = rawAccepted.map((m: string) => {
+        if (m === 'pago_movil') return 'mobile_transfer';
+        if (m === 'efectivo') return 'cash_usd';
+        if (m === 'tarjeta') return 'card_terminal';
+        return m;
+      });
+      const filtered = this.paymentMethods.filter(pm => normalizedAccepted.includes(pm.id));
+      if (filtered.length > 0) return filtered;
+    }
+    return this.paymentMethods;
   });
 
   constructor() {
@@ -176,10 +189,6 @@ export class CheckoutModalComponent {
           this.isSubmitting.set(false);
         },
       });
-
-      // Abrir pedido formateado para WhatsApp
-      const url = this.cart.generateWhatsAppOrderUrl(order);
-      window.open(url, '_blank');
     }
   }
 }

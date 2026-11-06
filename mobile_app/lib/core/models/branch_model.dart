@@ -268,7 +268,11 @@ class Branch {
           ? (json['accepted_payment_methods'] as List).map((e) => e.toString()).toList()
           : (json['acceptedPaymentMethods'] is List && (json['acceptedPaymentMethods'] as List).isNotEmpty)
               ? (json['acceptedPaymentMethods'] as List).map((e) => e.toString()).toList()
-              : const ['pago_movil', 'cash_usd', 'cash_local', 'mobile_transfer'],
+              : (json['currency_settings'] is Map && json['currency_settings']['acceptedPaymentMethods'] is List)
+                  ? (json['currency_settings']['acceptedPaymentMethods'] as List).map((e) => e.toString()).toList()
+                  : (json['currencySettings'] is Map && json['currencySettings']['acceptedPaymentMethods'] is List)
+                      ? (json['currencySettings']['acceptedPaymentMethods'] as List).map((e) => e.toString()).toList()
+                      : const ['pago_movil', 'cash_usd', 'cash_local', 'mobile_transfer'],
     );
   }
 }

@@ -59,9 +59,47 @@ const initialState: CartState = {
   isApplyingCoupon: false
 };
 
+const CART_STORAGE_KEY = 'pidetelo_web_cart_v1';
+
+function loadInitialCartState(): CartState {
+  let saved: any = {};
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem(CART_STORAGE_KEY);
+      if (raw) saved = JSON.parse(raw);
+    } catch (_) {}
+  }
+  return {
+    ...initialState,
+    items: Array.isArray(saved.items) ? saved.items : [],
+    customer: saved.customer ? { ...initialState.customer, ...saved.customer } : initialState.customer,
+    fulfillmentType: saved.fulfillmentType || 'delivery',
+    paymentMethod: saved.paymentMethod || 'cash_usd'
+  };
+}
+
+function persistCart(state: { items: CartItem[]; customer: CustomerInfo; fulfillmentType: FulfillmentType; paymentMethod: PaymentMethod }) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify({
+      items: state.items,
+      customer: state.customer,
+      fulfillmentType: state.fulfillmentType,
+      paymentMethod: state.paymentMethod
+    }));
+  } catch (_) {}
+}
+
+function clearCartStorage() {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.removeItem(CART_STORAGE_KEY);
+  } catch (_) {}
+}
+
 export const CartStore = signalStore(
   { providedIn: 'root' },
-  withState(initialState),
+  withState(loadInitialCartState),
   withComputed((store) => {
     const totalItemsCount = computed(() => {
       return store.items().reduce((acc, item) => acc + item.quantity, 0);
@@ -110,36 +148,35 @@ export const CartStore = signalStore(
     });
 
     const deliveryTiers = computed<DeliveryTier[]>(() => {
-      const branchTiers = store.selectedBranch()?.deliveryTiers;
-      const tenantTiers = store.activeTenant()?.deliverySettings?.deliveryTiers || (store.activeTenant() as any)?.delivery_tiers;
+      const rawBranchTiers = store.selectedBranch()?.deliveryTiers || (store.selectedBranch() as any)?.delivery_tiers;
+      const rawTenantTiers = store.activeTenant()?.deliverySettings?.deliveryTiers || (store.activeTenant() as any)?.delivery_tiers;
       
-      const bLen = Array.isArray(branchTiers) ? branchTiers.length : 0;
-      const tLen = Array.isArray(tenantTiers) ? tenantTiers.length : 0;
+      const rawList = (Array.isArray(rawBranchTiers) && rawBranchTiers.length > 0)
+        ? rawBranchTiers
+        : (Array.isArray(rawTenantTiers) && rawTenantTiers.length > 0)
+          ? rawTenantTiers
+          : [
+              { id: 'tier_1', minKm: 0, maxKm: 2, price: 1.50 },
+              { id: 'tier_2', minKm: 2, maxKm: 5, price: 3.00 },
+              { id: 'tier_3', minKm: 5, maxKm: 8, price: 4.50 }
+            ];
 
-      if (bLen > 0 && bLen >= tLen) {
-        return branchTiers!;
-      }
-      if (tLen > 0) {
-        return tenantTiers!;
-      }
-      if (bLen > 0) {
-        return branchTiers!;
-      }
-      return [
-        { id: 'tier_1', minKm: 0, maxKm: 2, price: 1.50 },
-        { id: 'tier_2', minKm: 2, maxKm: 5, price: 3.00 },
-        { id: 'tier_3', minKm: 5, maxKm: 8, price: 4.50 }
-      ];
+      return rawList.map((t: any, idx: number) => ({
+        id: t.id || `tier_${idx + 1}`,
+        minKm: Number(t.minKm ?? t.min_km ?? 0),
+        maxKm: Number(t.maxKm ?? t.max_km ?? 999),
+        price: Number(t.price ?? t.cost ?? 2.50)
+      }));
     });
 
     const maxCoverageRadiusKm = computed<number>(() => {
-      const tenantRadius = Number(store.activeTenant()?.deliverySettings?.deliveryRadiusKm);
-      const branchRadius = Number(store.selectedBranch()?.deliveryRadiusKm);
+      const tenantRadius = Number(store.activeTenant()?.deliverySettings?.deliveryRadiusKm || (store.activeTenant() as any)?.delivery_radius_km);
+      const branchRadius = Number(store.selectedBranch()?.deliveryRadiusKm || (store.selectedBranch() as any)?.delivery_radius_km);
       const tiers = deliveryTiers();
       const maxTierKm = tiers.length > 0 ? Math.max(...tiers.map(t => Number(t.maxKm) || 0)) : 0;
 
       const computedMax = Math.max(tenantRadius || 0, branchRadius || 0, maxTierKm);
-      return computedMax > 0 ? computedMax : 8.0;
+      return computedMax > 0 ? computedMax : 15.0;
     });
 
     const isOutOfCoverage = computed<boolean>(() => {
@@ -151,8 +188,10 @@ export const CartStore = signalStore(
 
     const appliedDeliveryTier = computed<DeliveryTier | null>(() => {
       const dist = customerDistanceKm();
-      if (dist === null) return null;
       const tiers = deliveryTiers();
+      if (dist === null) {
+        return tiers.length > 0 ? tiers[0] : null;
+      }
       const match = tiers.find(t => dist >= t.minKm && dist <= t.maxKm);
       if (match) return match;
       if (tiers.length > 0) {
@@ -164,24 +203,22 @@ export const CartStore = signalStore(
 
     const deliveryFee = computed<number>(() => {
       const tenant = store.activeTenant();
-      if (!tenant || store.fulfillmentType() === 'pickup') {
+      const branch = store.selectedBranch();
+      if ((!tenant && !branch) || store.fulfillmentType() === 'pickup') {
         return 0;
       }
-      const settings = tenant.deliverySettings;
+      const settings = tenant?.deliverySettings;
       if (settings?.freeDeliveryThreshold && subtotal() >= settings.freeDeliveryThreshold) {
         return 0;
       }
       if (isOutOfCoverage()) {
         return 0;
       }
-      if (isLocationRequired()) {
-        return 0; // La tarifa exacta se determinará al fijar el GPS
-      }
       const tier = appliedDeliveryTier();
       if (tier) {
         return Number(tier.price.toFixed(2));
       }
-      return settings?.baseDeliveryFee ?? 2.50;
+      return Number(branch?.baseDeliveryFee ?? (branch as any)?.base_delivery_fee ?? settings?.baseDeliveryFee ?? 2.50);
     });
 
     const couponDiscount = computed<number>(() => {
@@ -304,6 +341,7 @@ export const CartStore = signalStore(
     quickAddProduct(product: Product): void {
       const cartItemId = `${product.id}`;
       const existingIndex = store.items().findIndex(i => i.cartItemId === cartItemId);
+      let updatedItems: CartItem[];
       if (existingIndex > -1) {
         const updated = [...store.items()];
         const item = updated[existingIndex];
@@ -313,7 +351,7 @@ export const CartStore = signalStore(
           quantity: newQty,
           itemTotal: Number((item.unitPrice * newQty).toFixed(2))
         };
-        patchState(store, { items: updated });
+        updatedItems = updated;
       } else {
         const newItem: CartItem = {
           cartItemId,
@@ -326,8 +364,10 @@ export const CartStore = signalStore(
           imageUrl: product.imageUrl,
           itemTotal: product.price
         };
-        patchState(store, { items: [...store.items(), newItem] });
+        updatedItems = [...store.items(), newItem];
       }
+      patchState(store, { items: updatedItems });
+      persistCart({ items: updatedItems, customer: store.customer(), fulfillmentType: store.fulfillmentType(), paymentMethod: store.paymentMethod() });
     },
 
     setTenant(tenant: Tenant): void {
@@ -362,6 +402,7 @@ export const CartStore = signalStore(
       const cartItemId = `${product.id}_${sortedModIds}_${notes || ''}`;
 
       const existingIndex = store.items().findIndex(item => item.cartItemId === cartItemId);
+      let newItems: CartItem[];
 
       if (existingIndex > -1) {
         const currentItems = [...store.items()];
@@ -372,7 +413,7 @@ export const CartStore = signalStore(
           quantity: newQty,
           itemTotal: Number((singleUnitPrice * newQty).toFixed(2))
         };
-        patchState(store, { items: currentItems, isCartDrawerOpen: true });
+        newItems = currentItems;
       } else {
         const newItem: CartItem = {
           cartItemId,
@@ -385,8 +426,10 @@ export const CartStore = signalStore(
           notes,
           imageUrl: product.imageUrl
         };
-        patchState(store, { items: [...store.items(), newItem], isCartDrawerOpen: true });
+        newItems = [...store.items(), newItem];
       }
+      patchState(store, { items: newItems, isCartDrawerOpen: true });
+      persistCart({ items: newItems, customer: store.customer(), fulfillmentType: store.fulfillmentType(), paymentMethod: store.paymentMethod() });
     },
 
     updateQuantity(cartItemId: string, delta: number): void {
@@ -408,16 +451,20 @@ export const CartStore = signalStore(
         };
       }
       patchState(store, { items: currentItems });
+      persistCart({ items: currentItems, customer: store.customer(), fulfillmentType: store.fulfillmentType(), paymentMethod: store.paymentMethod() });
     },
 
     removeItem(cartItemId: string): void {
+      const remaining = store.items().filter(item => item.cartItemId !== cartItemId);
       patchState(store, {
-        items: store.items().filter(item => item.cartItemId !== cartItemId)
+        items: remaining
       });
+      persistCart({ items: remaining, customer: store.customer(), fulfillmentType: store.fulfillmentType(), paymentMethod: store.paymentMethod() });
     },
 
     clearCart(): void {
       patchState(store, { items: [] });
+      persistCart({ items: [], customer: store.customer(), fulfillmentType: store.fulfillmentType(), paymentMethod: store.paymentMethod() });
     },
 
     setBranch(selectedBranch: Branch | null): void {
@@ -426,16 +473,20 @@ export const CartStore = signalStore(
 
     setFulfillmentType(fulfillmentType: FulfillmentType): void {
       patchState(store, { fulfillmentType });
+      persistCart({ items: store.items(), customer: store.customer(), fulfillmentType, paymentMethod: store.paymentMethod() });
     },
 
     setPaymentMethod(paymentMethod: PaymentMethod): void {
       patchState(store, { paymentMethod });
+      persistCart({ items: store.items(), customer: store.customer(), fulfillmentType: store.fulfillmentType(), paymentMethod });
     },
 
     updateCustomer(customerData: Partial<CustomerInfo>): void {
+      const updatedCust = { ...store.customer(), ...customerData };
       patchState(store, {
-        customer: { ...store.customer(), ...customerData }
+        customer: updatedCust
       });
+      persistCart({ items: store.items(), customer: updatedCust, fulfillmentType: store.fulfillmentType(), paymentMethod: store.paymentMethod() });
 
       if (customerData.deliveryLat && customerData.deliveryLng) {
         const branch = store.selectedBranch();
@@ -505,6 +556,8 @@ export const CartStore = signalStore(
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
+
+      clearCartStorage();
 
       patchState(store, {
         completedOrder: order,

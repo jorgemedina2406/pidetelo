@@ -159,6 +159,7 @@ export class StoreViewComponent implements OnInit {
           return;
         }
         this.tenant.set(t);
+        this.cart.setTenant(t);
 
         const currentSelectedBranch = this.cart.selectedBranch();
         if (t.branches && t.branches.length > 0) {

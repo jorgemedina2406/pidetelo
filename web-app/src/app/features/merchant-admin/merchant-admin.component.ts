@@ -201,6 +201,15 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
 
   readonly activeBranchId = computed<string>(() => this.activeBranch()?.id || '');
 
+  cleanBranchDisplayName(name?: string | null): string {
+    if (!name) return '';
+    return name.replace(/(\s*\(Sede Principal\))+/gi, '').trim();
+  }
+
+  getTenantEmail(): string {
+    return (this.currentTenant() as any)?.email || (this.currentTenant() as any)?.contact?.email || this.auth.currentUser()?.email || 'Sin correo asignado';
+  }
+
   // Compatibilidad con templates y referencias existentes
   readonly selectedBranchId = computed<string>(() => this.activeBranchId());
   readonly selectedBranch = computed<Branch | null>(() => this.activeBranch());
@@ -2544,11 +2553,14 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         exchange_rate: Number(this.brandingForm.exchangeRate),
         base_currency: this.brandingForm.baseCurrency,
         display_mode: this.brandingForm.displayMode,
+        accepted_payment_methods: this.brandingForm.acceptedPaymentMethods,
+        acceptedPaymentMethods: this.brandingForm.acceptedPaymentMethods,
         currency_settings: {
           baseCurrency: this.brandingForm.baseCurrency,
           displayMode: this.brandingForm.displayMode,
           exchangeRate: Number(this.brandingForm.exchangeRate),
-          lastRateUpdate: new Date().toISOString()
+          lastRateUpdate: new Date().toISOString(),
+          acceptedPaymentMethods: this.brandingForm.acceptedPaymentMethods
         },
         business_hours: {
           open: this.brandingForm.openTime,

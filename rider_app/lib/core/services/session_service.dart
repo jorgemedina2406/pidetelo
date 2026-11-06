@@ -91,13 +91,12 @@ class SessionService extends ChangeNotifier {
           try {
             final tenantRes = await supabase
                 .from('tenants')
-                .select('id, name, is_active, status')
+                .select('id, name, is_active')
                 .eq('id', companyId.toString())
                 .maybeSingle();
             if (tenantRes != null) {
               final tenantActive = tenantRes['is_active'] ?? true;
-              final tenantStatus = tenantRes['status']?.toString().toLowerCase();
-              if (tenantActive == false || tenantStatus == 'paused' || tenantStatus == 'inactive') {
+              if (tenantActive == false) {
                 _lastErrorMessage = 'El comercio al que perteneces (' + (tenantRes['name'] ?? 'comercio') + ') se encuentra temporalmente pausado o inactivo. No es posible iniciar turno en este momento.';
                 try { await supabase.auth.signOut(); } catch (_) {}
                 return false;

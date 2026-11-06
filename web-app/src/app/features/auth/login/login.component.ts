@@ -159,8 +159,9 @@ export class LoginComponent {
         if (storeErr.status === 401 || storeErr.error?.message === 'Contraseña incorrecta' || storeErr.message?.includes('Contraseña incorrecta')) {
           throw new Error('Contraseña incorrecta para esta cuenta.');
         }
-        if (storeErr.error?.message?.includes('desactivada') || storeErr.message?.includes('desactivada')) {
-          throw new Error(storeErr.error?.message || storeErr.message);
+        const msg = storeErr.error?.message || storeErr.message || '';
+        if (msg.includes('desactivad') || msg.includes('pausado') || msg.includes('bloqueado') || msg.includes('inactiv')) {
+          throw new Error(msg);
         }
       }
 
@@ -243,6 +244,10 @@ export class LoginComponent {
             throw new Error('Esta cuenta no tiene permisos de administración ni de comercio en la plataforma.');
           }
 
+          if (profile?.is_active === false || user.user_metadata?.['is_active'] === false) {
+            throw new Error('Tu cuenta se encuentra desactivada por la administración de la plataforma. Comunícate con soporte de Pídetelo para más información.');
+          }
+
           let tenantId = profile?.tenant_id || user.user_metadata?.['tenant_id'];
           let tenantName = profile?.tenants?.name || user.user_metadata?.['tenant_name'];
 
@@ -252,15 +257,36 @@ export class LoginComponent {
               if (rawClient) {
                 const { data: tenantData } = await rawClient
                   .from('tenants')
-                  .select('id, name')
+                  .select('id, name, is_active')
                   .eq('email', user.email)
                   .maybeSingle();
                 if (tenantData) {
                   tenantId = tenantData.id;
                   tenantName = tenantData.name;
+                  if (tenantData.is_active === false && role !== 'SUPER_ADMIN') {
+                    throw new Error('El comercio asociado a esta cuenta se encuentra pausado o desactivado temporalmente. El acceso administrativo y de repartidores a este comercio está bloqueado.');
+                  }
                 }
               }
-            } catch (_) {}
+            } catch (tErr: any) {
+              if (tErr.message?.includes('El comercio asociado')) throw tErr;
+            }
+          } else if (tenantId && role !== 'SUPER_ADMIN') {
+            try {
+              const rawClient = this.supabase.rawClient;
+              if (rawClient) {
+                const { data: tRow } = await rawClient
+                  .from('tenants')
+                  .select('is_active')
+                  .eq('id', tenantId)
+                  .maybeSingle();
+                if (tRow && tRow.is_active === false) {
+                  throw new Error('El comercio asociado a esta cuenta se encuentra pausado o desactivado temporalmente. El acceso administrativo y de repartidores a este comercio está bloqueado.');
+                }
+              }
+            } catch (tErr: any) {
+              if (tErr.message?.includes('El comercio asociado')) throw tErr;
+            }
           }
 
           const appUser: AppUser = {
@@ -290,8 +316,15 @@ export class LoginComponent {
           throw new Error(errorMsg || 'La cuenta ingresada no existe o las credenciales son incorrectas.');
         }
       } catch (supaErr: any) {
-        if (supaErr.message?.includes('Contraseña incorrecta') || supaErr.message?.includes('no tiene permisos')) {
+        if (supaErr.message?.includes('Contraseña incorrecta') || 
+            supaErr.message?.includes('no tiene permisos') ||
+            supaErr.message?.includes('desactivada') ||
+            supaErr.message?.includes('pausado') ||
+            supaErr.message?.includes('bloqueado')) {
           throw supaErr;
+        }
+        if (supaErr.message?.toLowerCase()?.includes('banned') || supaErr.message?.toLowerCase()?.includes('user is banned')) {
+          throw new Error('Tu cuenta se encuentra desactivada por la administración de la plataforma. Comunícate con soporte de Pídetelo para más información.');
         }
         console.warn('[LoginComponent] Supabase auth fallback:', supaErr);
       }

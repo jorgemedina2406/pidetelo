@@ -747,10 +747,10 @@ export class UsersService {
         if (tenantActive) {
           const { data: tenantRow } = await this.supabase.getClient()
             .from('tenants')
-            .select('is_active, status')
+            .select('is_active')
             .eq('id', user.tenant_id)
             .maybeSingle();
-          if (tenantRow && (tenantRow.is_active === false || tenantRow.status === 'inactive' || tenantRow.status === 'paused' || (tenantRow as any).is_paused === true)) {
+          if (tenantRow && (tenantRow.is_active === false || (tenantRow as any).status === 'inactive' || (tenantRow as any).status === 'paused')) {
             tenantActive = false;
           }
         }

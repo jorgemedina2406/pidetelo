@@ -17,19 +17,19 @@
 
           <div class="p-5 overflow-y-auto space-y-4">
             
-            <!-- WhatsApp Action Reminder -->
-            <div class="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-900 space-y-2">
-              <div class="flex items-center gap-2 font-bold text-sm">
-                <span>💬</span>
-                <span>¿No se abrió WhatsApp automáticamente?</span>
+            <!-- Order Confirmation Notice -->
+            <div class="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-900 dark:text-emerald-200 space-y-2">
+              <div class="flex items-center gap-2 font-bold text-sm text-emerald-800 dark:text-emerald-300">
+                <span>✓</span>
+                <span>¡Tu pedido ha sido recibido con éxito!</span>
               </div>
-              <p class="text-xs text-emerald-800 leading-relaxed">
-                Haz clic en el siguiente botón para enviar el detalle de tu orden al comercio y confirmar la entrega:
+              <p class="text-xs text-emerald-700 dark:text-emerald-300 leading-relaxed">
+                El comercio ya fue notificado y está preparando tu orden. Puedes hacer seguimiento en vivo del despacho y la ruta de entrega aquí mismo:
               </p>
-              <a [href]="getWhatsAppUrl(order)" 
-                 target="_blank"
-                 class="inline-flex w-full items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 px-4 rounded-xl shadow-md transition-all">
-                <span>Reenviar a WhatsApp</span>
+              <a [routerLink]="['/track', order.orderNumber.replace('#', '')]"
+                 (click)="cart.closeSuccessModal()"
+                 class="inline-flex w-full items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 px-4 rounded-xl shadow-md transition-all cursor-pointer">
+                <span>📍 Rastrear Pedido en Vivo</span>
                 <span>→</span>
               </a>
             </div>
