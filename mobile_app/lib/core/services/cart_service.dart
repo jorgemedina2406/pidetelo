@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/order_model.dart';
 import '../models/user_model.dart';
 import '../models/branch_model.dart';
@@ -506,6 +507,13 @@ class CartService extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       if (_items.isEmpty) {
         await prefs.remove(key);
+        // Eliminar también de Supabase
+        try {
+          final user = Supabase.instance.client.auth.currentUser;
+          if (user != null) {
+            await Supabase.instance.client.from('customer_carts').delete().eq('user_id', user.id);
+          }
+        } catch (_) {}
         return;
       }
 
@@ -523,6 +531,28 @@ class CartService extends ChangeNotifier {
         'updatedAt': DateTime.now().toIso8601String(),
       };
       await prefs.setString(key, jsonEncode(payload));
+
+      // Sincronizar en la nube con Supabase (Tabla customer_carts)
+      try {
+        final user = Supabase.instance.client.auth.currentUser;
+        if (user != null) {
+          await Supabase.instance.client.from('customer_carts').upsert({
+            'user_id': user.id,
+            'user_email': user.email,
+            'tenant_id': _currentCompanyId,
+            'branch_id': _currentBranch?.id,
+            'store_name': _currentStoreName,
+            'items': _items.map((i) => i.toJson()).toList(),
+            'items_count': _items.length,
+            'subtotal': subtotal,
+            'exchange_rate': _currentStoreExchangeRate,
+            'delivery_fee': deliveryFee,
+            'updated_at': DateTime.now().toIso8601String(),
+          }, onConflict: 'user_id');
+        }
+      } catch (dbErr) {
+        debugPrint('[CartService] Sync to Supabase customer_carts note: $dbErr');
+      }
     } catch (e) {
       debugPrint('[CartService] Error saving cart to storage: $e');
     }
@@ -533,11 +563,36 @@ class CartService extends ChangeNotifier {
       final key = _getCartKey(identifier ?? _currentAccountKey);
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(key);
-      if (raw == null) return null;
-      final decoded = jsonDecode(raw) as Map<String, dynamic>;
-      final items = decoded['items'] as List?;
-      if (items == null || items.isEmpty) return null;
-      return decoded;
+      if (raw != null) {
+        final decoded = jsonDecode(raw) as Map<String, dynamic>;
+        final items = decoded['items'] as List?;
+        if (items != null && items.isNotEmpty) return decoded;
+      }
+
+      // Fallback a consultar en Supabase (si cambió de teléfono o reinstaló la app)
+      try {
+        final user = Supabase.instance.client.auth.currentUser;
+        if (user != null) {
+          final res = await Supabase.instance.client
+              .from('customer_carts')
+              .select('*')
+              .eq('user_id', user.id)
+              .maybeSingle();
+
+          if (res != null && res['items'] is List && (res['items'] as List).isNotEmpty) {
+            return {
+              'items': res['items'],
+              'storeName': res['store_name'],
+              'companyId': res['tenant_id'],
+              'branchId': res['branch_id'],
+              'exchangeRate': res['exchange_rate'],
+              'baseDeliveryFee': res['delivery_fee'],
+            };
+          }
+        }
+      } catch (_) {}
+
+      return null;
     } catch (e) {
       return null;
     }
@@ -580,6 +635,14 @@ class CartService extends ChangeNotifier {
       final key = _getCartKey(identifier ?? _currentAccountKey);
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(key);
+
+      // Eliminar también de Supabase
+      try {
+        final user = Supabase.instance.client.auth.currentUser;
+        if (user != null) {
+          await Supabase.instance.client.from('customer_carts').delete().eq('user_id', user.id);
+        }
+      } catch (_) {}
     } catch (e) {
       debugPrint('[CartService] Error discarding cart: $e');
     }
