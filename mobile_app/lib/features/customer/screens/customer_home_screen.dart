@@ -391,13 +391,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   }
 
   void _openUserProfile() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) =>
-            UserProfileScreen(sessionService: widget.sessionService),
-      ),
-    );
+    setState(() => _selectedTab = 3);
   }
 
   void _openNotificationsSheet(BuildContext context) {

@@ -633,6 +633,14 @@ export class SuperAdminComponent implements OnInit {
   updateMerchantCoords(lat: number, lng: number): void {
     this.newMerchant.latitude = Number(lat.toFixed(6));
     this.newMerchant.longitude = Number(lng.toFixed(6));
+    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+      .then(r => r.json())
+      .then(d => {
+        if (d?.display_name && (!this.newMerchant.address || this.newMerchant.address.length < 5)) {
+          this.newMerchant.address = d.display_name.split(',').slice(0, 3).join(',').trim();
+        }
+      })
+      .catch(() => {});
   }
 
 detectMerchantGps(): void {
@@ -709,6 +717,8 @@ detectMerchantGps(): void {
       subcategories: this.newMerchant.subcategories,
       whatsapp: this.newMerchant.whatsapp.trim(),
       address: this.newMerchant.address.trim(),
+      latitude: Number(this.newMerchant.latitude) || 10.0777,
+      longitude: Number(this.newMerchant.longitude) || -69.2812,
       deliveryFee: this.newMerchant.deliveryFee,
       commission: this.newMerchant.commission,
       owner_name: this.newMerchant.ownerName.trim() || `${this.newMerchant.name} (Dueño)`,
