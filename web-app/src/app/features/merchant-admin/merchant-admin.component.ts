@@ -2999,6 +2999,19 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     });
   }
 
+  getFormattedQrCode(): string | null {
+    const inst = this.whatsappInstance();
+    const raw = inst?.qr_code;
+    if (!raw) return null;
+    if (raw.startsWith('http') || raw.startsWith('data:')) {
+      return raw;
+    }
+    if (raw.startsWith('iVBORw') || raw.length > 500) {
+      return `data:image/png;base64,${raw}`;
+    }
+    return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(raw)}`;
+  }
+
   connectWhatsApp(): void {
     const tenantId = this.getEffectiveTenantId();
     if (!tenantId) return;
@@ -3007,8 +3020,15 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     this.api.connectWhatsAppInstance(tenantId, branchId).subscribe({
       next: (res) => {
         this.isConnectingWhatsApp.set(false);
-        this.whatsappInstance.set(res.instance);
-        this.showToast('success', 'WhatsApp', 'Código QR generado. Escanéalo con tu teléfono.');
+        const inst = res?.instance || res;
+        this.whatsappInstance.set(inst);
+        if (inst?.qr_code) {
+          this.showToast('success', 'WhatsApp', 'Código QR generado. Escanéalo con tu teléfono.');
+        } else if (inst?.status === 'connected') {
+          this.showToast('success', 'WhatsApp', 'WhatsApp ya se encuentra conectado.');
+        } else {
+          this.showToast('info', 'WhatsApp', 'Instancia iniciada. Escanea el código QR.');
+        }
       },
       error: (err) => {
         this.isConnectingWhatsApp.set(false);

@@ -123,7 +123,7 @@ export class WhatsAppService {
         });
         if (connectRes.ok) {
           const connectData = await connectRes.json();
-          qrCodeBase64 = connectData.base64 || connectData.code || null;
+          qrCodeBase64 = connectData?.base64 || connectData?.qrcode?.base64 || connectData?.code || connectData?.qrcode?.code || null;
         }
       } catch (_) {}
     }
@@ -131,6 +131,10 @@ export class WhatsAppService {
     // Fallback: si el gateway no está activo aún en local, generar un QR demostrativo
     if (!qrCodeBase64 && !isConnected) {
       qrCodeBase64 = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=WAPP_PIDETELO_MULTI_TENANT_${instanceName}`;
+    }
+
+    if (qrCodeBase64 && !qrCodeBase64.startsWith('http') && !qrCodeBase64.startsWith('data:')) {
+      qrCodeBase64 = `data:image/png;base64,${qrCodeBase64}`;
     }
 
     const updated: WhatsAppInstanceData = {
