@@ -1755,13 +1755,19 @@
 
 
 
-              <!-- Botón Copiar Enlace Directo para WhatsApp de esta Sede -->
-              <div class="pt-2 border-t border-slate-100 dark:border-slate-800">
+              <!-- Botón Copiar Enlace Directo y Respuesta Automática de WhatsApp -->
+              <div class="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-1.5">
+                <button (click)="copyWhatsAppGreeting(branch)"
+                  class="w-full py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                  title="Copiar mensaje de bienvenida automático con link web y app móvil para WhatsApp Business">
+                  <span>💬</span>
+                  <span>Copiar Mensaje Bienvenida WhatsApp</span>
+                </button>
                 <button (click)="copyBranchMenuLink(branch)"
                   class="w-full py-1.5 px-3 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-bold text-[11px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                  title="Copiar link de pedido directo para el WhatsApp de esta sucursal">
+                  title="Copiar link web directo de esta sucursal">
                   <span>🔗</span>
-                  <span>Copiar Enlace WhatsApp de esta Sede</span>
+                  <span>Copiar Solo Enlace Web</span>
                 </button>
               </div>
 

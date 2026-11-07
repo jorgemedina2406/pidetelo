@@ -2688,6 +2688,33 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
 
 
 
+  copyWhatsAppGreeting(branch: Branch): void {
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://pidetelo.com';
+    const tenant = this.currentTenant();
+    const slug = tenant?.slug || 'burger-king';
+    const branchParam = branch.slug || branch.id;
+    const link = `${origin}/t/${slug}?branch=${branchParam}`;
+    const storeName = tenant?.name || 'nuestro restaurante';
+    const branchName = branch.name || 'Sede Principal';
+
+    const text = `¡Hola! 👋 Gracias por comunicarte con *${storeName}* (${branchName}). 🍔✨\n\n` +
+      `Para ver nuestro menú actualizado con fotos, precios en $ y Bs, y hacer tu pedido sin esperas, ingresa aquí:\n\n` +
+      `🌐 *Haz tu pedido en línea:* \n${link}\n\n` +
+      `📲 *O pide desde nuestra App Móvil oficial:*\n` +
+      `• Descárgala en tu teléfono para ordenar con 1 clic y rastrear a tu repartidor en tiempo real: ${origin}/descargar\n\n` +
+      `¡Tu orden entrará directo a cocina y podrás pagar en línea o al recibir! 🛵💨`;
+
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => {
+        alert(`✓ ¡Mensaje de Bienvenida copiado al portapapeles!\n\nPégalo en WhatsApp Business en:\nAjustes > Herramientas para la empresa > Mensaje de bienvenida.`);
+      }).catch(() => {
+        prompt('Copia este texto para la respuesta automática de WhatsApp:', text);
+      });
+    } else {
+      prompt('Copia este texto para la respuesta automática de WhatsApp:', text);
+    }
+  }
+
   copyBranchMenuLink(branch: Branch): void {
     const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:4200';
     const slug = this.currentTenant()?.slug || 'burger-king';
