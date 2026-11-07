@@ -33,16 +33,22 @@ android {
 
     signingConfigs {
         release {
-            keyAlias 'nextcon_key'
-            keyPassword 'nextcon123'
-            storeFile file('upload-keystore.jks')
-            storePassword 'nextcon123'
+            if (file('upload-keystore.jks').exists()) {
+                keyAlias 'nextcon_key'
+                keyPassword 'nextcon123'
+                storeFile file('upload-keystore.jks')
+                storePassword 'nextcon123'
+            }
         }
     }
 
     buildTypes {
         release {
-            signingConfig signingConfigs.release
+            if (file('upload-keystore.jks').exists()) {
+                signingConfig signingConfigs.release
+            } else {
+                signingConfig signingConfigs.debug
+            }
             minifyEnabled false
             shrinkResources false
         }

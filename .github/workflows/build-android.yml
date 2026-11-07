@@ -42,8 +42,8 @@ jobs:
       - name: Upload Customer APK
         uses: actions/upload-artifact@v4
         with:
-          name: pidetelo-cliente-release
-          path: mobile_app/build/app/outputs/flutter-apk/app-release.apk
+          name: Pidetelo-Cliente-Android-apk
+          path: mobile_app/build/app/outputs/flutter-apk/*.apk
 
   build-rider-app:
     name: Build Rider App APK
@@ -76,6 +76,5 @@ jobs:
       - name: Upload Rider APK
         uses: actions/upload-artifact@v4
         with:
-          name: pidetelo-repartidor-release
-          path: rider_app/build/app/outputs/flutter-apk/app-release.apk
-
+          name: Pidetelo-Rider-Android-apk
+          path: rider_app/build/app/outputs/flutter-apk/*.apk
