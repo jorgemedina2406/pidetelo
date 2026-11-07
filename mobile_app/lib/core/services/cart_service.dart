@@ -356,19 +356,89 @@ class CartService extends ChangeNotifier {
     }
   }
 
-  void setBranch(Branch? branch) {
-    if (_currentBranch?.id != branch?.id) {
-      if (_items.isNotEmpty) {
-        _items.clear();
-      }
-      _currentBranch = branch;
-      if (branch != null) {
-        _currentStoreName = '${branch.companyName} - ${branch.name}';
-        _currentCompanyId = branch.companyId;
-        _currentCompanyName = branch.companyName;
-      }
-      notifyListeners();
+  bool isDifferentStore({Branch? branch, String? storeName, String? companyId}) {
+    if (_items.isEmpty) return false;
+
+    // 1. Validar por Company / Tenant ID
+    final targetCompId = branch?.companyId ?? companyId;
+    if (_currentCompanyId != null &&
+        targetCompId != null &&
+        _currentCompanyId!.isNotEmpty &&
+        targetCompId.isNotEmpty) {
+      if (_currentCompanyId != targetCompId) return true;
     }
+
+    // 2. Validar por Sucursal (Branch ID)
+    if (branch != null && _currentBranch != null) {
+      if (_currentBranch!.id.isNotEmpty &&
+          branch.id.isNotEmpty &&
+          _currentBranch!.id != branch.id) {
+        return true;
+      }
+    }
+
+    // 3. Comparación por nombre comercial
+    if (storeName != null && _currentStoreName != null) {
+      final cur = _currentStoreName!.toLowerCase().trim();
+      final target = storeName.toLowerCase().trim();
+      if (cur.isNotEmpty && target.isNotEmpty) {
+        final curBase = cur.split('-').first.trim();
+        final targetBase = target.split('-').first.trim();
+        if (curBase != targetBase && !cur.contains(target) && !target.contains(cur)) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  void clearForNewStore({
+    Branch? branch,
+    String? storeName,
+    String? companyId,
+    String? companyName,
+    double? exchangeRate,
+    String? displayMode,
+    String? whatsapp,
+    String? accentColor,
+    double? baseDeliveryFee,
+  }) {
+    _items.clear();
+    _currentBranch = branch;
+    _currentCompanyId = branch?.companyId ?? companyId;
+    _currentCompanyName = branch?.companyName ?? companyName;
+    _currentStoreName = branch != null
+        ? '${branch.companyName} - ${branch.name}'
+        : (storeName ?? 'Comercio');
+    if (exchangeRate != null && exchangeRate > 0) _currentStoreExchangeRate = exchangeRate;
+    if (displayMode != null && displayMode.isNotEmpty) _currentStoreDisplayMode = displayMode;
+    if (whatsapp != null && whatsapp.isNotEmpty) _currentStoreWhatsapp = whatsapp;
+    if (accentColor != null && accentColor.isNotEmpty) _currentStoreAccentColor = accentColor;
+    if (baseDeliveryFee != null && baseDeliveryFee > 0) _currentStoreBaseDeliveryFee = baseDeliveryFee;
+    notifyListeners();
+    saveCartToStorage();
+  }
+
+  void setBranch(Branch? branch, {bool force = false}) {
+    if (branch == null) return;
+    if (_currentBranch?.id == branch.id) return;
+
+    // Si el carrito ya tiene productos y no se fuerza, preservamos el carrito de la sede actual
+    if (_items.isNotEmpty && !force) {
+      return;
+    }
+
+    if (force && _items.isNotEmpty) {
+      _items.clear();
+    }
+
+    _currentBranch = branch;
+    _currentStoreName = '${branch.companyName} - ${branch.name}';
+    _currentCompanyId = branch.companyId;
+    _currentCompanyName = branch.companyName;
+    notifyListeners();
+    saveCartToStorage();
   }
 
   void setStoreMetadata({

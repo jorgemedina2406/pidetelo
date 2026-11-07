@@ -22,6 +22,11 @@ export interface CartState {
   customer: CustomerInfo;
   activeTenant: Tenant | null;
   selectedBranch: Branch | null;
+  cartTenantId: string | null;
+  cartTenantName: string | null;
+  cartTenantSlug: string | null;
+  cartBranchId: string | null;
+  cartBranchName: string | null;
   isCartDrawerOpen: boolean;
   isCheckoutModalOpen: boolean;
   isSuccessModalOpen: boolean;
@@ -47,6 +52,11 @@ const initialState: CartState = {
   },
   activeTenant: null,
   selectedBranch: null,
+  cartTenantId: null,
+  cartTenantName: null,
+  cartTenantSlug: null,
+  cartBranchId: null,
+  cartBranchName: null,
   isCartDrawerOpen: false,
   isCheckoutModalOpen: false,
   isSuccessModalOpen: false,
@@ -74,18 +84,38 @@ function loadInitialCartState(): CartState {
     items: Array.isArray(saved.items) ? saved.items : [],
     customer: saved.customer ? { ...initialState.customer, ...saved.customer } : initialState.customer,
     fulfillmentType: saved.fulfillmentType || 'delivery',
-    paymentMethod: saved.paymentMethod || 'cash_usd'
+    paymentMethod: saved.paymentMethod || 'cash_usd',
+    cartTenantId: saved.cartTenantId || null,
+    cartTenantName: saved.cartTenantName || null,
+    cartTenantSlug: saved.cartTenantSlug || null,
+    cartBranchId: saved.cartBranchId || null,
+    cartBranchName: saved.cartBranchName || null
   };
 }
 
-function persistCart(state: { items: CartItem[]; customer: CustomerInfo; fulfillmentType: FulfillmentType; paymentMethod: PaymentMethod }) {
+function persistCart(state: {
+  items: CartItem[];
+  customer: CustomerInfo;
+  fulfillmentType: FulfillmentType;
+  paymentMethod: PaymentMethod;
+  cartTenantId?: string | null;
+  cartTenantName?: string | null;
+  cartTenantSlug?: string | null;
+  cartBranchId?: string | null;
+  cartBranchName?: string | null;
+}) {
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(CART_STORAGE_KEY, JSON.stringify({
       items: state.items,
       customer: state.customer,
       fulfillmentType: state.fulfillmentType,
-      paymentMethod: state.paymentMethod
+      paymentMethod: state.paymentMethod,
+      cartTenantId: state.cartTenantId || null,
+      cartTenantName: state.cartTenantName || null,
+      cartTenantSlug: state.cartTenantSlug || null,
+      cartBranchId: state.cartBranchId || null,
+      cartBranchName: state.cartBranchName || null
     }));
   } catch (_) {}
 }
@@ -338,7 +368,60 @@ export const CartStore = signalStore(
       patchState(store, { storeProducts: products });
     },
 
+    isDifferentStore(targetTenantId?: string, targetBranchId?: string): boolean {
+      if (store.items().length === 0) return false;
+      const curTenantId = store.cartTenantId() || store.activeTenant()?.id;
+      if (curTenantId && targetTenantId && curTenantId !== targetTenantId) {
+        return true;
+      }
+      const curBranchId = store.cartBranchId() || store.selectedBranch()?.id;
+      if (curBranchId && targetBranchId && curBranchId !== targetBranchId) {
+        return true;
+      }
+      return false;
+    },
+
+    clearForNewStore(tenant: Tenant, branch: Branch | null): void {
+      const tenantId = tenant.id;
+      const tenantName = tenant.name;
+      const tenantSlug = tenant.slug;
+      const branchId = branch?.id || null;
+      const branchName = branch?.name || null;
+
+      patchState(store, {
+        items: [],
+        activeTenant: tenant,
+        selectedBranch: branch,
+        cartTenantId: tenantId,
+        cartTenantName: tenantName,
+        cartTenantSlug: tenantSlug,
+        cartBranchId: branchId,
+        cartBranchName: branchName,
+        appliedCoupon: null
+      });
+
+      persistCart({
+        items: [],
+        customer: store.customer(),
+        fulfillmentType: store.fulfillmentType(),
+        paymentMethod: store.paymentMethod(),
+        cartTenantId: tenantId,
+        cartTenantName: tenantName,
+        cartTenantSlug: tenantSlug,
+        cartBranchId: branchId,
+        cartBranchName: branchName
+      });
+    },
+
     quickAddProduct(product: Product): void {
+      const tenant = store.activeTenant();
+      const branch = store.selectedBranch();
+      const cartTenantId = tenant?.id || store.cartTenantId() || null;
+      const cartTenantName = tenant?.name || store.cartTenantName() || null;
+      const cartTenantSlug = tenant?.slug || store.cartTenantSlug() || null;
+      const cartBranchId = branch?.id || store.cartBranchId() || null;
+      const cartBranchName = branch?.name || store.cartBranchName() || null;
+
       const cartItemId = `${product.id}`;
       const existingIndex = store.items().findIndex(i => i.cartItemId === cartItemId);
       let updatedItems: CartItem[];
@@ -366,8 +449,25 @@ export const CartStore = signalStore(
         };
         updatedItems = [...store.items(), newItem];
       }
-      patchState(store, { items: updatedItems });
-      persistCart({ items: updatedItems, customer: store.customer(), fulfillmentType: store.fulfillmentType(), paymentMethod: store.paymentMethod() });
+      patchState(store, {
+        items: updatedItems,
+        cartTenantId,
+        cartTenantName,
+        cartTenantSlug,
+        cartBranchId,
+        cartBranchName
+      });
+      persistCart({
+        items: updatedItems,
+        customer: store.customer(),
+        fulfillmentType: store.fulfillmentType(),
+        paymentMethod: store.paymentMethod(),
+        cartTenantId,
+        cartTenantName,
+        cartTenantSlug,
+        cartBranchId,
+        cartBranchName
+      });
     },
 
     setTenant(tenant: Tenant): void {
@@ -392,6 +492,14 @@ export const CartStore = signalStore(
     },
 
     addItem(product: Product, quantity: number, selectedModifiers: SelectedModifier[], notes?: string): void {
+      const tenant = store.activeTenant();
+      const branch = store.selectedBranch();
+      const cartTenantId = tenant?.id || store.cartTenantId() || null;
+      const cartTenantName = tenant?.name || store.cartTenantName() || null;
+      const cartTenantSlug = tenant?.slug || store.cartTenantSlug() || null;
+      const cartBranchId = branch?.id || store.cartBranchId() || null;
+      const cartBranchName = branch?.name || store.cartBranchName() || null;
+
       // Calculate unit modifier delta
       const modifiersSum = selectedModifiers.reduce((acc, mod) => acc + mod.priceDelta, 0);
       const singleUnitPrice = product.price + modifiersSum;
@@ -428,8 +536,26 @@ export const CartStore = signalStore(
         };
         newItems = [...store.items(), newItem];
       }
-      patchState(store, { items: newItems, isCartDrawerOpen: true });
-      persistCart({ items: newItems, customer: store.customer(), fulfillmentType: store.fulfillmentType(), paymentMethod: store.paymentMethod() });
+      patchState(store, {
+        items: newItems,
+        isCartDrawerOpen: true,
+        cartTenantId,
+        cartTenantName,
+        cartTenantSlug,
+        cartBranchId,
+        cartBranchName
+      });
+      persistCart({
+        items: newItems,
+        customer: store.customer(),
+        fulfillmentType: store.fulfillmentType(),
+        paymentMethod: store.paymentMethod(),
+        cartTenantId,
+        cartTenantName,
+        cartTenantSlug,
+        cartBranchId,
+        cartBranchName
+      });
     },
 
     updateQuantity(cartItemId: string, delta: number): void {
@@ -450,24 +576,106 @@ export const CartStore = signalStore(
           itemTotal: Number((singlePrice * newQty).toFixed(2))
         };
       }
-      patchState(store, { items: currentItems });
-      persistCart({ items: currentItems, customer: store.customer(), fulfillmentType: store.fulfillmentType(), paymentMethod: store.paymentMethod() });
+      const cartTenantId = currentItems.length > 0 ? store.cartTenantId() : null;
+      const cartTenantName = currentItems.length > 0 ? store.cartTenantName() : null;
+      const cartTenantSlug = currentItems.length > 0 ? store.cartTenantSlug() : null;
+      const cartBranchId = currentItems.length > 0 ? store.cartBranchId() : null;
+      const cartBranchName = currentItems.length > 0 ? store.cartBranchName() : null;
+
+      patchState(store, {
+        items: currentItems,
+        cartTenantId,
+        cartTenantName,
+        cartTenantSlug,
+        cartBranchId,
+        cartBranchName
+      });
+      persistCart({
+        items: currentItems,
+        customer: store.customer(),
+        fulfillmentType: store.fulfillmentType(),
+        paymentMethod: store.paymentMethod(),
+        cartTenantId,
+        cartTenantName,
+        cartTenantSlug,
+        cartBranchId,
+        cartBranchName
+      });
     },
 
     removeItem(cartItemId: string): void {
       const remaining = store.items().filter(item => item.cartItemId !== cartItemId);
+      const cartTenantId = remaining.length > 0 ? store.cartTenantId() : null;
+      const cartTenantName = remaining.length > 0 ? store.cartTenantName() : null;
+      const cartTenantSlug = remaining.length > 0 ? store.cartTenantSlug() : null;
+      const cartBranchId = remaining.length > 0 ? store.cartBranchId() : null;
+      const cartBranchName = remaining.length > 0 ? store.cartBranchName() : null;
+
       patchState(store, {
-        items: remaining
+        items: remaining,
+        cartTenantId,
+        cartTenantName,
+        cartTenantSlug,
+        cartBranchId,
+        cartBranchName
       });
-      persistCart({ items: remaining, customer: store.customer(), fulfillmentType: store.fulfillmentType(), paymentMethod: store.paymentMethod() });
+      persistCart({
+        items: remaining,
+        customer: store.customer(),
+        fulfillmentType: store.fulfillmentType(),
+        paymentMethod: store.paymentMethod(),
+        cartTenantId,
+        cartTenantName,
+        cartTenantSlug,
+        cartBranchId,
+        cartBranchName
+      });
     },
 
     clearCart(): void {
-      patchState(store, { items: [] });
-      persistCart({ items: [], customer: store.customer(), fulfillmentType: store.fulfillmentType(), paymentMethod: store.paymentMethod() });
+      patchState(store, {
+        items: [],
+        cartTenantId: null,
+        cartTenantName: null,
+        cartTenantSlug: null,
+        cartBranchId: null,
+        cartBranchName: null,
+        appliedCoupon: null
+      });
+      persistCart({
+        items: [],
+        customer: store.customer(),
+        fulfillmentType: store.fulfillmentType(),
+        paymentMethod: store.paymentMethod(),
+        cartTenantId: null,
+        cartTenantName: null,
+        cartTenantSlug: null,
+        cartBranchId: null,
+        cartBranchName: null
+      });
     },
 
-    setBranch(selectedBranch: Branch | null): void {
+    setBranch(selectedBranch: Branch | null, force: boolean = false): void {
+      if (force && store.items().length > 0) {
+        patchState(store, {
+          items: [],
+          selectedBranch,
+          cartBranchId: selectedBranch?.id || null,
+          cartBranchName: selectedBranch?.name || null
+        });
+        persistCart({
+          items: [],
+          customer: store.customer(),
+          fulfillmentType: store.fulfillmentType(),
+          paymentMethod: store.paymentMethod(),
+          cartTenantId: store.cartTenantId(),
+          cartTenantName: store.cartTenantName(),
+          cartTenantSlug: store.cartTenantSlug(),
+          cartBranchId: selectedBranch?.id || null,
+          cartBranchName: selectedBranch?.name || null
+        });
+        return;
+      }
       patchState(store, { selectedBranch });
     },
 
@@ -536,10 +744,10 @@ export const CartStore = signalStore(
       const order: Order = {
         id: `ord_${Date.now()}`,
         orderNumber,
-        tenantId: (tenant?.id && tenant.id !== 'tenant-1') ? tenant.id : (branch?.companyId || 'dac59429-fd6f-4d3e-8b2e-ab0e23828c1f'),
-        tenantName: tenant?.name || branch?.companyName || 'Comercio',
-        branchId: branch?.id,
-        branchName: branch?.name,
+        tenantId: store.cartTenantId() || ((tenant?.id && tenant.id !== 'tenant-1') ? tenant.id : (branch?.companyId || 'dac59429-fd6f-4d3e-8b2e-ab0e23828c1f')),
+        tenantName: store.cartTenantName() || tenant?.name || branch?.companyName || 'Comercio',
+        branchId: store.cartBranchId() || branch?.id,
+        branchName: store.cartBranchName() || branch?.name,
         source: 'whatsapp_link',
         status: 'received',
         fulfillmentType: store.fulfillmentType(),

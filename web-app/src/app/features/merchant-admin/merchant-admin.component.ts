@@ -210,6 +210,15 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     return (this.currentTenant() as any)?.email || (this.currentTenant() as any)?.contact?.email || this.auth.currentUser()?.email || 'Sin correo asignado';
   }
 
+  isRealPagoMovil(cred?: any): boolean {
+    if (!cred || !cred.pagoMovilPhone || !cred.pagoMovilBank) return false;
+    const cleanPhone = String(cred.pagoMovilPhone || '').replace(/\D/g, '');
+    const cleanId = String(cred.pagoMovilIdNumber || '').replace(/\D/g, '');
+    if (cleanPhone === '04121234567' || cleanPhone === '04140000000' || cleanPhone.includes('1234567')) return false;
+    if (cleanId.includes('50123456') || cleanId.includes('12345678') || cleanId === '00000000') return false;
+    return true;
+  }
+
   // Compatibilidad con templates y referencias existentes
   readonly selectedBranchId = computed<string>(() => this.activeBranchId());
   readonly selectedBranch = computed<Branch | null>(() => this.activeBranch());

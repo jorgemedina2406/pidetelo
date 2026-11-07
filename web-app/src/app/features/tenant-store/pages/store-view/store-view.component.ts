@@ -58,6 +58,10 @@ export class StoreViewComponent implements OnInit {
   readonly searchQuery = signal<string>('');
   
   readonly activeModalProduct = signal<Product | null>(null);
+  readonly isStoreSwitchModalOpen = signal<boolean>(false);
+  readonly storeSwitchModalData = signal<{ title: string; message: string; type: 'store' | 'branch' } | null>(null);
+  readonly pendingProductAdd = signal<{ product: Product; quantity: number; modifiers: any[]; notes?: string } | null>(null);
+  readonly pendingBranchSwitch = signal<Branch | null>(null);
 
   readonly activeBranchRate = computed(() => {
     const bRate = this.cart.selectedBranch()?.currencySettings?.exchangeRate ||
@@ -209,6 +213,24 @@ export class StoreViewComponent implements OnInit {
   }
 
   selectBranch(branch: Branch): void {
+    if (this.cart.items().length > 0 && this.cart.cartBranchId() && this.cart.cartBranchId() !== branch.id) {
+      const curBranch = this.cart.cartBranchName() || 'la sede anterior';
+      this.pendingBranchSwitch.set(branch);
+      this.storeSwitchModalData.set({
+        title: '¿Cambiar de sucursal?',
+        message: `Tienes productos de la sucursal "${curBranch}" en tu carrito.\n\nLos pedidos en Pídetelo solo pueden pertenecer a una misma sede. Si cambias a "${branch.name}", se vaciará el carrito para sincronizar disponibilidad y tarifas. ¿Deseas continuar?`,
+        type: 'branch'
+      });
+      this.isStoreSwitchModalOpen.set(true);
+      this.isBranchModalOpen.set(false);
+      return;
+    }
+
+    this.applyBranchSwitch(branch, false);
+    this.isBranchModalOpen.set(false);
+  }
+
+  private applyBranchSwitch(branch: Branch, forceClear: boolean): void {
     const t = this.tenant();
     const effectiveRadius = t?.deliverySettings?.deliveryRadiusKm
       ? Math.max(Number(branch.deliveryRadiusKm) || 0, Number(t.deliverySettings.deliveryRadiusKm))
@@ -223,8 +245,7 @@ export class StoreViewComponent implements OnInit {
       deliveryTiers: effectiveTiers
     };
 
-    this.cart.setBranch(enrichedBranch);
-    this.isBranchModalOpen.set(false);
+    this.cart.setBranch(enrichedBranch, forceClear);
     if (t) {
       this.isLoading.set(true);
       this.loadCatalog(t.id, branch.id);
@@ -236,7 +257,54 @@ export class StoreViewComponent implements OnInit {
   }
 
   onProductAdd(event: { product: Product; quantity: number; modifiers: any[]; notes?: string }): void {
+    const t = this.tenant();
+    const b = this.cart.selectedBranch();
+    if (this.cart.isDifferentStore(t?.id, b?.id)) {
+      const curStore = this.cart.cartTenantName() || 'otro comercio';
+      const curBranch = this.cart.cartBranchName();
+      const currentFull = curBranch ? `${curStore} (${curBranch})` : curStore;
+      const targetStore = t?.name || 'este comercio';
+      const targetBranch = b?.name;
+      const targetFull = targetBranch ? `${targetStore} (${targetBranch})` : targetStore;
+
+      this.pendingProductAdd.set(event);
+      this.storeSwitchModalData.set({
+        title: '¿Empezar un nuevo pedido?',
+        message: `Ya tienes productos en tu carrito de "${currentFull}".\n\nLos pedidos en Pídetelo solo pueden ser de un mismo comercio y sucursal.\n\n¿Deseas vaciar tu carrito actual para agregar productos de "${targetFull}"?`,
+        type: 'store'
+      });
+      this.isStoreSwitchModalOpen.set(true);
+      return;
+    }
+
     this.cart.addItem(event.product, event.quantity, event.modifiers, event.notes);
     this.activeModalProduct.set(null);
+  }
+
+  confirmStoreSwitch(): void {
+    const t = this.tenant();
+    const b = this.cart.selectedBranch();
+    const pendingAdd = this.pendingProductAdd();
+    const pendingBranch = this.pendingBranchSwitch();
+
+    if (pendingAdd && t) {
+      this.cart.clearForNewStore(t, b);
+      this.cart.addItem(pendingAdd.product, pendingAdd.quantity, pendingAdd.modifiers, pendingAdd.notes);
+      this.activeModalProduct.set(null);
+      this.pendingProductAdd.set(null);
+    } else if (pendingBranch && t) {
+      this.applyBranchSwitch(pendingBranch, true);
+      this.pendingBranchSwitch.set(null);
+    }
+
+    this.isStoreSwitchModalOpen.set(false);
+    this.storeSwitchModalData.set(null);
+  }
+
+  cancelStoreSwitch(): void {
+    this.pendingProductAdd.set(null);
+    this.pendingBranchSwitch.set(null);
+    this.isStoreSwitchModalOpen.set(false);
+    this.storeSwitchModalData.set(null);
   }
 }

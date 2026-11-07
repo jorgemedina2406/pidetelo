@@ -118,10 +118,62 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
     );
 
     if (selected != null && mounted) {
+      final cart = CartService();
+      if (cart.items.isNotEmpty && _selectedBranch != null && _selectedBranch!.id != selected.id) {
+        final confirm = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.storefront_rounded, color: Colors.orange.shade700, size: 24),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    '¿Cambiar de sucursal?',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+                  ),
+                ),
+              ],
+            ),
+            content: Text(
+              'Tienes productos de la sucursal "${_selectedBranch!.name}" en tu carrito.\n\n'
+              'Los pedidos en Pídetelo solo pueden pertenecer a una misma sede. Si cambias a "${selected.name}", se vaciará el carrito para sincronizar disponibilidad y tarifas. ¿Deseas continuar?',
+              style: const TextStyle(fontSize: 14, height: 1.4),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFF97316),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Cambiar y vaciar', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        );
+
+        if (confirm != true) return;
+        cart.setBranch(selected, force: true);
+      } else {
+        cart.setBranch(selected);
+      }
+
       setState(() {
         _selectedBranch = selected;
       });
-      CartService().setBranch(selected);
       _loadRealProducts();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -645,8 +697,80 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                       Expanded(
                         child: ElevatedButton(
                           onPressed: isValidSelection()
-                              ? () {
-                                  CartService().addItem(
+                              ? () async {
+                                  final cart = CartService();
+                                  final storeName = widget.storeData['name']?.toString() ?? 'este comercio';
+                                  final companyId = widget.storeData['id']?.toString() ?? _selectedBranch?.companyId;
+
+                                  if (cart.isDifferentStore(
+                                    branch: _selectedBranch,
+                                    storeName: storeName,
+                                    companyId: companyId,
+                                  )) {
+                                    final currentStore = cart.currentStoreName ?? 'otro comercio';
+                                    final confirm = await showDialog<bool>(
+                                      context: context,
+                                      builder: (dialogCtx) => AlertDialog(
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                        title: Row(
+                                          children: [
+                                            Container(
+                                              padding: const EdgeInsets.all(8),
+                                              decoration: BoxDecoration(
+                                                color: Colors.orange.shade50,
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: Icon(Icons.storefront_rounded, color: Colors.orange.shade700, size: 24),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            const Expanded(
+                                              child: Text(
+                                                '¿Empezar nuevo pedido?',
+                                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        content: Text(
+                                          'Ya tienes productos en tu carrito de "$currentStore".\n\n'
+                                          'Los pedidos en Pídetelo solo pueden ser de un mismo comercio y sucursal. '
+                                          '¿Deseas vaciar tu carrito actual para agregar productos de "$storeName"?',
+                                          style: const TextStyle(fontSize: 14, height: 1.4),
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(dialogCtx, false),
+                                            child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+                                          ),
+                                          ElevatedButton(
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: const Color(0xFFF97316),
+                                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                            ),
+                                            onPressed: () => Navigator.pop(dialogCtx, true),
+                                            child: const Text('Vaciar y empezar nuevo', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+
+                                    if (confirm != true) return;
+
+                                    cart.clearForNewStore(
+                                      branch: _selectedBranch,
+                                      storeName: storeName,
+                                      companyId: companyId,
+                                      companyName: widget.storeData['name']?.toString(),
+                                      exchangeRate: rate,
+                                      displayMode: displayMode,
+                                      whatsapp: widget.storeData['whatsappNumber']?.toString(),
+                                      accentColor: widget.storeData['accentColor']?.toString(),
+                                      baseDeliveryFee: (widget.storeData['baseDeliveryFee'] as num?)?.toDouble(),
+                                    );
+                                  }
+
+                                  cart.addItem(
                                     product,
                                     quantity: quantity,
                                     options: selectedOptions,
@@ -676,7 +800,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                           const SizedBox(width: 12),
                                           Expanded(
                                             child: Text(
-                                              '¡ agregado al carrito!',
+                                              '¡${product.name} agregado al carrito!',
                                               style: GoogleFonts.outfit(
                                                 fontWeight: FontWeight.w700,
                                                 fontSize: 14,

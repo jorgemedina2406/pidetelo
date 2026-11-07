@@ -13,7 +13,15 @@
                 </div>
                 <div>
                   <h3 class="font-bold text-slate-900">Tu Pedido</h3>
-                  <p class="text-xs text-slate-500">{{ cart.totalItemsCount() }} producto(s)</p>
+                  <p class="text-xs text-slate-500">
+                    {{ cart.totalItemsCount() }} producto(s)
+                    @if (cart.cartTenantName(); as storeName) {
+                      • <span class="font-semibold text-orange-600">{{ storeName }}</span>
+                      @if (cart.cartBranchName(); as branchName) {
+                        <span class="text-slate-400"> ({{ branchName }})</span>
+                      }
+                    }
+                  </p>
                 </div>
               </div>
               <button (click)="cart.closeCart()" 
