@@ -40,5 +40,19 @@
     "is_active": true,
     "created_at": "2026-11-06T10:02:20.882Z",
     "updated_at": "2026-11-06T10:02:20.882Z"
+  },
+  {
+    "id": "0695527d-e01f-4c60-a594-5ccc75a2b6db",
+    "tenant_id": "5ecb4b6c-6ad8-45a2-8a5d-26af406cd31c",
+    "branch_id": null,
+    "branch_name": "Todas las Sedes (Acceso Global)",
+    "name": "Mc Donalds",
+    "email": "mcdonalds@comercio.com",
+    "phone": "+584125163118",
+    "role": "MERCHANT_OWNER",
+    "password": "Mcdonalds.",
+    "is_active": true,
+    "created_at": "2026-11-07T18:59:53.095Z",
+    "updated_at": "2026-11-07T18:59:53.095Z"
   }
 ]

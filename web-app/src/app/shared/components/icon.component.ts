@@ -57,6 +57,7 @@ export type IconName =
   | 'file-text'
   | 'arrow-down'
   | 'folder'
+  | 'send'
   | 'upload'
   | 'copy'
   | 'tag'
@@ -346,6 +347,10 @@ export type IconName =
         }
         @case ('folder') {
           <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+        }
+        @case ('send') {
+          <line x1="22" y1="2" x2="11" y2="13"/>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"/>
         }
         @case ('upload') {
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>

@@ -101,5 +101,63 @@
       "cash_local",
       "card_terminal"
     ]
+  },
+  "5ecb4b6c-6ad8-45a2-8a5d-26af406cd31c": {
+    "category": "Restaurantes",
+    "subcategories": [
+      "Hamburguesas",
+      "Comida Rápida"
+    ],
+    "tagline": "",
+    "exchange_rate": 896.12,
+    "base_currency": "USD",
+    "display_mode": "usd_and_bs",
+    "delivery_tiers": [
+      {
+        "id": "tier_1",
+        "maxKm": 2,
+        "minKm": 0,
+        "price": 1.5
+      },
+      {
+        "id": "tier_2",
+        "maxKm": 5,
+        "minKm": 2,
+        "price": 3
+      },
+      {
+        "id": "tier_3",
+        "maxKm": 8,
+        "minKm": 5,
+        "price": 4.5
+      },
+      {
+        "id": "tier_1794078219837",
+        "minKm": 8,
+        "maxKm": 11,
+        "price": 6
+      }
+    ],
+    "accepted_payment_methods": [
+      "cash_usd",
+      "mobile_transfer",
+      "cash_local"
+    ],
+    "acceptedPaymentMethods": [
+      "cash_usd",
+      "mobile_transfer",
+      "cash_local"
+    ],
+    "currency_settings": {
+      "baseCurrency": "USD",
+      "displayMode": "usd_and_bs",
+      "exchangeRate": 896.12,
+      "lastRateUpdate": "2026-11-07T19:03:49.168Z",
+      "acceptedPaymentMethods": [
+        "cash_usd",
+        "mobile_transfer",
+        "cash_local"
+      ]
+    }
   }
 }

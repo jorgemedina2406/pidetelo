@@ -97,7 +97,36 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
   readonly isSidebarExpanded = signal(true);
   readonly isMobileMenuOpen = signal(false);
   readonly productViewMode = signal<'grid' | 'list'>('grid');
-  readonly activeTab = signal<'orders' | 'products' | 'branches' | 'riders' | 'gps_map' | 'users' | 'settings' | 'coupons'>('orders');
+  readonly activeTab = signal<'orders' | 'products' | 'branches' | 'riders' | 'gps_map' | 'users' | 'settings' | 'coupons' | 'whatsapp'>('orders');
+
+  // --- WHATSAPP BOT & CENTRAL DE MENSAJERIA ---
+  readonly whatsappSubTab = signal<'chat' | 'settings'>('chat');
+  readonly whatsappInstance = signal<any>(null);
+  readonly whatsappConversations = signal<any[]>([]);
+  readonly selectedWhatsAppConversation = signal<any>(null);
+  readonly whatsappMessages = signal<any[]>([]);
+  readonly whatsappSearchQuery = signal<string>('');
+  readonly whatsappNewMessageText = signal<string>('');
+  readonly isLoadingWhatsApp = signal<boolean>(false);
+  readonly isConnectingWhatsApp = signal<boolean>(false);
+  readonly isSendingWhatsApp = signal<boolean>(false);
+  readonly whatsappSettings = signal<{ greetingMessage: string; autoReplyEnabled: boolean; pauseDurationMinutes: number }>({
+    greetingMessage: '¡Hola! Bienvenido a nuestro canal oficial de atención. ¿En qué podemos ayudarte hoy?',
+    autoReplyEnabled: true,
+    pauseDurationMinutes: 120
+  });
+  private whatsappPollingInterval: any = null;
+
+  readonly filteredWhatsAppConversations = computed(() => {
+    const q = this.whatsappSearchQuery().toLowerCase().trim();
+    const list = this.whatsappConversations();
+    if (!q) return list;
+    return list.filter(c =>
+      (c.customer_name && c.customer_name.toLowerCase().includes(q)) ||
+      (c.customer_phone && c.customer_phone.includes(q)) ||
+      (c.last_message && c.last_message.toLowerCase().includes(q))
+    );
+  });
 
   // --- SISTEMA DE TOASTS LLAMATIVOS PARA COMERCIO ---
   readonly activeToasts = signal<{ id: string; type: 'success' | 'error' | 'info'; title: string; message: string }[]>([]);
@@ -935,6 +964,27 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
           this.settingsLocationMarker = undefined;
         }
       }
+
+      if (tab === 'whatsapp') {
+        this.loadWhatsAppInstance();
+        this.loadWhatsAppConversations();
+        if (!this.whatsappPollingInterval) {
+          this.whatsappPollingInterval = setInterval(() => {
+            if (this.activeTab() === 'whatsapp') {
+              this.loadWhatsAppConversations(true);
+              const sel = this.selectedWhatsAppConversation();
+              if (sel) {
+                this.loadWhatsAppMessages(sel.id, true);
+              }
+            }
+          }, 5000);
+        }
+      } else {
+        if (this.whatsappPollingInterval) {
+          clearInterval(this.whatsappPollingInterval);
+          this.whatsappPollingInterval = null;
+        }
+      }
     });
 
     effect(() => {
@@ -1145,6 +1195,10 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.whatsappPollingInterval) {
+      clearInterval(this.whatsappPollingInterval);
+      this.whatsappPollingInterval = null;
+    }
     if (this.ordersPollingInterval) {
       clearInterval(this.ordersPollingInterval);
     }
@@ -2916,6 +2970,152 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       this.showToast('info', 'Cupón Eliminado', `El cupón "${c.code}" fue eliminado.`);
       this.couponActionNotice.set(`Cupón "${c.code}" eliminado.`);
       setTimeout(() => this.couponActionNotice.set(null), 3500);
+    });
+  }
+
+  // ================= WHATSAPP BOT & CENTRAL DE MENSAJERIA =================
+  getEffectiveTenantId(): string {
+    return this.currentTenant().id || this.auth.currentUser()?.tenantId || '';
+  }
+
+  loadWhatsAppInstance(): void {
+    const tenantId = this.getEffectiveTenantId();
+    if (!tenantId) return;
+    const branchId = this.activeBranch()?.id;
+    this.api.getWhatsAppInstance(tenantId, branchId).subscribe({
+      next: (instance) => {
+        this.whatsappInstance.set(instance);
+        if (instance) {
+          this.whatsappSettings.set({
+            greetingMessage: instance.greeting_message || '¡Hola! Bienvenido a nuestro canal oficial de atención. ¿En qué podemos ayudarte hoy?',
+            autoReplyEnabled: instance.auto_reply_enabled ?? true,
+            pauseDurationMinutes: instance.pause_duration_minutes ?? 120
+          });
+        }
+      },
+      error: (err) => {
+        console.error('Error loading WhatsApp instance:', err);
+      }
+    });
+  }
+
+  connectWhatsApp(): void {
+    const tenantId = this.getEffectiveTenantId();
+    if (!tenantId) return;
+    const branchId = this.activeBranch()?.id;
+    this.isConnectingWhatsApp.set(true);
+    this.api.connectWhatsAppInstance(tenantId, branchId).subscribe({
+      next: (res) => {
+        this.isConnectingWhatsApp.set(false);
+        this.whatsappInstance.set(res.instance);
+        this.showToast('success', 'WhatsApp', 'Código QR generado. Escanéalo con tu teléfono.');
+      },
+      error: (err) => {
+        this.isConnectingWhatsApp.set(false);
+        this.showToast('error', 'Error WhatsApp', err.error?.message || 'No se pudo iniciar la conexión con WhatsApp.');
+      }
+    });
+  }
+
+  async disconnectWhatsApp(): Promise<void> {
+    const tenantId = this.getEffectiveTenantId();
+    if (!tenantId) return;
+    const branchId = this.activeBranch()?.id;
+    const confirmed = await this.confirmModal.confirm('¿Estás seguro de que deseas desconectar este número de WhatsApp? El bot dejará de responder.');
+    if (!confirmed) return;
+
+    this.api.disconnectWhatsAppInstance(tenantId, branchId).subscribe({
+      next: () => {
+        this.loadWhatsAppInstance();
+        this.showToast('info', 'WhatsApp Desconectado', 'Se ha cerrado la sesión de WhatsApp.');
+      },
+      error: (err) => {
+        this.showToast('error', 'Error', err.error?.message || 'No se pudo desconectar.');
+      }
+    });
+  }
+
+  saveWhatsAppSettings(): void {
+    const tenantId = this.getEffectiveTenantId();
+    if (!tenantId) return;
+    const branchId = this.activeBranch()?.id;
+    this.api.updateWhatsAppSettings(tenantId, this.whatsappSettings(), branchId).subscribe({
+      next: (updated) => {
+        this.whatsappInstance.set(updated);
+        this.showToast('success', 'Configuración Guardada', 'Los ajustes de respuestas y bienvenida han sido actualizados.');
+      },
+      error: (err) => {
+        this.showToast('error', 'Error al Guardar', err.error?.message || 'No se pudieron guardar los ajustes.');
+      }
+    });
+  }
+
+  loadWhatsAppConversations(silent = false): void {
+    const tenantId = this.getEffectiveTenantId();
+    if (!tenantId) return;
+    if (!silent) this.isLoadingWhatsApp.set(true);
+    this.api.getWhatsAppConversations(tenantId).subscribe({
+      next: (convs) => {
+        this.whatsappConversations.set(convs || []);
+        if (!silent) this.isLoadingWhatsApp.set(false);
+      },
+      error: (err) => {
+        if (!silent) this.isLoadingWhatsApp.set(false);
+        console.error('Error loading conversations:', err);
+      }
+    });
+  }
+
+  selectWhatsAppConversation(conv: any): void {
+    this.selectedWhatsAppConversation.set(conv);
+    this.loadWhatsAppMessages(conv.id);
+  }
+
+  loadWhatsAppMessages(conversationId: string, silent = false): void {
+    this.api.getWhatsAppMessages(conversationId).subscribe({
+      next: (msgs) => {
+        this.whatsappMessages.set(msgs || []);
+      },
+      error: (err) => {
+        console.error('Error loading messages:', err);
+      }
+    });
+  }
+
+  sendWhatsAppChatMessage(): void {
+    const text = this.whatsappNewMessageText().trim();
+    const conv = this.selectedWhatsAppConversation();
+    if (!text || !conv) return;
+
+    this.isSendingWhatsApp.set(true);
+    this.api.sendWhatsAppMessage(conv.id, text).subscribe({
+      next: (res) => {
+        this.isSendingWhatsApp.set(false);
+        this.whatsappNewMessageText.set('');
+        this.loadWhatsAppMessages(conv.id, true);
+        this.loadWhatsAppConversations(true);
+        this.selectedWhatsAppConversation.update(c => c ? { ...c, mode: 'human' } : null);
+      },
+      error: (err) => {
+        this.isSendingWhatsApp.set(false);
+        this.showToast('error', 'Error al Enviar', err.error?.message || 'No se pudo enviar el mensaje.');
+      }
+    });
+  }
+
+  toggleWhatsAppBotMode(mode: 'bot' | 'human'): void {
+    const conv = this.selectedWhatsAppConversation();
+    if (!conv) return;
+    const duration = this.whatsappSettings().pauseDurationMinutes || 120;
+    this.api.toggleWhatsAppBotMode(conv.id, mode, duration).subscribe({
+      next: (res) => {
+        this.selectedWhatsAppConversation.update(c => c ? { ...c, mode: res.mode, paused_until: res.paused_until } : null);
+        this.loadWhatsAppConversations(true);
+        this.showToast('info', 'Modo WhatsApp', mode === 'human' ? `Bot pausado por ${duration} minutos. Estás atendiendo como Operador.` : 'Bot reanudado para este cliente.');
+      },
+      error: (err) => {
+        this.showToast('error', 'Error', err.error?.message || 'No se pudo cambiar el modo.');
+      }
     });
   }
 

@@ -75,7 +75,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
       builder: (ctx) {
         final isDark = Theme.of(ctx).brightness == Brightness.dark;
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
           backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
           title: Row(
             children: [
@@ -85,7 +86,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   color: AppTheme.primary.withOpacity(0.15),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.shopping_bag_rounded, color: AppTheme.primary, size: 22),
+                child: const Icon(Icons.shopping_bag_rounded,
+                    color: AppTheme.primary, size: 22),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -108,7 +110,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
               color: isDark ? Colors.white70 : const Color(0xFF475569),
             ),
           ),
-          actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          actionsPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           actions: [
             TextButton(
               onPressed: () async {
@@ -131,7 +134,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('✓ Se recuperaron $count producto(s) en tu carrito'),
+                      content: Text(
+                          '✓ Se recuperaron $count producto(s) en tu carrito'),
                       backgroundColor: const Color(0xFF10B981),
                       duration: const Duration(seconds: 3),
                       behavior: SnackBarBehavior.floating,
@@ -142,8 +146,10 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primary,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               ),
               child: Text(
                 'Continuar pedido',
@@ -162,7 +168,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   void _startNotificationsSync() {
     _notifSyncTimer?.cancel();
     _syncNotifications();
-    _notifSyncTimer = Timer.periodic(const Duration(seconds: 10), (_) => _syncNotifications());
+    _notifSyncTimer = Timer.periodic(
+        const Duration(seconds: 10), (_) => _syncNotifications());
   }
 
   Future<void> _syncNotifications() async {
@@ -202,11 +209,13 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
               behavior: SnackBarBehavior.floating,
               backgroundColor: AppTheme.primary,
               margin: const EdgeInsets.only(top: 10, left: 16, right: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
               duration: const Duration(seconds: 4),
               content: Row(
                 children: [
-                  const Icon(Icons.notifications_active_rounded, color: Colors.white, size: 24),
+                  const Icon(Icons.notifications_active_rounded,
+                      color: Colors.white, size: 24),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
@@ -215,11 +224,18 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                       children: [
                         Text(
                           latestNewNotif['title'] ?? 'Nueva Notificación',
-                          style: GoogleFonts.outfit(fontWeight: FontWeight.w800, color: Colors.white, fontSize: 13),
+                          style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                              fontSize: 13),
                         ),
                         Text(
-                          latestNewNotif['body'] ?? latestNewNotif['message'] ?? '',
-                          style: GoogleFonts.outfit(color: Colors.white.withOpacity(0.9), fontSize: 11),
+                          latestNewNotif['body'] ??
+                              latestNewNotif['message'] ??
+                              '',
+                          style: GoogleFonts.outfit(
+                              color: Colors.white.withOpacity(0.9),
+                              fontSize: 11),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -260,13 +276,13 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     super.dispose();
   }
 
-  
   void _onBannerTapped(BannerItem b) {
     if (b.couponCode != null && b.couponCode!.isNotEmpty) {
       Clipboard.setData(ClipboardData(text: b.couponCode!));
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('¡Cupón "${b.couponCode}" copiado al portapapeles! Úsalo al pagar 🎉'),
+          content: Text(
+              '¡Cupón "${b.couponCode}" copiado al portapapeles! Úsalo al pagar 🎉'),
           backgroundColor: const Color(0xFF10B981),
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 2),
@@ -276,11 +292,13 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
     final link = (b.linkUrl ?? '').trim();
     if (link.isNotEmpty) {
-      final slug = link.replaceAll('/t/', '').replaceAll('/', '').trim().toLowerCase();
+      final slug =
+          link.replaceAll('/t/', '').replaceAll('/', '').trim().toLowerCase();
       final matchedStore = _stores.firstWhere(
-        (s) => (s['slug']?.toString().toLowerCase() == slug) ||
-               (s['id']?.toString() == slug) ||
-               (s['name']?.toString().toLowerCase().contains(slug) == true),
+        (s) =>
+            (s['slug']?.toString().toLowerCase() == slug) ||
+            (s['id']?.toString() == slug) ||
+            (s['name']?.toString().toLowerCase().contains(slug) == true),
         orElse: () => <String, dynamic>{},
       );
       if (matchedStore.isNotEmpty) {
@@ -630,7 +648,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     final receiptBg = isDark ? const Color(0xFF0F172A) : Colors.white;
     final receiptText = isDark ? Colors.white : const Color(0xFF0F172A);
     final receiptDivider = isDark ? Colors.white12 : const Color(0xFFE2E8F0);
-    final receiptCardBg = isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC);
+    final receiptCardBg =
+        isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC);
 
     showModalBottomSheet(
       context: context,
@@ -949,10 +968,14 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                       color: Color(0xFFEF4444),
                       shape: BoxShape.circle,
                     ),
-                    constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                    constraints:
+                        const BoxConstraints(minWidth: 16, minHeight: 16),
                     child: Text(
                       '$_unreadNotificationsCount',
-                      style: GoogleFonts.outfit(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w900),
+                      style: GoogleFonts.outfit(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w900),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -1367,7 +1390,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                                 borderRadius: BorderRadius.circular(20),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: const Color(0xFFEA580C).withOpacity(0.35),
+                                    color: const Color(0xFFEA580C)
+                                        .withOpacity(0.35),
                                     blurRadius: 14,
                                     offset: const Offset(0, 5),
                                   ),
@@ -1377,18 +1401,23 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                                 children: [
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
                                         if (b.badgeText != null &&
                                             b.badgeText!.isNotEmpty)
                                           Container(
                                             padding: const EdgeInsets.symmetric(
                                                 horizontal: 8, vertical: 3),
-                                            margin: const EdgeInsets.only(bottom: 6),
+                                            margin: const EdgeInsets.only(
+                                                bottom: 6),
                                             decoration: BoxDecoration(
-                                              color: Colors.white.withOpacity(0.22),
-                                              borderRadius: BorderRadius.circular(8),
+                                              color: Colors.white
+                                                  .withOpacity(0.22),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
                                             ),
                                             child: Text(
                                               b.badgeText!,
@@ -1416,7 +1445,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                                             overflow: TextOverflow.ellipsis,
                                             style: GoogleFonts.outfit(
                                                 fontSize: 11.5,
-                                                color: Colors.white.withOpacity(0.92)),
+                                                color: Colors.white
+                                                    .withOpacity(0.92)),
                                           ),
                                         ],
                                         const SizedBox(height: 8),
@@ -1425,34 +1455,45 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                                             if (b.couponCode != null &&
                                                 b.couponCode!.isNotEmpty)
                                               Container(
-                                                padding: const EdgeInsets.symmetric(
-                                                    horizontal: 8, vertical: 3.5),
-                                                margin: const EdgeInsets.only(right: 8),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 8,
+                                                        vertical: 3.5),
+                                                margin: const EdgeInsets.only(
+                                                    right: 8),
                                                 decoration: BoxDecoration(
-                                                  color: Colors.black.withOpacity(0.25),
-                                                  borderRadius: BorderRadius.circular(8),
+                                                  color: Colors.black
+                                                      .withOpacity(0.25),
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
                                                 ),
                                                 child: Text(
                                                   'Cupón: ' + b.couponCode!,
                                                   style: GoogleFonts.outfit(
                                                       fontSize: 10.5,
-                                                      fontWeight: FontWeight.w800,
-                                                      color: const Color(0xFFFDE047)),
+                                                      fontWeight:
+                                                          FontWeight.w800,
+                                                      color: const Color(
+                                                          0xFFFDE047)),
                                                 ),
                                               ),
                                             Container(
-                                              padding: const EdgeInsets.symmetric(
-                                                  horizontal: 10, vertical: 5),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 10,
+                                                      vertical: 5),
                                               decoration: BoxDecoration(
                                                 color: Colors.white,
-                                                borderRadius: BorderRadius.circular(8),
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
                                               ),
                                               child: Text(
                                                 b.buttonText ?? 'Pedir ahora',
                                                 style: GoogleFonts.outfit(
                                                     fontSize: 11,
                                                     fontWeight: FontWeight.w800,
-                                                    color: const Color(0xFFEA580C)),
+                                                    color: const Color(
+                                                        0xFFEA580C)),
                                               ),
                                             ),
                                           ],
@@ -1460,7 +1501,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                                       ],
                                     ),
                                   ),
-                                  if (b.imageUrl != null && b.imageUrl!.isNotEmpty) ...[
+                                  if (b.imageUrl != null &&
+                                      b.imageUrl!.isNotEmpty) ...[
                                     const SizedBox(width: 10),
                                     ClipRRect(
                                       borderRadius: BorderRadius.circular(14),

@@ -1900,5 +1900,45 @@ export class ApiService {
       ]
     };
   }
-}
 
+  // --- WHATSAPP BOT & CENTRAL DE MENSAJERIA ---
+  getWhatsAppInstance(tenantId: string, branchId?: string): Observable<any> {
+    const params: any = {};
+    if (branchId) params.branchId = branchId;
+    return this.http.get<any>(`${this.baseUrl}/whatsapp/instance/${tenantId}`, { params });
+  }
+
+  connectWhatsAppInstance(tenantId: string, branchId?: string): Observable<any> {
+    const params: any = {};
+    if (branchId) params.branchId = branchId;
+    return this.http.post<any>(`${this.baseUrl}/whatsapp/instance/${tenantId}/connect`, {}, { params });
+  }
+
+  disconnectWhatsAppInstance(tenantId: string, branchId?: string): Observable<any> {
+    const params: any = {};
+    if (branchId) params.branchId = branchId;
+    return this.http.post<any>(`${this.baseUrl}/whatsapp/instance/${tenantId}/disconnect`, {}, { params });
+  }
+
+  updateWhatsAppSettings(tenantId: string, settings: any, branchId?: string): Observable<any> {
+    const params: any = {};
+    if (branchId) params.branchId = branchId;
+    return this.http.put<any>(`${this.baseUrl}/whatsapp/instance/${tenantId}/settings`, settings, { params });
+  }
+
+  getWhatsAppConversations(tenantId: string): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/whatsapp/conversations/${tenantId}`);
+  }
+
+  getWhatsAppMessages(conversationId: string): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/whatsapp/conversations/${conversationId}/messages`);
+  }
+
+  sendWhatsAppMessage(conversationId: string, text: string): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/whatsapp/conversations/${conversationId}/send`, { text });
+  }
+
+  toggleWhatsAppBotMode(conversationId: string, mode: 'bot' | 'human', minutes: number = 120): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/whatsapp/conversations/${conversationId}/toggle-mode`, { mode, minutes });
+  }
+}

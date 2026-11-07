@@ -14,6 +14,7 @@ import { NotificationsModule } from './notifications/notifications.module.js';
 import { MetricsModule } from './metrics/metrics.module.js';
 import { UploadsModule } from './uploads/uploads.module.js';
 import { SeedModule } from './seed/seed.module.js';
+import { WhatsAppModule } from './whatsapp/whatsapp.module.js';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 
@@ -37,6 +38,7 @@ import { AppService } from './app.service.js';
     MetricsModule,
     UploadsModule,
     SeedModule,
+    WhatsAppModule,
   ],
   controllers: [AppController],
   providers: [AppService],

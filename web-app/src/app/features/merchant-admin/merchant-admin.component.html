@@ -383,6 +383,44 @@
           }
         </div>
 
+        <!-- Pestaña WhatsApp Bot & Live Chat -->
+        <div class="relative group">
+          <button (click)="activeTab.set('whatsapp')" [class.bg-emerald-600]="activeTab() === 'whatsapp'"
+            [class.text-white]="activeTab() === 'whatsapp'" [class.shadow-md]="activeTab() === 'whatsapp'"
+            [class.shadow-emerald-600/25]="activeTab() === 'whatsapp'" [class.text-slate-600]="activeTab() !== 'whatsapp'"
+            [class.dark:text-slate-400]="activeTab() !== 'whatsapp'"
+            [class.hover:bg-slate-100]="activeTab() !== 'whatsapp'"
+            [class.dark:hover:bg-slate-850]="activeTab() !== 'whatsapp'" [class.justify-center]="!isSidebarExpanded()"
+            [class.w-12]="!isSidebarExpanded()" [class.h-12]="!isSidebarExpanded()"
+            [class.mx-auto]="!isSidebarExpanded()" [class.w-full]="isSidebarExpanded()"
+            [class.px-3]="isSidebarExpanded()" [class.py-2.5]="isSidebarExpanded()"
+            class="flex items-center gap-3 rounded-xl font-bold text-xs transition-all duration-150 active:scale-95 cursor-pointer">
+            <span class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
+              [class.bg-white/20]="activeTab() === 'whatsapp'" [class.text-white]="activeTab() === 'whatsapp'"
+              [class.bg-emerald-50]="activeTab() !== 'whatsapp'" [class.dark:bg-emerald-950/40]="activeTab() !== 'whatsapp'"
+              [class.text-emerald-600]="activeTab() !== 'whatsapp'"
+              [class.dark:text-emerald-400]="activeTab() !== 'whatsapp'">
+              <app-icon name="message-circle" [size]="17"></app-icon>
+            </span>
+            @if (isSidebarExpanded()) {
+            <span class="truncate flex-1 text-left font-semibold">WhatsApp Bot</span>
+            @if (whatsappInstance()?.status === 'connected') {
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" title="WhatsApp Conectado"></span>
+            }
+            }
+          </button>
+
+          @if (!isSidebarExpanded()) {
+          <div
+            class="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 flex items-center gap-2">
+            <span>WhatsApp Bot</span>
+            @if (whatsappInstance()?.status === 'connected') {
+              <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            }
+          </div>
+          }
+        </div>
+
       </nav>
 
     </div>
@@ -479,6 +517,9 @@
             {{ activeTab() === 'orders' ? i18n.t('ma.orders') : activeTab() === 'products' ? i18n.t('ma.catalog') :
             activeTab() === 'branches' ? 'Mis Sucursales' :
             activeTab() === 'riders' ? i18n.t('ma.riders') : activeTab() === 'gps_map' ? i18n.t('ma.radar') :
+            activeTab() === 'coupons' ? 'Cupones de Oferta' :
+            activeTab() === 'whatsapp' ? 'WhatsApp Bot & Chat' :
+            activeTab() === 'settings' ? 'Configuración' :
             i18n.t('ma.team') }}
           </span>
         </div>
@@ -2996,6 +3037,481 @@
             (notifyCoupon)="openNotifyCouponModal($event)"
             (closeNotice)="couponActionNotice.set(null)">
           </app-merchant-coupons-tab>
+        }
+
+        <!-- PESTAÑA: WHATSAPP BOT & CENTRAL DE MENSAJERÍA -->
+        @if (activeTab() === 'whatsapp') {
+        <div class="space-y-6 animate-fade-in pb-12">
+          <!-- WhatsApp Top Bar Banner -->
+          <div class="bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-800 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
+            <div class="absolute -right-6 -bottom-8 opacity-10 pointer-events-none">
+              <app-icon name="message-circle" [size]="160"></app-icon>
+            </div>
+            <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <div class="flex items-center gap-3">
+                  <span class="p-2.5 rounded-xl bg-white/20 backdrop-blur-xs flex items-center justify-center">
+                    <app-icon name="message-circle" [size]="24" className="text-white"></app-icon>
+                  </span>
+                  <div>
+                    <h2 class="text-xl font-black tracking-tight flex items-center gap-2">
+                      Central de WhatsApp & Bot Inteligente
+                      @if (whatsappInstance()?.status === 'connected') {
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-400/25 border border-emerald-300/40 text-emerald-100">
+                          <span class="w-2 h-2 rounded-full bg-emerald-300 animate-ping"></span>
+                          Conectado ({{ whatsappInstance()?.phone_number || 'En línea' }})
+                        </span>
+                      } @else {
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-500/30 border border-rose-300/30 text-rose-100">
+                          <span class="w-2 h-2 rounded-full bg-rose-300"></span>
+                          Desconectado
+                        </span>
+                      }
+                    </h2>
+                    <p class="text-xs text-emerald-100/90 mt-1 max-w-2xl">
+                      Atiende a tus clientes automáticamente cuando te escriban al WhatsApp: envía tu link de catálogo para compras web, invita a descargar la App móvil o responde tú mismo como operador humano pausando el bot.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Subtab navigation pill -->
+              <div class="flex items-center bg-black/25 backdrop-blur-md p-1.5 rounded-xl border border-white/10 self-start md:self-auto">
+                <button (click)="whatsappSubTab.set('chat')"
+                  [class.bg-white]="whatsappSubTab() === 'chat'"
+                  [class.text-emerald-900]="whatsappSubTab() === 'chat'"
+                  [class.font-black]="whatsappSubTab() === 'chat'"
+                  [class.text-white]="whatsappSubTab() !== 'chat'"
+                  class="px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-xs">
+                  <app-icon name="message-circle" [size]="15"></app-icon>
+                  <span>Chat en Vivo</span>
+                  @if (whatsappConversations().length > 0) {
+                    <span class="px-1.5 py-0.2 rounded-full text-[10px]"
+                      [class.bg-emerald-100]="whatsappSubTab() === 'chat'"
+                      [class.text-emerald-800]="whatsappSubTab() === 'chat'"
+                      [class.bg-white/20]="whatsappSubTab() !== 'chat'"
+                      [class.text-white]="whatsappSubTab() !== 'chat'">
+                      {{ whatsappConversations().length }}
+                    </span>
+                  }
+                </button>
+                <button (click)="whatsappSubTab.set('settings')"
+                  [class.bg-white]="whatsappSubTab() === 'settings'"
+                  [class.text-emerald-900]="whatsappSubTab() === 'settings'"
+                  [class.font-black]="whatsappSubTab() === 'settings'"
+                  [class.text-white]="whatsappSubTab() !== 'settings'"
+                  class="px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-xs">
+                  <app-icon name="smartphone" [size]="15"></app-icon>
+                  <span>Vincular QR & Configuración</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- SUBTAB 1: LIVE CHAT -->
+          @if (whatsappSubTab() === 'chat') {
+            <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col md:flex-row h-[720px]">
+              
+              <!-- Left Sidebar: Conversations List -->
+              <div class="w-full md:w-80 lg:w-96 border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-800 flex flex-col h-full bg-slate-50/50 dark:bg-slate-900/50">
+                <!-- Search bar & status summary -->
+                <div class="p-3.5 border-b border-slate-200 dark:border-slate-800 space-y-2">
+                  <div class="relative">
+                    <input type="text"
+                      [value]="whatsappSearchQuery()"
+                      (input)="whatsappSearchQuery.set($any($event.target).value)"
+                      placeholder="Buscar por teléfono o nombre..."
+                      class="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                    <span class="absolute left-3 top-2.5 text-slate-400">
+                      <app-icon name="search" [size]="14"></app-icon>
+                    </span>
+                  </div>
+                  <div class="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 px-1">
+                    <span>{{ filteredWhatsAppConversations().length }} conversación(es)</span>
+                    <button (click)="loadWhatsAppConversations()" class="hover:text-emerald-500 flex items-center gap-1 font-semibold cursor-pointer">
+                      <span>Actualizar</span>
+                      <app-icon name="refresh-cw" [size]="11"></app-icon>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Conversation Cards -->
+                <div class="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60">
+                  @if (filteredWhatsAppConversations().length === 0) {
+                    <div class="p-8 text-center text-slate-400 dark:text-slate-500 space-y-2">
+                      <div class="w-12 h-12 mx-auto rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
+                        <app-icon name="message-circle" [size]="22"></app-icon>
+                      </div>
+                      <p class="text-xs font-semibold">No hay conversaciones registradas</p>
+                      <p class="text-[11px] leading-relaxed">
+                        Cuando tus clientes te escriban al número de WhatsApp vinculado, aparecerán aquí automáticamente.
+                      </p>
+                    </div>
+                  } @else {
+                    @for (conv of filteredWhatsAppConversations(); track conv.id) {
+                      <button (click)="selectWhatsAppConversation(conv)"
+                        [class.bg-emerald-50]="selectedWhatsAppConversation()?.id === conv.id"
+                        [class.dark:bg-emerald-950/20]="selectedWhatsAppConversation()?.id === conv.id"
+                        [class.border-l-4]="selectedWhatsAppConversation()?.id === conv.id"
+                        [class.border-emerald-500]="selectedWhatsAppConversation()?.id === conv.id"
+                        [class.hover:bg-slate-100/80]="selectedWhatsAppConversation()?.id !== conv.id"
+                        [class.dark:hover:bg-slate-800/50]="selectedWhatsAppConversation()?.id !== conv.id"
+                        class="w-full text-left p-3.5 flex items-start gap-3 transition-colors cursor-pointer">
+                        <div class="w-10 h-10 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-sm flex-shrink-0">
+                          {{ (conv.customer_name || conv.customer_phone || '?').substring(0, 2).toUpperCase() }}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                          <div class="flex items-center justify-between gap-1 mb-1">
+                            <span class="text-xs font-bold text-slate-900 dark:text-white truncate">
+                              {{ conv.customer_name || conv.customer_phone }}
+                            </span>
+                            @if (conv.mode === 'human') {
+                              <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 flex items-center gap-1">
+                                <span>👤</span> Operador
+                              </span>
+                            } @else {
+                              <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 flex items-center gap-1">
+                                <span>🤖</span> Bot
+                              </span>
+                            }
+                          </div>
+                          <p class="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                            {{ conv.last_message || 'Sin mensajes aún' }}
+                          </p>
+                          <div class="mt-1 flex items-center justify-between text-[10px] text-slate-400">
+                            <span>+{{ conv.customer_phone }}</span>
+                            @if (conv.unread_count > 0) {
+                              <span class="px-1.5 py-0.2 rounded-full bg-emerald-500 text-white font-bold">{{ conv.unread_count }}</span>
+                            }
+                          </div>
+                        </div>
+                      </button>
+                    }
+                  }
+                </div>
+              </div>
+
+              <!-- Right Panel: Chat Stream & Actions -->
+              <div class="flex-1 flex flex-col h-full bg-slate-100/30 dark:bg-slate-950/30">
+                @if (selectedWhatsAppConversation(); as currentConv) {
+                  <!-- Chat Header -->
+                  <div class="p-3.5 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3 flex-shrink-0">
+                    <div class="flex items-center gap-3 min-w-0">
+                      <div class="w-10 h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold text-sm">
+                        {{ (currentConv.customer_name || currentConv.customer_phone || '?').substring(0, 2).toUpperCase() }}
+                      </div>
+                      <div class="min-w-0">
+                        <div class="flex items-center gap-2">
+                          <h3 class="text-sm font-bold text-slate-900 dark:text-white truncate">
+                            {{ currentConv.customer_name || currentConv.customer_phone }}
+                          </h3>
+                          <span class="text-xs text-slate-500 dark:text-slate-400 font-mono">(+{{ currentConv.customer_phone }})</span>
+                        </div>
+                        <div class="flex items-center gap-2 mt-0.5">
+                          @if (currentConv.mode === 'human') {
+                            <span class="inline-flex items-center gap-1 text-[11px] font-bold text-amber-600 dark:text-amber-400">
+                              <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                              Atención Humana Activa (Bot Pausado)
+                            </span>
+                          } @else {
+                            <span class="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                              Bot Inteligente Activo
+                            </span>
+                          }
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Bot / Human Toggle Button -->
+                    <div class="flex items-center gap-2">
+                      @if (currentConv.mode === 'human') {
+                        <button (click)="toggleWhatsAppBotMode('bot')"
+                          class="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer"
+                          title="Reanudar el bot para que responda automáticamente">
+                          <span>▶️</span>
+                          <span>Reanudar Bot</span>
+                        </button>
+                      } @else {
+                        <button (click)="toggleWhatsAppBotMode('human')"
+                          class="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer"
+                          title="Pausa el bot temporalmente para que puedas hablar sin que el bot envíe menús">
+                          <span>⏸️</span>
+                          <span>Pausar Bot (Atender yo)</span>
+                        </button>
+                      }
+                    </div>
+                  </div>
+
+                  <!-- Messages List Stream -->
+                  <div class="flex-1 overflow-y-auto p-4 space-y-3">
+                    @if (whatsappMessages().length === 0) {
+                      <div class="h-full flex flex-col items-center justify-center text-center text-slate-400">
+                        <app-icon name="message-circle" [size]="32" className="text-slate-300 dark:text-slate-600 mb-2"></app-icon>
+                        <p class="text-xs">No hay historial de mensajes para este contacto</p>
+                      </div>
+                    } @else {
+                      @for (msg of whatsappMessages(); track msg.id) {
+                        <div class="flex" [class.justify-end]="msg.sender === 'bot' || msg.sender === 'agent'" [class.justify-start]="msg.sender === 'customer'">
+                          <div class="max-w-[78%] rounded-2xl px-4 py-2.5 shadow-xs"
+                            [class.bg-emerald-600]="msg.sender === 'bot' || msg.sender === 'agent'"
+                            [class.text-white]="msg.sender === 'bot' || msg.sender === 'agent'"
+                            [class.rounded-tr-xs]="msg.sender === 'bot' || msg.sender === 'agent'"
+                            [class.bg-white]="msg.sender === 'customer'"
+                            [class.dark:bg-slate-800]="msg.sender === 'customer'"
+                            [class.text-slate-800]="msg.sender === 'customer'"
+                            [class.dark:text-slate-100]="msg.sender === 'customer'"
+                            [class.rounded-tl-xs]="msg.sender === 'customer'"
+                            [class.border]="msg.sender === 'customer'"
+                            [class.border-slate-200]="msg.sender === 'customer'"
+                            [class.dark:border-slate-700]="msg.sender === 'customer'">
+                            
+                            <!-- Sender Badge -->
+                            <div class="flex items-center gap-2 mb-1">
+                              @if (msg.sender === 'customer') {
+                                <span class="text-[10px] font-black text-emerald-600 dark:text-emerald-400">Cliente</span>
+                              } @else if (msg.sender === 'agent') {
+                                <span class="text-[10px] font-black text-emerald-100 flex items-center gap-1">👤 Operador de la Tienda</span>
+                              } @else {
+                                <span class="text-[10px] font-black text-emerald-200 flex items-center gap-1">🤖 Bot Automatizado</span>
+                              }
+                              <span class="text-[9px] opacity-70 ml-auto">{{ msg.created_at | date:'shortTime' }}</span>
+                            </div>
+
+                            <p class="text-xs leading-relaxed whitespace-pre-wrap select-text">{{ msg.message_text }}</p>
+                          </div>
+                        </div>
+                      }
+                    }
+                  </div>
+
+                  <!-- Input text bar -->
+                  <div class="p-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex-shrink-0">
+                    @if (currentConv.mode === 'bot') {
+                      <div class="mb-2 px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/50 flex items-center gap-2 text-[11px] text-amber-700 dark:text-amber-300">
+                        <span>ℹ️</span>
+                        <span>Al responder directamente, el bot se pausará automáticamente para que puedas atender de manera personalizada.</span>
+                      </div>
+                    }
+                    <div class="flex items-center gap-2">
+                      <input type="text"
+                        [value]="whatsappNewMessageText()"
+                        (input)="whatsappNewMessageText.set($any($event.target).value)"
+                        (keydown.enter)="sendWhatsAppChatMessage()"
+                        placeholder="Escribe una respuesta para enviar al cliente por WhatsApp..."
+                        [disabled]="isSendingWhatsApp()"
+                        class="flex-1 px-4 py-2.5 text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                      <button (click)="sendWhatsAppChatMessage()"
+                        [disabled]="isSendingWhatsApp() || !whatsappNewMessageText().trim()"
+                        class="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white font-bold text-xs flex items-center gap-2 transition-all shadow-md shadow-emerald-500/25 active:scale-95 cursor-pointer">
+                        @if (isSendingWhatsApp()) {
+                          <span class="animate-spin">⏳</span>
+                        } @else {
+                          <app-icon name="send" [size]="14"></app-icon>
+                        }
+                        <span>Enviar</span>
+                      </button>
+                    </div>
+                  </div>
+                } @else {
+                  <!-- Empty chat selection -->
+                  <div class="h-full flex flex-col items-center justify-center text-center p-8 text-slate-400 space-y-3">
+                    <div class="w-16 h-16 rounded-3xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                      <app-icon name="message-circle" [size]="32"></app-icon>
+                    </div>
+                    <div>
+                      <h4 class="text-sm font-bold text-slate-800 dark:text-slate-200">Bandeja de Mensajería en Vivo</h4>
+                      <p class="text-xs text-slate-500 dark:text-slate-400 max-w-sm mt-1">
+                        Selecciona un cliente de la lista de la izquierda para ver su historial de mensajes, pausar el bot o chatear directamente.
+                      </p>
+                    </div>
+                  </div>
+                }
+              </div>
+
+            </div>
+          }
+
+          <!-- SUBTAB 2: CONFIGURACIÓN & VINCULACIÓN QR -->
+          @if (whatsappSubTab() === 'settings') {
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              
+              <!-- Card 1: Vincular WhatsApp (QR) -->
+              <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-5">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                    <app-icon name="smartphone" [size]="20"></app-icon>
+                  </div>
+                  <div>
+                    <h3 class="text-base font-bold text-slate-900 dark:text-white">Vinculación de WhatsApp</h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Conecta el número de teléfono oficial de este comercio o sucursal.</p>
+                  </div>
+                </div>
+
+                <!-- Status indicator -->
+                <div class="p-4 rounded-xl border"
+                  [class.bg-emerald-50]="whatsappInstance()?.status === 'connected'"
+                  [class.border-emerald-200]="whatsappInstance()?.status === 'connected'"
+                  [class.dark:bg-emerald-950/20]="whatsappInstance()?.status === 'connected'"
+                  [class.dark:border-emerald-800/40]="whatsappInstance()?.status === 'connected'"
+                  [class.bg-slate-50]="whatsappInstance()?.status !== 'connected'"
+                  [class.border-slate-200]="whatsappInstance()?.status !== 'connected'"
+                  [class.dark:bg-slate-800/40]="whatsappInstance()?.status !== 'connected'"
+                  [class.dark:border-slate-700]="whatsappInstance()?.status !== 'connected'">
+                  
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <div class="text-xs font-bold text-slate-700 dark:text-slate-300">Estado de Conexión:</div>
+                      <div class="text-sm font-black mt-0.5"
+                        [class.text-emerald-600]="whatsappInstance()?.status === 'connected'"
+                        [class.dark:text-emerald-400]="whatsappInstance()?.status === 'connected'"
+                        [class.text-slate-600]="whatsappInstance()?.status !== 'connected'"
+                        [class.dark:text-slate-400]="whatsappInstance()?.status !== 'connected'">
+                        {{ whatsappInstance()?.status === 'connected' ? '✅ En línea y sincronizado' : '⚪ Sin conectar' }}
+                      </div>
+                      @if (whatsappInstance()?.phone_number) {
+                        <div class="text-xs text-slate-500 font-mono mt-1">+{{ whatsappInstance()?.phone_number }}</div>
+                      }
+                    </div>
+
+                    @if (whatsappInstance()?.status === 'connected') {
+                      <button (click)="disconnectWhatsApp()"
+                        class="px-3 py-1.5 rounded-xl border border-rose-300 dark:border-rose-800 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-xs font-bold transition-all cursor-pointer">
+                        Desconectar
+                      </button>
+                    }
+                  </div>
+                </div>
+
+                <!-- QR Code Box -->
+                @if (whatsappInstance()?.status !== 'connected') {
+                  <div class="space-y-4">
+                    <div class="text-center p-6 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-850/50">
+                      @if (whatsappInstance()?.qr_code) {
+                        <div class="space-y-3">
+                          <img [src]="whatsappInstance()?.qr_code" alt="WhatsApp QR Code" class="w-64 h-64 mx-auto rounded-xl shadow-md border border-slate-200 dark:border-slate-700 bg-white p-2" />
+                          <p class="text-xs font-bold text-slate-700 dark:text-slate-300">Escanea este código con WhatsApp</p>
+                        </div>
+                      } @else {
+                        <div class="space-y-3 py-6">
+                          <div class="w-16 h-16 mx-auto rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-400">
+                            <app-icon name="smartphone" [size]="28"></app-icon>
+                          </div>
+                          <p class="text-xs text-slate-500">Presiona el botón para generar el código QR de vinculación.</p>
+                        </div>
+                      }
+
+                      <div class="mt-4">
+                        <button (click)="connectWhatsApp()"
+                          [disabled]="isConnectingWhatsApp()"
+                          class="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white font-bold text-xs inline-flex items-center gap-2 transition-all shadow-md shadow-emerald-500/25 active:scale-95 cursor-pointer">
+                          @if (isConnectingWhatsApp()) {
+                            <span class="animate-spin">⏳</span>
+                            <span>Generando QR...</span>
+                          } @else {
+                            <app-icon name="refresh-cw" [size]="14"></app-icon>
+                            <span>{{ whatsappInstance()?.qr_code ? 'Regenerar Código QR' : 'Generar Código QR' }}</span>
+                          }
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- Step-by-step instructions -->
+                    <div class="p-4 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/40 text-xs space-y-2">
+                      <div class="font-bold text-emerald-900 dark:text-emerald-300">¿Cómo conectar tu WhatsApp?</div>
+                      <ol class="list-decimal list-inside text-emerald-800 dark:text-emerald-300/80 space-y-1">
+                        <li>Abre WhatsApp en el teléfono del comercio.</li>
+                        <li>Toca el menú de opciones (tres puntos en Android o Configuración en iPhone).</li>
+                        <li>Selecciona <strong>Dispositivos vinculados</strong> y luego <strong>Vincular un dispositivo</strong>.</li>
+                        <li>Apunta la cámara del teléfono hacia este código QR.</li>
+                      </ol>
+                    </div>
+                  </div>
+                }
+              </div>
+
+              <!-- Card 2: Configuración del Bot y Respuestas -->
+              <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-5">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                    <app-icon name="tag" [size]="20"></app-icon>
+                  </div>
+                  <div>
+                    <h3 class="text-base font-bold text-slate-900 dark:text-white">Configuración del Bot</h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Personaliza las respuestas automáticas enviadas a los clientes.</p>
+                  </div>
+                </div>
+
+                <div class="space-y-4">
+                  <!-- Auto Reply Toggle -->
+                  <div class="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                    <div>
+                      <div class="text-xs font-bold text-slate-900 dark:text-white">Respuestas Automáticas Activas</div>
+                      <div class="text-[11px] text-slate-500 dark:text-slate-400">El bot responderá cuando los clientes escriban por primera vez.</div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox"
+                        [checked]="whatsappSettings().autoReplyEnabled"
+                        (change)="whatsappSettings.update(s => ({ ...s, autoReplyEnabled: $any($event.target).checked }))"
+                        class="sr-only peer">
+                      <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                    </label>
+                  </div>
+
+                  <!-- Greeting Message -->
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                      Saludo inicial personalizado
+                    </label>
+                    <textarea
+                      rows="3"
+                      [value]="whatsappSettings().greetingMessage"
+                      (input)="whatsappSettings.update(s => ({ ...s, greetingMessage: $any($event.target).value }))"
+                      placeholder="¡Hola! Bienvenido a nuestro comercio..."
+                      class="w-full px-3.5 py-2.5 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
+                  </div>
+
+                  <!-- Pause Duration -->
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                      Tiempo de pausa del bot al hablar con operador (minutos)
+                    </label>
+                    <div class="flex items-center gap-3">
+                      <input type="number"
+                        [value]="whatsappSettings().pauseDurationMinutes"
+                        (input)="whatsappSettings.update(s => ({ ...s, pauseDurationMinutes: +$any($event.target).value }))"
+                        min="5" max="1440" step="5"
+                        class="w-32 px-3.5 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                      <span class="text-xs text-slate-500">minutos (ej. 120 = 2 horas)</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400 mt-1">Durante este tiempo el bot guardará silencio para permitir que el operador atienda libremente.</p>
+                  </div>
+
+                  <!-- Preview of the auto-response -->
+                  <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs space-y-2">
+                    <div class="text-[11px] font-black uppercase tracking-wider text-slate-400">Vista Previa de la Respuesta Automática:</div>
+                    <div class="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 text-emerald-900 dark:text-emerald-200 text-xs font-sans whitespace-pre-wrap border border-emerald-200/50 dark:border-emerald-800/30">
+{{ whatsappSettings().greetingMessage }}
+
+*Elige una de las siguientes opciones respondiendo con el número:*
+1️⃣ 🌐 *Pedir por la Tienda Web* (Catálogo directo)
+2️⃣ 📱 *Descargar nuestra App Móvil*
+3️⃣ 👤 *Hablar con un Operador*</div>
+                  </div>
+
+                  <div class="pt-2">
+                    <button (click)="saveWhatsAppSettings()"
+                      class="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs flex items-center gap-2 transition-all shadow-md shadow-emerald-500/25 active:scale-95 cursor-pointer">
+                      <app-icon name="check" [size]="14"></app-icon>
+                      <span>Guardar Cambios</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          }
+        </div>
         }
         </main>
 
