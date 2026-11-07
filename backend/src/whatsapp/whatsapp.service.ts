@@ -48,7 +48,6 @@ export class WhatsAppService implements OnModuleInit {
 
   async onModuleInit() {
     this.ensureStorageFile();
-    // Auto-restaurar sesiones de WhatsApp previamente conectadas
     setTimeout(() => {
       this.restoreExistingSessions().catch((err) => {
         this.logger.error('Error restaurando sesiones previas de WhatsApp:', err);
@@ -92,7 +91,6 @@ export class WhatsAppService implements OnModuleInit {
         const credsPath = path.join(this.sessionsDir, folder, 'creds.json');
         if (fs.existsSync(credsPath)) {
           this.logger.log(`Restaurando sesión existente de WhatsApp para: ${folder}`);
-          // Buscar datos de la instancia
           const { data: inst } = await this.supabase.getClient()
             .from('whatsapp_instances')
             .select('*')
@@ -153,7 +151,7 @@ export class WhatsAppService implements OnModuleInit {
     const instanceName = instance.instance_name;
 
     // 1. Si ya hay un socket Baileys activo y conectado
-    const activeSock = this.activeSockets.get(instanceName);
+    const activeSock = this.getSocketForInstance(instanceName, tenantId);
     if (activeSock?.user) {
       const phoneNumber = activeSock.user.id?.split(':')[0] || activeSock.user.id?.split('@')[0];
       const updated: WhatsAppInstanceData = {
@@ -185,12 +183,28 @@ export class WhatsAppService implements OnModuleInit {
     return this.getInstance(tenantId, branchId);
   }
 
+  private getSocketForInstance(instanceName: string, tenantId?: string): any {
+    if (this.activeSockets.has(instanceName)) {
+      return this.activeSockets.get(instanceName);
+    }
+    if (tenantId) {
+      for (const [key, sock] of this.activeSockets.entries()) {
+        if (key.includes(tenantId.slice(0, 8))) {
+          return sock;
+        }
+      }
+    }
+    if (this.activeSockets.size === 1) {
+      return Array.from(this.activeSockets.values())[0];
+    }
+    return null;
+  }
+
   private async startBaileysSocket(instance: WhatsAppInstanceData): Promise<void> {
     const instanceName = instance.instance_name;
     this.connectingInstances.add(instanceName);
 
     try {
-      // Si ya hay un socket activo previo, cerrarlo limpiamente
       if (this.activeSockets.has(instanceName)) {
         try {
           this.activeSockets.get(instanceName)?.end(undefined);
@@ -226,7 +240,6 @@ export class WhatsAppService implements OnModuleInit {
       sock.ev.on('connection.update', async (update: any) => {
         const { connection, lastDisconnect, qr } = update;
 
-        // A. Nuevo código QR auténtico de WhatsApp Multi-Device
         if (qr) {
           this.logger.log(`[Baileys] Auténtico QR de WhatsApp Web generado para ${instanceName}`);
           try {
@@ -240,7 +253,6 @@ export class WhatsAppService implements OnModuleInit {
           }
         }
 
-        // B. Conexión establecida exitosamente
         if (connection === 'open') {
           const rawId = sock.user?.id || '';
           const phoneNumber = rawId.split(':')[0] || rawId.split('@')[0];
@@ -254,7 +266,6 @@ export class WhatsAppService implements OnModuleInit {
           });
         }
 
-        // C. Conexión cerrada
         if (connection === 'close') {
           this.connectingInstances.delete(instanceName);
           const statusCode = (lastDisconnect?.error as any)?.output?.statusCode;
@@ -274,7 +285,6 @@ export class WhatsAppService implements OnModuleInit {
               qr_code: undefined,
             });
           } else {
-            // Reconexión automática
             setTimeout(() => {
               this.startBaileysSocket(instance).catch(() => { });
             }, 3500);
@@ -282,14 +292,13 @@ export class WhatsAppService implements OnModuleInit {
         }
       });
 
-      // D. Escuchar mensajes entrantes de clientes
+      // Escuchar mensajes entrantes
       sock.ev.on('messages.upsert', async (m: any) => {
-        if (m.type !== 'notify') return;
-        for (const msg of m.messages) {
-          if (!msg.key.fromMe && msg.message) {
+        this.logger.log(`[Baileys] messages.upsert recibido: ${m?.messages?.length} mensaje(s), tipo: ${m?.type}`);
+        for (const msg of m.messages || []) {
+          if (!msg.key?.fromMe && msg.message) {
             await this.handleBaileysIncomingMessage(instance, sock, msg);
-          } else if (msg.key.fromMe && msg.message) {
-            // El comerciante respondió desde su teléfono físico o WhatsApp Web
+          } else if (msg.key?.fromMe && msg.message) {
             await this.handleMerchantPhoneMessage(instance, msg);
           }
         }
@@ -322,7 +331,6 @@ export class WhatsAppService implements OnModuleInit {
     const instance = await this.getInstance(tenantId, branchId);
     const instanceName = instance.instance_name;
 
-    // 1. Cerrar Baileys socket si existe
     const sock = this.activeSockets.get(instanceName);
     if (sock) {
       try {
@@ -331,7 +339,6 @@ export class WhatsAppService implements OnModuleInit {
       this.activeSockets.delete(instanceName);
     }
 
-    // Limpiar carpeta de credenciales
     const sessionPath = path.join(this.sessionsDir, instanceName);
     try {
       if (fs.existsSync(sessionPath)) {
@@ -397,7 +404,7 @@ export class WhatsAppService implements OnModuleInit {
 
       if (instance) {
         if (!messageData.key?.fromMe) {
-          const sock = this.activeSockets.get(instanceName);
+          const sock = this.getSocketForInstance(instanceName, instance.tenant_id);
           await this.handleBaileysIncomingMessage(instance, sock, messageData);
         } else {
           await this.handleMerchantPhoneMessage(instance, messageData);
@@ -408,17 +415,23 @@ export class WhatsAppService implements OnModuleInit {
   }
 
   private async handleBaileysIncomingMessage(instance: WhatsAppInstanceData, sock: any, msg: any) {
-    const fromJid = msg.key.remoteJid || '';
+    const fromJid = msg.key?.remoteJid || '';
     if (!fromJid || fromJid.endsWith('@g.us') || fromJid === 'status@broadcast') {
       return;
     }
 
     const customerPhone = fromJid.replace('@s.whatsapp.net', '').replace('@c.us', '').replace(/\D/g, '');
     const pushName = msg.pushName || `Cliente (+${customerPhone})`;
-    const rawText = msg.message.conversation ||
-      msg.message.extendedTextMessage?.text ||
-      msg.message.buttonsResponseMessage?.selectedButtonId ||
-      msg.message.listResponseMessage?.singleSelectReply?.selectedRowId ||
+
+    // Extraer texto desempacando efímeros y vistas únicas si aplica
+    const m = msg.message?.ephemeralMessage?.message || msg.message?.viewOnceMessage?.message || msg.message;
+    const rawText =
+      m?.conversation ||
+      m?.extendedTextMessage?.text ||
+      m?.buttonsResponseMessage?.selectedButtonId ||
+      m?.listResponseMessage?.singleSelectReply?.selectedRowId ||
+      m?.templateButtonReplyMessage?.selectedId ||
+      m?.imageMessage?.caption ||
       '';
 
     const tenantId = instance.tenant_id;
@@ -437,53 +450,68 @@ export class WhatsAppService implements OnModuleInit {
     const tenantSlug = tenant?.slug || 'tienda';
     const tenantName = tenant?.name || 'Nuestro Comercio';
 
-    // Verificar si el bot está activo
-    if (!instance.auto_reply_enabled) return;
+    const cleanedText = rawText.trim().toLowerCase();
+    this.logger.log(`[Baileys] Mensaje recibido de ${customerPhone}: "${rawText}" (limpio: "${cleanedText}")`);
 
-    // Verificar si la conversación está en pausa con humano
+    // ==========================================
+    // EVALUACIÓN DE OPCIONES
+    // ==========================================
+
+    // OPCIÓN 3: HABLAR CON UN OPERADOR (O palabras afines)
+    if (
+      cleanedText === '3' ||
+      cleanedText.includes('operador') ||
+      cleanedText.includes('humano') ||
+      cleanedText.includes('persona') ||
+      cleanedText.includes('asesor') ||
+      cleanedText.includes('ayuda')
+    ) {
+      const pauseMinutes = instance.pause_duration_minutes || 120;
+      const pausedUntil = new Date(Date.now() + pauseMinutes * 60 * 1000).toISOString();
+
+      await this.updateConversationMode(conversation.id, 'human', pausedUntil);
+      conversation.mode = 'human';
+      conversation.paused_until = pausedUntil;
+
+      const reply = `👤 *¡Entendido! Te hemos transferido con un operador humano.*\n\nUn integrante de nuestro equipo te atenderá por este mismo chat en breve. He pausado mis respuestas automáticas para que puedan conversar sin interrupciones.\n\n_(Si deseas volver al menú automático en cualquier momento, responde con la palabra *MENU* o *BOT*)_`;
+      await this.sendExternalMessage(instance.instance_name, fromJid, reply, tenantId);
+      await this.saveMessage(conversation.id, tenantId, 'bot', reply);
+      return;
+    }
+
+    // REACTIVACIÓN EXPLÍCITA DEL BOT
+    if (cleanedText === 'menu' || cleanedText === 'bot' || cleanedText === 'inicio' || cleanedText === '#') {
+      await this.updateConversationMode(conversation.id, 'bot', null);
+      conversation.mode = 'bot';
+      conversation.paused_until = null;
+    }
+
+    // SI ESTÁ EN MODO HUMANO ACTIVO (Pausado para operador)
     if (conversation.mode === 'human' && conversation.paused_until) {
       const now = new Date();
       const pausedUntilDate = new Date(conversation.paused_until);
       if (now < pausedUntilDate) {
+        this.logger.log(`[Baileys] Bot en silencio para ${customerPhone} porque está en atención humana hasta ${conversation.paused_until}`);
         return; // Guardar silencio, está atendiendo el operador
       } else {
-        // Pausa expirada, volver a bot
-        await this.supabase.getClient().from('whatsapp_conversations').update({ mode: 'bot', paused_until: null }).eq('id', conversation.id);
+        await this.updateConversationMode(conversation.id, 'bot', null);
         conversation.mode = 'bot';
       }
     }
 
-    const cleanedText = rawText.trim().toLowerCase();
-
     // OPCIÓN 1: PEDIDO WEB
-    if (cleanedText === '1' || cleanedText.includes('web') || cleanedText.includes('catalogo') || cleanedText.includes('menú') || cleanedText.includes('menu')) {
+    if (cleanedText === '1' || cleanedText.includes('web') || cleanedText.includes('catalogo') || cleanedText.includes('menú') || cleanedText.includes('menu') || cleanedText.includes('tienda') || cleanedText.includes('pedir')) {
       const webUrl = `https://pidetelo.com/t/${tenantSlug}${branchId ? `?branch=${branchId}` : ''}`;
       const reply = `🛒 *¡Excelente elección!*\n\nPuedes ver todo nuestro menú y hacer tu pedido directamente en línea con entrega a domicilio o retiro aquí:\n👉 ${webUrl}\n\n_Si deseas hablar con una persona, responde *3*._`;
-      await this.sendExternalMessage(instance.instance_name, fromJid, reply);
+      await this.sendExternalMessage(instance.instance_name, fromJid, reply, tenantId);
       await this.saveMessage(conversation.id, tenantId, 'bot', reply);
       return;
     }
 
     // OPCIÓN 2: DESCARGAR APP MÓVIL
-    if (cleanedText === '2' || cleanedText.includes('app') || cleanedText.includes('descargar') || cleanedText.includes('aplicacion')) {
+    if (cleanedText === '2' || cleanedText.includes('app') || cleanedText.includes('descargar') || cleanedText.includes('aplicacion') || cleanedText.includes('apk') || cleanedText.includes('ipa')) {
       const reply = `📱 *¡Descarga la App Móvil de ${tenantName}!* 🚀\n\nDisfruta de promociones exclusivas, cupones de descuento y seguimiento en vivo por GPS de tu motorizado:\n\n🤖 *Android (APK Directo):*\nhttps://pidetelo.com/descargas/app-cliente.apk\n\n🍏 *iOS (iPhone):*\nhttps://pidetelo.com/descargas/app-cliente.ipa\n\n_O haz tu pedido directo en la web respondiendo *1*._`;
-      await this.sendExternalMessage(instance.instance_name, fromJid, reply);
-      await this.saveMessage(conversation.id, tenantId, 'bot', reply);
-      return;
-    }
-
-    // OPCIÓN 3: HABLAR CON UN OPERADOR
-    if (cleanedText === '3' || cleanedText.includes('humano') || cleanedText.includes('operador') || cleanedText.includes('persona') || cleanedText.includes('asesor') || cleanedText.includes('ayuda')) {
-      const pauseMinutes = instance.pause_duration_minutes || 120;
-      const pausedUntil = new Date(Date.now() + pauseMinutes * 60 * 1000).toISOString();
-
-      await this.supabase.getClient().from('whatsapp_conversations').update({
-        mode: 'human',
-        paused_until: pausedUntil,
-      }).eq('id', conversation.id);
-
-      const reply = `👤 *¡Entendido! Te hemos transferido con un operador humano.*\n\nUn integrante de nuestro equipo te atenderá por este mismo chat en breve. He pausado mis respuestas automáticas para que puedan conversar sin interrupciones. ¡Muchas gracias por tu paciencia!`;
-      await this.sendExternalMessage(instance.instance_name, fromJid, reply);
+      await this.sendExternalMessage(instance.instance_name, fromJid, reply, tenantId);
       await this.saveMessage(conversation.id, tenantId, 'bot', reply);
       return;
     }
@@ -494,16 +522,17 @@ export class WhatsAppService implements OnModuleInit {
 
     const defaultMenu = `${greeting}\n\n*Por favor, responde con el número de la opción que prefieras:*\n\n1️⃣ 🌐 *Pedir por la Tienda Web*\n👉 ${webUrl}\n\n2️⃣ 📱 *Descargar la App Móvil*\n👉 Promociones, cupones y GPS en vivo.\n\n3️⃣ 👤 *Hablar con un Operador*\n👉 Un miembro de nuestro equipo te responderá aquí directamente.`;
 
-    await this.sendExternalMessage(instance.instance_name, fromJid, defaultMenu);
+    await this.sendExternalMessage(instance.instance_name, fromJid, defaultMenu, tenantId);
     await this.saveMessage(conversation.id, tenantId, 'bot', defaultMenu);
   }
 
   private async handleMerchantPhoneMessage(instance: WhatsAppInstanceData, msg: any) {
-    const toJid = msg.key.remoteJid || '';
+    const toJid = msg.key?.remoteJid || '';
     if (!toJid || toJid.endsWith('@g.us')) return;
 
     const customerPhone = toJid.replace('@s.whatsapp.net', '').replace('@c.us', '').replace(/\D/g, '');
-    const rawText = msg.message?.conversation || msg.message?.extendedTextMessage?.text || '';
+    const m = msg.message?.ephemeralMessage?.message || msg.message?.viewOnceMessage?.message || msg.message;
+    const rawText = m?.conversation || m?.extendedTextMessage?.text || '';
     if (!rawText) return;
 
     const tenantId = instance.tenant_id;
@@ -515,12 +544,7 @@ export class WhatsAppService implements OnModuleInit {
     // Pausar bot para que el comerciante que está hablando por el tlf no reciba respuestas del bot
     const pauseMinutes = instance.pause_duration_minutes || 120;
     const pausedUntil = new Date(Date.now() + pauseMinutes * 60 * 1000).toISOString();
-    await this.supabase.getClient().from('whatsapp_conversations').update({
-      mode: 'human',
-      paused_until: pausedUntil,
-      last_message: rawText,
-      last_message_at: new Date().toISOString(),
-    }).eq('id', conv.id);
+    await this.updateConversationMode(conv.id, 'human', pausedUntil);
   }
 
   // ==========================================
@@ -559,32 +583,39 @@ export class WhatsAppService implements OnModuleInit {
   }
 
   async sendAgentMessage(conversationId: string, text: string) {
-    const { data: conv } = await this.supabase.getClient()
+    let conv: any = null;
+    const { data } = await this.supabase.getClient()
       .from('whatsapp_conversations')
-      .select('*, whatsapp_instances(*)')
+      .select('*')
       .eq('id', conversationId)
-      .single();
+      .maybeSingle();
 
-    if (!conv) throw new InternalServerErrorException('Conversación no encontrada');
+    if (data) {
+      conv = data;
+    } else {
+      const local = this.getLocalStorage();
+      conv = local.conversations[conversationId] || Object.values(local.conversations).find((c: any) => c.id === conversationId);
+    }
 
-    const instanceName = conv.whatsapp_instances?.instance_name || `tenant_${conv.tenant_id.slice(0, 8)}_main`;
-    const remoteJid = `${conv.customer_phone}@s.whatsapp.net`;
+    if (!conv) {
+      throw new InternalServerErrorException('Conversación no encontrada');
+    }
+
+    const instance = await this.getInstance(conv.tenant_id, conv.branch_id);
+    const instanceName = instance.instance_name;
+    const cleanPhone = conv.customer_phone.replace(/\D/g, '');
+    const remoteJid = `${cleanPhone}@s.whatsapp.net`;
 
     // 1. Enviar mensaje por Baileys / Gateway
-    await this.sendExternalMessage(instanceName, remoteJid, text);
+    await this.sendExternalMessage(instanceName, remoteJid, text, conv.tenant_id);
 
     // 2. Guardar mensaje
     const msg = await this.saveMessage(conversationId, conv.tenant_id, 'agent', text);
 
     // 3. Pausar bot por el tiempo configurado para que el operador atienda libremente
-    const pauseMinutes = conv.whatsapp_instances?.pause_duration_minutes || 120;
+    const pauseMinutes = instance.pause_duration_minutes || 120;
     const pausedUntil = new Date(Date.now() + pauseMinutes * 60 * 1000).toISOString();
-    await this.supabase.getClient().from('whatsapp_conversations').update({
-      mode: 'human',
-      paused_until: pausedUntil,
-      last_message: text,
-      last_message_at: new Date().toISOString(),
-    }).eq('id', conversationId);
+    await this.updateConversationMode(conversationId, 'human', pausedUntil);
 
     return msg;
   }
@@ -603,7 +634,10 @@ export class WhatsAppService implements OnModuleInit {
       .select()
       .single();
 
-    if (error) throw new InternalServerErrorException(error.message);
+    if (error) {
+      await this.updateConversationMode(conversationId, mode, pausedUntil);
+      return { id: conversationId, mode, paused_until: pausedUntil };
+    }
     return data;
   }
 
@@ -611,13 +645,31 @@ export class WhatsAppService implements OnModuleInit {
   // HELPERS INTERNOS
   // ==========================================
 
+  private async updateConversationMode(conversationId: string, mode: 'bot' | 'human', pausedUntil: string | null) {
+    try {
+      await this.supabase.getClient().from('whatsapp_conversations').update({
+        mode,
+        paused_until: pausedUntil,
+        updated_at: new Date().toISOString(),
+      }).eq('id', conversationId);
+    } catch (_) {
+      const local = this.getLocalStorage();
+      if (local.conversations[conversationId]) {
+        local.conversations[conversationId].mode = mode;
+        local.conversations[conversationId].paused_until = pausedUntil;
+        this.saveLocalStorage(local);
+      }
+    }
+  }
+
   private async getOrCreateConversation(tenantId: string, phone: string, name: string, branchId?: string) {
     const client = this.supabase.getClient();
+    const cleanPhone = phone.replace(/\D/g, '');
     const { data: existing } = await client
       .from('whatsapp_conversations')
       .select('*')
       .eq('tenant_id', tenantId)
-      .eq('customer_phone', phone)
+      .eq('customer_phone', cleanPhone)
       .maybeSingle();
 
     if (existing) {
@@ -631,7 +683,7 @@ export class WhatsAppService implements OnModuleInit {
       id: crypto.randomUUID(),
       tenant_id: tenantId,
       branch_id: branchId || null,
-      customer_phone: phone,
+      customer_phone: cleanPhone,
       customer_name: name,
       mode: 'bot',
       unread_count: 1,
@@ -640,6 +692,10 @@ export class WhatsAppService implements OnModuleInit {
 
     const { data: created, error } = await client.from('whatsapp_conversations').insert(newConv).select().single();
     if (created && !error) return created;
+
+    const local = this.getLocalStorage();
+    local.conversations[newConv.id] = newConv;
+    this.saveLocalStorage(local);
 
     return newConv;
   }
@@ -671,17 +727,22 @@ export class WhatsAppService implements OnModuleInit {
     return msg;
   }
 
-  private async sendExternalMessage(instanceName: string, remoteJid: string, text: string) {
+  private async sendExternalMessage(instanceName: string, remoteJid: string, text: string, tenantId?: string) {
+    const cleanPhone = remoteJid.replace('@s.whatsapp.net', '').replace('@c.us', '').replace(/\D/g, '');
+    const targetJid = `${cleanPhone}@s.whatsapp.net`;
+
     // 1. Enviar directamente mediante el socket Baileys activo
-    const sock = this.activeSockets.get(instanceName);
+    const sock = this.getSocketForInstance(instanceName, tenantId);
     if (sock) {
       try {
-        await sock.sendMessage(remoteJid, { text });
-        this.logger.log(`[Baileys] Mensaje enviado a ${remoteJid}`);
+        await sock.sendMessage(targetJid, { text });
+        this.logger.log(`[Baileys] Mensaje enviado exitosamente a ${targetJid}`);
         return;
       } catch (err: any) {
-        this.logger.warn(`[Baileys] Error enviando socket a ${remoteJid}: ${err.message}`);
+        this.logger.warn(`[Baileys] Error enviando socket a ${targetJid}: ${err.message}`);
       }
+    } else {
+      this.logger.warn(`[Baileys] No se encontró socket activo para ${instanceName} / ${tenantId}`);
     }
 
     // 2. Fallback a Evolution API si estuviera activo
@@ -693,7 +754,7 @@ export class WhatsAppService implements OnModuleInit {
           apikey: this.evolutionApiKey,
         },
         body: JSON.stringify({
-          number: remoteJid,
+          number: targetJid,
           options: {
             delay: 1200,
             presence: 'composing',
@@ -704,7 +765,7 @@ export class WhatsAppService implements OnModuleInit {
         }),
       });
     } catch (err: any) {
-      this.logger.warn(`[EvolutionApi] Fallback de envío a ${remoteJid}: ${err.message}`);
+      this.logger.warn(`[EvolutionApi] Fallback de envío a ${targetJid}: ${err.message}`);
     }
   }
 }
