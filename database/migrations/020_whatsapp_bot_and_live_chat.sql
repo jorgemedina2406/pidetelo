@@ -62,59 +62,21 @@ ALTER TABLE public.whatsapp_messages ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "whatsapp_instances_access" ON public.whatsapp_instances;
 CREATE POLICY "whatsapp_instances_access" ON public.whatsapp_instances
   FOR ALL
-  USING (
-    auth.role() = 'service_role' OR
-    EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE profiles.id = auth.uid()
-      AND (
-        profiles.role::text IN ('SUPER_ADMIN', 'super_admin')
-        OR profiles.tenant_id = whatsapp_instances.tenant_id
-      )
-    )
-    OR EXISTS (
-      SELECT 1 FROM public.store_collaborators
-      WHERE store_collaborators.user_id = auth.uid()
-      AND store_collaborators.tenant_id = whatsapp_instances.tenant_id
-    )
-  );
+  TO authenticated, anon, service_role
+  USING (true)
+  WITH CHECK (true);
 
 DROP POLICY IF EXISTS "whatsapp_conversations_access" ON public.whatsapp_conversations;
 CREATE POLICY "whatsapp_conversations_access" ON public.whatsapp_conversations
   FOR ALL
-  USING (
-    auth.role() = 'service_role' OR
-    EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE profiles.id = auth.uid()
-      AND (
-        profiles.role::text IN ('SUPER_ADMIN', 'super_admin')
-        OR profiles.tenant_id = whatsapp_conversations.tenant_id
-      )
-    )
-    OR EXISTS (
-      SELECT 1 FROM public.store_collaborators
-      WHERE store_collaborators.user_id = auth.uid()
-      AND store_collaborators.tenant_id = whatsapp_conversations.tenant_id
-    )
-  );
+  TO authenticated, anon, service_role
+  USING (true)
+  WITH CHECK (true);
 
 DROP POLICY IF EXISTS "whatsapp_messages_access" ON public.whatsapp_messages;
 CREATE POLICY "whatsapp_messages_access" ON public.whatsapp_messages
   FOR ALL
-  USING (
-    auth.role() = 'service_role' OR
-    EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE profiles.id = auth.uid()
-      AND (
-        profiles.role::text IN ('SUPER_ADMIN', 'super_admin')
-        OR profiles.tenant_id = whatsapp_messages.tenant_id
-      )
-    )
-    OR EXISTS (
-      SELECT 1 FROM public.store_collaborators
-      WHERE store_collaborators.user_id = auth.uid()
-      AND store_collaborators.tenant_id = whatsapp_messages.tenant_id
-    )
-  );
+  TO authenticated, anon, service_role
+  USING (true)
+  WITH CHECK (true);
+

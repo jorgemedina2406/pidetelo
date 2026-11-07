@@ -82,3 +82,4 @@ export class WhatsAppController {
     return this.whatsappService.toggleConversationMode(conversationId, mode, minutes);
   }
 }
+

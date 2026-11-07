@@ -10,3 +10,4 @@ import { SupabaseModule } from '../supabase/supabase.module.js';
   exports: [WhatsAppService],
 })
 export class WhatsAppModule {}
+
