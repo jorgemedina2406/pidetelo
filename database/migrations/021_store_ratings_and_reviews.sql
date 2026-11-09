@@ -78,3 +78,4 @@ CREATE POLICY "tenant_reviews_manage" ON public.tenant_reviews
   FOR ALL TO authenticated, service_role
   USING (true)
   WITH CHECK (true);
+

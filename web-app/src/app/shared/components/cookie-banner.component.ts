@@ -269,3 +269,4 @@ export class CookieBannerComponent implements OnInit {
     this.showCustomizeModal.set(false);
   }
 }
+

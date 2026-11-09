@@ -343,6 +343,30 @@ export class LoginComponent {
   }
 
   private redirectByRole(role?: string): void {
+    // Registrar evento de inicio de sesión para métricas y auditoría del Super Admin
+    try {
+      const currentUser = this.auth.currentUser();
+      const r = role || currentUser?.role || 'CUSTOMER';
+      let platform = 'web_store';
+      if (r === 'SUPER_ADMIN') {
+        platform = 'super_admin';
+      } else if (['MERCHANT_OWNER', 'MERCHANT_MANAGER', 'MERCHANT_KITCHEN', 'MERCHANT_DISPATCH'].includes(r)) {
+        platform = 'merchant_admin';
+      } else if (r === 'RIDER') {
+        platform = 'rider';
+      }
+
+      this.api.logPlatformLogin({
+        userId: currentUser?.id,
+        userEmail: currentUser?.email || this.email,
+        userName: currentUser?.name || this.fullName,
+        role: r,
+        platform,
+        deviceInfo: typeof navigator !== 'undefined' ? navigator.userAgent : 'Web Browser',
+        status: 'success'
+      }).subscribe({ error: () => {} });
+    } catch (_) {}
+
     const returnUrl = this.route.snapshot.queryParams['returnUrl'];
     if (returnUrl) {
       const isSuperAdminRoute = returnUrl.includes('super-admin');

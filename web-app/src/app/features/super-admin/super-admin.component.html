@@ -612,6 +612,7 @@
               [metricsSummary]="metricsSummary()"
               [activeMerchantsCount]="activeMerchantsCount()"
               [totalMerchantsCount]="merchants().length"
+              [merchants]="merchants()"
               (refresh)="loadMetricsSummary()">
             </app-super-admin-metrics>
           }

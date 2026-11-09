@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
 import 'cart_service.dart';
+import 'api_service.dart';
 
 class SessionService extends ChangeNotifier {
   static final SessionService _instance = SessionService._internal();
@@ -116,6 +117,17 @@ class SessionService extends ChangeNotifier {
       user.email.isNotEmpty ? user.email : user.id,
       phone: user.phone,
     );
+
+    // Registrar evento de login en métricas de la plataforma
+    try {
+      ApiService().logPlatformLogin(
+        userId: user.id,
+        userEmail: user.email,
+        userName: user.name,
+        role: user.role.name,
+        platform: 'mobile_app_flutter',
+      );
+    } catch (_) {}
 
     notifyListeners();
   }

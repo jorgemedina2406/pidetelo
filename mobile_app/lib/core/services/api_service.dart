@@ -1142,5 +1142,58 @@ class ApiService {
         return OrderDeliveryStatus.pending;
     }
   }
+
+  /// Registrar inicio de sesión en plataforma (Móvil / App Flutter)
+  Future<void> logPlatformLogin({
+    String? userId,
+    String? userEmail,
+    String? userName,
+    String role = 'customer',
+    String platform = 'mobile_app_flutter',
+    String? deviceInfo,
+  }) async {
+    final payload = {
+      'userId': userId,
+      'userEmail': userEmail,
+      'userName': userName,
+      'role': role,
+      'platform': platform,
+      'deviceInfo': deviceInfo ?? 'Flutter Mobile (${kIsWeb ? 'Web' : 'App'})',
+      'status': 'success',
+      'timestamp': DateTime.now().toIso8601String(),
+    };
+
+    final urls = [
+      '${AppConfig.backendBaseUrl}/metrics/log-login',
+      'http://192.168.0.151:3000/api/metrics/log-login',
+      'http://127.0.0.1:3000/api/metrics/log-login',
+    ];
+
+    for (final u in urls) {
+      try {
+        final res = await http.post(
+          Uri.parse(u),
+          headers: {'Content-Type': 'application/json'},
+          body: json.encode(payload),
+        ).timeout(const Duration(seconds: 4));
+        if (res.statusCode == 200 || res.statusCode == 201) return;
+      } catch (_) {}
+    }
+
+    try {
+      final supabase = Supabase.instance.client;
+      await supabase.from('platform_login_logs').insert({
+        'user_id': userId,
+        'user_email': userEmail,
+        'user_name': userName,
+        'role': role,
+        'platform': platform,
+        'device_info': deviceInfo ?? 'Flutter Mobile',
+        'status': 'success',
+        'created_at': DateTime.now().toIso8601String(),
+      });
+    } catch (_) {}
+  }
 }
+
 

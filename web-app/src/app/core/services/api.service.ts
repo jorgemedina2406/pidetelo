@@ -564,6 +564,61 @@ export class ApiService {
     );
   }
 
+  getOrdersReport(filter: { tenantId?: string; branchId?: string; startDate?: string; endDate?: string; status?: string; fulfillmentType?: string }): Observable<any> {
+    const params = new URLSearchParams();
+    if (filter.tenantId && filter.tenantId !== 'all') params.append('tenantId', filter.tenantId);
+    if (filter.branchId && filter.branchId !== 'all') params.append('branchId', filter.branchId);
+    if (filter.startDate) params.append('startDate', filter.startDate);
+    if (filter.endDate) params.append('endDate', filter.endDate);
+    if (filter.status && filter.status !== 'all') params.append('status', filter.status);
+    if (filter.fulfillmentType && filter.fulfillmentType !== 'all') params.append('fulfillmentType', filter.fulfillmentType);
+
+    const qs = params.toString();
+    const url = `${this.baseUrl}/metrics/orders-report${qs ? `?${qs}` : ''}`;
+    return this.http.get<any>(url).pipe(
+      catchError(err => {
+        console.warn('[ApiService] Error obteniendo reporte de pedidos:', err);
+        return of({ kpi: {}, merchantSummaries: [], hourlyDistribution: {}, paymentMethodsStats: {}, orders: [] });
+      })
+    );
+  }
+
+  getPlatformLoginActivity(filter: { role?: string; platform?: string; startDate?: string; endDate?: string; search?: string }): Observable<any> {
+    const params = new URLSearchParams();
+    if (filter.role && filter.role !== 'all') params.append('role', filter.role);
+    if (filter.platform && filter.platform !== 'all') params.append('platform', filter.platform);
+    if (filter.startDate) params.append('startDate', filter.startDate);
+    if (filter.endDate) params.append('endDate', filter.endDate);
+    if (filter.search) params.append('search', filter.search);
+
+    const qs = params.toString();
+    const url = `${this.baseUrl}/metrics/login-activity${qs ? `?${qs}` : ''}`;
+    return this.http.get<any>(url).pipe(
+      catchError(err => {
+        console.warn('[ApiService] Error obteniendo actividad de logins:', err);
+        return of({ summary: {}, logs: [] });
+      })
+    );
+  }
+
+  logPlatformLogin(payload: { userId?: string; userName: string; userEmail?: string; userPhone?: string; role: string; platform: string; deviceInfo?: string; ipAddress?: string; status?: string }): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/metrics/log-login`, payload).pipe(
+      catchError(err => {
+        console.warn('[ApiService] Error registrando login:', err);
+        return of({ success: false });
+      })
+    );
+  }
+
+  getDecisionInsights(): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/metrics/decision-insights`).pipe(
+      catchError(err => {
+        console.warn('[ApiService] Error obteniendo métricas de decisión:', err);
+        return of({ topMerchants: [], topRiders: [], peakHours: [] });
+      })
+    );
+  }
+
   createRider(payload: { tenant_id?: string; branch_id?: string; name: string; email?: string; password?: string; phone: string; national_id?: string; vehicle_plate: string; vehicle_type?: string }): Observable<any> {
     return this.http.post<any>(`${this.baseUrl}/riders`, payload).pipe(
       catchError(err => {

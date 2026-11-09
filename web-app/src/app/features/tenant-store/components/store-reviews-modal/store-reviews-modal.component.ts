@@ -154,3 +154,4 @@ export class StoreReviewsModalComponent implements OnChanges {
     this.close.emit();
   }
 }
+

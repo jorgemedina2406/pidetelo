@@ -1,20 +1,88 @@
 <div class="space-y-6 animate-fade-in">
-      <div class="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 class="text-2xl font-extrabold tracking-tight">{{ i18n.t('sa.metrics') }} & Reportes</h2>
-          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Datos consolidados en tiempo real directamente desde la base de datos de pedidos y sucursales.
-          </p>
-        </div>
-        <button (click)="refresh.emit()" class="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer">
-          <app-icon name="refresh-cw" [size]="14"></app-icon>
-          <span>Actualizar Datos</span>
+  <!-- Encabezado Principal y Subnavegación de Pestañas -->
+  <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
+    <div>
+      <h2 class="text-2xl font-extrabold tracking-tight flex items-center gap-2">
+        <app-icon name="trending-up" [size]="24" className="text-brand-500"></app-icon>
+        <span>Centro de Analítica & Control Ejecutivo</span>
+      </h2>
+      <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+        Auditoría de inicios de sesión, control de pedidos por comercio e inteligencia de datos para toma de decisiones.
+      </p>
+    </div>
+
+    <!-- Pestañas de Navegación -->
+    <div class="inline-flex p-1 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 shadow-xs self-start md:self-auto overflow-x-auto max-w-full">
+      <button (click)="setSubTab('general')"
+              [class.bg-white]="activeSubTab() === 'general'"
+              [class.dark:bg-slate-900]="activeSubTab() === 'general'"
+              [class.text-brand-600]="activeSubTab() === 'general'"
+              [class.dark:text-brand-400]="activeSubTab() === 'general'"
+              [class.shadow-xs]="activeSubTab() === 'general'"
+              [class.text-slate-600]="activeSubTab() !== 'general'"
+              [class.dark:text-slate-300]="activeSubTab() !== 'general'"
+              class="px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap">
+        <app-icon name="trending-up" [size]="14"></app-icon>
+        <span>Panel General</span>
+      </button>
+
+      <button (click)="setSubTab('orders')"
+              [class.bg-white]="activeSubTab() === 'orders'"
+              [class.dark:bg-slate-900]="activeSubTab() === 'orders'"
+              [class.text-brand-600]="activeSubTab() === 'orders'"
+              [class.dark:text-brand-400]="activeSubTab() === 'orders'"
+              [class.shadow-xs]="activeSubTab() === 'orders'"
+              [class.text-slate-600]="activeSubTab() !== 'orders'"
+              [class.dark:text-slate-300]="activeSubTab() !== 'orders'"
+              class="px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap">
+        <app-icon name="store" [size]="14"></app-icon>
+        <span>Reporte de Pedidos</span>
+      </button>
+
+      <button (click)="setSubTab('logins')"
+              [class.bg-white]="activeSubTab() === 'logins'"
+              [class.dark:bg-slate-900]="activeSubTab() === 'logins'"
+              [class.text-brand-600]="activeSubTab() === 'logins'"
+              [class.dark:text-brand-400]="activeSubTab() === 'logins'"
+              [class.shadow-xs]="activeSubTab() === 'logins'"
+              [class.text-slate-600]="activeSubTab() !== 'logins'"
+              [class.dark:text-slate-300]="activeSubTab() !== 'logins'"
+              class="px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap">
+        <app-icon name="shield" [size]="14"></app-icon>
+        <span>Inicios de Sesión</span>
+      </button>
+
+      <button (click)="setSubTab('insights')"
+              [class.bg-white]="activeSubTab() === 'insights'"
+              [class.dark:bg-slate-900]="activeSubTab() === 'insights'"
+              [class.text-brand-600]="activeSubTab() === 'insights'"
+              [class.dark:text-brand-400]="activeSubTab() === 'insights'"
+              [class.shadow-xs]="activeSubTab() === 'insights'"
+              [class.text-slate-600]="activeSubTab() !== 'insights'"
+              [class.dark:text-slate-300]="activeSubTab() !== 'insights'"
+              class="px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap">
+        <app-icon name="sparkles" [size]="14"></app-icon>
+        <span>Métricas de Decisión</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- 1. PESTAÑA: PANEL GENERAL (KPIs y Sucursales)                    -->
+  <!-- ================================================================= -->
+  @if (activeSubTab() === 'general') {
+    <div class="space-y-6 animate-fade-in">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Métricas Clave de la Plataforma</span>
+        <button (click)="refresh.emit()" class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer">
+          <app-icon name="refresh-cw" [size]="13"></app-icon>
+          <span>Actualizar</span>
         </button>
       </div>
 
       <!-- Top KPI Cards -->
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="card-adaptive rounded-2xl p-5 shadow-sm space-y-2 relative border border-slate-200 dark:border-slate-800">
+        <div class="card-adaptive rounded-2xl p-5 shadow-xs space-y-2 relative border border-slate-200 dark:border-slate-800">
           <div class="w-2.5 h-2.5 rounded-full bg-brand-500 absolute top-4 right-4"></div>
           <span class="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Comercios Activos</span>
           <div class="text-3xl font-extrabold">{{ activeMerchantsCount }}</div>
@@ -23,27 +91,27 @@
           </span>
         </div>
 
-        <div class="card-adaptive rounded-2xl p-5 shadow-sm space-y-2 relative border border-slate-200 dark:border-slate-800">
+        <div class="card-adaptive rounded-2xl p-5 shadow-xs space-y-2 relative border border-slate-200 dark:border-slate-800">
           <span class="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Ventas Totales</span>
           <div class="text-3xl font-extrabold text-brand-500 font-mono">
-            \${{ (metricsSummary?.totalRevenueUsd || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+            ${{ (metricsSummary?.totalRevenueUsd || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
           </div>
           <span class="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
             ~Bs. {{ (metricsSummary?.totalRevenueBs || 0).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
           </span>
         </div>
 
-        <div class="card-adaptive rounded-2xl p-5 shadow-sm space-y-2 relative border border-slate-200 dark:border-slate-800">
+        <div class="card-adaptive rounded-2xl p-5 shadow-xs space-y-2 relative border border-slate-200 dark:border-slate-800">
           <span class="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Comisiones Pídetelo</span>
           <div class="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
-            \${{ (metricsSummary?.totalCommissionUsd || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+            ${{ (metricsSummary?.totalCommissionUsd || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
           </div>
           <span class="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
             Ingreso neto de la red
           </span>
         </div>
 
-        <div class="card-adaptive rounded-2xl p-5 shadow-sm space-y-2 relative border border-slate-200 dark:border-slate-800">
+        <div class="card-adaptive rounded-2xl p-5 shadow-xs space-y-2 relative border border-slate-200 dark:border-slate-800">
           <span class="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Total de Pedidos</span>
           <div class="text-3xl font-extrabold">{{ metricsSummary?.totalOrders || 0 }}</div>
           <span class="text-[11px] text-brand-500 font-semibold">
@@ -53,7 +121,7 @@
       </div>
 
       <!-- Tabla de Reportes por Sucursal -->
-      <div class="card-adaptive rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-800 space-y-4">
+      <div class="card-adaptive rounded-2xl p-6 shadow-xs border border-slate-200 dark:border-slate-800 space-y-4">
         <div class="flex items-center justify-between">
           <div>
             <h3 class="text-base font-bold flex items-center gap-2">
@@ -97,10 +165,10 @@
                   <td class="p-3.5 text-center font-bold">{{ rep.totalOrders }}</td>
                   <td class="p-3.5 text-center text-emerald-600 font-bold">{{ rep.deliveredOrders }}</td>
                   <td class="p-3.5 text-right font-extrabold text-slate-900 dark:text-white font-mono">
-                    \${{ (rep.grossRevenueUsd || 0).toFixed(2) }}
+                    ${{ (rep.grossRevenueUsd || 0).toFixed(2) }}
                   </td>
                   <td class="p-3.5 text-right font-black text-brand-600 dark:text-brand-400 font-mono">
-                    \${{ (rep.commissionEarnedUsd || 0).toFixed(2) }}
+                    ${{ (rep.commissionEarnedUsd || 0).toFixed(2) }}
                   </td>
                 </tr>
               } @empty {
@@ -115,3 +183,705 @@
         </div>
       </div>
     </div>
+  }
+
+  <!-- ================================================================= -->
+  <!-- 2. PESTAÑA: REPORTE DE PEDIDOS Y CONTROL POR COMERCIO             -->
+  <!-- ================================================================= -->
+  @if (activeSubTab() === 'orders') {
+    <div class="space-y-6 animate-fade-in">
+      <!-- Barra de Filtros Multifunción -->
+      <div class="card-adaptive rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center gap-2">
+            <app-icon name="search" [size]="18" className="text-brand-500"></app-icon>
+            <h3 class="text-sm font-extrabold uppercase tracking-wider">Filtros de Reporte de Pedidos</h3>
+          </div>
+          <div class="flex items-center gap-2">
+            <button (click)="loadOrdersReport()"
+                    [disabled]="loadingOrders()"
+                    class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50">
+              <app-icon name="refresh-cw" [size]="13" [className]="loadingOrders() ? 'animate-spin' : ''"></app-icon>
+              <span>Filtrar</span>
+            </button>
+            <button (click)="exportOrdersCsv()"
+                    [disabled]="filteredOrders().length === 0"
+                    class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer disabled:opacity-40">
+              <app-icon name="file-text" [size]="14"></app-icon>
+              <span>Exportar CSV / Excel</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+          <!-- Filtro Comercio -->
+          <div>
+            <label class="block font-bold text-slate-500 dark:text-slate-400 mb-1">Comercio / Tienda</label>
+            <select [ngModel]="selectedMerchantId()"
+                    (ngModelChange)="onMerchantChange($event)"
+                    class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-brand-500">
+              <option value="all">🏪 Todos los Comercios</option>
+              @for (m of merchants; track m.id) {
+                <option [value]="m.id">{{ m.name }}</option>
+              }
+            </select>
+          </div>
+
+          <!-- Filtro Período -->
+          <div>
+            <label class="block font-bold text-slate-500 dark:text-slate-400 mb-1">Rango de Fecha</label>
+            <select [ngModel]="selectedPeriod()"
+                    (ngModelChange)="onPeriodChange($event)"
+                    class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-brand-500">
+              <option value="all">📅 Todo el Histórico</option>
+              <option value="today">☀️ Solo Hoy</option>
+              <option value="7days">🗓️ Últimos 7 Días</option>
+              <option value="30days">📆 Últimos 30 Días</option>
+            </select>
+          </div>
+
+          <!-- Filtro Estado -->
+          <div>
+            <label class="block font-bold text-slate-500 dark:text-slate-400 mb-1">Estado del Pedido</label>
+            <select [ngModel]="selectedStatus()"
+                    (ngModelChange)="onStatusChange($event)"
+                    class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-brand-500">
+              <option value="all">Todos los Estados</option>
+              <option value="delivered">✅ Entregados</option>
+              <option value="preparing">🍳 En Preparación</option>
+              <option value="on_the_way">🛵 En Camino</option>
+              <option value="pending">⏳ Pendientes</option>
+              <option value="cancelled">❌ Cancelados</option>
+            </select>
+          </div>
+
+          <!-- Filtro Modalidad -->
+          <div>
+            <label class="block font-bold text-slate-500 dark:text-slate-400 mb-1">Modalidad de Entrega</label>
+            <select [ngModel]="selectedFulfillment()"
+                    (ngModelChange)="onFulfillmentChange($event)"
+                    class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-brand-500">
+              <option value="all">Todas las Modalidades</option>
+              <option value="delivery">🛵 Delivery</option>
+              <option value="pickup">🛍️ Para Llevar (Pick-up)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Resumen Ejecutivo del Segmento Seleccionado -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+        <div class="card-adaptive rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-xs space-y-1">
+          <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Total Pedidos</span>
+          <div class="text-2xl font-black text-slate-900 dark:text-white">{{ ordersReport()?.summary?.totalOrders || 0 }}</div>
+          <span class="text-[10px] text-emerald-600 font-semibold">{{ ordersReport()?.summary?.deliveredOrders || 0 }} entregados</span>
+        </div>
+
+        <div class="card-adaptive rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-xs space-y-1">
+          <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Facturación Bruta</span>
+          <div class="text-2xl font-black text-brand-500 font-mono">
+            ${{ (ordersReport()?.summary?.grossRevenueUsd || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+          </div>
+          <span class="text-[10px] text-slate-400 font-mono">~Bs. {{ (ordersReport()?.summary?.grossRevenueBs || 0).toFixed(2) }}</span>
+        </div>
+
+        <div class="card-adaptive rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-xs space-y-1">
+          <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Comisión Red</span>
+          <div class="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
+            ${{ (ordersReport()?.summary?.totalCommissionUsd || 0).toFixed(2) }}
+          </div>
+          <span class="text-[10px] text-emerald-600 font-semibold">10% tarifa red</span>
+        </div>
+
+        <div class="card-adaptive rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-xs space-y-1">
+          <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Ticket Promedio</span>
+          <div class="text-2xl font-black text-blue-600 dark:text-blue-400 font-mono">
+            ${{ (ordersReport()?.summary?.avgTicketUsd || 0).toFixed(2) }}
+          </div>
+          <span class="text-[10px] text-slate-400">Por orden completada</span>
+        </div>
+
+        <div class="card-adaptive rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-xs space-y-1">
+          <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Cancelaciones</span>
+          <div class="text-2xl font-black font-mono"
+               [class.text-rose-500]="(ordersReport()?.summary?.cancellationRate || 0) > 5"
+               [class.text-emerald-500]="(ordersReport()?.summary?.cancellationRate || 0) <= 5">
+            {{ (ordersReport()?.summary?.cancellationRate || 0).toFixed(1) }}%
+          </div>
+          <span class="text-[10px] text-slate-400">{{ ordersReport()?.summary?.cancelledOrders || 0 }} pedidos cancelados</span>
+        </div>
+      </div>
+
+      <!-- Resumen por Comercios (Si "Todos los Comercios" está seleccionado) -->
+      @if (selectedMerchantId() === 'all' && (ordersReport()?.merchantSummaries || []).length > 0) {
+        <div class="card-adaptive rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
+          <div class="flex items-center justify-between">
+            <h4 class="text-xs font-extrabold uppercase tracking-wider flex items-center gap-2">
+              <app-icon name="store" [size]="16" className="text-brand-500"></app-icon>
+              <span>Volumen y Desempeño por Comercio Afiliado</span>
+            </h4>
+            <span class="text-[11px] text-slate-400 font-semibold">{{ ordersReport()?.merchantSummaries?.length }} comercios con pedidos</span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            @for (ms of ordersReport()?.merchantSummaries || []; track ms.tenantId) {
+              <div (click)="onMerchantChange(ms.tenantId)"
+                   class="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-brand-500 dark:hover:border-brand-500 bg-slate-50/50 dark:bg-slate-900/50 transition-all cursor-pointer group">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="font-bold text-xs text-slate-900 dark:text-white group-hover:text-brand-500 transition-colors truncate max-w-[180px]">
+                    {{ ms.tenantName }}
+                  </span>
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-brand-500/10 text-brand-600 dark:text-brand-400">
+                    {{ ms.ordersCount }} pedidos
+                  </span>
+                </div>
+                <div class="flex items-center justify-between text-xs font-mono">
+                  <span class="text-slate-500">Facturado: <strong class="text-slate-900 dark:text-white">${{ (ms.grossRevenueUsd || 0).toFixed(2) }}</strong></span>
+                  <span class="text-emerald-600 font-bold">Comisión: ${{ (ms.commissionEarnedUsd || 0).toFixed(2) }}</span>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Tabla Detallada de Pedidos -->
+      <div class="card-adaptive rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h3 class="text-base font-bold flex items-center gap-2">
+              <app-icon name="list" [size]="18" className="text-brand-500"></app-icon>
+              <span>Listado Exhaustivo de Pedidos Enriquecidos</span>
+            </h3>
+            <p class="text-xs text-slate-400">Detalle de cliente, comercio, repartidor, montos y estado operativo</p>
+          </div>
+
+          <!-- Buscador en tiempo real -->
+          <div class="relative w-full sm:w-72">
+            <input type="text"
+                   [ngModel]="ordersSearch()"
+                   (ngModelChange)="ordersSearch.set($event); ordersPage.set(1)"
+                   placeholder="Buscar pedido, cliente, comercio..."
+                   class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl pl-9 pr-3 py-1.5 text-xs focus:outline-hidden focus:ring-2 focus:ring-brand-500">
+            <span class="absolute left-3 top-2 text-slate-400">🔍</span>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs text-left">
+            <thead class="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 uppercase font-bold text-[10px] tracking-wider border-b border-slate-200 dark:border-slate-800">
+              <tr>
+                <th class="p-3"># Pedido</th>
+                <th class="p-3">Comercio / Sede</th>
+                <th class="p-3">Cliente</th>
+                <th class="p-3">Repartidor</th>
+                <th class="p-3 text-center">Tipo</th>
+                <th class="p-3 text-right">Monto ($ / Bs)</th>
+                <th class="p-3 text-center">Estado</th>
+                <th class="p-3 text-right">Fecha / Hora</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+              @for (o of paginatedOrders(); track (o.id || $index)) {
+                <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
+                  <td class="p-3 font-mono font-bold text-slate-900 dark:text-white">
+                    #{{ o.orderNumber || o.order_number || (o.id?.slice(0, 8)) }}
+                  </td>
+                  <td class="p-3">
+                    <div class="font-bold text-slate-900 dark:text-white truncate max-w-[150px]">{{ o.tenantName || 'Comercio' }}</div>
+                    <div class="text-[10px] text-slate-400 truncate max-w-[150px]">{{ o.branchName || 'Sucursal Principal' }}</div>
+                  </td>
+                  <td class="p-3">
+                    <div class="font-bold text-slate-800 dark:text-slate-200">{{ o.customerName || 'Cliente' }}</div>
+                    <div class="text-[10px] text-slate-400 font-mono">{{ o.customerPhone || 'N/A' }}</div>
+                  </td>
+                  <td class="p-3">
+                    <div class="font-semibold text-slate-700 dark:text-slate-300">{{ o.riderName || '—' }}</div>
+                    @if (o.riderPlate) {
+                      <div class="text-[10px] text-slate-400 font-mono">Placa: {{ o.riderPlate }}</div>
+                    }
+                  </td>
+                  <td class="p-3 text-center">
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold"
+                          [class.bg-blue-100]="(o.fulfillmentType || o.fulfillment_type) === 'delivery'"
+                          [class.text-blue-700]="(o.fulfillmentType || o.fulfillment_type) === 'delivery'"
+                          [class.dark:bg-blue-950]="(o.fulfillmentType || o.fulfillment_type) === 'delivery'"
+                          [class.dark:text-blue-300]="(o.fulfillmentType || o.fulfillment_type) === 'delivery'"
+                          [class.bg-purple-100]="(o.fulfillmentType || o.fulfillment_type) === 'pickup'"
+                          [class.text-purple-700]="(o.fulfillmentType || o.fulfillment_type) === 'pickup'">
+                      {{ (o.fulfillmentType || o.fulfillment_type) === 'pickup' ? '🛍️ Retiro' : '🛵 Delivery' }}
+                    </span>
+                  </td>
+                  <td class="p-3 text-right">
+                    <div class="font-black text-slate-900 dark:text-white font-mono">
+                      ${{ (o.totalUsd || o.total || 0).toFixed(2) }}
+                    </div>
+                    @if (o.totalBs) {
+                      <div class="text-[10px] text-slate-400 font-mono">Bs. {{ (o.totalBs).toFixed(2) }}</div>
+                    }
+                  </td>
+                  <td class="p-3 text-center">
+                    <span class="px-2.5 py-1 rounded-full text-[10px] font-bold inline-block"
+                          [ngClass]="getStatusBadgeClass(o.status)">
+                      {{ getStatusLabel(o.status) }}
+                    </span>
+                  </td>
+                  <td class="p-3 text-right text-slate-400 text-[11px] font-mono">
+                    {{ o.createdAt ? (o.createdAt | date:'short') : 'Reciente' }}
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="8" class="p-8 text-center text-slate-400 text-xs">
+                    No se encontraron pedidos con los filtros aplicados.
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Paginación de Pedidos -->
+        <div class="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-500">
+          <div>
+            Mostrando {{ filteredOrders().length === 0 ? 0 : (ordersPage() - 1) * ordersPerPage + 1 }} a {{ Math.min(ordersPage() * ordersPerPage, filteredOrders().length) }} de {{ filteredOrders().length }} pedidos
+          </div>
+          <div class="flex items-center gap-2">
+            <button (click)="prevOrdersPage()"
+                    [disabled]="ordersPage() <= 1"
+                    class="px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-40 font-bold transition-colors">
+              Anterior
+            </button>
+            <span class="font-bold text-slate-700 dark:text-slate-300">Pág. {{ ordersPage() }} de {{ totalOrderPages() }}</span>
+            <button (click)="nextOrdersPage()"
+                    [disabled]="ordersPage() >= totalOrderPages()"
+                    class="px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-40 font-bold transition-colors">
+              Siguiente
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ================================================================= -->
+  <!-- 3. PESTAÑA: AUDITORÍA DE INICIOS DE SESIÓN                       -->
+  <!-- ================================================================= -->
+  @if (activeSubTab() === 'logins') {
+    <div class="space-y-6 animate-fade-in">
+      <!-- Filtros de Inicios de Sesión -->
+      <div class="card-adaptive rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center gap-2">
+            <app-icon name="shield" [size]="18" className="text-brand-500"></app-icon>
+            <h3 class="text-sm font-extrabold uppercase tracking-wider">Control de Accesos a la Plataforma</h3>
+          </div>
+          <div class="flex items-center gap-2">
+            <button (click)="loadLoginActivity()"
+                    [disabled]="loadingLogins()"
+                    class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50">
+              <app-icon name="refresh-cw" [size]="13" [className]="loadingLogins() ? 'animate-spin' : ''"></app-icon>
+              <span>Refrescar</span>
+            </button>
+            <button (click)="exportLoginsCsv()"
+                    [disabled]="filteredLogins().length === 0"
+                    class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer disabled:opacity-40">
+              <app-icon name="file-text" [size]="14"></app-icon>
+              <span>Exportar Auditoría CSV</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+          <!-- Filtro Rol -->
+          <div>
+            <label class="block font-bold text-slate-500 dark:text-slate-400 mb-1">Filtrar por Rol</label>
+            <select [ngModel]="selectedLoginRole()"
+                    (ngModelChange)="onLoginRoleChange($event)"
+                    class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-brand-500">
+              <option value="all">👥 Todos los Roles</option>
+              <option value="customer">👤 Clientes</option>
+              <option value="merchant_owner">🏪 Dueños de Comercio</option>
+              <option value="branch_manager">🏢 Admins de Sucursal</option>
+              <option value="rider">🛵 Repartidores (Riders)</option>
+              <option value="superadmin">🛡️ Super Administradores</option>
+            </select>
+          </div>
+
+          <!-- Filtro Plataforma -->
+          <div>
+            <label class="block font-bold text-slate-500 dark:text-slate-400 mb-1">Filtrar por Plataforma</label>
+            <select [ngModel]="selectedLoginPlatform()"
+                    (ngModelChange)="onLoginPlatformChange($event)"
+                    class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-hidden focus:ring-2 focus:ring-brand-500">
+              <option value="all">📱 Todas las Plataformas</option>
+              <option value="mobile_app_flutter">📱 App Móvil (Flutter)</option>
+              <option value="web_store">🌐 Tienda Web Clientes</option>
+              <option value="merchant_admin">💻 Panel de Comercios</option>
+              <option value="super_admin">🛡️ Super Admin Web</option>
+            </select>
+          </div>
+
+          <!-- Buscador -->
+          <div>
+            <label class="block font-bold text-slate-500 dark:text-slate-400 mb-1">Buscar Usuario / Email / IP</label>
+            <div class="flex gap-1.5">
+              <input type="text"
+                     [ngModel]="loginsSearch()"
+                     (ngModelChange)="loginsSearch.set($event)"
+                     (keyup.enter)="onLoginSearch()"
+                     placeholder="Ej: jorge@pidetelo.com..."
+                     class="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs focus:outline-hidden focus:ring-2 focus:ring-brand-500">
+              <button (click)="onLoginSearch()" class="px-3 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs transition-colors cursor-pointer">
+                Buscar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Resumen Rápido de Logins -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3.5">
+        <div class="card-adaptive rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-xs space-y-1">
+          <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Total Accesos</span>
+          <div class="text-2xl font-black text-slate-900 dark:text-white">{{ loginsData()?.totalCount || 0 }}</div>
+          <span class="text-[10px] text-slate-400 font-semibold">Eventos registrados</span>
+        </div>
+
+        <div class="card-adaptive rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-xs space-y-1">
+          <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">App Móvil (Flutter)</span>
+          <div class="text-2xl font-black text-brand-500">{{ loginsData()?.byPlatform?.mobile_app_flutter || 0 }}</div>
+          <span class="text-[10px] text-brand-500 font-semibold">Dispositivos móviles</span>
+        </div>
+
+        <div class="card-adaptive rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-xs space-y-1">
+          <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Comercios / Admins</span>
+          <div class="text-2xl font-black text-amber-500">{{ (loginsData()?.byRole?.merchant_owner || 0) + (loginsData()?.byRole?.branch_manager || 0) }}</div>
+          <span class="text-[10px] text-amber-500 font-semibold">Dueños y sedes</span>
+        </div>
+
+        <div class="card-adaptive rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-xs space-y-1">
+          <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Repartidores (Riders)</span>
+          <div class="text-2xl font-black text-blue-500">{{ loginsData()?.byRole?.rider || 0 }}</div>
+          <span class="text-[10px] text-blue-500 font-semibold">Flota activa</span>
+        </div>
+
+        <div class="card-adaptive rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-xs space-y-1">
+          <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Clientes</span>
+          <div class="text-2xl font-black text-emerald-500">{{ loginsData()?.byRole?.customer || 0 }}</div>
+          <span class="text-[10px] text-emerald-500 font-semibold">Consumidores</span>
+        </div>
+      </div>
+
+      <!-- Tabla de Eventos de Inicio de Sesión -->
+      <div class="card-adaptive rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-base font-bold flex items-center gap-2">
+              <app-icon name="clock" [size]="18" className="text-brand-500"></app-icon>
+              <span>Registro de Inicios de Sesión en Tiempo Real</span>
+            </h3>
+            <p class="text-xs text-slate-400">Auditoría con trazabilidad de plataforma, dispositivo, rol y dirección IP</p>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs text-left">
+            <thead class="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 uppercase font-bold text-[10px] tracking-wider border-b border-slate-200 dark:border-slate-800">
+              <tr>
+                <th class="p-3">Usuario</th>
+                <th class="p-3">Rol</th>
+                <th class="p-3">Plataforma</th>
+                <th class="p-3">Dispositivo / Entorno</th>
+                <th class="p-3">Dirección IP</th>
+                <th class="p-3 text-center">Estado</th>
+                <th class="p-3 text-right">Fecha / Hora</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+              @for (log of paginatedLogins(); track (log.id || $index)) {
+                <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
+                  <td class="p-3">
+                    <div class="font-bold text-slate-900 dark:text-white">{{ log.userName || 'Usuario' }}</div>
+                    <div class="text-[10px] text-slate-400 font-mono">{{ log.userEmail || '—' }}</div>
+                  </td>
+                  <td class="p-3">
+                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider"
+                          [class.bg-purple-100]="log.role?.includes('super')"
+                          [class.text-purple-800]="log.role?.includes('super')"
+                          [class.dark:bg-purple-950]="log.role?.includes('super')"
+                          [class.dark:text-purple-300]="log.role?.includes('super')"
+                          [class.bg-amber-100]="log.role?.includes('merchant')"
+                          [class.text-amber-800]="log.role?.includes('merchant')"
+                          [class.dark:bg-amber-950]="log.role?.includes('merchant')"
+                          [class.dark:text-amber-300]="log.role?.includes('merchant')"
+                          [class.bg-blue-100]="log.role === 'rider'"
+                          [class.text-blue-800]="log.role === 'rider'"
+                          [class.dark:bg-blue-950]="log.role === 'rider'"
+                          [class.dark:text-blue-300]="log.role === 'rider'"
+                          [class.bg-emerald-100]="log.role === 'customer'"
+                          [class.text-emerald-800]="log.role === 'customer'"
+                          [class.dark:bg-emerald-950]="log.role === 'customer'"
+                          [class.dark:text-emerald-300]="log.role === 'customer'">
+                      {{ formatRole(log.role) }}
+                    </span>
+                  </td>
+                  <td class="p-3 font-semibold text-slate-700 dark:text-slate-300">
+                    {{ formatPlatform(log.platform) }}
+                  </td>
+                  <td class="p-3 text-[11px] text-slate-500 max-w-[200px] truncate" [title]="log.deviceInfo || log.device_info">
+                    {{ log.deviceInfo || log.device_info || 'Navegador Web' }}
+                  </td>
+                  <td class="p-3 font-mono text-slate-500 text-[11px]">
+                    {{ log.ipAddress || log.ip_address || '127.0.0.1' }}
+                  </td>
+                  <td class="p-3 text-center">
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                      Éxito
+                    </span>
+                  </td>
+                  <td class="p-3 text-right text-slate-400 font-mono text-[11px]">
+                    {{ log.timestamp || log.created_at ? (log.timestamp || log.created_at | date:'medium') : 'Reciente' }}
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="7" class="p-8 text-center text-slate-400 text-xs">
+                    No hay registros de accesos aún con los filtros seleccionados.
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Paginación de Logins -->
+        <div class="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-500">
+          <div>
+            Mostrando {{ filteredLogins().length === 0 ? 0 : (loginsPage() - 1) * loginsPerPage + 1 }} a {{ Math.min(loginsPage() * loginsPerPage, filteredLogins().length) }} de {{ filteredLogins().length }} eventos
+          </div>
+          <div class="flex items-center gap-2">
+            <button (click)="prevLoginsPage()"
+                    [disabled]="loginsPage() <= 1"
+                    class="px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-40 font-bold transition-colors">
+              Anterior
+            </button>
+            <span class="font-bold text-slate-700 dark:text-slate-300">Pág. {{ loginsPage() }} de {{ totalLoginPages() }}</span>
+            <button (click)="nextLoginsPage()"
+                    [disabled]="loginsPage() >= totalLoginPages()"
+                    class="px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-40 font-bold transition-colors">
+              Siguiente
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ================================================================= -->
+  <!-- 4. PESTAÑA: MÉTRICAS DE DECISIÓN & BUSINESS INTELLIGENCE         -->
+  <!-- ================================================================= -->
+  @if (activeSubTab() === 'insights') {
+    <div class="space-y-6 animate-fade-in">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-base font-extrabold flex items-center gap-2">
+            <app-icon name="sparkles" [size]="20" className="text-amber-500"></app-icon>
+            <span>Inteligencia de Negocio para Toma de Decisiones</span>
+          </h3>
+          <p class="text-xs text-slate-400">Patrones de demanda, rendimiento de aliados y optimización operativa</p>
+        </div>
+        <button (click)="loadInsights()"
+                [disabled]="loadingInsights()"
+                class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50">
+          <app-icon name="refresh-cw" [size]="13" [className]="loadingInsights() ? 'animate-spin' : ''"></app-icon>
+          <span>Recalcular</span>
+        </button>
+      </div>
+
+      <!-- Grid de Insights: Horas Pico y Métodos de Pago -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Horas Pico de Demanda -->
+        <div class="card-adaptive rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <h4 class="text-sm font-extrabold uppercase tracking-wider flex items-center gap-2">
+                <app-icon name="clock" [size]="16" className="text-brand-500"></app-icon>
+                <span>Curva de Demanda por Horas (00h - 23h)</span>
+              </h4>
+              <p class="text-[11px] text-slate-400">Determina en qué franjas horarias activar más repartidores</p>
+            </div>
+            <span class="px-2.5 py-1 rounded-full text-[10px] font-black bg-brand-500/10 text-brand-600 dark:text-brand-400">
+              Pico: 18:00 - 21:00
+            </span>
+          </div>
+
+          <!-- Histograma Visual con Barras de Progreso -->
+          <div class="grid grid-cols-6 sm:grid-cols-8 gap-2 pt-2">
+            @for (h of insightsData()?.peakHours || []; track h.hour) {
+              <div class="flex flex-col items-center gap-1">
+                <div class="h-24 w-full bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5 flex flex-col justify-end">
+                  <div class="w-full rounded-md transition-all duration-500"
+                       [class.bg-brand-500]="h.count > 0"
+                       [class.bg-slate-200]="h.count === 0"
+                       [class.dark:bg-slate-700]="h.count === 0"
+                       [style.height.%]="Math.max(8, (h.count / 10) * 100)">
+                  </div>
+                </div>
+                <span class="text-[9px] font-mono text-slate-400">{{ h.label }}</span>
+                <span class="text-[9px] font-bold text-slate-700 dark:text-slate-300">{{ h.count }}</span>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Desglose de Métodos de Pago -->
+        <div class="card-adaptive rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <h4 class="text-sm font-extrabold uppercase tracking-wider flex items-center gap-2">
+                <app-icon name="wallet" [size]="16" className="text-emerald-500"></app-icon>
+                <span>Distribución por Método de Pago</span>
+              </h4>
+              <p class="text-[11px] text-slate-400">Participación en volumen de pedidos y facturación</p>
+            </div>
+          </div>
+
+          <div class="space-y-3 pt-2">
+            @for (pm of insightsData()?.paymentBreakdown || []; track pm.method) {
+              <div class="space-y-1">
+                <div class="flex items-center justify-between text-xs">
+                  <span class="font-bold text-slate-800 dark:text-slate-200">{{ pm.method }}</span>
+                  <div class="font-mono text-slate-500 flex items-center gap-2">
+                    <span>${{ (pm.volumeUsd || 0).toFixed(2) }}</span>
+                    <strong class="text-brand-500 font-bold">({{ pm.percentage }}%)</strong>
+                  </div>
+                </div>
+                <div class="w-full h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                  <div class="h-full bg-gradient-to-r from-brand-500 to-amber-500 rounded-full transition-all duration-500"
+                       [style.width.%]="pm.percentage"></div>
+                </div>
+              </div>
+            } @empty {
+              <div class="p-6 text-center text-slate-400 text-xs">
+                No hay datos de métodos de pago registrados aún.
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- Rankings: Top Comercios y Top Repartidores -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Top 5 Comercios -->
+        <div class="card-adaptive rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <h4 class="text-sm font-extrabold uppercase tracking-wider flex items-center gap-2">
+                <app-icon name="store" [size]="16" className="text-brand-500"></app-icon>
+                <span>Top 5 Comercios con Mayor Ventas</span>
+              </h4>
+              <p class="text-[11px] text-slate-400">Aliados clave que generan mayor facturación a la plataforma</p>
+            </div>
+          </div>
+
+          <div class="divide-y divide-slate-100 dark:divide-slate-800">
+            @for (topM of insightsData()?.topMerchants || []; track topM.tenantId; let idx = $index) {
+              <div class="py-3 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div class="w-7 h-7 rounded-xl flex items-center justify-center font-black text-xs"
+                       [class.bg-amber-100]="idx === 0" [class.text-amber-700]="idx === 0"
+                       [class.bg-slate-200]="idx === 1" [class.text-slate-700]="idx === 1"
+                       [class.bg-orange-100]="idx === 2" [class.text-orange-700]="idx === 2"
+                       [class.bg-slate-100]="idx > 2" [class.text-slate-500]="idx > 2">
+                    {{ idx === 0 ? '🥇' : (idx === 1 ? '🥈' : (idx === 2 ? '🥉' : idx + 1)) }}
+                  </div>
+                  <div>
+                    <div class="font-bold text-xs text-slate-900 dark:text-white">{{ topM.name }}</div>
+                    <div class="text-[10px] text-slate-400">{{ topM.ordersCount }} pedidos cerrados</div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="font-black text-xs font-mono text-slate-900 dark:text-white">${{ (topM.grossSales || 0).toFixed(2) }}</div>
+                  <div class="text-[10px] text-emerald-600 font-bold font-mono">Comisión: ${{ (topM.commission || 0).toFixed(2) }}</div>
+                </div>
+              </div>
+            } @empty {
+              <div class="p-6 text-center text-slate-400 text-xs">
+                No hay datos suficientes de comercios aún.
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Top 5 Repartidores -->
+        <div class="card-adaptive rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <h4 class="text-sm font-extrabold uppercase tracking-wider flex items-center gap-2">
+                <app-icon name="bike" [size]="16" className="text-blue-500"></app-icon>
+                <span>Top 5 Repartidores Más Eficientes</span>
+              </h4>
+              <p class="text-[11px] text-slate-400">Riders con mayor volumen de entregas y alta satisfacción</p>
+            </div>
+          </div>
+
+          <div class="divide-y divide-slate-100 dark:divide-slate-800">
+            @for (topR of insightsData()?.topRiders || []; track topR.id; let idx = $index) {
+              <div class="py-3 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div class="w-7 h-7 rounded-xl flex items-center justify-center font-black text-xs bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300">
+                    #{{ idx + 1 }}
+                  </div>
+                  <div>
+                    <div class="font-bold text-xs text-slate-900 dark:text-white">{{ topR.name }}</div>
+                    <div class="text-[10px] text-slate-400 font-mono">Placa: {{ topR.plate || 'N/A' }}</div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="font-black text-xs text-blue-600 dark:text-blue-400">{{ topR.deliveredCount }} entregas</div>
+                  <div class="text-[10px] text-amber-500 font-bold flex items-center justify-end gap-0.5">
+                    <span>★</span>
+                    <span>{{ (topR.rating || 5.0).toFixed(1) }}</span>
+                  </div>
+                </div>
+              </div>
+            } @empty {
+              <div class="p-6 text-center text-slate-400 text-xs">
+                No hay datos suficientes de repartidores aún.
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- Recomendaciones Estratégicas Automatizadas -->
+      <div class="card-adaptive rounded-2xl p-6 border border-amber-200 dark:border-amber-900/40 bg-amber-50/50 dark:bg-amber-950/20 shadow-xs space-y-3">
+        <h4 class="text-xs font-black uppercase tracking-wider text-amber-800 dark:text-amber-400 flex items-center gap-2">
+          <app-icon name="shield-check" [size]="16" className="text-amber-600 dark:text-amber-400"></app-icon>
+          <span>Acciones y Recomendaciones Sugeridas para Mejora Continua</span>
+        </h4>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-amber-900 dark:text-amber-200">
+          <div class="p-3 rounded-xl bg-white/70 dark:bg-slate-900/60 border border-amber-200 dark:border-amber-900/40">
+            <div class="font-bold mb-1 flex items-center gap-1.5">🛵 Cobertura en Horas Pico</div>
+            <p class="text-[11px] opacity-90 leading-relaxed">
+              Programar incentivos o tarifas dinámicas entre las 18:00 y 21:00 para garantizar disponibilidad de motorizados.
+            </p>
+          </div>
+          <div class="p-3 rounded-xl bg-white/70 dark:bg-slate-900/60 border border-amber-200 dark:border-amber-900/40">
+            <div class="font-bold mb-1 flex items-center gap-1.5">🏪 Fidelización de Comercios Clave</div>
+            <p class="text-[11px] opacity-90 leading-relaxed">
+              El 70% de la facturación proviene de los comercios top. Ofrecerles promociones conjuntas y banners destacados en portada.
+            </p>
+          </div>
+          <div class="p-3 rounded-xl bg-white/70 dark:bg-slate-900/60 border border-amber-200 dark:border-amber-900/40">
+            <div class="font-bold mb-1 flex items-center gap-1.5">💳 Fomentar Pagos Digitales</div>
+            <p class="text-[11px] opacity-90 leading-relaxed">
+              Monitorear pagos móviles y transferencias inmediatas para reducir fricción de cambio en efectivo y acelerar los despachos.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+</div>
