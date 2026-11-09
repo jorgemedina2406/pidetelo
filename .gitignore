@@ -48,5 +48,6 @@ Thumbs.db
 
 # Backend uploads
 backend/uploads/
+backend/data/
 
 

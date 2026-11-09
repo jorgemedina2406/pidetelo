@@ -34,6 +34,9 @@ export class WhatsAppService implements OnModuleInit {
   private readonly activeSockets = new Map<string, any>();
   private readonly connectingInstances = new Set<string>();
   private readonly botSentMessageIds = new Set<string>();
+  private readonly processedMessageIds = new Set<string>();
+  private readonly recentBotTexts = new Set<string>();
+  private readonly lidToPhoneMap = new Map<string, string>();
 
   private evolutionApiUrl: string;
   private evolutionApiKey: string;
@@ -100,58 +103,73 @@ export class WhatsAppService implements OnModuleInit {
 
           if (inst) {
             this.startBaileysSocket(inst).catch((err) => {
-              this.logger.warn(`No se pudo restaurar socket para ${folder}: ${err.message}`);
+              this.logger.error(`Error autoreconectando ${folder}:`, err);
             });
           }
         }
       }
-    } catch (err: any) {
-      this.logger.warn('Error en restoreExistingSessions:', err.message);
+    } catch (err) {
+      this.logger.warn('Error escaneando carpeta de sesiones:', err);
     }
   }
 
   // ==========================================
-  // GESTIÓN DE INSTANCIAS & CÓDIGOS QR
+  // GESTIÓN DE INSTANCIAS & CONEXIÓN
   // ==========================================
 
   async getInstance(tenantId: string, branchId?: string): Promise<WhatsAppInstanceData> {
-    const client = this.supabase.getClient();
-    let query = client.from('whatsapp_instances').select('*').eq('tenant_id', tenantId);
-    if (branchId) query = query.eq('branch_id', branchId);
-    const { data, error } = await query.maybeSingle();
+    const cleanBranchId = branchId || null;
+    let query = this.supabase.getClient()
+      .from('whatsapp_instances')
+      .select('*')
+      .eq('tenant_id', tenantId);
 
-    if (data && !error) return data;
+    if (cleanBranchId) {
+      query = query.eq('branch_id', cleanBranchId);
+    } else {
+      query = query.is('branch_id', null);
+    }
 
-    // Fallback local o crear registro por defecto
-    const local = this.getLocalStorage();
-    const instanceKey = `${tenantId}_${branchId || 'main'}`;
-    if (local.instances[instanceKey]) return local.instances[instanceKey];
+    const { data: existing, error } = await query.maybeSingle();
+    if (existing && !error) {
+      return existing;
+    }
 
-    const newInst: WhatsAppInstanceData = {
+    const instanceName = `tenant_${tenantId.slice(0, 8)}_${cleanBranchId ? cleanBranchId.slice(0, 8) : 'main'}`;
+    const newInstance: WhatsAppInstanceData = {
       id: crypto.randomUUID(),
       tenant_id: tenantId,
-      branch_id: branchId,
-      instance_name: `tenant_${tenantId.slice(0, 8)}_${branchId ? branchId.slice(0, 8) : 'main'}`,
+      branch_id: cleanBranchId || undefined,
+      instance_name: instanceName,
       status: 'disconnected',
       auto_reply_enabled: true,
       pause_duration_minutes: 120,
       greeting_message: '¡Hola! 👋 Gracias por comunicarte con nosotros.',
     };
 
-    try {
-      await client.from('whatsapp_instances').insert(newInst);
-    } catch (_) {
-      local.instances[instanceKey] = newInst;
+    const { data: created, error: insertErr } = await this.supabase.getClient()
+      .from('whatsapp_instances')
+      .insert(newInstance)
+      .select()
+      .single();
+
+    if (created && !insertErr) {
+      return created;
+    }
+
+    const local = this.getLocalStorage();
+    const key = `${tenantId}_${cleanBranchId || 'main'}`;
+    if (!local.instances[key]) {
+      local.instances[key] = newInstance;
       this.saveLocalStorage(local);
     }
-    return newInst;
+    return local.instances[key];
   }
 
   async connectInstance(tenantId: string, branchId?: string): Promise<WhatsAppInstanceData> {
     const instance = await this.getInstance(tenantId, branchId);
     const instanceName = instance.instance_name;
 
-    // 1. Si ya hay un socket Baileys activo y conectado
     const activeSock = this.getSocketForInstance(instanceName, tenantId);
     if (activeSock?.user) {
       const phoneNumber = activeSock.user.id?.split(':')[0] || activeSock.user.id?.split('@')[0];
@@ -165,14 +183,12 @@ export class WhatsAppService implements OnModuleInit {
       return updated;
     }
 
-    // 2. Iniciar Baileys socket si no está conectándose
     if (!this.connectingInstances.has(instanceName)) {
       this.startBaileysSocket(instance).catch((err) => {
         this.logger.error(`Error iniciando socket Baileys para ${instanceName}:`, err);
       });
     }
 
-    // Esperar activamente unos instantes para entregar el primer QR al frontend
     for (let i = 0; i < 10; i++) {
       await new Promise((r) => setTimeout(r, 400));
       const fresh = await this.getInstance(tenantId, branchId);
@@ -181,57 +197,47 @@ export class WhatsAppService implements OnModuleInit {
       }
     }
 
-    return this.getInstance(tenantId, branchId);
+    return await this.getInstance(tenantId, branchId);
   }
 
   private getSocketForInstance(instanceName: string, tenantId?: string): any {
     if (this.activeSockets.has(instanceName)) {
       return this.activeSockets.get(instanceName);
     }
-    if (tenantId) {
-      for (const [key, sock] of this.activeSockets.entries()) {
-        if (key.includes(tenantId.slice(0, 8))) {
-          return sock;
-        }
-      }
-    }
-    if (this.activeSockets.size === 1) {
-      return Array.from(this.activeSockets.values())[0];
+    for (const [key, sock] of this.activeSockets.entries()) {
+      if (key.includes(instanceName)) return sock;
+      if (tenantId && key.includes(tenantId.slice(0, 8))) return sock;
     }
     return null;
   }
 
-  private async startBaileysSocket(instance: WhatsAppInstanceData): Promise<void> {
+  private async startBaileysSocket(instance: WhatsAppInstanceData) {
     const instanceName = instance.instance_name;
+    if (this.connectingInstances.has(instanceName)) return;
+
     this.connectingInstances.add(instanceName);
+    const sessionDir = path.join(this.sessionsDir, instanceName);
+    if (!fs.existsSync(sessionDir)) {
+      fs.mkdirSync(sessionDir, { recursive: true });
+    }
+
+    this.logger.log(`[Baileys] Inicializando cliente nativo WhatsApp para ${instanceName}...`);
 
     try {
-      if (this.activeSockets.has(instanceName)) {
-        try {
-          this.activeSockets.get(instanceName)?.end(undefined);
-        } catch (_) { }
-        this.activeSockets.delete(instanceName);
-      }
+      const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
+      const { version } = await fetchLatestBaileysVersion();
 
-      const sessionPath = path.join(this.sessionsDir, instanceName);
-      if (!fs.existsSync(sessionPath)) {
-        fs.mkdirSync(sessionPath, { recursive: true });
-      }
-
-      const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
-      let version: [number, number, number] = [2, 3000, 1015901307];
-      try {
-        const latest = await fetchLatestBaileysVersion();
-        if (latest?.version) version = latest.version;
-      } catch (_) { }
+      const baileysLogger = pino({ level: 'silent' });
 
       const sock = makeWASocket({
         version,
-        logger: pino({ level: 'silent' }),
-        printQRInTerminal: false,
         auth: state,
-        browser: ['Pidetelo Hub', 'Chrome', '124.0.0'],
-        syncFullHistory: false,
+        logger: baileysLogger,
+        printQRInTerminal: false,
+        browser: ['PideloFacil Delivery', 'Chrome', '124.0.0.0'],
+        connectTimeoutMs: 60000,
+        defaultQueryTimeoutMs: 60000,
+        keepAliveIntervalMs: 25000,
       });
 
       this.activeSockets.set(instanceName, sock);
@@ -242,42 +248,49 @@ export class WhatsAppService implements OnModuleInit {
         const { connection, lastDisconnect, qr } = update;
 
         if (qr) {
-          this.logger.log(`[Baileys] Auténtico QR de WhatsApp Web generado para ${instanceName}`);
           try {
-            const qrDataUrl = await QRCode.toDataURL(qr, { margin: 2, scale: 8 });
+            const qrBase64 = await QRCode.toDataURL(qr, {
+              margin: 2,
+              width: 320,
+              color: { dark: '#111827', light: '#ffffff' },
+            });
+
             await this.updateInstanceStatus(instance.id, {
               status: 'qr_ready',
-              qr_code: qrDataUrl,
+              qr_code: qrBase64,
             });
-          } catch (qrErr: any) {
-            this.logger.error('Error convirtiendo Baileys QR a DataURL:', qrErr.message);
+            this.logger.log(`[Baileys] Código QR generado exitosamente para ${instanceName}`);
+          } catch (qrErr) {
+            this.logger.error(`[Baileys] Error generando DataURL de QR para ${instanceName}:`, qrErr);
           }
         }
 
         if (connection === 'open') {
-          const rawId = sock.user?.id || '';
-          const phoneNumber = rawId.split(':')[0] || rawId.split('@')[0];
-          this.logger.log(`[Baileys] ¡WhatsApp CONECTADO EXITOSAMENTE! ${instanceName} (+${phoneNumber})`);
           this.connectingInstances.delete(instanceName);
+          const rawId = sock.user?.id || '';
+          const phone = rawId.split(':')[0] || rawId.split('@')[0] || '';
 
           await this.updateInstanceStatus(instance.id, {
             status: 'connected',
-            phone_number: phoneNumber,
+            phone_number: phone,
             qr_code: undefined,
           });
+          this.logger.log(`[Baileys] ¡Conexión establecida exitosamente para ${instanceName}! Teléfono: +${phone}`);
         }
 
         if (connection === 'close') {
           this.connectingInstances.delete(instanceName);
           const statusCode = (lastDisconnect?.error as any)?.output?.statusCode;
-          const isLoggedOut = statusCode === DisconnectReason.loggedOut;
-          this.logger.warn(`[Baileys] Conexión cerrada para ${instanceName}. Logged out: ${isLoggedOut} (code: ${statusCode})`);
+          const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
 
-          this.activeSockets.delete(instanceName);
+          this.logger.warn(`[Baileys] Conexión cerrada para ${instanceName}. Código: ${statusCode}. Reconectar: ${shouldReconnect}`);
 
-          if (isLoggedOut) {
+          if (!shouldReconnect) {
+            this.activeSockets.delete(instanceName);
             try {
-              fs.rmSync(sessionPath, { recursive: true, force: true });
+              if (fs.existsSync(sessionDir)) {
+                fs.rmSync(sessionDir, { recursive: true, force: true });
+              }
             } catch (_) { }
 
             await this.updateInstanceStatus(instance.id, {
@@ -293,14 +306,36 @@ export class WhatsAppService implements OnModuleInit {
         }
       });
 
-      // Escuchar mensajes entrantes
+      // Escuchar mensajes entrantes (evitando duplicados con processedMessageIds)
       sock.ev.on('messages.upsert', async (m: any) => {
-        this.logger.log(`[Baileys] messages.upsert recibido: ${m?.messages?.length} mensaje(s), tipo: ${m?.type}`);
         for (const msg of m.messages || []) {
-          if (!msg.key?.fromMe && msg.message) {
+          const msgId = msg.key?.id;
+          if (msgId) {
+            if (this.processedMessageIds.has(msgId)) {
+              continue; // Ignorar duplicados de Baileys notify/append
+            }
+            this.processedMessageIds.add(msgId);
+            if (this.processedMessageIds.size > 2000) {
+              const first = this.processedMessageIds.values().next().value;
+              if (first) this.processedMessageIds.delete(first);
+            }
+          }
+
+          if (msg.key?.fromMe) {
+            // Si el mensaje fue enviado por nuestro bot / backend, ignorar eco para evitar bucles o auto-pausas
+            if (msgId && (this.botSentMessageIds.has(msgId) || msgId.startsWith('BOT_'))) {
+              this.botSentMessageIds.delete(msgId);
+              continue;
+            }
+            const rawText = this.extractMessageText(msg);
+            if (rawText && this.recentBotTexts.has(rawText.trim())) {
+              continue;
+            }
+            if (msg.message) {
+              await this.handleMerchantPhoneMessage(instance, sock, msg);
+            }
+          } else if (!msg.key?.fromMe && msg.message) {
             await this.handleBaileysIncomingMessage(instance, sock, msg);
-          } else if (msg.key?.fromMe && msg.message) {
-            await this.handleMerchantPhoneMessage(instance, msg);
           }
         }
       });
@@ -370,6 +405,90 @@ export class WhatsAppService implements OnModuleInit {
   }
 
   // ==========================================
+  // RESOLUCIÓN DE IDENTIDAD & TELÉFONO REAL
+  // ==========================================
+
+  private extractMessageText(msg: any): string {
+    const m =
+      msg.message?.ephemeralMessage?.message ||
+      msg.message?.viewOnceMessage?.message ||
+      msg.message?.viewOnceMessageV2?.message ||
+      msg.message?.documentWithCaptionMessage?.message ||
+      msg.message;
+
+    return (
+      m?.conversation ||
+      m?.extendedTextMessage?.text ||
+      m?.buttonsResponseMessage?.selectedButtonId ||
+      m?.listResponseMessage?.singleSelectReply?.selectedRowId ||
+      m?.templateButtonReplyMessage?.selectedId ||
+      m?.imageMessage?.caption ||
+      m?.videoMessage?.caption ||
+      ''
+    ).trim();
+  }
+
+  /**
+   * Resuelve el número de teléfono real del cliente (incluso si WhatsApp envía un @lid en modo Multi-Device)
+   */
+  private async resolveRealCustomerPhone(sock: any, instanceName: string, remoteJid: string, msg?: any): Promise<string> {
+    if (!remoteJid) return '';
+
+    // 1. Si no es un @lid, es directamente el número de teléfono
+    if (!remoteJid.endsWith('@lid')) {
+      return remoteJid.replace('@s.whatsapp.net', '').replace('@c.us', '').replace(/\D/g, '');
+    }
+
+    const lidUser = remoteJid.split('@')[0];
+
+    // 2. Si el mensaje trae participantPn o senderPn nativo de Baileys
+    const pnFromMsg = msg?.key?.participantPn || msg?.senderPn || msg?.key?.remoteJidAlt;
+    if (pnFromMsg) {
+      const clean = pnFromMsg.replace('@s.whatsapp.net', '').replace('@c.us', '').replace(/\D/g, '');
+      if (clean && clean.length >= 7 && clean.length <= 15) {
+        this.lidToPhoneMap.set(lidUser, clean);
+        return clean;
+      }
+    }
+
+    // 3. Consultar la caché en memoria de nuestro servicio
+    if (this.lidToPhoneMap.has(lidUser)) {
+      return this.lidToPhoneMap.get(lidUser)!;
+    }
+
+    // 4. Consultar el repositorio signalRepository.lidMapping de Baileys
+    try {
+      if (sock?.signalRepository?.lidMapping?.getPNForLID) {
+        const pn = await sock.signalRepository.lidMapping.getPNForLID(remoteJid);
+        if (pn) {
+          const clean = pn.replace('@s.whatsapp.net', '').replace('@c.us', '').replace(/\D/g, '');
+          if (clean && clean.length >= 7 && clean.length <= 15) {
+            this.lidToPhoneMap.set(lidUser, clean);
+            return clean;
+          }
+        }
+      }
+    } catch (_) { }
+
+    // 5. Leer directamente el mapeo guardado en disco por Baileys: lid-mapping-{lidUser}_reverse.json
+    try {
+      const sessionDir = path.join(this.sessionsDir, instanceName);
+      const reverseFile = path.join(sessionDir, `lid-mapping-${lidUser}_reverse.json`);
+      if (fs.existsSync(reverseFile)) {
+        const raw = fs.readFileSync(reverseFile, 'utf8').trim();
+        const clean = raw.replace(/"/g, '').replace(/\D/g, '');
+        if (clean && clean.length >= 7 && clean.length <= 15) {
+          this.lidToPhoneMap.set(lidUser, clean);
+          return clean;
+        }
+      }
+    } catch (_) { }
+
+    // Fallback: Si no se pudo resolver el número real, retornar el lidUser
+    return lidUser.replace(/\D/g, '');
+  }
+
+  // ==========================================
   // RECEPCIÓN DE MENSAJES & BOT AUTOMATIZADO
   // ==========================================
 
@@ -404,11 +523,11 @@ export class WhatsAppService implements OnModuleInit {
         .maybeSingle();
 
       if (instance) {
+        const sock = this.getSocketForInstance(instanceName, instance.tenant_id);
         if (!messageData.key?.fromMe) {
-          const sock = this.getSocketForInstance(instanceName, instance.tenant_id);
           await this.handleBaileysIncomingMessage(instance, sock, messageData);
         } else {
-          await this.handleMerchantPhoneMessage(instance, messageData);
+          await this.handleMerchantPhoneMessage(instance, sock, messageData);
         }
       }
     }
@@ -421,19 +540,12 @@ export class WhatsAppService implements OnModuleInit {
       return;
     }
 
-    const customerPhone = fromJid.replace('@s.whatsapp.net', '').replace('@c.us', '').replace(/\D/g, '');
-    const pushName = msg.pushName || `Cliente (+${customerPhone})`;
+    // Resolver el número de teléfono real del cliente (incluso si WhatsApp envió @lid)
+    const customerPhone = await this.resolveRealCustomerPhone(sock, instance.instance_name, fromJid, msg);
+    if (!customerPhone) return;
 
-    // Extraer texto desempacando efímeros y vistas únicas si aplica
-    const m = msg.message?.ephemeralMessage?.message || msg.message?.viewOnceMessage?.message || msg.message;
-    const rawText =
-      m?.conversation ||
-      m?.extendedTextMessage?.text ||
-      m?.buttonsResponseMessage?.selectedButtonId ||
-      m?.listResponseMessage?.singleSelectReply?.selectedRowId ||
-      m?.templateButtonReplyMessage?.selectedId ||
-      m?.imageMessage?.caption ||
-      '';
+    const pushName = msg.pushName || `Cliente (+${customerPhone})`;
+    const rawText = this.extractMessageText(msg);
 
     const tenantId = instance.tenant_id;
     const branchId = instance.branch_id;
@@ -441,7 +553,6 @@ export class WhatsAppService implements OnModuleInit {
     let conversation = await this.getOrCreateConversation(tenantId, customerPhone, pushName, branchId);
     await this.saveMessage(conversation.id, tenantId, 'customer', rawText);
 
-    // Obtener datos frescos del comercio
     const { data: tenant } = await this.supabase.getClient()
       .from('tenants')
       .select('name, slug')
@@ -452,13 +563,13 @@ export class WhatsAppService implements OnModuleInit {
     const tenantName = tenant?.name || 'Nuestro Comercio';
 
     const cleanedText = rawText.trim().toLowerCase();
-    this.logger.log(`[Baileys] Mensaje recibido de ${customerPhone}: "${rawText}" (limpio: "${cleanedText}")`);
+    this.logger.log(`[Baileys] Mensaje recibido de ${customerPhone} (${fromJid}): "${rawText}" (limpio: "${cleanedText}")`);
 
     // ==========================================
     // EVALUACIÓN DE OPCIONES
     // ==========================================
 
-    // OPCIÓN 3: HABLAR CON UN OPERADOR (O palabras afines)
+    // OPCIÓN 3: HABLAR CON UN OPERADOR
     if (
       cleanedText === '3' ||
       cleanedText.includes('operador') ||
@@ -475,7 +586,7 @@ export class WhatsAppService implements OnModuleInit {
       conversation.paused_until = pausedUntil;
 
       const reply = `👤 *¡Entendido! Te hemos transferido con un operador humano.*\n\nUn integrante de nuestro equipo te atenderá por este mismo chat en breve. He pausado mis respuestas automáticas para que puedan conversar sin interrupciones.\n\n_(Si deseas volver al menú automático en cualquier momento, responde con la palabra *MENU* o *BOT*)_`;
-      await this.sendExternalMessage(instance.instance_name, fromJid, reply, tenantId);
+      await this.sendExternalMessage(instance.instance_name, customerPhone, reply, tenantId);
       await this.saveMessage(conversation.id, tenantId, 'bot', reply);
       return;
     }
@@ -504,7 +615,7 @@ export class WhatsAppService implements OnModuleInit {
     if (cleanedText === '1' || cleanedText.includes('web') || cleanedText.includes('catalogo') || cleanedText.includes('menú') || cleanedText.includes('menu') || cleanedText.includes('tienda') || cleanedText.includes('pedir')) {
       const webUrl = `https://pidetelo.com/t/${tenantSlug}${branchId ? `?branch=${branchId}` : ''}`;
       const reply = `🛒 *¡Excelente elección!*\n\nPuedes ver todo nuestro menú y hacer tu pedido directamente en línea con entrega a domicilio o retiro aquí:\n👉 ${webUrl}\n\n_Si deseas hablar con una persona, responde *3*._`;
-      await this.sendExternalMessage(instance.instance_name, fromJid, reply, tenantId);
+      await this.sendExternalMessage(instance.instance_name, customerPhone, reply, tenantId);
       await this.saveMessage(conversation.id, tenantId, 'bot', reply);
       return;
     }
@@ -512,7 +623,7 @@ export class WhatsAppService implements OnModuleInit {
     // OPCIÓN 2: DESCARGAR APP MÓVIL
     if (cleanedText === '2' || cleanedText.includes('app') || cleanedText.includes('descargar') || cleanedText.includes('aplicacion') || cleanedText.includes('apk') || cleanedText.includes('ipa')) {
       const reply = `📱 *¡Descarga la App Móvil de ${tenantName}!* 🚀\n\nDisfruta de promociones exclusivas, cupones de descuento y seguimiento en vivo por GPS de tu motorizado:\n\n🤖 *Android (APK Directo):*\nhttps://pidetelo.com/descargas/app-cliente.apk\n\n🍏 *iOS (iPhone):*\nhttps://pidetelo.com/descargas/app-cliente.ipa\n\n_O haz tu pedido directo en la web respondiendo *1*._`;
-      await this.sendExternalMessage(instance.instance_name, fromJid, reply, tenantId);
+      await this.sendExternalMessage(instance.instance_name, customerPhone, reply, tenantId);
       await this.saveMessage(conversation.id, tenantId, 'bot', reply);
       return;
     }
@@ -523,18 +634,22 @@ export class WhatsAppService implements OnModuleInit {
 
     const defaultMenu = `${greeting}\n\n*Por favor, responde con el número de la opción que prefieras:*\n\n1️⃣ 🌐 *Pedir por la Tienda Web*\n👉 ${webUrl}\n\n2️⃣ 📱 *Descargar la App Móvil*\n👉 Promociones, cupones y GPS en vivo.\n\n3️⃣ 👤 *Hablar con un Operador*\n👉 Un miembro de nuestro equipo te responderá aquí directamente.`;
 
-    await this.sendExternalMessage(instance.instance_name, fromJid, defaultMenu, tenantId);
+    await this.sendExternalMessage(instance.instance_name, customerPhone, defaultMenu, tenantId);
     await this.saveMessage(conversation.id, tenantId, 'bot', defaultMenu);
   }
 
-  private async handleMerchantPhoneMessage(instance: WhatsAppInstanceData, msg: any) {
+  private async handleMerchantPhoneMessage(instance: WhatsAppInstanceData, sock: any, msg: any) {
     const toJid = msg.key?.remoteJid || '';
-    if (!toJid || toJid.endsWith('@g.us')) return;
+    if (!toJid || toJid.endsWith('@g.us') || toJid === 'status@broadcast') return;
 
-    const customerPhone = toJid.replace('@s.whatsapp.net', '').replace('@c.us', '').replace(/\D/g, '');
-    const m = msg.message?.ephemeralMessage?.message || msg.message?.viewOnceMessage?.message || msg.message;
-    const rawText = m?.conversation || m?.extendedTextMessage?.text || '';
+    const customerPhone = await this.resolveRealCustomerPhone(sock, instance.instance_name, toJid, msg);
+    if (!customerPhone) return;
+
+    const rawText = this.extractMessageText(msg);
     if (!rawText) return;
+
+    // Si coincide con texto enviado recientemente por el bot, ignorar eco
+    if (this.recentBotTexts.has(rawText.trim())) return;
 
     const tenantId = instance.tenant_id;
     const branchId = instance.branch_id;
@@ -542,35 +657,35 @@ export class WhatsAppService implements OnModuleInit {
     const conv = await this.getOrCreateConversation(tenantId, customerPhone, `Cliente (+${customerPhone})`, branchId);
     await this.saveMessage(conv.id, tenantId, 'agent', rawText);
 
-    // Pausar bot para que el comerciante que está hablando por el tlf no reciba respuestas del bot
+    // Pausar el bot para este cliente porque el operador le escribió manualmente desde su teléfono
     const pauseMinutes = instance.pause_duration_minutes || 120;
     const pausedUntil = new Date(Date.now() + pauseMinutes * 60 * 1000).toISOString();
     await this.updateConversationMode(conv.id, 'human', pausedUntil);
   }
 
   // ==========================================
-  // CONVERSACIONES & BANDEJA DE ENTRADA
+  // OPERACIONES DE CHAT EN VIVO (PANEL COMERCIO)
   // ==========================================
 
-  async getConversations(tenantId: string) {
-    const { data, error } = await this.supabase.getClient()
+  async getConversations(tenantId: string, branchId?: string) {
+    let query = this.supabase.getClient()
       .from('whatsapp_conversations')
       .select('*')
       .eq('tenant_id', tenantId)
       .order('last_message_at', { ascending: false });
 
+    if (branchId) {
+      query = query.eq('branch_id', branchId);
+    }
+
+    const { data, error } = await query;
     if (data && !error) return data;
 
     const local = this.getLocalStorage();
-    return Object.values(local.conversations).filter((c: any) => c.tenant_id === tenantId);
+    return Object.values(local.conversations || {}).filter((c: any) => c.tenant_id === tenantId);
   }
 
   async getMessages(conversationId: string) {
-    await this.supabase.getClient()
-      .from('whatsapp_conversations')
-      .update({ unread_count: 0 })
-      .eq('id', conversationId);
-
     const { data, error } = await this.supabase.getClient()
       .from('whatsapp_messages')
       .select('*')
@@ -604,13 +719,11 @@ export class WhatsAppService implements OnModuleInit {
 
     const instance = await this.getInstance(conv.tenant_id, conv.branch_id);
     const instanceName = instance.instance_name;
-    const cleanPhone = conv.customer_phone.replace(/\D/g, '');
-    const remoteJid = `${cleanPhone}@s.whatsapp.net`;
 
-    // 1. Enviar mensaje por Baileys / Gateway
-    await this.sendExternalMessage(instanceName, remoteJid, text, conv.tenant_id);
+    // 1. Enviar mensaje por Baileys / Gateway al teléfono real del cliente
+    await this.sendExternalMessage(instanceName, conv.customer_phone, text, conv.tenant_id);
 
-    // 2. Guardar mensaje
+    // 2. Guardar mensaje como enviado por el agente humano
     const msg = await this.saveMessage(conversationId, conv.tenant_id, 'agent', text);
 
     // 3. Pausar bot por el tiempo configurado para que el operador atienda libremente
@@ -697,7 +810,7 @@ export class WhatsAppService implements OnModuleInit {
       .maybeSingle();
 
     if (existing) {
-      if (name && existing.customer_name !== name) {
+      if (name && existing.customer_name !== name && !existing.customer_name?.startsWith('Cliente (+')) {
         await client.from('whatsapp_conversations').update({ customer_name: name }).eq('id', existing.id);
       }
       return existing;
@@ -751,16 +864,33 @@ export class WhatsAppService implements OnModuleInit {
     return msg;
   }
 
-  private async sendExternalMessage(instanceName: string, remoteJid: string, text: string, tenantId?: string) {
-    const cleanPhone = remoteJid.replace('@s.whatsapp.net', '').replace('@c.us', '').replace(/\D/g, '');
-    const targetJid = `${cleanPhone}@s.whatsapp.net`;
+  private async sendExternalMessage(instanceName: string, targetJidOrPhone: string, text: string, tenantId?: string) {
+    let cleanDigits = targetJidOrPhone.replace('@s.whatsapp.net', '').replace('@c.us', '').replace(/\D/g, '');
+
+    // Si nos pasaron un JID con @lid o un identificador de longitud anormal, resolver al teléfono real
+    if (targetJidOrPhone.includes('@lid') || (cleanDigits.length > 14 && this.lidToPhoneMap.has(cleanDigits))) {
+      const sock = this.getSocketForInstance(instanceName, tenantId);
+      cleanDigits = await this.resolveRealCustomerPhone(sock, instanceName, targetJidOrPhone.includes('@lid') ? targetJidOrPhone : `${cleanDigits}@lid`);
+    }
+
+    // El destino en WhatsApp siempre debe ser {telefono_real}@s.whatsapp.net
+    const targetJid = `${cleanDigits}@s.whatsapp.net`;
 
     // 1. Enviar directamente mediante el socket Baileys activo
     const sock = this.getSocketForInstance(instanceName, tenantId);
     if (sock) {
       try {
-        await sock.sendMessage(targetJid, { text });
-        this.logger.log(`[Baileys] Mensaje enviado exitosamente a ${targetJid}`);
+        const customMsgId = 'BOT_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9).toUpperCase();
+        this.botSentMessageIds.add(customMsgId);
+        this.recentBotTexts.add(text.trim());
+        setTimeout(() => this.recentBotTexts.delete(text.trim()), 60000);
+
+        this.logger.log(`[Baileys] Enviando mensaje a ${targetJid} (ID: ${customMsgId}): "${text.slice(0, 40)}..."`);
+        const sent = await sock.sendMessage(targetJid, { text }, { messageId: customMsgId });
+        if (sent?.key?.id) {
+          this.botSentMessageIds.add(sent.key.id);
+        }
+        this.logger.log(`[Baileys] ¡Mensaje enviado exitosamente a ${targetJid}!`);
         return;
       } catch (err: any) {
         this.logger.warn(`[Baileys] Error enviando socket a ${targetJid}: ${err.message}`);
@@ -779,17 +909,10 @@ export class WhatsAppService implements OnModuleInit {
         },
         body: JSON.stringify({
           number: targetJid,
-          options: {
-            delay: 1200,
-            presence: 'composing',
-          },
-          textMessage: {
-            text,
-          },
+          options: { delay: 1200, presence: 'composing' },
+          textMessage: { text },
         }),
       });
-    } catch (err: any) {
-      this.logger.warn(`[EvolutionApi] Fallback de envío a ${targetJid}: ${err.message}`);
-    }
+    } catch (_) { }
   }
 }
