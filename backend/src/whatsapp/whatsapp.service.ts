@@ -33,6 +33,7 @@ export class WhatsAppService implements OnModuleInit {
   private readonly sessionsDir = path.join(process.cwd(), 'data', 'whatsapp_sessions');
   private readonly activeSockets = new Map<string, any>();
   private readonly connectingInstances = new Set<string>();
+  private readonly botSentMessageIds = new Set<string>();
 
   private evolutionApiUrl: string;
   private evolutionApiKey: string;
@@ -618,6 +619,29 @@ export class WhatsAppService implements OnModuleInit {
     await this.updateConversationMode(conversationId, 'human', pausedUntil);
 
     return msg;
+  }
+
+  async resumeAllBots(tenantId: string) {
+    try {
+      await this.supabase.getClient()
+        .from('whatsapp_conversations')
+        .update({
+          mode: 'bot',
+          paused_until: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('tenant_id', tenantId);
+    } catch (_) {
+      const local = this.getLocalStorage();
+      for (const k of Object.keys(local.conversations)) {
+        if (local.conversations[k].tenant_id === tenantId) {
+          local.conversations[k].mode = 'bot';
+          local.conversations[k].paused_until = null;
+        }
+      }
+      this.saveLocalStorage(local);
+    }
+    return { success: true, message: 'Bot activado para todas las conversaciones' };
   }
 
   async toggleConversationMode(conversationId: string, mode: 'bot' | 'human', minutes: number = 120) {

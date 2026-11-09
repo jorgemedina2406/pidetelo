@@ -1941,4 +1941,8 @@ export class ApiService {
   toggleWhatsAppBotMode(conversationId: string, mode: 'bot' | 'human', minutes: number = 120): Observable<any> {
     return this.http.post<any>(this.baseUrl + '/whatsapp/conversations/' + conversationId + '/toggle-mode', { mode, minutes });
   }
+
+  resumeAllWhatsAppBots(tenantId: string): Observable<any> {
+    return this.http.post<any>(this.baseUrl + '/whatsapp/conversations/' + tenantId + '/resume-all-bots', {});
+  }
 }

@@ -3139,6 +3139,23 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     });
   }
 
+  resumeAllWhatsAppBots(): void {
+    const tenantId = this.getEffectiveTenantId();
+    if (!tenantId) return;
+    this.api.resumeAllWhatsAppBots(tenantId).subscribe({
+      next: () => {
+        this.whatsappConversations.update(list => list.map(c => ({ ...c, mode: 'bot', paused_until: null })));
+        if (this.selectedWhatsAppConversation()) {
+          this.selectedWhatsAppConversation.update(c => c ? { ...c, mode: 'bot', paused_until: null } : null);
+        }
+        this.showToast('success', 'Bot Activado para Todos', 'El bot responderá automáticamente a todos los clientes.');
+      },
+      error: (err) => {
+        this.showToast('error', 'Error', err.error?.message || 'No se pudo activar el bot para todos.');
+      }
+    });
+  }
+
   async logout(): Promise<void> {
     await this.supabase.signOut();
     this.auth.logout();

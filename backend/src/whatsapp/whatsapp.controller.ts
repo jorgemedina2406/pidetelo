@@ -81,5 +81,10 @@ export class WhatsAppController {
   ) {
     return this.whatsappService.toggleConversationMode(conversationId, mode, minutes);
   }
+
+  @Post('conversations/:tenantId/resume-all-bots')
+  async resumeAllBots(@Param('tenantId') tenantId: string) {
+    return this.whatsappService.resumeAllBots(tenantId);
+  }
 }
 
