@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, NotFoundException, InternalServerErrorException, BadRequestException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service.js';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -7,6 +7,26 @@ import * as crypto from 'crypto';
 @Injectable()
 export class TenantsService {
   private metadataFilePath = path.join(process.cwd(), 'data', 'tenants_metadata.json');
+  private reviewsStoragePath = path.join(process.cwd(), 'data', 'tenant_reviews.json');
+
+  private loadLocalReviews(): Record<string, any[]> {
+    try {
+      if (fs.existsSync(this.reviewsStoragePath)) {
+        return JSON.parse(fs.readFileSync(this.reviewsStoragePath, 'utf-8'));
+      }
+    } catch (_) {}
+    return {};
+  }
+
+  private saveLocalReviews(data: Record<string, any[]>) {
+    try {
+      const dir = path.dirname(this.reviewsStoragePath);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(this.reviewsStoragePath, JSON.stringify(data, null, 2), 'utf-8');
+    } catch (e) {
+      console.warn('[TenantsService] Error saving local reviews:', e);
+    }
+  }
 
   constructor(private supabase: SupabaseService) {}
 
@@ -123,6 +143,19 @@ export class TenantsService {
       });
     }
 
+    const localReviews = this.loadLocalReviews();
+    const reviews = localReviews[t.id] || [];
+    let calculatedRating = Number(t.rating ?? meta.rating);
+    let calculatedReviewCount = Number(t.review_count ?? meta.review_count ?? meta.reviewCount);
+
+    if (reviews.length > 0) {
+      calculatedReviewCount = reviews.length;
+      calculatedRating = Number((reviews.reduce((acc: number, r: any) => acc + (Number(r.rating) || 5), 0) / reviews.length).toFixed(1));
+    } else if (isNaN(calculatedRating) || calculatedRating === 0) {
+      calculatedRating = 5.0;
+      calculatedReviewCount = 0;
+    }
+
     return {
       ...t,
       category,
@@ -130,6 +163,9 @@ export class TenantsService {
       tagline,
       is_featured: isFeatured,
       isFeatured,
+      rating: calculatedRating,
+      review_count: calculatedReviewCount,
+      reviewCount: calculatedReviewCount,
       exchange_rate: exchangeRate,
       base_currency: baseCurrency,
       display_mode: displayMode,
@@ -504,6 +540,119 @@ export class TenantsService {
         password: ownerPassword,
         role: 'MERCHANT_OWNER'
       }
+    };
+  }
+
+  // ==========================================
+  // VALORACIONES, ESTRELLAS Y RESEÑAS REALES
+  // ==========================================
+
+  private async resolveTenant(tenantIdOrSlug: string): Promise<any> {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tenantIdOrSlug);
+    try {
+      if (isUuid) {
+        return await this.findById(tenantIdOrSlug);
+      }
+      return await this.findBySlug(tenantIdOrSlug);
+    } catch (_) {
+      // Intentar búsqueda rápida directa
+      const query = isUuid
+        ? this.supabase.getClient().from('tenants').select('*').eq('id', tenantIdOrSlug).maybeSingle()
+        : this.supabase.getClient().from('tenants').select('*').eq('slug', tenantIdOrSlug).maybeSingle();
+      const { data } = await query;
+      return data || null;
+    }
+  }
+
+  async getTenantReviews(tenantIdOrSlug: string) {
+    const tenant = await this.resolveTenant(tenantIdOrSlug);
+    const tenantId = tenant?.id || tenantIdOrSlug;
+
+    // 1. Intentar desde Supabase
+    try {
+      const { data, error } = await this.supabase.getClient()
+        .from('tenant_reviews')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .order('created_at', { ascending: false });
+
+      if (!error && Array.isArray(data) && data.length > 0) {
+        return data;
+      }
+    } catch (_) { }
+
+    // 2. Fallback a almacenamiento local en JSON
+    const local = this.loadLocalReviews();
+    return local[tenantId] || [];
+  }
+
+  async createTenantReview(tenantIdOrSlug: string, payload: { rating: number; comment?: string; customerName: string; customerPhone?: string; orderId?: string }) {
+    const tenant = await this.resolveTenant(tenantIdOrSlug);
+    if (!tenant) {
+      throw new BadRequestException('Comercio no encontrado para valorar');
+    }
+    const tenantId = tenant.id;
+
+    const rating = Math.min(5, Math.max(1, Math.round(Number(payload.rating) || 5)));
+    const comment = (payload.comment || '').trim();
+    const customerName = (payload.customerName || '').trim() || 'Cliente Satisfecho';
+    const customerPhone = (payload.customerPhone || '').trim();
+    const orderId = payload.orderId || null;
+
+    const newReview = {
+      id: crypto.randomUUID(),
+      tenant_id: tenantId,
+      order_id: orderId,
+      customer_name: customerName,
+      customer_phone: customerPhone,
+      rating,
+      comment,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    // 1. Guardar en Supabase si la tabla existe
+    try {
+      await this.supabase.getClient().from('tenant_reviews').insert(newReview);
+    } catch (_) { }
+
+    // 2. Guardar en almacenamiento local persistente
+    const local = this.loadLocalReviews();
+    if (!local[tenantId]) local[tenantId] = [];
+    local[tenantId].unshift(newReview);
+    this.saveLocalReviews(local);
+
+    // 3. Recalcular promedio y cantidad real de reseñas
+    const allReviews = local[tenantId];
+    const totalCount = allReviews.length;
+    const sumRatings = allReviews.reduce((sum, r) => sum + (Number(r.rating) || 5), 0);
+    const avgRating = totalCount > 0 ? Number((sumRatings / totalCount).toFixed(1)) : 5.0;
+
+    // 4. Actualizar tabla tenants en Supabase
+    try {
+      await this.supabase.getClient()
+        .from('tenants')
+        .update({
+          rating: avgRating,
+          review_count: totalCount,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', tenantId);
+    } catch (_) { }
+
+    // 5. Guardar en metadata
+    this.saveTenantMetadata(tenantId, {
+      rating: avgRating,
+      review_count: totalCount,
+      reviewCount: totalCount,
+    });
+
+    return {
+      success: true,
+      message: '¡Valoración enviada exitosamente!',
+      review: newReview,
+      rating: avgRating,
+      reviewCount: totalCount,
     };
   }
 }

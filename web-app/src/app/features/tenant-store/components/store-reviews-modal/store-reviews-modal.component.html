@@ -1,0 +1,266 @@
+@if (isOpen) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-xs animate-fade-in"
+       (click)="onClose()">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-lg w-full max-h-[90vh] overflow-hidden shadow-2xl flex flex-col animate-modal-in"
+         (click)="$event.stopPropagation()">
+
+      <!-- Modal Header -->
+      <div class="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-amber-500/10 dark:bg-amber-400/15 text-amber-500 flex items-center justify-center text-xl shadow-xs">
+            ⭐
+          </div>
+          <div>
+            <h2 class="text-base font-extrabold text-slate-900 dark:text-white leading-tight">
+              Valoraciones y Reseñas
+            </h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+              {{ store.name }}
+            </p>
+          </div>
+        </div>
+
+        <button
+          (click)="onClose()"
+          class="w-8 h-8 rounded-full bg-slate-200/60 dark:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+        >
+          ✕
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-5 overflow-y-auto space-y-6">
+
+        <!-- Score Breakdown & Stats Card -->
+        <div class="p-4 rounded-2xl bg-gradient-to-br from-amber-500/5 via-orange-500/5 to-transparent border border-amber-500/15 flex flex-col sm:flex-row items-center gap-5">
+          <!-- Big Rating Number -->
+          <div class="text-center sm:text-left flex-shrink-0">
+            <div class="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white tracking-tight">
+              {{ store.rating.toFixed(1) }}
+            </div>
+            <div class="flex items-center justify-center sm:justify-start gap-1 text-amber-400 text-lg mt-1">
+              <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
+            </div>
+            <p class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mt-1">
+              {{ store.reviewCount }} {{ store.reviewCount === 1 ? 'reseña real' : 'reseñas reales' }}
+            </p>
+          </div>
+
+          <!-- Distribution Bars -->
+          <div class="flex-1 w-full space-y-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300">
+            @for (star of [5, 4, 3, 2, 1]; track star) {
+              <div class="flex items-center gap-2">
+                <span class="w-5 text-right text-[11px] text-slate-400">{{ star }}★</span>
+                <div class="flex-1 h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                  <div
+                    class="h-full rounded-full transition-all duration-500"
+                    [class.bg-amber-400]="star >= 4"
+                    [class.bg-orange-400]="star === 3"
+                    [class.bg-red-400]="star <= 2"
+                    [style.width.%]="getRatingDistribution(star)"
+                  ></div>
+                </div>
+                <span class="w-8 text-right text-[10px] text-slate-400">{{ getRatingDistribution(star) }}%</span>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Action Button: Escribir Valoración -->
+        @if (!showForm()) {
+          <button
+            (click)="showForm.set(true)"
+            type="button"
+            class="w-full py-3 px-4 rounded-2xl text-xs sm:text-sm font-extrabold text-white bg-gradient-to-r from-amber-500 via-orange-500 to-brand-600 hover:from-amber-400 hover:to-brand-500 shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2 transition-all transform active:scale-98 cursor-pointer"
+          >
+            <span>✍️</span>
+            <span>Escribir una Valoración</span>
+          </button>
+        }
+
+        <!-- Review Form Container -->
+        @if (showForm()) {
+          <div class="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 space-y-4">
+            <div class="flex items-center justify-between">
+              <h3 class="text-xs sm:text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">
+                Tu Valoración para {{ store.name }}
+              </h3>
+              <button
+                (click)="showForm.set(false)"
+                type="button"
+                class="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+              >
+                Cancelar
+              </button>
+            </div>
+
+            <!-- Star Selector -->
+            <div>
+              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                Selecciona tu puntuación (1 a 5 estrellas):
+              </label>
+              <div class="flex items-center gap-2">
+                @for (star of [1, 2, 3, 4, 5]; track star) {
+                  <button
+                    type="button"
+                    (click)="setRating(star)"
+                    (mouseenter)="setHover(star)"
+                    (mouseleave)="setHover(0)"
+                    class="text-3xl sm:text-4xl transition-transform hover:scale-125 focus:outline-hidden cursor-pointer"
+                    [class.text-amber-400]="(hoveredRating || selectedRating) >= star"
+                    [class.text-slate-300]="(hoveredRating || selectedRating) < star"
+                    [class.dark:text-slate-700]="(hoveredRating || selectedRating) < star"
+                  >
+                    ★
+                  </button>
+                }
+              </div>
+              <p class="text-xs font-semibold text-amber-600 dark:text-amber-400 mt-1">
+                {{ getStarLabel(hoveredRating || selectedRating) }}
+              </p>
+            </div>
+
+            <!-- Customer Name -->
+            <div>
+              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Tu Nombre o Apodo: *
+              </label>
+              <input
+                type="text"
+                [(ngModel)]="customerName"
+                placeholder="Ej. Carlos Mendoza"
+                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-amber-500"
+              />
+            </div>
+
+            <!-- Optional Phone -->
+            <div>
+              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Teléfono de WhatsApp (Opcional):
+              </label>
+              <input
+                type="tel"
+                [(ngModel)]="customerPhone"
+                placeholder="Ej. +58 412 1234567"
+                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-amber-500"
+              />
+            </div>
+
+            <!-- Comment -->
+            <div>
+              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Tu Comentario u Opinión:
+              </label>
+              <textarea
+                [(ngModel)]="comment"
+                rows="3"
+                placeholder="Cuéntanos qué tal estuvo la comida, la preparación, el empaque y el sabor..."
+                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-amber-500 resize-none"
+              ></textarea>
+            </div>
+
+            <!-- Alerts -->
+            @if (errorMessage()) {
+              <div class="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs font-medium">
+                ⚠️ {{ errorMessage() }}
+              </div>
+            }
+
+            @if (successMessage()) {
+              <div class="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-medium">
+                ✅ {{ successMessage() }}
+              </div>
+            }
+
+            <!-- Submit Button -->
+            <button
+              (click)="submitReview()"
+              [disabled]="isSubmitting()"
+              type="button"
+              class="w-full py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold text-white bg-brand-600 hover:bg-brand-500 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-brand-600/20 transition-all cursor-pointer flex items-center justify-center gap-2"
+            >
+              @if (isSubmitting()) {
+                <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <span>Publicando...</span>
+              } @else {
+                <span>Publicar Valoración ⭐</span>
+              }
+            </button>
+          </div>
+        }
+
+        <!-- Reviews List Section -->
+        <div>
+          <h3 class="text-xs font-extrabold text-slate-400 uppercase tracking-wider mb-3">
+            Opiniones de la Comunidad ({{ reviews().length }})
+          </h3>
+
+          @if (isLoading()) {
+            <div class="py-8 text-center text-slate-400 text-xs flex flex-col items-center gap-2">
+              <div class="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+              <span>Cargando valoraciones reales...</span>
+            </div>
+          } @else if (reviews().length === 0) {
+            <div class="py-10 text-center px-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-dashed border-slate-200 dark:border-slate-800">
+              <div class="text-3xl mb-2">⭐</div>
+              <p class="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-200">
+                Aún no hay valoraciones para este comercio
+              </p>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xs mx-auto">
+                ¡Sé el primero en compartir tu experiencia haciendo clic en el botón de arriba!
+              </p>
+            </div>
+          } @else {
+            <div class="space-y-3">
+              @for (rev of reviews(); track rev.id || $index) {
+                <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 flex flex-col gap-2">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2.5">
+                      <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-amber-500 to-brand-500 text-white font-black text-xs flex items-center justify-center uppercase shadow-xs">
+                        {{ rev.customer_name ? rev.customer_name.charAt(0) : 'C' }}
+                      </div>
+                      <div>
+                        <div class="text-xs font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5">
+                          <span>{{ rev.customer_name }}</span>
+                          <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded-full">✓ Verificado</span>
+                        </div>
+                        <div class="text-[10px] text-slate-400">
+                          {{ rev.created_at ? (rev.created_at | date:'dd/MM/yyyy') : 'Reciente' }}
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Stars Badge -->
+                    <div class="flex items-center gap-0.5 text-amber-400 text-xs">
+                      @for (s of [1, 2, 3, 4, 5]; track s) {
+                        <span>{{ s <= rev.rating ? '★' : '☆' }}</span>
+                      }
+                    </div>
+                  </div>
+
+                  @if (rev.comment) {
+                    <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed pl-10">
+                      "{{ rev.comment }}"
+                    </p>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+      </div>
+
+      <!-- Footer -->
+      <div class="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 flex justify-end">
+        <button
+          (click)="onClose()"
+          class="px-5 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+        >
+          Cerrar
+        </button>
+      </div>
+
+    </div>
+  </div>
+}

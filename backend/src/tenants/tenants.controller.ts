@@ -37,4 +37,16 @@ export class TenantsController {
   update(@Param('id') id: string, @Body() updateData: any) {
     return this.tenantsService.update(id, updateData);
   }
+
+  @Get(':id/reviews')
+  @ApiOperation({ summary: 'Obtener reseñas y valoraciones reales de un comercio' })
+  getReviews(@Param('id') id: string) {
+    return this.tenantsService.getTenantReviews(id);
+  }
+
+  @Post(':id/reviews')
+  @ApiOperation({ summary: 'Publicar una reseña y valoración con estrellas para un comercio' })
+  createReview(@Param('id') id: string, @Body() body: any) {
+    return this.tenantsService.createTenantReview(id, body);
+  }
 }

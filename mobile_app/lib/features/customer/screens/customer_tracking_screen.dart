@@ -78,6 +78,39 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
     }
   }
 
+  // Calificación del comercio / tienda
+  bool _hasRatedStore = false;
+  double _selectedStoreRating = 5.0;
+  bool _isSubmittingStoreRating = false;
+  final TextEditingController _storeRatingCommentController = TextEditingController();
+
+  Future<void> _submitStoreRating() async {
+    final tenantId = _order.tenantId;
+    if (tenantId == null || tenantId.isEmpty) return;
+    setState(() => _isSubmittingStoreRating = true);
+    final res = await ApiService().submitTenantReview(
+      tenantId: tenantId,
+      rating: _selectedStoreRating,
+      orderId: _order.id,
+      comment: _storeRatingCommentController.text.trim(),
+      customerName: _order.customerName.isNotEmpty ? _order.customerName : 'Cliente',
+      customerPhone: _order.customerPhone,
+    );
+    if (!mounted) return;
+    setState(() {
+      _isSubmittingStoreRating = false;
+      _hasRatedStore = res != null;
+    });
+    if (res != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('¡Gracias por calificar a ${_order.tenantName.isNotEmpty ? _order.tenantName : "tu comercio"}! ⭐'),
+          backgroundColor: const Color(0xFF10B981),
+        ),
+      );
+    }
+  }
+
   double get _riderProgress {
     if (!_hasRider) return 0.0;
     switch (_order.status) {
@@ -503,6 +536,7 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
   @override
   void dispose() {
     _ratingCommentController.dispose();
+    _storeRatingCommentController.dispose();
     _smoothGlideTimer?.cancel();
     _pollTimer?.cancel();
     _realtimeChannel?.unsubscribe();
@@ -1166,6 +1200,130 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                                           )
                                         : Text(
                                             'Enviar Valoración',
+                                            style: GoogleFonts.outfit(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                          ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+
+                  // Calificar al comercio / tienda
+                  if (_order.status == OrderDeliveryStatus.delivered && (_order.tenantId != null && _order.tenantId!.isNotEmpty)) ...[
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+                        ),
+                      ),
+                      child: _hasRatedStore
+                          ? Row(
+                              children: [
+                                const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 24),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    '¡Has valorado a ${_order.tenantName.isNotEmpty ? _order.tenantName : "tu comercio"} con ${_selectedStoreRating.toInt()} ⭐! Gracias por tu opinión.',
+                                    style: GoogleFonts.outfit(
+                                      color: const Color(0xFF10B981),
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            )
+                          : Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Text('🏪', style: TextStyle(fontSize: 18)),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        '¿Qué tal estuvo la comida de ${_order.tenantName.isNotEmpty ? _order.tenantName : "este comercio"}?',
+                                        style: GoogleFonts.outfit(
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 14,
+                                          color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Valora la calidad, empaque y sabor de tu pedido:',
+                                  style: GoogleFonts.outfit(
+                                    color: const Color(0xFF94A3B8),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: List.generate(5, (index) {
+                                    final starValue = (index + 1).toDouble();
+                                    return IconButton(
+                                      onPressed: () {
+                                        setState(() => _selectedStoreRating = starValue);
+                                      },
+                                      icon: Icon(
+                                        starValue <= _selectedStoreRating
+                                            ? Icons.star_rounded
+                                            : Icons.star_outline_rounded,
+                                        color: AppTheme.amberAccent,
+                                        size: 32,
+                                      ),
+                                    );
+                                  }),
+                                ),
+                                const SizedBox(height: 6),
+                                TextField(
+                                  controller: _storeRatingCommentController,
+                                  style: GoogleFonts.outfit(fontSize: 12.5, color: isDark ? Colors.white : Colors.black87),
+                                  decoration: InputDecoration(
+                                    hintText: 'Escribe un comentario sobre tu comida (opcional)...',
+                                    hintStyle: GoogleFonts.outfit(fontSize: 12, color: Colors.grey),
+                                    filled: true,
+                                    fillColor: isDark ? const Color(0xFF0F172A) : Colors.white,
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                SizedBox(
+                                  width: double.infinity,
+                                  height: 42,
+                                  child: ElevatedButton(
+                                    onPressed: _isSubmittingStoreRating ? null : _submitStoreRating,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppTheme.primary,
+                                      foregroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                    child: _isSubmittingStoreRating
+                                        ? const SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Colors.white,
+                                            ),
+                                          )
+                                        : Text(
+                                            'Calificar Comercio ⭐',
                                             style: GoogleFonts.outfit(
                                               fontSize: 13,
                                               fontWeight: FontWeight.w800,

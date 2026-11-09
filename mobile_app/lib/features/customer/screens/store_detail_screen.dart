@@ -1046,7 +1046,11 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                             spacing: 8,
                             runSpacing: 8,
                             children: [
-                              _buildBadge(Icons.star_rounded, '$ratingStr$reviews', AppTheme.amberAccent),
+                              InkWell(
+                                onTap: () => _openStoreReviewsSheet(context, store),
+                                borderRadius: BorderRadius.circular(10),
+                                child: _buildBadge(Icons.star_rounded, '$ratingStr$reviews • Ver', AppTheme.amberAccent),
+                              ),
                               _buildBadge(Icons.schedule_rounded, dynamicDeliveryTime, const Color(0xFF38BDF8)),
                               _buildBadge(Icons.delivery_dining_rounded, 'Envío $feeStr', AppTheme.riderAccent),
                               _buildBadge(Icons.currency_exchange_rounded, 'Tasa: ${rate.toStringAsFixed(2)} Bs/\$', const Color(0xFF10B981)),
@@ -1790,6 +1794,420 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  void _openStoreReviewsSheet(BuildContext context, Map<String, dynamic> store) {
+    final tenantId = store['id']?.toString() ?? '';
+    final storeName = store['name']?.toString() ?? 'el comercio';
+    final isDark = widget.sessionService?.isDarkMode ?? (Theme.of(context).brightness == Brightness.dark);
+    final user = widget.sessionService?.currentUser;
+
+    bool showAddReview = false;
+    double selectedRating = 5.0;
+    bool isSubmitting = false;
+    final nameCtrl = TextEditingController(text: user?.name ?? '');
+    final commentCtrl = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (sheetCtx, setSheetState) {
+            return Container(
+              height: MediaQuery.of(sheetCtx).size.height * 0.85,
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF0F172A) : Colors.white,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 20)],
+              ),
+              child: Column(
+                children: [
+                  // Drag Handle
+                  Container(
+                    margin: const EdgeInsets.only(top: 12, bottom: 8),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+
+                  // Header
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Valoraciones y Reseñas',
+                              style: GoogleFonts.outfit(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                              ),
+                            ),
+                            Text(
+                              storeName,
+                              style: GoogleFonts.outfit(
+                                fontSize: 13,
+                                color: const Color(0xFF94A3B8),
+                              ),
+                            ),
+                          ],
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(sheetCtx),
+                          icon: const Icon(Icons.close_rounded),
+                          color: isDark ? Colors.white70 : Colors.black54,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1),
+
+                  // Body
+                  Expanded(
+                    child: FutureBuilder<List<Map<String, dynamic>>>(
+                      future: ApiService().fetchTenantReviews(tenantId),
+                      builder: (fbCtx, snapshot) {
+                        final reviews = snapshot.data ?? [];
+                        final rating = double.tryParse(store['rating']?.toString() ?? '5.0') ?? 5.0;
+                        final count = reviews.length;
+
+                        return ListView(
+                          padding: const EdgeInsets.all(20),
+                          children: [
+                            // Stats Summary Card
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: isDark
+                                      ? [const Color(0xFF1E293B), const Color(0xFF0F172A)]
+                                      : [const Color(0xFFFFFBEB), const Color(0xFFFEF3C7).withOpacity(0.4)],
+                                ),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: AppTheme.amberAccent.withOpacity(0.3)),
+                              ),
+                              child: Row(
+                                children: [
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        rating.toStringAsFixed(1),
+                                        style: GoogleFonts.outfit(
+                                          fontSize: 40,
+                                          fontWeight: FontWeight.w900,
+                                          color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                        ),
+                                      ),
+                                      Row(
+                                        children: List.generate(5, (index) {
+                                          return Icon(
+                                            index < rating.round() ? Icons.star_rounded : Icons.star_outline_rounded,
+                                            color: AppTheme.amberAccent,
+                                            size: 20,
+                                          );
+                                        }),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '$count ${count == 1 ? "opinión real" : "opiniones reales"}',
+                                        style: GoogleFonts.outfit(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: const Color(0xFF94A3B8),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const Spacer(),
+                                  if (!showAddReview)
+                                    ElevatedButton.icon(
+                                      onPressed: () {
+                                        setSheetState(() => showAddReview = true);
+                                      },
+                                      icon: const Icon(Icons.rate_review_rounded, size: 16),
+                                      label: const Text('Valorar'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppTheme.amberAccent,
+                                        foregroundColor: const Color(0xFF0F172A),
+                                        elevation: 0,
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                        textStyle: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w700),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+
+                            // Add Review Form
+                            if (showAddReview) ...[
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          'Tu Valoración',
+                                          style: GoogleFonts.outfit(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w800,
+                                            color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                          ),
+                                        ),
+                                        IconButton(
+                                          onPressed: () => setSheetState(() => showAddReview = false),
+                                          icon: const Icon(Icons.close, size: 18),
+                                          color: Colors.grey,
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+
+                                    // Interactive Star Rating
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: List.generate(5, (index) {
+                                        final starValue = (index + 1).toDouble();
+                                        return IconButton(
+                                          icon: Icon(
+                                            starValue <= selectedRating ? Icons.star_rounded : Icons.star_outline_rounded,
+                                            color: AppTheme.amberAccent,
+                                            size: 36,
+                                          ),
+                                          onPressed: () {
+                                            setSheetState(() => selectedRating = starValue);
+                                          },
+                                        );
+                                      }),
+                                    ),
+                                    const SizedBox(height: 12),
+
+                                    // Name Field
+                                    TextField(
+                                      controller: nameCtrl,
+                                      style: GoogleFonts.outfit(fontSize: 13, color: isDark ? Colors.white : Colors.black87),
+                                      decoration: InputDecoration(
+                                        labelText: 'Tu Nombre',
+                                        labelStyle: GoogleFonts.outfit(fontSize: 12, color: Colors.grey),
+                                        filled: true,
+                                        fillColor: isDark ? const Color(0xFF0F172A) : Colors.white,
+                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+
+                                    // Comment Field
+                                    TextField(
+                                      controller: commentCtrl,
+                                      maxLines: 3,
+                                      style: GoogleFonts.outfit(fontSize: 13, color: isDark ? Colors.white : Colors.black87),
+                                      decoration: InputDecoration(
+                                        hintText: '¿Qué te pareció la comida y el servicio de $storeName?',
+                                        hintStyle: GoogleFonts.outfit(fontSize: 12, color: Colors.grey),
+                                        filled: true,
+                                        fillColor: isDark ? const Color(0xFF0F172A) : Colors.white,
+                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+
+                                    // Submit Button
+                                    SizedBox(
+                                      width: double.infinity,
+                                      height: 44,
+                                      child: ElevatedButton(
+                                        onPressed: isSubmitting
+                                            ? null
+                                            : () async {
+                                                final name = nameCtrl.text.trim();
+                                                if (name.isEmpty) {
+                                                  ScaffoldMessenger.of(sheetCtx).showSnackBar(
+                                                    const SnackBar(content: Text('Por favor ingresa tu nombre.')),
+                                                  );
+                                                  return;
+                                                }
+                                                setSheetState(() => isSubmitting = true);
+                                                final res = await ApiService().submitTenantReview(
+                                                  tenantId: tenantId,
+                                                  rating: selectedRating,
+                                                  comment: commentCtrl.text.trim(),
+                                                  customerName: name,
+                                                  customerPhone: user?.phone,
+                                                );
+                                                setSheetState(() {
+                                                  isSubmitting = false;
+                                                  showAddReview = false;
+                                                });
+                                                if (res != null) {
+                                                  if (res['rating'] != null) {
+                                                    setState(() {
+                                                      store['rating'] = res['rating'];
+                                                      store['reviewsCount'] = res['reviewCount'];
+                                                    });
+                                                  }
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    const SnackBar(
+                                                      content: Text('¡Gracias por tu valoración! Ha sido registrada con éxito.'),
+                                                      backgroundColor: Color(0xFF10B981),
+                                                    ),
+                                                  );
+                                                }
+                                              },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: AppTheme.primary,
+                                          foregroundColor: Colors.white,
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                        ),
+                                        child: isSubmitting
+                                            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                            : Text('Publicar Valoración ⭐', style: GoogleFonts.outfit(fontWeight: FontWeight.w700)),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                            ],
+
+                            // Reviews List
+                            Text(
+                              'Opiniones de clientes',
+                              style: GoogleFonts.outfit(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF94A3B8),
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+
+                            if (snapshot.connectionState == ConnectionState.waiting)
+                              const Padding(
+                                padding: EdgeInsets.all(32.0),
+                                child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                              )
+                            else if (reviews.isEmpty)
+                              Container(
+                                padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
+                                alignment: Alignment.center,
+                                child: Column(
+                                  children: [
+                                    const Icon(Icons.star_border_rounded, size: 48, color: Colors.grey),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Aún no hay valoraciones para este comercio.',
+                                      style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '¡Sé el primero en calificar tu experiencia!',
+                                      style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            else
+                              ...reviews.map((r) {
+                                final author = r['customer_name']?.toString() ?? 'Cliente';
+                                final rComment = r['comment']?.toString() ?? '';
+                                final rRating = (r['rating'] as num?)?.toDouble() ?? 5.0;
+                                final dateStr = r['created_at'] != null
+                                    ? r['created_at'].toString().split('T').first
+                                    : 'Reciente';
+
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 10),
+                                  padding: const EdgeInsets.all(14),
+                                  decoration: BoxDecoration(
+                                    color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(color: isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              CircleAvatar(
+                                                radius: 14,
+                                                backgroundColor: AppTheme.amberAccent.withOpacity(0.2),
+                                                child: Text(
+                                                  author.isNotEmpty ? author[0].toUpperCase() : 'C',
+                                                  style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w800, color: AppTheme.amberAccent),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                author,
+                                                style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.w700, color: isDark ? Colors.white : const Color(0xFF0F172A)),
+                                              ),
+                                            ],
+                                          ),
+                                          Text(
+                                            dateStr,
+                                            style: GoogleFonts.outfit(fontSize: 11, color: Colors.grey),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Row(
+                                        children: List.generate(5, (sIdx) {
+                                          return Icon(
+                                            sIdx < rRating ? Icons.star_rounded : Icons.star_outline_rounded,
+                                            color: AppTheme.amberAccent,
+                                            size: 14,
+                                          );
+                                        }),
+                                      ),
+                                      if (rComment.isNotEmpty) ...[
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          rComment,
+                                          style: GoogleFonts.outfit(fontSize: 12.5, color: isDark ? Colors.white70 : const Color(0xFF334155)),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                );
+                              }),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

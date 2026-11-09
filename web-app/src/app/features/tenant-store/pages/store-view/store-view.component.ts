@@ -17,6 +17,7 @@ import { StoreHeaderComponent } from '../../components/store-header/store-header
 import { StoreFiltersComponent } from '../../components/store-filters/store-filters.component';
 import { StoreProductGridComponent } from '../../components/store-product-grid/store-product-grid.component';
 import { BranchSelectModalComponent } from '../../components/branch-select-modal/branch-select-modal.component';
+import { StoreReviewsModalComponent } from '../../components/store-reviews-modal/store-reviews-modal.component';
 
 @Component({
   selector: 'app-store-view',
@@ -32,7 +33,8 @@ import { BranchSelectModalComponent } from '../../components/branch-select-modal
     StoreHeaderComponent,
     StoreFiltersComponent,
     StoreProductGridComponent,
-    BranchSelectModalComponent
+    BranchSelectModalComponent,
+    StoreReviewsModalComponent
   ],
   templateUrl: './store-view.component.html'
 })
@@ -43,6 +45,19 @@ export class StoreViewComponent implements OnInit {
   readonly cart = inject(CartStore);
   readonly currency = inject(CurrencyService);
   readonly theme = inject(ThemeService);
+
+  readonly isReviewsModalOpen = signal<boolean>(false);
+
+  onRatingUpdated(stats: { rating: number; reviewCount: number }) {
+    const current = this.tenant();
+    if (current) {
+      this.tenant.set({
+        ...current,
+        rating: stats.rating,
+        reviewCount: stats.reviewCount
+      });
+    }
+  }
 
   readonly tenant = signal<Tenant | null>(null);
   get store(): Tenant | null { return this.tenant(); }

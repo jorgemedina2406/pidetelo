@@ -32,6 +32,7 @@ export class StoreHeaderComponent {
   @Input() activeBranchRate: number = 52.80;
 
   @Output() openBranchModal = new EventEmitter<void>();
+  @Output() openReviewsModal = new EventEmitter<void>();
 
   getDeliveryFee(store: Tenant): string {
     const fee = this.selectedBranch?.baseDeliveryFee ?? store.deliverySettings?.baseDeliveryFee ?? 0;

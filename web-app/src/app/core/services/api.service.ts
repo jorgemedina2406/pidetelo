@@ -546,6 +546,24 @@ export class ApiService {
     );
   }
 
+  getTenantReviews(tenantId: string): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/tenants/${tenantId}/reviews`).pipe(
+      catchError(err => {
+        console.warn('[ApiService] Error obteniendo reseñas de comercio:', err);
+        return of([]);
+      })
+    );
+  }
+
+  submitTenantReview(tenantId: string, review: { rating: number; comment?: string; customerName: string; customerPhone?: string; orderId?: string }): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/tenants/${tenantId}/reviews`, review).pipe(
+      catchError(err => {
+        console.error('[ApiService] Error enviando reseña de comercio:', err);
+        throw err;
+      })
+    );
+  }
+
   createRider(payload: { tenant_id?: string; branch_id?: string; name: string; email?: string; password?: string; phone: string; national_id?: string; vehicle_plate: string; vehicle_type?: string }): Observable<any> {
     return this.http.post<any>(`${this.baseUrl}/riders`, payload).pipe(
       catchError(err => {
@@ -1241,7 +1259,7 @@ export class ApiService {
       logoUrl: defaultLogo,
       bannerUrl: defaultBanner,
       rating: Number(row.rating) || 5.0,
-      reviewCount: Number(row.review_count) || 0,
+      reviewCount: Number(row.review_count ?? row.reviewCount) || 0,
       category: row.category || (row.slug === 'burger-lab' ? 'Restaurantes' : 'Restaurantes'),
       subcategories: Array.isArray(row.subcategories) ? row.subcategories : (row.slug === 'burger-lab' ? ['Hamburguesas'] : []),
       isActive: row.is_active ?? true,

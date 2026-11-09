@@ -512,6 +512,95 @@ class ApiService {
     return [];
   }
 
+  /// Fetch real customer reviews for a tenant
+  Future<List<Map<String, dynamic>>> fetchTenantReviews(String tenantId) async {
+    // 1. Direct cloud Supabase query
+    try {
+      final supabase = Supabase.instance.client;
+      final data = await supabase
+          .from('tenant_reviews')
+          .select('*')
+          .eq('tenant_id', tenantId)
+          .order('created_at', ascending: false)
+          .timeout(const Duration(seconds: 4));
+      if (data is List && data.isNotEmpty) {
+        return List<Map<String, dynamic>>.from(data);
+      }
+    } catch (_) {}
+
+    // 2. Fallback backend
+    final urls = [
+      '${AppConfig.backendBaseUrl}/tenants/$tenantId/reviews',
+      'http://192.168.0.151:3000/api/tenants/$tenantId/reviews',
+      'http://127.0.0.1:3000/api/tenants/$tenantId/reviews',
+    ];
+    for (final u in urls) {
+      try {
+        final res = await http.get(Uri.parse(u)).timeout(const Duration(seconds: 3));
+        if (res.statusCode == 200) {
+          final List list = json.decode(res.body);
+          return List<Map<String, dynamic>>.from(list);
+        }
+      } catch (_) {}
+    }
+    return [];
+  }
+
+  /// Submit a real customer rating and comment for a merchant/store
+  Future<Map<String, dynamic>?> submitTenantReview({
+    required String tenantId,
+    required double rating,
+    required String comment,
+    required String customerName,
+    String? customerPhone,
+    String? orderId,
+  }) async {
+    final payload = {
+      'rating': rating.toInt(),
+      'comment': comment.trim(),
+      'customerName': customerName.trim(),
+      'customerPhone': customerPhone?.trim() ?? '',
+      'orderId': orderId,
+    };
+
+    final urls = [
+      '${AppConfig.backendBaseUrl}/tenants/$tenantId/reviews',
+      'http://192.168.0.151:3000/api/tenants/$tenantId/reviews',
+      'http://127.0.0.1:3000/api/tenants/$tenantId/reviews',
+    ];
+
+    for (final u in urls) {
+      try {
+        final res = await http.post(
+          Uri.parse(u),
+          headers: {'Content-Type': 'application/json'},
+          body: json.encode(payload),
+        ).timeout(const Duration(seconds: 4));
+        if (res.statusCode == 200 || res.statusCode == 201) {
+          return json.decode(res.body);
+        }
+      } catch (_) {}
+    }
+
+    // Direct Supabase fallback
+    try {
+      final supabase = Supabase.instance.client;
+      final inserted = await supabase.from('tenant_reviews').insert({
+        'tenant_id': tenantId,
+        'order_id': orderId,
+        'customer_name': customerName,
+        'customer_phone': customerPhone,
+        'rating': rating.toInt(),
+        'comment': comment,
+        'created_at': DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toIso8601String(),
+      }).select().maybeSingle();
+      return inserted != null ? {'success': true, 'review': inserted} : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Fetch real products for a tenant and specific branch (Database Only - Zero Mock Products)
   Future<List<Product>> fetchProductsByTenant(String tenantId, {String? branchId}) async {
     String queryParams = 'onlyAvailable=true';

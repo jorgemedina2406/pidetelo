@@ -7,7 +7,8 @@
     [selectedBranch]="cart.selectedBranch()"
     [isStoreOpen]="isStoreOpen()"
     [activeBranchRate]="activeBranchRate()"
-    (openBranchModal)="isBranchModalOpen.set(true)">
+    (openBranchModal)="isBranchModalOpen.set(true)"
+    (openReviewsModal)="isReviewsModalOpen.set(true)">
   </app-store-header>
 
   <!-- Store Meta & Quick Stats Container -->
@@ -124,6 +125,14 @@
       </div>
     </div>
   }
+
+  <!-- Modal de Valoraciones y Reseñas Reales -->
+  <app-store-reviews-modal
+    [store]="store"
+    [isOpen]="isReviewsModalOpen()"
+    (close)="isReviewsModalOpen.set(false)"
+    (ratingUpdated)="onRatingUpdated($event)">
+  </app-store-reviews-modal>
 
 </div>
 }
