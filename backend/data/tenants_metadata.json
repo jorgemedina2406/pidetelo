@@ -100,7 +100,9 @@
       "mobile_transfer",
       "cash_local",
       "card_terminal"
-    ]
+    ],
+    "plan_code": "FRANQUICIA",
+    "planCode": "FRANQUICIA"
   },
   "5ecb4b6c-6ad8-45a2-8a5d-26af406cd31c": {
     "category": "Restaurantes",

@@ -1598,13 +1598,7 @@ export class ApiService {
         localStorage.setItem('pidetelo_tenant_plans', JSON.stringify(map));
       }
     } catch (_) {}
-    return this.http.put<any>(`${this.baseUrl}/plans/tenant/${tenantId}`, { planCode }).pipe(
-      tap(() => {
-        try {
-          this.updateTenant(tenantId, { plan_code: planCode, planCode, subscription_plan_id: planCode }).subscribe();
-        } catch (_) {}
-      })
-    );
+    return this.http.put<any>(`${this.baseUrl}/plans/tenant/${tenantId}`, { planCode });
   }
 
   exportOrdersReport(tenantId: string, branchId?: string): Observable<any> {

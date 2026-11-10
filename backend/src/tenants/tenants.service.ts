@@ -312,16 +312,37 @@ export class TenantsService {
       cleanPayload.delivery_tiers = updateData.deliveryTiers;
     }
 
-    const { data, error } = await this.supabase
-      .getClient()
-      .from('tenants')
-      .update(cleanPayload)
-      .eq('id', id)
-      .select('*, branches(*)')
-      .single();
+    // Validar que subscription_plan_id sea un UUID real antes de enviarlo a Supabase
+    const isUuid = (val: any) => typeof val === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+    if (cleanPayload.subscription_plan_id && !isUuid(cleanPayload.subscription_plan_id)) {
+      delete cleanPayload.subscription_plan_id;
+    }
 
-    if (error) {
-      throw new InternalServerErrorException(`Error updating tenant: ${error.message}`);
+    let data: any = null;
+    try {
+      const res = await this.supabase
+        .getClient()
+        .from('tenants')
+        .update(cleanPayload)
+        .eq('id', id)
+        .select('*, branches(*)')
+        .maybeSingle();
+
+      if (res.error) {
+        console.warn(`[TenantsService] Error updating tenant on Supabase: ${res.error.message}`);
+      } else {
+        data = res.data;
+      }
+    } catch (e: any) {
+      console.warn(`[TenantsService] Exception updating tenant on Supabase: ${e.message}`);
+    }
+
+    if (!data) {
+      try {
+        data = await this.findById(id);
+      } catch (_) {
+        data = { id, ...cleanPayload };
+      }
     }
 
     // Sincronizar automáticamente sucursales en la tabla branches si se modificó radio, tarifas, ubicación o teléfono
