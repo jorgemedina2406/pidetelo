@@ -2103,25 +2103,56 @@ export class ApiService {
     if (code === 'COMERCIO') code = 'COMERCIO_PRO';
     if (code === 'CORPORATIVO') code = 'FRANQUICIA';
 
-    const priceMonthly = Number(r.price_monthly ?? r.priceMonthly ?? r.monthly_fee_usd ?? r.monthlyPriceUsd ?? 9.00);
-    const priceAnnual = Number(r.price_annual ?? r.priceAnnual ?? (priceMonthly * 0.8));
+    const priceMonthly = code === 'FRANQUICIA' ? 79.00 : (code === 'COMERCIO_PRO' ? 29.00 : 9.00);
+    const priceAnnual = code === 'FRANQUICIA' ? 63.00 : (code === 'COMERCIO_PRO' ? 23.00 : 7.00);
+    const name = code === 'FRANQUICIA' ? 'Plan Franquicia' : (code === 'COMERCIO_PRO' ? 'Plan Comercio Pro' : 'Plan Emprendedor');
 
     return {
       id: r.id || code,
       code,
-      name: r.name || (code === 'FRANQUICIA' ? 'Plan Franquicia' : code === 'COMERCIO_PRO' ? 'Plan Comercio Pro' : 'Plan Emprendedor'),
-      priceMonthly,
-      priceAnnual,
-      monthlyPriceUsd: priceMonthly,
-      maxBranches: r.max_branches !== undefined ? Number(r.max_branches) : (code === 'FRANQUICIA' ? -1 : code === 'COMERCIO_PRO' ? 2 : 0),
-      hasWhatsappBot: Boolean(r.has_whatsapp_bot ?? r.hasWhatsappBot ?? (code !== 'EMPRENDEDOR')),
-      hasExcelReports: Boolean(r.has_excel_reports ?? r.hasExcelReports ?? (code !== 'EMPRENDEDOR')),
-      hasFeaturedBanners: Boolean(r.has_featured_banners ?? r.hasFeaturedBanners ?? (code === 'FRANQUICIA')),
-      maxAdditionalUsers: r.max_additional_users !== undefined ? Number(r.max_additional_users) : (code === 'FRANQUICIA' ? -1 : code === 'COMERCIO_PRO' ? 3 : 1),
-      maxMonthlyOrders: r.max_monthly_orders !== undefined ? Number(r.max_monthly_orders) : (code === 'FRANQUICIA' ? -1 : code === 'COMERCIO_PRO' ? 50 : 20),
-      maxProducts: r.max_products !== undefined ? Number(r.max_products) : (code === 'FRANQUICIA' ? -1 : code === 'COMERCIO_PRO' ? 100 : 20),
+      name,
+      priceMonthly: Number(r.price_monthly ?? r.priceMonthly ?? priceMonthly),
+      priceAnnual: Number(r.price_annual ?? r.priceAnnual ?? priceAnnual),
+      monthlyPriceUsd: Number(r.price_monthly ?? r.monthly_fee_usd ?? priceMonthly),
+      maxBranches: code === 'FRANQUICIA' ? -1 : (code === 'COMERCIO_PRO' ? 2 : 0),
+      hasWhatsappBot: code === 'FRANQUICIA' || code === 'COMERCIO_PRO',
+      hasExcelReports: code === 'FRANQUICIA' || code === 'COMERCIO_PRO',
+      hasFeaturedBanners: code === 'FRANQUICIA',
+      maxAdditionalUsers: code === 'FRANQUICIA' ? -1 : (code === 'COMERCIO_PRO' ? 3 : 1),
+      maxMonthlyOrders: code === 'FRANQUICIA' ? -1 : (code === 'COMERCIO_PRO' ? 50 : 20),
+      maxProducts: code === 'FRANQUICIA' ? -1 : (code === 'COMERCIO_PRO' ? 100 : 20),
       description: r.description || '',
-      features: Array.isArray(r.features) ? r.features : [],
+      features: Array.isArray(r.features) && r.features.length > 0 ? r.features : (code === 'FRANQUICIA' ? [
+        'Todo lo incluido en el Plan Comercio Pro',
+        'Sucursales físicas ilimitadas',
+        'Productos en catálogo ilimitados',
+        'Pedidos al mes ilimitados',
+        'Cuentas de usuarios de equipo ilimitadas',
+        'Banners destacados VIP en la App Móvil',
+        'Bot automático de WhatsApp ilimitado con IA',
+        'Auditoría de inicios de sesión y BI empresarial',
+        'Soporte VIP 24/7 con ejecutivo asignado'
+      ] : code === 'COMERCIO_PRO' ? [
+        'Todo lo incluido en el Plan Emprendedor',
+        'Hasta 2 sucursales adicionales (3 sedes en total)',
+        'Hasta 100 productos en catálogo',
+        'Hasta 50 pedidos al mes',
+        'Hasta 3 usuarios de equipo adicionales',
+        'Bot automático de WhatsApp y Live Chat 24/7',
+        'Reportes avanzados en Excel (.xlsx)',
+        'Soporte prioritario'
+      ] : [
+        '0 sucursales adicionales (solo sede principal)',
+        'Hasta 20 productos en catálogo',
+        'Hasta 20 pedidos al mes',
+        '1 usuario de equipo adicional',
+        'Tienda web y menú digital con código QR',
+        'Acceso a la App Móvil de Clientes',
+        'Acceso a la App de Repartidores con GPS',
+        'Pagos 100% directos (0% comisión sobre ventas)',
+        'Tracking de pedidos en tiempo real',
+        'Soporte estándar'
+      ]),
       isActive: r.is_active !== undefined ? Boolean(r.is_active) : true
     };
   }

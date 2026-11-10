@@ -142,10 +142,15 @@ export class PlansService {
       const { data, error } = await client
         .from('subscription_plans')
         .select('*')
+        .eq('is_active', true)
         .order('price_monthly', { ascending: true });
 
       if (!error && Array.isArray(data) && data.length > 0) {
-        return data.map(row => this.normalizePlan(row));
+        const validCodes = new Set(['EMPRENDEDOR', 'COMERCIO_PRO', 'FRANQUICIA']);
+        const valid = data.filter(r => validCodes.has((r.code || '').toUpperCase()));
+        if (valid.length > 0) {
+          return valid.map(row => this.normalizePlan(row));
+        }
       }
     } catch (_) {}
 
@@ -159,22 +164,26 @@ export class PlansService {
 
     const fallback = DEFAULT_SUBSCRIPTION_PLANS.find(p => p.code === rawCode) || DEFAULT_SUBSCRIPTION_PLANS[0];
 
+    const hasBot = rawCode === 'FRANQUICIA' || rawCode === 'COMERCIO_PRO';
+    const hasExcel = rawCode === 'FRANQUICIA' || rawCode === 'COMERCIO_PRO';
+    const hasBanners = rawCode === 'FRANQUICIA';
+
     return {
       id: row.id || fallback.id,
       code: rawCode as any,
-      name: row.name || fallback.name,
+      name: rawCode === 'FRANQUICIA' ? 'Plan Franquicia' : (rawCode === 'COMERCIO_PRO' ? 'Plan Comercio Pro' : 'Plan Emprendedor'),
       price_monthly: Number(row.price_monthly ?? row.monthly_fee_usd ?? fallback.price_monthly),
       price_annual: Number(row.price_annual ?? fallback.price_annual),
       monthly_fee_usd: Number(row.monthly_fee_usd ?? row.price_monthly ?? fallback.monthly_fee_usd),
-      max_branches: row.max_branches !== undefined ? Number(row.max_branches) : fallback.max_branches,
-      has_whatsapp_bot: row.has_whatsapp_bot !== undefined ? Boolean(row.has_whatsapp_bot) : fallback.has_whatsapp_bot,
-      has_excel_reports: row.has_excel_reports !== undefined ? Boolean(row.has_excel_reports) : fallback.has_excel_reports,
-      has_featured_banners: row.has_featured_banners !== undefined ? Boolean(row.has_featured_banners) : fallback.has_featured_banners,
-      max_additional_users: row.max_additional_users !== undefined ? Number(row.max_additional_users) : fallback.max_additional_users,
-      max_monthly_orders: row.max_monthly_orders !== undefined ? Number(row.max_monthly_orders) : fallback.max_monthly_orders,
-      max_products: row.max_products !== undefined ? Number(row.max_products) : fallback.max_products,
+      max_branches: rawCode === 'FRANQUICIA' ? -1 : (rawCode === 'COMERCIO_PRO' ? 2 : 0),
+      has_whatsapp_bot: hasBot,
+      has_excel_reports: hasExcel,
+      has_featured_banners: hasBanners,
+      max_additional_users: rawCode === 'FRANQUICIA' ? -1 : (rawCode === 'COMERCIO_PRO' ? 3 : 1),
+      max_monthly_orders: rawCode === 'FRANQUICIA' ? -1 : (rawCode === 'COMERCIO_PRO' ? 50 : 20),
+      max_products: rawCode === 'FRANQUICIA' ? -1 : (rawCode === 'COMERCIO_PRO' ? 100 : 20),
       description: row.description || fallback.description,
-      features: Array.isArray(row.features) ? row.features : fallback.features,
+      features: Array.isArray(row.features) && row.features.length > 0 ? row.features : fallback.features,
       is_active: row.is_active !== undefined ? Boolean(row.is_active) : true
     };
   }
@@ -202,11 +211,11 @@ export class PlansService {
         .maybeSingle();
 
       if (tenant) {
-        if (tenant.subscription_plans) {
-          return this.normalizePlan(tenant.subscription_plans);
-        }
         if (tenant.plan_code) {
           return this.getPlanByCode(tenant.plan_code);
+        }
+        if (tenant.subscription_plans) {
+          return this.normalizePlan(tenant.subscription_plans);
         }
       }
     } catch (_) {}

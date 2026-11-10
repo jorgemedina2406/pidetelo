@@ -283,34 +283,40 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
   readonly currentSubscriptionPlan = computed<SubscriptionPlan>(() => {
     const plans = this.subscriptionPlans();
     const tenant = this.currentTenant() as any;
-    const rawCode = (tenant?.planCode || tenant?.plan_code || tenant?.subscriptionPlanId || 'COMERCIO_PRO').toUpperCase();
-    const code = rawCode === 'COMERCIO' ? 'COMERCIO_PRO' : (rawCode === 'CORPORATIVO' ? 'FRANQUICIA' : rawCode);
+    let rawCode = (tenant?.planCode || tenant?.plan_code || tenant?.subscriptionPlanId || 'COMERCIO_PRO').toUpperCase();
+    if (rawCode === 'COMERCIO') rawCode = 'COMERCIO_PRO';
+    if (rawCode === 'CORPORATIVO') rawCode = 'FRANQUICIA';
 
-    return plans.find(p => p.code === code || p.id === code) || {
-      id: 'plan_comercio_pro',
-      code: 'COMERCIO_PRO',
-      name: 'Plan Comercio Pro',
-      priceMonthly: 29.00,
-      priceAnnual: 23.00,
-      monthlyPriceUsd: 29.00,
-      maxBranches: 2,
-      hasWhatsappBot: true,
-      hasExcelReports: true,
-      hasFeaturedBanners: false,
-      maxAdditionalUsers: 3,
-      maxMonthlyOrders: 50,
-      maxProducts: 100,
-      description: 'Para comercios establecidos que buscan automatización y expansión local.',
-      features: [
-        'Hasta 2 sucursales adicionales (3 sedes en total)',
-        'Hasta 100 productos en catálogo',
-        'Hasta 50 pedidos al mes',
-        'Hasta 3 usuarios adicionales',
-        'Bot automático de WhatsApp 24/7',
-        'Reportes avanzados en Excel (.xlsx)'
-      ],
-      isActive: true
-    };
+    if (typeof localStorage !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('pidetelo_tenant_plans');
+        if (stored) {
+          const map = JSON.parse(stored);
+          const local = map[tenant?.id] || (tenant?.slug ? map[tenant?.slug] : null);
+          if (local) {
+            const cleanLocal = local.toUpperCase() === 'CORPORATIVO' ? 'FRANQUICIA' : (local.toUpperCase() === 'COMERCIO' ? 'COMERCIO_PRO' : local.toUpperCase());
+            rawCode = cleanLocal;
+          }
+        }
+      } catch (_) {}
+    }
+
+    const found = plans.find(p => p.code === rawCode || p.id === rawCode);
+    if (found) {
+      return {
+        ...found,
+        name: rawCode === 'FRANQUICIA' ? 'Plan Franquicia' : (rawCode === 'COMERCIO_PRO' ? 'Plan Comercio Pro' : 'Plan Emprendedor'),
+        hasWhatsappBot: rawCode === 'FRANQUICIA' || rawCode === 'COMERCIO_PRO' || found.hasWhatsappBot,
+        hasExcelReports: rawCode === 'FRANQUICIA' || rawCode === 'COMERCIO_PRO' || found.hasExcelReports,
+        hasFeaturedBanners: rawCode === 'FRANQUICIA' || found.hasFeaturedBanners,
+        maxBranches: rawCode === 'FRANQUICIA' ? -1 : (rawCode === 'COMERCIO_PRO' ? 2 : 0),
+        maxProducts: rawCode === 'FRANQUICIA' ? -1 : (rawCode === 'COMERCIO_PRO' ? 100 : 20),
+        maxMonthlyOrders: rawCode === 'FRANQUICIA' ? -1 : (rawCode === 'COMERCIO_PRO' ? 50 : 20),
+        maxAdditionalUsers: rawCode === 'FRANQUICIA' ? -1 : (rawCode === 'COMERCIO_PRO' ? 3 : 1)
+      };
+    }
+
+    return this.api.getDefaultSubscriptionPlans().find(p => p.code === rawCode) || this.api.getDefaultSubscriptionPlans()[1];
   });
 
   // --- REGLAS DE NEGOCIO: SEDE PRINCIPAL VS SUCURSALES SECUNDARIAS ---
