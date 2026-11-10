@@ -464,28 +464,85 @@ export class MockDataService {
 
   private readonly subscriptionPlans: SubscriptionPlan[] = [
     {
-      id: 'EMPRENDEDOR',
+      id: 'plan_emprendedor',
+      code: 'EMPRENDEDOR',
       name: 'Plan Emprendedor',
-      maxBranches: 1,
+      priceMonthly: 9.00,
+      priceAnnual: 7.00,
+      monthlyPriceUsd: 9.00,
+      maxBranches: 0,
+      hasWhatsappBot: false,
+      hasExcelReports: false,
+      hasFeaturedBanners: false,
+      maxAdditionalUsers: 1,
+      maxMonthlyOrders: 20,
+      maxProducts: 20,
+      description: 'Para negocios y marcas que inician con su sede principal.',
+      features: [
+        '0 sucursales adicionales (solo sede principal)',
+        'Hasta 20 productos en catálogo',
+        'Hasta 20 pedidos al mes',
+        '1 usuario de equipo adicional',
+        'Tienda web y menú digital con código QR',
+        'Acceso a la App Móvil de Clientes',
+        'Acceso a la App de Repartidores con GPS',
+        'Pagos 100% directos (0% comisión sobre ventas)',
+        'Tracking de pedidos en tiempo real',
+        'Soporte estándar'
+      ]
+    },
+    {
+      id: 'plan_comercio_pro',
+      code: 'COMERCIO_PRO',
+      name: 'Plan Comercio Pro',
+      priceMonthly: 29.00,
+      priceAnnual: 23.00,
       monthlyPriceUsd: 29.00,
-      description: 'Ideal para negocios con una sola sede física que inician en delivery.',
-      features: ['1 Sede física activa', '0% Comisiones por venta', 'Cobro directo a tu Pago Móvil/Zelle', 'Panel administrativo', 'Menú digital QR']
+      maxBranches: 2,
+      hasWhatsappBot: true,
+      hasExcelReports: true,
+      hasFeaturedBanners: false,
+      maxAdditionalUsers: 3,
+      maxMonthlyOrders: 50,
+      maxProducts: 100,
+      description: 'Para comercios establecidos que buscan automatización y expansión local.',
+      features: [
+        'Todo lo incluido en el Plan Emprendedor',
+        'Hasta 2 sucursales adicionales (3 sedes en total)',
+        'Hasta 100 productos en catálogo',
+        'Hasta 50 pedidos al mes',
+        'Hasta 3 usuarios de equipo adicionales',
+        'Bot automático de WhatsApp y Live Chat 24/7',
+        'Reportes avanzados en Excel (.xlsx)',
+        'Soporte prioritario'
+      ]
     },
     {
-      id: 'COMERCIO',
-      name: 'Plan Comercio',
-      maxBranches: 3,
-      monthlyPriceUsd: 59.00,
-      description: 'Para cadenas locales en expansión con hasta 3 sucursales operativas.',
-      features: ['Hasta 3 Sedes operativas', '0% Comisiones por venta', 'Cuentas bancarias independientes por sede', 'Panel multi-sucursal', 'Despacho inteligente por geolocalización', 'Soporte prioritario']
-    },
-    {
-      id: 'CORPORATIVO',
-      name: 'Plan Corporativo',
-      maxBranches: 999,
-      monthlyPriceUsd: 119.00,
-      description: 'Para franquicias y marcas consolidadas con sedes ilimitadas.',
-      features: ['Sedes ilimitadas', '0% Comisiones por venta', 'Multi-sucursal descentralizado', 'Facturación global corporativa', 'Métricas avanzadas y API abierta', 'Gerente de cuenta dedicado']
+      id: 'plan_franquicia',
+      code: 'FRANQUICIA',
+      name: 'Plan Franquicia',
+      priceMonthly: 79.00,
+      priceAnnual: 63.00,
+      monthlyPriceUsd: 79.00,
+      maxBranches: -1,
+      hasWhatsappBot: true,
+      hasExcelReports: true,
+      hasFeaturedBanners: true,
+      maxAdditionalUsers: -1,
+      maxMonthlyOrders: -1,
+      maxProducts: -1,
+      description: 'Para cadenas gastronómicas, franquicias y marcas líderes de alto volumen.',
+      features: [
+        'Todo lo incluido en el Plan Comercio Pro',
+        'Sucursales físicas ilimitadas',
+        'Productos en catálogo ilimitados',
+        'Pedidos al mes ilimitados',
+        'Cuentas de usuarios de equipo ilimitadas',
+        'Banners destacados VIP en la App Móvil',
+        'Bot automático de WhatsApp ilimitado con IA',
+        'Auditoría de inicios de sesión y BI empresarial',
+        'Soporte VIP 24/7 con ejecutivo asignado'
+      ]
     }
   ];
 

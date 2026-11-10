@@ -581,7 +581,8 @@
               [merchants]="merchants()"
               (createMerchant)="openCreateMerchantModal()"
               (editMerchant)="openEditMerchantModal($event)"
-              (toggleActive)="toggleMerchantActive($event)">
+              (toggleActive)="toggleMerchantActive($event)"
+              (changePlan)="onMerchantPlanChange($event)">
             </app-super-admin-merchants>
           }
 

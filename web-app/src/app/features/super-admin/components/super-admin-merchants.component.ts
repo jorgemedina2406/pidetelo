@@ -21,6 +21,7 @@ export class SuperAdminMerchantsComponent {
   @Output() createMerchant = new EventEmitter<void>();
   @Output() editMerchant = new EventEmitter<Tenant>();
   @Output() toggleActive = new EventEmitter<string>();
+  @Output() changePlan = new EventEmitter<{ tenantId: string; planCode: string }>();
 
   private readonly _merchants = signal<Tenant[]>([]);
   readonly searchMerchant = signal('');
@@ -34,6 +35,19 @@ export class SuperAdminMerchantsComponent {
       (m.category && m.category.toLowerCase().includes(q))
     );
   });
+
+  getMerchantPlan(m: any): string {
+    const raw = (m.planCode || m.plan_code || m.subscriptionPlanId || 'COMERCIO_PRO').toUpperCase();
+    if (raw === 'COMERCIO') return 'COMERCIO_PRO';
+    if (raw === 'CORPORATIVO') return 'FRANQUICIA';
+    return raw;
+  }
+
+  onPlanSelect(m: any, planCode: string): void {
+    m.planCode = planCode;
+    m.subscriptionPlanId = planCode;
+    this.changePlan.emit({ tenantId: m.id, planCode });
+  }
 
   getBaseFee(m: Tenant): string {
     return ((m.deliverySettings?.baseDeliveryFee) || 0).toFixed(2);

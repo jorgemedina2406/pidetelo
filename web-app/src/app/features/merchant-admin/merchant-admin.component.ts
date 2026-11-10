@@ -270,6 +270,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
   readonly isEditBranchModalOpen = signal(false);
   readonly editingBranch = signal<Branch | null>(null);
   readonly isUpgradePlanModalOpen = signal(false);
+  readonly planModalLimitType = signal<'branches' | 'products' | 'users' | 'orders' | 'whatsapp' | 'excel' | 'banner' | 'generic'>('generic');
   readonly isDetectingBranchGps = signal(false);
   readonly branchGpsMessage = signal<string | null>(null);
   readonly branchFormErrorMessage = signal<string | null>(null);
@@ -281,14 +282,34 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
 
   readonly currentSubscriptionPlan = computed<SubscriptionPlan>(() => {
     const plans = this.subscriptionPlans();
-    const planId = (this.currentTenant() as any)?.subscriptionPlanId || 'COMERCIO';
-    return plans.find(p => p.id === planId) || {
-      id: 'COMERCIO',
-      name: 'Plan Comercio',
-      maxBranches: 3,
-      monthlyPriceUsd: 59.00,
-      description: 'Para cadenas locales en expansión con hasta 3 sucursales operativas.',
-      features: ['Hasta 3 Sedes operativas', '0% Comisiones por venta', 'Cuentas bancarias independientes por sede']
+    const tenant = this.currentTenant() as any;
+    const rawCode = (tenant?.planCode || tenant?.plan_code || tenant?.subscriptionPlanId || 'COMERCIO_PRO').toUpperCase();
+    const code = rawCode === 'COMERCIO' ? 'COMERCIO_PRO' : (rawCode === 'CORPORATIVO' ? 'FRANQUICIA' : rawCode);
+
+    return plans.find(p => p.code === code || p.id === code) || {
+      id: 'plan_comercio_pro',
+      code: 'COMERCIO_PRO',
+      name: 'Plan Comercio Pro',
+      priceMonthly: 29.00,
+      priceAnnual: 23.00,
+      monthlyPriceUsd: 29.00,
+      maxBranches: 2,
+      hasWhatsappBot: true,
+      hasExcelReports: true,
+      hasFeaturedBanners: false,
+      maxAdditionalUsers: 3,
+      maxMonthlyOrders: 50,
+      maxProducts: 100,
+      description: 'Para comercios establecidos que buscan automatización y expansión local.',
+      features: [
+        'Hasta 2 sucursales adicionales (3 sedes en total)',
+        'Hasta 100 productos en catálogo',
+        'Hasta 50 pedidos al mes',
+        'Hasta 3 usuarios adicionales',
+        'Bot automático de WhatsApp 24/7',
+        'Reportes avanzados en Excel (.xlsx)'
+      ],
+      isActive: true
     };
   });
 
@@ -326,10 +347,12 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
   readonly activeBranchesCount = computed(() => this.branches().filter(b => b.status === 'active').length);
   readonly pendingBranchesCount = computed(() => this.branches().filter(b => b.status === 'pending_approval').length);
   readonly canCreateBranch = computed(() => {
-    // Solo la sede principal o dueño del comercio puede crear sucursales
     if (!this.isMainBranchOrOwner()) return false;
     const plan = this.currentSubscriptionPlan();
-    return this.activeBranchesCount() < plan.maxBranches;
+    if (plan.maxBranches === -1) return true;
+    if (plan.maxBranches === 0) return false;
+    const additionalBranches = this.branches().filter(b => !b.isMain && b.status !== 'rejected').length;
+    return additionalBranches < plan.maxBranches;
   });
   readonly liveExchangeRate = signal<number | null>(null);
   readonly activeExchangeRate = computed(() => this.liveExchangeRate() || this.currentTenant()?.currencySettings?.exchangeRate || this.brandingForm.exchangeRate || 54.50);
@@ -1238,6 +1261,13 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
   }
 
   openCreateUserModal(): void {
+    const plan = this.currentSubscriptionPlan();
+    const additionalUsers = this.storeUsers().filter((u: any) => u.role !== 'MERCHANT_OWNER').length;
+    if (plan.maxAdditionalUsers !== -1 && additionalUsers >= plan.maxAdditionalUsers) {
+      this.planModalLimitType.set('users');
+      this.isUpgradePlanModalOpen.set(true);
+      return;
+    }
     const defaultBranch = this.activeBranchId();
     this.userForm = {
       id: '',
@@ -2051,8 +2081,15 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
   }
 
   openProductModal(prod?: Product): void {
+    if (!prod) {
+      const plan = this.currentSubscriptionPlan();
+      if (plan.maxProducts !== -1 && this.products().length >= plan.maxProducts) {
+        this.planModalLimitType.set('products');
+        this.isUpgradePlanModalOpen.set(true);
+        return;
+      }
+    }
     const defaultBranchId = this.activeBranchId();
-
     if (prod) {
       this.currentEditingProduct = {
         ...JSON.parse(JSON.stringify(prod)),
@@ -2716,6 +2753,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       return;
     }
     if (!this.canCreateBranch()) {
+      this.planModalLimitType.set('branches');
       this.isUpgradePlanModalOpen.set(true);
       return;
     }
@@ -3161,5 +3199,44 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     this.auth.logout();
     this.router.navigate(['/login']);
   }
-}
 
+  exportOrdersToExcel(): void {
+    const plan = this.currentSubscriptionPlan();
+    if (!plan.hasExcelReports) {
+      this.planModalLimitType.set('excel');
+      this.isUpgradePlanModalOpen.set(true);
+      return;
+    }
+
+    const ordersList = this.filteredOrders();
+    if (ordersList.length === 0) {
+      alert('No hay pedidos disponibles para exportar en este momento.');
+      return;
+    }
+
+    const headers = ['Nro Pedido', 'Fecha y Hora', 'Cliente', 'Telefono', 'Tipo', 'Sucursal', 'Estado', 'Metodo de Pago', 'Total USD', 'Total Bs'];
+    const rows = ordersList.map(o => [
+      `"${o.orderNumber || o.id}"`,
+      `"${o.createdAt ? new Date(o.createdAt).toLocaleString() : ''}"`,
+      `"${(o.customer?.name || 'Cliente').replace(/"/g, '""')}"`,
+      `"${o.customer?.phone || ''}"`,
+      `"${o.fulfillmentType === 'pickup' ? 'Para Llevar / Retiro' : 'Delivery'}"`,
+      `"${(o.branchName || 'Sede Principal').replace(/"/g, '""')}"`,
+      `"${o.status}"`,
+      `"${o.paymentMethod || 'Pago Movil'}"`,
+      `"${(Number(o.total) || 0).toFixed(2)}"`,
+      `"${((Number(o.total) || 0) * (this.activeExchangeRate() || 54.50)).toFixed(2)}"`
+    ]);
+
+    const csvContent = '\uFEFF' + [headers.join(';'), ...rows.map(r => r.join(';'))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Reporte_Pedidos_${this.currentTenant()?.slug || 'Pidetelo'}_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+}

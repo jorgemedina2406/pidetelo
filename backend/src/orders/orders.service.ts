@@ -1,9 +1,13 @@
 import { Injectable, NotFoundException, InternalServerErrorException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service.js';
+import { PlansService } from '../plans/plans.service.js';
 
 @Injectable()
 export class OrdersService {
-  constructor(private supabase: SupabaseService) {}
+  constructor(
+    private supabase: SupabaseService,
+    private plansService: PlansService,
+  ) {}
 
   async create(orderPayload: any) {
     const client = this.supabase.getClient();
@@ -29,6 +33,11 @@ export class OrdersService {
           resolvedTenantId = firstTenant.id;
         }
       }
+    }
+
+    // Validar límite mensual de pedidos según el plan de suscripción del comercio
+    if (resolvedTenantId && isUuid(resolvedTenantId)) {
+      await this.plansService.checkLimit(resolvedTenantId, 'order');
     }
 
     // Resolve branch_id to a valid branch or fallback to tenant main branch

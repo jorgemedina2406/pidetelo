@@ -1,6 +1,7 @@
 import { Injectable, InternalServerErrorException, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from '../supabase/supabase.service.js';
+import { PlansService } from '../plans/plans.service.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import makeWASocketPkg, {
@@ -44,6 +45,7 @@ export class WhatsAppService implements OnModuleInit {
   constructor(
     private readonly supabase: SupabaseService,
     private readonly configService: ConfigService,
+    private readonly plansService: PlansService,
   ) {
     this.evolutionApiUrl = this.configService.get<string>('EVOLUTION_API_URL') || 'http://localhost:8080';
     this.evolutionApiKey = this.configService.get<string>('EVOLUTION_API_KEY') || 'pidetelo_secret_key';
@@ -167,6 +169,9 @@ export class WhatsAppService implements OnModuleInit {
   }
 
   async connectInstance(tenantId: string, branchId?: string): Promise<WhatsAppInstanceData> {
+    // Validar si el plan de suscripción incluye Bot de WhatsApp
+    await this.plansService.checkLimit(tenantId, 'whatsapp');
+
     const instance = await this.getInstance(tenantId, branchId);
     const instanceName = instance.instance_name;
 
@@ -394,6 +399,9 @@ export class WhatsAppService implements OnModuleInit {
   }
 
   async updateSettings(tenantId: string, settings: { greeting_message?: string; auto_reply_enabled?: boolean; pause_duration_minutes?: number }, branchId?: string) {
+    if (settings.auto_reply_enabled) {
+      await this.plansService.checkLimit(tenantId, 'whatsapp');
+    }
     const instance = await this.getInstance(tenantId, branchId);
     const updated = {
       ...instance,

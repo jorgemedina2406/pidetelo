@@ -77,7 +77,9 @@ export interface Tenant {
   branding: TenantBranding;
   currencySettings: TenantCurrencySettings;
   deliveryTiers?: DeliveryTier[];
-  subscriptionPlanId?: 'EMPRENDEDOR' | 'COMERCIO' | 'CORPORATIVO';
+  subscriptionPlanId?: string;
+  planCode?: 'EMPRENDEDOR' | 'COMERCIO_PRO' | 'FRANQUICIA' | string;
+  subscriptionPlan?: any;
   commissionPercentage?: number;
   branches?: any[];
 }

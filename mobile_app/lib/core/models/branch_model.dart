@@ -104,6 +104,8 @@ class Branch {
   final String? baseCurrency;
   final String? displayMode;
   final bool isFeatured;
+  final String? subscriptionPlanCode;
+  final bool hasFeaturedBanners;
   final List<String> acceptedPaymentMethods;
 
   const Branch({
@@ -137,6 +139,8 @@ class Branch {
     this.baseCurrency,
     this.displayMode,
     this.isFeatured = false,
+    this.subscriptionPlanCode,
+    this.hasFeaturedBanners = false,
     this.acceptedPaymentMethods = const ['pago_movil', 'cash_usd', 'cash_local', 'mobile_transfer'],
   });
 
@@ -263,7 +267,9 @@ class Branch {
       exchangeRate: (json['exchange_rate'] as num?)?.toDouble() ?? (json['exchangeRate'] as num?)?.toDouble(),
       baseCurrency: json['base_currency']?.toString() ?? json['baseCurrency']?.toString(),
       displayMode: json['display_mode']?.toString() ?? json['displayMode']?.toString(),
-      isFeatured: json['is_featured'] ?? json['isFeatured'] ?? false,
+      isFeatured: json['is_featured'] ?? json['isFeatured'] ?? (json['plan_code'] == 'FRANQUICIA'),
+      subscriptionPlanCode: json['plan_code']?.toString() ?? json['subscription_plan_code']?.toString() ?? json['planCode']?.toString(),
+      hasFeaturedBanners: json['has_featured_banners'] ?? (json['plan_code'] == 'FRANQUICIA') ?? false,
       acceptedPaymentMethods: (json['accepted_payment_methods'] is List && (json['accepted_payment_methods'] as List).isNotEmpty)
           ? (json['accepted_payment_methods'] as List).map((e) => e.toString()).toList()
           : (json['acceptedPaymentMethods'] is List && (json['acceptedPaymentMethods'] as List).isNotEmpty)
@@ -290,6 +296,8 @@ class BannerItem {
   final String bgGradientEnd;
   final bool isActive;
   final int sortOrder;
+  final String? tenantId;
+  final String? planCode;
 
   const BannerItem({
     required this.id,
@@ -304,7 +312,11 @@ class BannerItem {
     this.bgGradientEnd = '#ea580c',
     this.isActive = true,
     this.sortOrder = 0,
+    this.tenantId,
+    this.planCode,
   });
+
+  bool get isFranquicia => planCode?.toUpperCase() == 'FRANQUICIA' || (badgeText?.toUpperCase().contains('VIP') ?? false);
 
   factory BannerItem.fromJson(Map<String, dynamic> json) => BannerItem(
     id: json['id']?.toString() ?? '',
@@ -319,5 +331,7 @@ class BannerItem {
     bgGradientEnd: json['bg_gradient_end']?.toString() ?? json['bgGradientEnd']?.toString() ?? '#ea580c',
     isActive: json['is_active'] ?? json['isActive'] ?? true,
     sortOrder: (json['sort_order'] as num?)?.toInt() ?? (json['sortOrder'] as num?)?.toInt() ?? 0,
+    tenantId: json['tenant_id']?.toString() ?? json['tenantId']?.toString(),
+    planCode: json['plan_code']?.toString() ?? json['planCode']?.toString(),
   );
 }

@@ -15,6 +15,7 @@ import { MetricsModule } from './metrics/metrics.module.js';
 import { UploadsModule } from './uploads/uploads.module.js';
 import { SeedModule } from './seed/seed.module.js';
 import { WhatsAppModule } from './whatsapp/whatsapp.module.js';
+import { PlansModule } from './plans/plans.module.js';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 
@@ -25,6 +26,7 @@ import { AppService } from './app.service.js';
       envFilePath: '.env',
     }),
     SupabaseModule,
+    PlansModule,
     TenantsModule,
     ProductsModule,
     OrdersModule,

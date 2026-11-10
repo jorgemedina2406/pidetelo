@@ -65,10 +65,20 @@ export interface Branch {
 }
 
 export interface SubscriptionPlan {
-  id: 'EMPRENDEDOR' | 'COMERCIO' | 'CORPORATIVO';
+  id: string;
+  code: 'EMPRENDEDOR' | 'COMERCIO_PRO' | 'FRANQUICIA' | string;
   name: string;
-  maxBranches: number;
+  priceMonthly: number;
+  priceAnnual: number;
   monthlyPriceUsd: number;
+  maxBranches: number; // 0, 2, -1 (ilimitado)
+  hasWhatsappBot: boolean;
+  hasExcelReports: boolean;
+  hasFeaturedBanners: boolean;
+  maxAdditionalUsers: number; // 1, 3, -1
+  maxMonthlyOrders: number; // 20, 50, -1
+  maxProducts: number; // 20, 100, -1
   description: string;
   features: string[];
+  isActive?: boolean;
 }

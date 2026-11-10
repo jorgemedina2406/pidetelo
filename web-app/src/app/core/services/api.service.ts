@@ -1542,18 +1542,119 @@ export class ApiService {
 
   // --- MULTI-SUCURSAL & SUSCRIPCIONES (100% REAL SUPABASE / BACKEND) ---
   getSubscriptionPlans(): Observable<SubscriptionPlan[]> {
-    return this.http.get<any[]>(`${this.baseUrl}/subscription-plans`).pipe(
+    return this.http.get<any[]>(`${this.baseUrl}/plans`).pipe(
       map(rows => (rows || []).map(r => this.mapSubscriptionPlan(r))),
       catchError(() => {
-        const client = this.supabase.rawClient;
-        if (client) {
-          return from(client.from('subscription_plans').select('*').order('monthly_fee_usd')).pipe(
-            map(({ data }) => (data || []).map(r => this.mapSubscriptionPlan(r)))
-          );
-        }
-        return of([]);
+        return this.http.get<any[]>(`${this.baseUrl}/subscription-plans`).pipe(
+          map(rows => (rows || []).map(r => this.mapSubscriptionPlan(r))),
+          catchError(() => of(this.getDefaultSubscriptionPlans()))
+        );
       })
     );
+  }
+
+  getTenantPlanAndUsage(tenantId: string): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/plans/tenant/${tenantId}`).pipe(
+      catchError(() => of(null))
+    );
+  }
+
+  assignTenantPlan(tenantId: string, planCode: string): Observable<any> {
+    return this.http.put<any>(`${this.baseUrl}/plans/tenant/${tenantId}`, { planCode });
+  }
+
+  exportOrdersReport(tenantId: string, branchId?: string): Observable<any> {
+    const url = branchId ? `${this.baseUrl}/orders/export/${tenantId}?branchId=${branchId}` : `${this.baseUrl}/orders/export/${tenantId}`;
+    return this.http.get<any>(url);
+  }
+
+  getDefaultSubscriptionPlans(): SubscriptionPlan[] {
+    return [
+      {
+        id: 'plan_emprendedor',
+        code: 'EMPRENDEDOR',
+        name: 'Plan Emprendedor',
+        priceMonthly: 9.00,
+        priceAnnual: 7.00,
+        monthlyPriceUsd: 9.00,
+        maxBranches: 0,
+        hasWhatsappBot: false,
+        hasExcelReports: false,
+        hasFeaturedBanners: false,
+        maxAdditionalUsers: 1,
+        maxMonthlyOrders: 20,
+        maxProducts: 20,
+        description: 'Para negocios y marcas que inician con su sede principal.',
+        features: [
+          '0 sucursales adicionales (solo sede principal)',
+          'Hasta 20 productos en catálogo',
+          'Hasta 20 pedidos al mes',
+          '1 usuario de equipo adicional',
+          'Tienda web y menú digital con código QR',
+          'Acceso a la App Móvil de Clientes',
+          'Acceso a la App de Repartidores con GPS',
+          'Pagos 100% directos (0% comisión sobre ventas)',
+          'Tracking de pedidos en tiempo real',
+          'Soporte estándar'
+        ],
+        isActive: true
+      },
+      {
+        id: 'plan_comercio_pro',
+        code: 'COMERCIO_PRO',
+        name: 'Plan Comercio Pro',
+        priceMonthly: 29.00,
+        priceAnnual: 23.00,
+        monthlyPriceUsd: 29.00,
+        maxBranches: 2,
+        hasWhatsappBot: true,
+        hasExcelReports: true,
+        hasFeaturedBanners: false,
+        maxAdditionalUsers: 3,
+        maxMonthlyOrders: 50,
+        maxProducts: 100,
+        description: 'Para comercios establecidos que buscan automatización y expansión local.',
+        features: [
+          'Todo lo incluido en el Plan Emprendedor',
+          'Hasta 2 sucursales adicionales (3 sedes en total)',
+          'Hasta 100 productos en catálogo',
+          'Hasta 50 pedidos al mes',
+          'Hasta 3 usuarios de equipo adicionales',
+          'Bot automático de WhatsApp y Live Chat 24/7',
+          'Reportes avanzados en Excel (.xlsx)',
+          'Soporte prioritario'
+        ],
+        isActive: true
+      },
+      {
+        id: 'plan_franquicia',
+        code: 'FRANQUICIA',
+        name: 'Plan Franquicia',
+        priceMonthly: 79.00,
+        priceAnnual: 63.00,
+        monthlyPriceUsd: 79.00,
+        maxBranches: -1,
+        hasWhatsappBot: true,
+        hasExcelReports: true,
+        hasFeaturedBanners: true,
+        maxAdditionalUsers: -1,
+        maxMonthlyOrders: -1,
+        maxProducts: -1,
+        description: 'Para cadenas gastronómicas, franquicias y marcas líderes de alto volumen.',
+        features: [
+          'Todo lo incluido en el Plan Comercio Pro',
+          'Sucursales físicas ilimitadas',
+          'Productos en catálogo ilimitados',
+          'Pedidos al mes ilimitados',
+          'Cuentas de usuarios de equipo ilimitadas',
+          'Banners destacados VIP en la App Móvil',
+          'Bot automático de WhatsApp ilimitado con IA',
+          'Auditoría de inicios de sesión y BI empresarial',
+          'Soporte VIP 24/7 con ejecutivo asignado'
+        ],
+        isActive: true
+      }
+    ];
   }
 
   getBranches(companyId?: string): Observable<Branch[]> {
@@ -1960,17 +2061,30 @@ export class ApiService {
   }
 
   private mapSubscriptionPlan(r: any): SubscriptionPlan {
+    let code = (r.code || r.id || 'EMPRENDEDOR').toUpperCase();
+    if (code === 'COMERCIO') code = 'COMERCIO_PRO';
+    if (code === 'CORPORATIVO') code = 'FRANQUICIA';
+
+    const priceMonthly = Number(r.price_monthly ?? r.priceMonthly ?? r.monthly_fee_usd ?? r.monthlyPriceUsd ?? 9.00);
+    const priceAnnual = Number(r.price_annual ?? r.priceAnnual ?? (priceMonthly * 0.8));
+
     return {
-      id: r.code || r.id,
-      name: r.name,
-      maxBranches: r.max_branches ?? r.maxBranches ?? 1,
-      monthlyPriceUsd: Number(r.monthly_fee_usd ?? r.monthlyPriceUsd ?? 19.99),
-      description: r.description,
-      features: r.features || [
-        `Hasta ${r.max_branches ?? r.maxBranches ?? 1} Sede(s) física(s)`,
-        '0% Comisiones por venta',
-        'Pago Móvil y Zelle directo a la sede'
-      ]
+      id: r.id || code,
+      code,
+      name: r.name || (code === 'FRANQUICIA' ? 'Plan Franquicia' : code === 'COMERCIO_PRO' ? 'Plan Comercio Pro' : 'Plan Emprendedor'),
+      priceMonthly,
+      priceAnnual,
+      monthlyPriceUsd: priceMonthly,
+      maxBranches: r.max_branches !== undefined ? Number(r.max_branches) : (code === 'FRANQUICIA' ? -1 : code === 'COMERCIO_PRO' ? 2 : 0),
+      hasWhatsappBot: Boolean(r.has_whatsapp_bot ?? r.hasWhatsappBot ?? (code !== 'EMPRENDEDOR')),
+      hasExcelReports: Boolean(r.has_excel_reports ?? r.hasExcelReports ?? (code !== 'EMPRENDEDOR')),
+      hasFeaturedBanners: Boolean(r.has_featured_banners ?? r.hasFeaturedBanners ?? (code === 'FRANQUICIA')),
+      maxAdditionalUsers: r.max_additional_users !== undefined ? Number(r.max_additional_users) : (code === 'FRANQUICIA' ? -1 : code === 'COMERCIO_PRO' ? 3 : 1),
+      maxMonthlyOrders: r.max_monthly_orders !== undefined ? Number(r.max_monthly_orders) : (code === 'FRANQUICIA' ? -1 : code === 'COMERCIO_PRO' ? 50 : 20),
+      maxProducts: r.max_products !== undefined ? Number(r.max_products) : (code === 'FRANQUICIA' ? -1 : code === 'COMERCIO_PRO' ? 100 : 20),
+      description: r.description || '',
+      features: Array.isArray(r.features) ? r.features : [],
+      isActive: r.is_active !== undefined ? Boolean(r.is_active) : true
     };
   }
 

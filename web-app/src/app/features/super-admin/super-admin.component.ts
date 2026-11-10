@@ -529,6 +529,21 @@ export class SuperAdminComponent implements OnInit {
     });
   }
 
+  onMerchantPlanChange(event: { tenantId: string; planCode: string }): void {
+    this.api.assignTenantPlan(event.tenantId, event.planCode).subscribe({
+      next: (res) => {
+        this.showToast('success', 'Plan Actualizado', `El plan del comercio fue actualizado a ${event.planCode}`);
+        this.api.getTenants(true).subscribe(tenants => {
+          if (tenants) this.merchants.set(tenants);
+        });
+      },
+      error: (err) => {
+        console.warn('[SuperAdmin] Error asignando plan:', err);
+        this.showToast('error', 'Error', 'No se pudo actualizar el plan del comercio');
+      }
+    });
+  }
+
 
   onMerchantNameChanged(name: string): void {
     this.newMerchant.name = name;

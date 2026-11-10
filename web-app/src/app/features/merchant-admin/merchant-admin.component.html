@@ -640,6 +640,16 @@
                   {{ completedOrders().length }}
                 </span>
               </button>
+            
+              <!-- Botón Exportar a Excel -->
+              <button (click)="exportOrdersToExcel()"
+                class="px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-2 cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs ml-1">
+                <app-icon name="file-text" [size]="14"></app-icon>
+                <span>Exportar Excel</span>
+                @if (!currentSubscriptionPlan().hasExcelReports) {
+                  <span class="text-[9px] font-black uppercase px-1.5 py-0.2 rounded-md bg-amber-400 text-slate-950">PRO</span>
+                }
+              </button>
             </div>
           </div>
 
@@ -3108,6 +3118,30 @@
             </div>
           </div>
 
+          @if (!currentSubscriptionPlan().hasWhatsappBot) {
+          <!-- Bloqueo por Plan Emprendedor: Función Exclusiva Pro -->
+          <div class="p-8 rounded-3xl bg-gradient-to-br from-slate-900 to-navy-950 text-white border border-emerald-500/30 shadow-xl text-center space-y-5 max-w-2xl mx-auto my-8">
+            <div class="w-16 h-16 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto border border-emerald-500/40 shadow-lg shadow-emerald-500/20">
+              <app-icon name="message-circle" [size]="36"></app-icon>
+            </div>
+            <div class="space-y-2">
+              <span class="text-[11px] font-black uppercase tracking-wider text-emerald-400 bg-emerald-950/60 px-3 py-1 rounded-full border border-emerald-700/60">
+                Función Exclusiva: Plan Comercio Pro y Franquicia
+              </span>
+              <h3 class="text-2xl font-black text-white">¡Automatiza tus pedidos 24/7 con el Bot de WhatsApp!</h3>
+              <p class="text-xs text-slate-300 max-w-lg mx-auto">
+                Tu plan actual (<strong>{{ currentSubscriptionPlan().name }}</strong>) no incluye el motor de inteligencia artificial y respuestas automáticas para WhatsApp. Actualiza para conectar tu número, recibir comandas sin intervención y dar soporte en vivo.
+              </p>
+            </div>
+            <div class="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+              <button (click)="planModalLimitType.set('whatsapp'); isUpgradePlanModalOpen.set(true)"
+                class="px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-extrabold text-xs shadow-lg shadow-emerald-500/25 flex items-center gap-2 cursor-pointer transition-all active:scale-95">
+                <app-icon name="sparkles" [size]="16"></app-icon>
+                <span>Mejorar a Plan Comercio Pro ($29/mes)</span>
+              </button>
+            </div>
+          </div>
+          } @else {
           <!-- SUBTAB 1: LIVE CHAT -->
           @if (whatsappSubTab() === 'chat') {
             <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col md:flex-row h-[720px]">
@@ -3517,6 +3551,7 @@
 
             </div>
           }
+          }
         </div>
         }
         </main>
@@ -3597,6 +3632,7 @@
   <app-plan-upgrade-modal
     [isOpen]="isUpgradePlanModalOpen()"
     [currentSubscriptionPlan]="currentSubscriptionPlan()"
+    [limitType]="planModalLimitType()"
     [activeBranchesCount]="activeBranchesCount()"
     (close)="isUpgradePlanModalOpen.set(false)">
   </app-plan-upgrade-modal>

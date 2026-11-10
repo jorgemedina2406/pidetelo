@@ -330,9 +330,15 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
   Future<void> _loadBanners() async {
     final banners = await ApiService().fetchBanners();
+    // Banners destacados en la app móvil: Solo para Plan Franquicia o promociones del sistema
+    final filtered = banners.where((b) {
+      if (b.tenantId == null || b.tenantId!.isEmpty) return true;
+      return b.isFranquicia || b.planCode?.toUpperCase() == 'FRANQUICIA';
+    }).toList();
+
     if (mounted) {
       setState(() {
-        _banners = banners;
+        _banners = filtered.isNotEmpty ? filtered : banners;
       });
     }
   }

@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, InternalServerErrorException, ConflictException, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service.js';
+import { PlansService } from '../plans/plans.service.js';
 import { randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -20,7 +21,10 @@ export class UsersService {
   private localUsers = new Map<string, any>();
   private storageFilePath = path.resolve(process.cwd(), 'data', 'users_storage.json');
 
-  constructor(private supabase: SupabaseService) {
+  constructor(
+    private supabase: SupabaseService,
+    private plansService: PlansService,
+  ) {
     this.loadFromDisk();
   }
 
@@ -271,6 +275,11 @@ export class UsersService {
     const email = payload.email?.toLowerCase().trim();
     if (!name || !email) {
       throw new InternalServerErrorException('Nombre y correo electrónico son obligatorios');
+    }
+
+    // Validar límite de usuarios adicionales según el plan de suscripción del comercio
+    if (payload.role !== 'MERCHANT_OWNER') {
+      await this.plansService.checkLimit(tenantId, 'user');
     }
     if (payload.password) {
       const pass = payload.password;

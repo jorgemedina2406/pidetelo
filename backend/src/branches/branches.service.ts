@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { SupabaseService } from '../supabase/supabase.service.js';
 import { UsersService } from '../users/users.service.js';
+import { PlansService } from '../plans/plans.service.js';
 
 @Injectable()
 export class BranchesService {
@@ -11,6 +12,7 @@ export class BranchesService {
   constructor(
     private supabase: SupabaseService,
     private usersService: UsersService,
+    private plansService: PlansService,
   ) {}
 
   private loadMetadata(): Record<string, any> {
@@ -195,6 +197,9 @@ export class BranchesService {
 
   async create(companyId: string, branchPayload: any) {
     const client = this.supabase.getClient();
+
+    // Validar límite de sucursales según el plan de suscripción del comercio
+    await this.plansService.checkLimit(companyId, 'branch');
 
     // Regla de Negocio: Una sucursal secundaria no puede crear sucursales.
     // Solo la sede principal o el dueño del comercio pueden crear sucursales.
@@ -673,15 +678,6 @@ export class BranchesService {
   }
 
   async getSubscriptionPlans() {
-    const client = this.supabase.getClient();
-    const { data, error } = await client
-      .from('subscription_plans')
-      .select('*')
-      .order('monthly_fee_usd', { ascending: true });
-
-    if (error) {
-      throw new InternalServerErrorException(`Error fetching subscription plans: ${error.message}`);
-    }
-    return data || [];
+    return this.plansService.getAllPlans();
   }
 }

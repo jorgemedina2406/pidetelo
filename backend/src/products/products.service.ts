@@ -2,12 +2,16 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { Injectable, NotFoundException, InternalServerErrorException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service.js';
+import { PlansService } from '../plans/plans.service.js';
 
 @Injectable()
 export class ProductsService {
   private metadataFilePath = path.join(process.cwd(), 'data', 'product_metadata.json');
 
-  constructor(private supabase: SupabaseService) {}
+  constructor(
+    private supabase: SupabaseService,
+    private plansService: PlansService,
+  ) {}
 
   private loadMetadata(): Record<string, any> {
     try {
@@ -186,6 +190,11 @@ export class ProductsService {
   async create(productData: any) {
     const modifierGroups = productData.modifierGroups || productData.modifier_groups;
     const targetTenantId = productData.tenant_id || productData.tenantId;
+
+    if (targetTenantId) {
+      // Validar límite de productos según el plan de suscripción del comercio
+      await this.plansService.checkLimit(targetTenantId, 'product');
+    }
 
     let targetBranchId = (productData.branch_id || productData.branchId) && productData.branch_id !== 'all' && productData.branchId !== 'all' ? (productData.branch_id || productData.branchId) : null;
     if (!targetBranchId && targetTenantId) {

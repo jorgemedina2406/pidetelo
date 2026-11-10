@@ -1,11 +1,15 @@
 import { Controller, Get, Post, Patch, Param, Body, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { OrdersService } from './orders.service.js';
+import { PlansService } from '../plans/plans.service.js';
 
 @ApiTags('Orders & Comandas')
 @Controller('api/orders')
 export class OrdersController {
-  constructor(private readonly ordersService: OrdersService) {}
+  constructor(
+    private readonly ordersService: OrdersService,
+    private readonly plansService: PlansService,
+  ) {}
 
   @Post()
   @ApiOperation({ summary: 'Crear un nuevo pedido desde el checkout del cliente' })
@@ -64,5 +68,20 @@ export class OrdersController {
   @ApiOperation({ summary: 'Asignar repartidor al pedido y ponerlo en camino' })
   assignRider(@Param('id') id: string, @Body('riderId') riderId: string) {
     return this.ordersService.assignRider(id, riderId);
+  }
+
+  @Get('export/:tenantId')
+  @ApiOperation({ summary: 'Exportar reporte avanzado de pedidos a Excel (solo planes Pro y Franquicia)' })
+  async exportOrders(
+    @Param('tenantId') tenantId: string,
+    @Query('branchId') branchId?: string,
+  ) {
+    await this.plansService.checkLimit(tenantId, 'excel');
+    const orders = await this.ordersService.findByTenant(tenantId, undefined, branchId);
+    return {
+      success: true,
+      count: orders.length,
+      orders
+    };
   }
 }
