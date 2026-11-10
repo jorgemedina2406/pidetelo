@@ -38,3 +38,4 @@ CREATE POLICY support_ticket_messages_all_access ON public.support_ticket_messag
 CREATE INDEX IF NOT EXISTS idx_support_tickets_tenant ON public.support_tickets(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_support_tickets_status ON public.support_tickets(status);
 CREATE INDEX IF NOT EXISTS idx_support_ticket_messages_ticket ON public.support_ticket_messages(ticket_id);
+

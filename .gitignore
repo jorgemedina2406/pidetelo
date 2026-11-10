@@ -21,6 +21,8 @@ ios/Podfile.lock
 *.ipa
 *.zip
 *.tar.gz
+!dist-apps/*.apk
+!dist-apps/*.ipa
 
 # Environment & logs
 .env
