@@ -408,6 +408,9 @@ class DeliveryOrder {
   final String? branchId;
   final String? companyId;
 
+  String? get tenantId => companyId;
+  String get tenantName => merchantName;
+
   DeliveryOrder({
     required this.id,
     required this.orderNumber,

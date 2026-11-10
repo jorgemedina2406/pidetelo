@@ -661,6 +661,7 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final centerLat = (_order.merchantLat + _order.customerLat) / 2;
     final centerLng = (_order.merchantLng + _order.customerLng) / 2;
 

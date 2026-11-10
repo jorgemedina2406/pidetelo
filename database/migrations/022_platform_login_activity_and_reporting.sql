@@ -34,3 +34,4 @@ DROP POLICY IF EXISTS "login_logs_insert" ON public.platform_login_logs;
 CREATE POLICY "login_logs_insert" ON public.platform_login_logs
   FOR INSERT TO authenticated, anon, service_role
   WITH CHECK (true);
+
