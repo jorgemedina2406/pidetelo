@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="es" class="dark scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pídetelo | Plataforma Integral de Delivery, App Móvil y Panel para Comercios</title>
+  
+  <!-- SEO Meta Tags -->
+  <meta name="description" content="Pídetelo es la plataforma de delivery y pedidos más moderna de Venezuela. App móvil para clientes (iOS/Android), panel web para comercios, bot inteligente de WhatsApp con operador y app para repartidores con GPS en vivo.">
+  <meta name="keywords" content="Pídetelo, delivery venezuela, app delivery barquisimeto, software para restaurantes, pedidos online, bot whatsapp delivery, app repartidores, tasa bcv pedidos">
+  <meta name="author" content="Pídetelo Technologies">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://pidetelo.com/">
+
+  <!-- Open Graph / Facebook / WhatsApp -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://pidetelo.com/">
+  <meta property="og:title" content="Pídetelo | Ecosistema Tecnológico de Delivery & Pedidos">
+  <meta property="og:description" content="Multiplica tus ventas y gestiona tus envíos con Pídetelo: App móvil, panel de comercios, bot de WhatsApp y app de repartidores con GPS en vivo.">
+  <meta property="og:image" content="https://pidetelo.com/assets/images/logo.png">
+
+  <!-- Twitter Cards -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Pídetelo | Ecosistema Tecnológico de Delivery & Pedidos">
+  <meta name="twitter:description" content="Multiplica tus ventas con la plataforma más completa de delivery en Venezuela: App móvil, panel web, bot de WhatsApp y app para repartidores.">
+  <meta name="twitter:image" content="https://pidetelo.com/assets/images/logo.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="assets/images/logo.png">
+  <link rel="apple-touch-icon" href="assets/images/logo.png">
+
+  <!-- Google Fonts & Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#fff7ed',
+              100: '#ffedd5',
+              200: '#fed7aa',
+              300: '#fdba74',
+              400: '#fb923c',
+              500: '#f97316', // Color principal Pídetelo
+              600: '#ea580c',
+              700: '#c2410c',
+              800: '#9a3412',
+              900: '#7c2d12',
+            },
+            navy: {
+              800: '#162447',
+              850: '#0f1933',
+              900: '#0b1329',
+              950: '#060b17',
+            }
+          },
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'sans-serif'],
+            heading: ['Outfit', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="assets/css/styles.css">
+
+  <!-- Schema.org JSON-LD Microdata for SEO -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Pídetelo",
+    "operatingSystem": "Android, iOS, Web",
+    "applicationCategory": "BusinessApplication, FoodDeliveryApplication",
+    "description": "Ecosistema integral de delivery y pedidos online con apps nativas de cliente y repartidor, panel web multi-sucursal y bot de WhatsApp.",
+    "offers": {
+      "@type": "Offer",
+      "price": "0.00",
+      "priceCurrency": "USD"
+    },
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "4.9",
+      "ratingCount": "1240"
+    }
+  }
+  </script>
+</head>
+
+<body class="bg-navy-950 text-slate-100 transition-colors duration-300 selection:bg-brand-500 selection:text-white">
+
+  <!-- ===================================================================
+       1. BARRA DE NAVEGACIÓN PRINCIPAL (STICKY)
+  =================================================================== -->
+  <header class="sticky top-0 z-50 bg-navy-950/80 dark:bg-navy-950/80 backdrop-blur-md border-b border-white/10 transition-colors">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+      
+      <!-- Logo Pídetelo Oficial -->
+      <a href="#" class="flex items-center gap-3 group">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-brand-600 via-brand-500 to-amber-500 p-0.5 shadow-lg shadow-brand-500/25 flex items-center justify-center transition-transform group-hover:scale-105">
+          <img src="assets/images/logo.png" alt="Logo Pídetelo" class="w-full h-full object-contain rounded-xl p-1 bg-white">
+        </div>
+        <div class="leading-none">
+          <span class="font-heading font-black text-2xl tracking-tight text-white flex items-center gap-1">
+            Pídetelo<span class="text-brand-500">.</span>
+          </span>
+          <span class="text-[10px] uppercase font-bold tracking-widest text-slate-400 block mt-0.5">
+            Delivery & Comercio
+          </span>
+        </div>
+      </a>
+
+      <!-- Menú Escritorio -->
+      <nav class="hidden lg:flex items-center gap-7 text-sm font-semibold text-slate-300">
+        <a href="#ecosistema" class="hover:text-brand-400 transition-colors">Ecosistema</a>
+        <a href="#modulos" class="hover:text-brand-400 transition-colors">Módulos</a>
+        <a href="#pantallas" class="hover:text-brand-400 transition-colors">Capturas Reales</a>
+        <a href="#precios" class="hover:text-brand-400 transition-colors">Precios</a>
+        <a href="#calculadora" class="hover:text-brand-400 transition-colors">Calculadora ROI</a>
+        <a href="#faq" class="hover:text-brand-400 transition-colors">Preguntas</a>
+      </nav>
+
+      <!-- Botones de Acción / CTAs -->
+      <div class="hidden sm:flex items-center gap-3">
+        <!-- Selector Modo Claro / Oscuro -->
+        <button id="theme-toggle" class="w-10 h-10 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-700 flex items-center justify-center text-slate-300 hover:text-white transition-all cursor-pointer" title="Cambiar Tema">
+          <span class="text-base">🌓</span>
+        </button>
+
+        <!-- Botón Descargar Apps -->
+        <button class="open-download-modal px-4 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-white flex items-center gap-2 transition-all cursor-pointer">
+          <span>📲 Descargar Apps</span>
+        </button>
+
+        <!-- Botón Afiliar Comercio -->
+        <a href="#contacto" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand-500 to-amber-500 hover:from-brand-600 hover:to-amber-600 text-white font-bold text-xs shadow-lg shadow-brand-500/25 flex items-center gap-2 transition-all transform hover:-translate-y-0.5 cursor-pointer">
+          <span>Afiliar mi Comercio</span>
+          <span>→</span>
+        </a>
+      </div>
+
+      <!-- Botón Menú Móvil (Hamburger) -->
+      <button id="mobile-menu-btn" class="lg:hidden p-2.5 rounded-xl bg-slate-800 text-slate-300 hover:text-white">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path>
+        </svg>
+      </button>
+
+    </div>
+
+    <!-- Menú Desplegable Móvil -->
+    <div id="mobile-menu" class="hidden lg:hidden border-t border-white/10 bg-navy-900/95 backdrop-blur-xl px-4 py-5 space-y-3">
+      <a href="#ecosistema" class="mobile-nav-link block py-2 text-sm font-semibold text-slate-300 hover:text-brand-400">Ecosistema</a>
+      <a href="#modulos" class="mobile-nav-link block py-2 text-sm font-semibold text-slate-300 hover:text-brand-400">Módulos</a>
+      <a href="#pantallas" class="mobile-nav-link block py-2 text-sm font-semibold text-slate-300 hover:text-brand-400">Capturas Reales</a>
+      <a href="#precios" class="mobile-nav-link block py-2 text-sm font-semibold text-slate-300 hover:text-brand-400">Precios</a>
+      <a href="#calculadora" class="mobile-nav-link block py-2 text-sm font-semibold text-slate-300 hover:text-brand-400">Calculadora ROI</a>
+      <a href="#faq" class="mobile-nav-link block py-2 text-sm font-semibold text-slate-300 hover:text-brand-400">Preguntas Frecuentes</a>
+      
+      <div class="pt-4 border-t border-white/10 flex flex-col gap-2">
+        <button class="open-download-modal w-full py-2.5 rounded-xl bg-slate-800 text-xs font-bold text-center">
+          Descargar Aplicaciones (APK / iOS)
+        </button>
+        <a href="#contacto" class="mobile-nav-link w-full py-2.5 rounded-xl bg-brand-500 text-white text-xs font-bold text-center">
+          Afiliar mi Comercio Gratis
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===================================================================
+       2. HERO SECTION CON MOCKUPS 3D FLOTANTES
+  =================================================================== -->
+  <section class="relative pt-12 pb-24 md:pt-20 md:pb-32 overflow-hidden">
+    <!-- Luces de fondo decorativas -->
+    <div class="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-brand-500/15 rounded-full blur-[140px] pointer-events-none"></div>
+    <div class="absolute top-1/3 right-10 w-[400px] h-[400px] bg-emerald-500/10 rounded-full blur-[120px] pointer-events-none"></div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+        
+        <!-- Contenido Izquierdo (Textos & CTAs) -->
+        <div class="lg:col-span-7 space-y-6 text-center lg:text-left">
+          
+          <!-- Badge Llamativo -->
+          <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/30 text-brand-400 text-xs font-bold animate-pulse">
+            <span class="w-2 h-2 rounded-full bg-brand-500"></span>
+            <span>Plataforma Oficial de Pedidos & Delivery 2026</span>
+          </div>
+
+          <!-- Título Principal -->
+          <h1 class="font-heading font-black text-4xl sm:text-5xl lg:text-6xl tracking-tight leading-[1.1] text-white">
+            Revoluciona tus ventas con la tecnología de <span class="text-gradient">Pídetelo</span>.
+          </h1>
+
+          <!-- Descripción -->
+          <p class="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto lg:mx-0 leading-relaxed font-normal">
+            El ecosistema integral definitivo: <strong>App móvil nativa para clientes</strong>, <strong>panel web multi-sucursal para comercios</strong>, <strong>bot de WhatsApp con IA y operador</strong>, y <strong>app de repartidores con GPS en vivo</strong>. Todo sincronizado en USD y Bs a tasa BCV.
+          </p>
+
+          <!-- Botones de Acción -->
+          <div class="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-2">
+            <a href="#contacto" class="px-7 py-4 rounded-2xl bg-gradient-to-r from-brand-500 to-amber-500 hover:from-brand-600 hover:to-amber-600 text-white font-extrabold text-sm shadow-xl shadow-brand-500/30 flex items-center gap-2 transform hover:-translate-y-1 transition-all cursor-pointer">
+              <span>🚀 Comenzar como Comercio</span>
+              <span>→</span>
+            </a>
+            
+            <button class="open-download-modal px-6 py-4 rounded-2xl bg-slate-800/90 hover:bg-slate-700/90 border border-slate-700 text-white font-bold text-sm flex items-center gap-2.5 transition-all cursor-pointer">
+              <span>📲 Descargar Apps Móviles</span>
+            </button>
+          </div>
+
+          <!-- Badges de Confianza / Trust Metrics -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-8 border-t border-white/10 text-left">
+            <div>
+              <div class="text-2xl font-black font-heading text-white font-mono">100%</div>
+              <div class="text-[11px] text-slate-400 font-medium">Tiempo Real (GPS)</div>
+            </div>
+            <div>
+              <div class="text-2xl font-black font-heading text-brand-400 font-mono">USD / Bs</div>
+              <div class="text-[11px] text-slate-400 font-medium">Tasa Oficial BCV</div>
+            </div>
+            <div>
+              <div class="text-2xl font-black font-heading text-emerald-400 font-mono">4-en-1</div>
+              <div class="text-[11px] text-slate-400 font-medium">App, Web, Bot & Rider</div>
+            </div>
+            <div>
+              <div class="text-2xl font-black font-heading text-white font-mono">99.9%</div>
+              <div class="text-[11px] text-slate-400 font-medium">Uptime Servidores</div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Visual Derecho (Mockup Dual con Capturas Reales de Pantalla) -->
+        <div class="lg:col-span-5 flex justify-center relative">
+          
+          <!-- Teléfono 1: App Cliente con Banners y Restaurantes -->
+          <div class="w-64 sm:w-72 phone-mockup shadow-2xl relative z-20 transform -rotate-3 hover:rotate-0 transition-transform duration-500">
+            <img src="assets/images/screenshot-customer-app.png" alt="App Cliente Pídetelo" class="w-full h-auto object-cover zoomable-image cursor-zoom-in">
+          </div>
+
+          <!-- Teléfono 2: Seguimiento en Vivo con Mapa GPS Flotando Atrás -->
+          <div class="hidden sm:block w-64 phone-mockup shadow-2xl absolute -right-6 top-10 z-10 opacity-90 transform rotate-6 hover:rotate-0 transition-transform duration-500">
+            <img src="assets/images/screenshot-tracking.png" alt="Rastreo en vivo con Mapa" class="w-full h-auto object-cover zoomable-image cursor-zoom-in">
+          </div>
+
+          <!-- Tarjeta Flotante: Indicador de Entrega Exitosa -->
+          <div class="absolute -bottom-6 left-4 sm:-left-6 z-30 glass-panel p-3.5 rounded-2xl border border-white/10 shadow-2xl flex items-center gap-3 animate-float">
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-lg">
+              ✓
+            </div>
+            <div class="text-xs">
+              <span class="font-extrabold text-white block">PIN de Entrega Seguro</span>
+              <span class="text-slate-400 text-[10px]">Validación directa con el cliente</span>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ===================================================================
+       3. ECOSISTEMA TECNOLÓGICO DE MÓDULOS (SHOWCASE INTERACTIVO)
+  =================================================================== -->
+  <section id="modulos" class="py-20 bg-navy-900/60 border-y border-white/5 relative">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <!-- Título de Sección -->
+      <div class="text-center max-w-3xl mx-auto space-y-3 mb-12">
+        <span class="text-brand-500 font-extrabold text-xs uppercase tracking-widest">Tecnología de Punta a Punta</span>
+        <h2 class="font-heading font-black text-3xl sm:text-4xl text-white">
+          Los 5 Módulos que Componen el Ecosistema Pídetelo
+        </h2>
+        <p class="text-sm sm:text-base text-slate-300">
+          Diseñado para que clientes, dueños de negocios, cocineros y repartidores operen en perfecta sincronía.
+        </p>
+      </div>
+
+      <!-- Selector de Pestañas Interactivas -->
+      <div class="flex items-center justify-center gap-2 overflow-x-auto pb-4 max-w-full">
+        <button class="module-tab-btn px-4 py-2.5 rounded-xl text-xs font-bold bg-brand-500 text-white shadow-lg shadow-brand-500/25 transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer" data-target="panel-customer">
+          <span>📱 App Clientes</span>
+        </button>
+        <button class="module-tab-btn px-4 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-800/50 transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer" data-target="panel-merchant">
+          <span>🏪 Panel Comercios</span>
+        </button>
+        <button class="module-tab-btn px-4 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-800/50 transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer" data-target="panel-rider">
+          <span>🛵 App Repartidores</span>
+        </button>
+        <button class="module-tab-btn px-4 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-800/50 transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer" data-target="panel-whatsapp">
+          <span>🤖 WhatsApp & Bot IA</span>
+        </button>
+        <button class="module-tab-btn px-4 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-800/50 transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer" data-target="panel-superadmin">
+          <span>🛡️ Super Admin Control</span>
+        </button>
+      </div>
+
+      <!-- Contenido de las Pestañas -->
+      <div class="mt-8">
+
+        <!-- 1. PANEL: APP CLIENTES -->
+        <div id="panel-customer" class="module-tab-panel grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          <div class="lg:col-span-6 space-y-5">
+            <span class="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-brand-500/10 text-brand-400 border border-brand-500/20">
+              Flutter iOS & Android
+            </span>
+            <h3 class="font-heading font-black text-2xl sm:text-3xl text-white">
+              App Móvil de Clientes de Última Generación
+            </h3>
+            <p class="text-sm text-slate-300 leading-relaxed">
+              Una experiencia fluida, rápida y atractiva inspirada en los estándares mundiales de delivery. Los clientes descubren platos, personalizan pedidos con modificadores y siguen el recorrido de su comida en un mapa interactivo.
+            </p>
+            
+            <div class="space-y-3">
+              <div class="flex items-start gap-3">
+                <div class="w-6 h-6 rounded-lg bg-brand-500/20 text-brand-400 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">✓</div>
+                <div>
+                  <h4 class="font-bold text-xs text-white">Precios Dobles USD / Bs</h4>
+                  <p class="text-[12px] text-slate-400">Actualización en tiempo real con la tasa oficial del Banco Central de Venezuela.</p>
+                </div>
+              </div>
+              <div class="flex items-start gap-3">
+                <div class="w-6 h-6 rounded-lg bg-brand-500/20 text-brand-400 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">✓</div>
+                <div>
+                  <h4 class="font-bold text-xs text-white">Rastreo GPS en Vivo con Mapa</h4>
+                  <p class="text-[12px] text-slate-400">El cliente ve al motorizado acercarse a su dirección con tiempo estimado de llegada (ETA).</p>
+                </div>
+              </div>
+              <div class="flex items-start gap-3">
+                <div class="w-6 h-6 rounded-lg bg-brand-500/20 text-brand-400 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">✓</div>
+                <div>
+                  <h4 class="font-bold text-xs text-white">Calificaciones & Reseñas Reales</h4>
+                  <p class="text-[12px] text-slate-400">Los comensales califican con estrellas y comentarios para dar reputación genuina al comercio.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="lg:col-span-6 flex justify-center">
+            <div class="w-72 phone-mockup shadow-2xl">
+              <img src="assets/images/screenshot-customer-app.png" alt="Captura App Cliente" class="w-full h-auto object-cover zoomable-image cursor-zoom-in">
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. PANEL: COMERCIOS -->
+        <div id="panel-merchant" class="module-tab-panel hidden grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          <div class="lg:col-span-6 space-y-5">
+            <span class="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/20">
+              Portal Web Pro (Angular 18+)
+            </span>
+            <h3 class="font-heading font-black text-2xl sm:text-3xl text-white">
+              Panel Administrativo Integral para tu Negocio
+            </h3>
+            <p class="text-sm text-slate-300 leading-relaxed">
+              Toma el control absoluto de tus ventas. Diseñado para restaurantes, panaderías, tiendas y farmacias con soporte para múltiples sucursales y roles de colaboradores.
+            </p>
+            
+            <div class="space-y-3">
+              <div class="flex items-start gap-3">
+                <div class="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">✓</div>
+                <div>
+                  <h4 class="font-bold text-xs text-white">Pantalla de Cocina / Kanban en Vivo</h4>
+                  <p class="text-[12px] text-slate-400">Alertas sonoras y tarjetas para pasar pedidos de Recibido a En Cocina y Despacho.</p>
+                </div>
+              </div>
+              <div class="flex items-start gap-3">
+                <div class="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">✓</div>
+                <div>
+                  <h4 class="font-bold text-xs text-white">Gestor de Menú con Variantes</h4>
+                  <p class="text-[12px] text-slate-400">Activa o pausa productos al instante, crea combos, salsas y extras con precios dinámicos.</p>
+                </div>
+              </div>
+              <div class="flex items-start gap-3">
+                <div class="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">✓</div>
+                <div>
+                  <h4 class="font-bold text-xs text-white">Liquidación de Ventas y Comisiones</h4>
+                  <p class="text-[12px] text-slate-400">Reportes automáticos de cierre de caja, comisiones de entrega y métodos de pago.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="lg:col-span-6 flex justify-center">
+            <div class="w-full max-w-lg laptop-mockup shadow-2xl">
+              <img src="assets/images/screenshot-merchant-web.png" alt="Panel de Comercio" class="w-full h-auto object-cover zoomable-image cursor-zoom-in">
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. PANEL: RIDERS -->
+        <div id="panel-rider" class="module-tab-panel hidden grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          <div class="lg:col-span-6 space-y-5">
+            <span class="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20">
+              App de Flota & Repartidores
+            </span>
+            <h3 class="font-heading font-black text-2xl sm:text-3xl text-white">
+              App Especializada para Motorizados
+            </h3>
+            <p class="text-sm text-slate-300 leading-relaxed">
+              Herramienta nativa para que los motorizados gestionen sus entregas con precisión milimétrica, maximicen sus ingresos diarios y minimicen el tiempo de espera.
+            </p>
+            
+            <div class="space-y-3">
+              <div class="flex items-start gap-3">
+                <div class="w-6 h-6 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">✓</div>
+                <div>
+                  <h4 class="font-bold text-xs text-white">Navegación Asistida y Ruta Óptima</h4>
+                  <p class="text-[12px] text-slate-400">Integración con mapas y GPS para llegar al comercio y a la puerta del cliente sin retrasos.</p>
+                </div>
+              </div>
+              <div class="flex items-start gap-3">
+                <div class="w-6 h-6 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">✓</div>
+                <div>
+                  <h4 class="font-bold text-xs text-white">Confirmación por PIN de Entrega</h4>
+                  <p class="text-[12px] text-slate-400">Evita confusiones y reclamos: el pedido solo se cierra cuando el cliente entrega su PIN.</p>
+                </div>
+              </div>
+              <div class="flex items-start gap-3">
+                <div class="w-6 h-6 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">✓</div>
+                <div>
+                  <h4 class="font-bold text-xs text-white">Billetera Digital y Resumen de Ganancias</h4>
+                  <p class="text-[12px] text-slate-400">Detalle transparente de cada carrera realizada, propinas y pagos pendientes.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="lg:col-span-6 flex justify-center">
+            <div class="w-72 phone-mockup shadow-2xl">
+              <img src="assets/images/screenshot-rider-app.png" alt="Captura App Rider" class="w-full h-auto object-cover zoomable-image cursor-zoom-in">
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. PANEL: WHATSAPP BOT -->
+        <div id="panel-whatsapp" class="module-tab-panel hidden grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          <div class="lg:col-span-6 space-y-5">
+            <span class="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              Integración Oficial WhatsApp QR
+            </span>
+            <h3 class="font-heading font-black text-2xl sm:text-3xl text-white">
+              Bot Inteligente de WhatsApp & Chat en Vivo
+            </h3>
+            <p class="text-sm text-slate-300 leading-relaxed">
+              Vende en automático por el canal donde ya están tus clientes. El bot responde preguntas, envía el menú digital y toma pedidos sin que tengas que atender el teléfono.
+            </p>
+            
+            <div class="space-y-3">
+              <div class="flex items-start gap-3">
+                <div class="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">✓</div>
+                <div>
+                  <h4 class="font-bold text-xs text-white">Vinculación en 10 Segundos con Código QR</h4>
+                  <p class="text-[12px] text-slate-400">Escanea el código desde tu WhatsApp Business oficial y el bot queda activado al instante.</p>
+                </div>
+              </div>
+              <div class="flex items-start gap-3">
+                <div class="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">✓</div>
+                <div>
+                  <h4 class="font-bold text-xs text-white">Transferencia Inteligente a Operador Humano</h4>
+                  <p class="text-[12px] text-slate-400">Si el cliente digita la opción de operador o tu equipo escribe desde el panel, el bot se pausa automáticamente para no interferir.</p>
+                </div>
+              </div>
+              <div class="flex items-start gap-3">
+                <div class="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">✓</div>
+                <div>
+                  <h4 class="font-bold text-xs text-white">Recepción Directa al Sistema de Pedidos</h4>
+                  <p class="text-[12px] text-slate-400">Los pedidos de WhatsApp entran directamente a la pantalla de cocina con el mismo formato estándar.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="lg:col-span-6 flex justify-center">
+            <div class="w-full max-w-md glass-panel p-4 rounded-3xl border border-emerald-500/20 shadow-2xl">
+              <img src="assets/images/screenshot-whatsapp-bot.png" alt="WhatsApp Bot" class="w-full h-auto rounded-2xl zoomable-image cursor-zoom-in">
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. PANEL: SUPER ADMIN -->
+        <div id="panel-superadmin" class="module-tab-panel hidden grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          <div class="lg:col-span-6 space-y-5">
+            <span class="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-purple-500/10 text-purple-400 border border-purple-500/20">
+              Centro de Analítica & Control
+            </span>
+            <h3 class="font-heading font-black text-2xl sm:text-3xl text-white">
+              Panel Maestro de Analítica y Auditoría
+            </h3>
+            <p class="text-sm text-slate-300 leading-relaxed">
+              Toda la red bajo supervisión estratégica. Métricas de facturación consolidada, auditoría de inicios de sesión en tiempo real y herramientas avanzadas para la toma de decisiones.
+            </p>
+            
+            <div class="space-y-3">
+              <div class="flex items-start gap-3">
+                <div class="w-6 h-6 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">✓</div>
+                <div>
+                  <h4 class="font-bold text-xs text-white">Auditoría de Inicios de Sesión en Vivo</h4>
+                  <p class="text-[12px] text-slate-400">Monitorea accesos desde la app móvil, paneles de comercios, repartidores y administradores con IP y dispositivo.</p>
+                </div>
+              </div>
+              <div class="flex items-start gap-3">
+                <div class="w-6 h-6 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">✓</div>
+                <div>
+                  <h4 class="font-bold text-xs text-white">Curvas de Demanda & Horas Pico</h4>
+                  <p class="text-[12px] text-slate-400">Histograma de 00h a 23h para optimizar turnos y disponibilidad de motorizados en horas punta.</p>
+                </div>
+              </div>
+              <div class="flex items-start gap-3">
+                <div class="w-6 h-6 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">✓</div>
+                <div>
+                  <h4 class="font-bold text-xs text-white">Exportación Ejecutiva a Excel / CSV</h4>
+                  <p class="text-[12px] text-slate-400">Descarga reportes completos con filtros por comercio, fechas y estados en formato compatible con Excel.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="lg:col-span-6 flex justify-center">
+            <div class="w-full max-w-lg laptop-mockup shadow-2xl">
+              <img src="assets/images/screenshot-superadmin.png" alt="Super Admin Metrics" class="w-full h-auto object-cover zoomable-image cursor-zoom-in">
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ===================================================================
+       4. GALERÍA DE PANTALLAS REALES DE LA APLICACIÓN
+  =================================================================== -->
+  <section id="pantallas" class="py-24 relative">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center max-w-3xl mx-auto space-y-3 mb-16">
+        <span class="text-brand-500 font-extrabold text-xs uppercase tracking-widest">Transparencia Total</span>
+        <h2 class="font-heading font-black text-3xl sm:text-4xl text-white">
+          Capturas Reales de Nuestra Plataforma en Producción
+        </h2>
+        <p class="text-sm sm:text-base text-slate-300">
+          Sin maquetas ficticias. Esto es exactamente lo que tú y tus clientes disfrutarán desde el primer día. Haz clic en cualquier imagen para verla en tamaño completo.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        
+        <!-- Tarjeta 1: App Cliente Feed -->
+        <div class="glass-panel rounded-3xl p-4 border border-white/10 hover:border-brand-500/50 transition-all group">
+          <div class="overflow-hidden rounded-2xl bg-black aspect-[9/16] relative">
+            <img src="assets/images/screenshot-customer-app.png" alt="Catálogo de la App Móvil" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 zoomable-image cursor-zoom-in">
+          </div>
+          <div class="pt-4">
+            <h4 class="font-bold text-sm text-white flex items-center justify-between">
+              <span>Catálogo del Cliente</span>
+              <span class="text-[10px] text-brand-400 bg-brand-500/10 px-2 py-0.5 rounded-full font-mono">App Flutter</span>
+            </h4>
+            <p class="text-xs text-slate-400 mt-1">Exploración de locales, fotos de platos y promociones dinámicas.</p>
+          </div>
+        </div>
+
+        <!-- Tarjeta 2: Tracking en Vivo -->
+        <div class="glass-panel rounded-3xl p-4 border border-white/10 hover:border-brand-500/50 transition-all group">
+          <div class="overflow-hidden rounded-2xl bg-black aspect-[9/16] relative">
+            <img src="assets/images/screenshot-tracking.png" alt="Seguimiento GPS en Vivo" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 zoomable-image cursor-zoom-in">
+          </div>
+          <div class="pt-4">
+            <h4 class="font-bold text-sm text-white flex items-center justify-between">
+              <span>Rastreo GPS en Vivo</span>
+              <span class="text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full font-mono">OpenStreetMap</span>
+            </h4>
+            <p class="text-xs text-slate-400 mt-1">Ubicación del repartidor y ruta trazada en tiempo real hacia la casa.</p>
+          </div>
+        </div>
+
+        <!-- Tarjeta 3: App Repartidor -->
+        <div class="glass-panel rounded-3xl p-4 border border-white/10 hover:border-brand-500/50 transition-all group">
+          <div class="overflow-hidden rounded-2xl bg-black aspect-[9/16] relative">
+            <img src="assets/images/screenshot-rider-app.png" alt="App de Motorizados" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 zoomable-image cursor-zoom-in">
+          </div>
+          <div class="pt-4">
+            <h4 class="font-bold text-sm text-white flex items-center justify-between">
+              <span>App para Repartidores</span>
+              <span class="text-[10px] text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-full font-mono">App Rider</span>
+            </h4>
+            <p class="text-xs text-slate-400 mt-1">Despacho de pedidos, dirección de entrega y cobro de propinas.</p>
+          </div>
+        </div>
+
+        <!-- Tarjeta 4: Panel Web del Comercio -->
+        <div class="glass-panel rounded-3xl p-4 border border-white/10 hover:border-brand-500/50 transition-all group">
+          <div class="overflow-hidden rounded-2xl bg-black aspect-[9/16] relative">
+            <img src="assets/images/screenshot-merchant-web.png" alt="Panel de Pedidos en Vivo" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 zoomable-image cursor-zoom-in">
+          </div>
+          <div class="pt-4">
+            <h4 class="font-bold text-sm text-white flex items-center justify-between">
+              <span>Panel del Comercio</span>
+              <span class="text-[10px] text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full font-mono">Web Angular</span>
+            </h4>
+            <p class="text-xs text-slate-400 mt-1">Recepción de comandas, estados de cocina y control de caja.</p>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ===================================================================
+       5. CALCULADORA DE RETORNO DE INVERSIÓN (ROI) INTERACTIVA
+  =================================================================== -->
+  <section id="calculadora" class="py-20 bg-gradient-to-b from-navy-950 via-navy-900 to-navy-950 border-t border-white/5">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="glass-panel rounded-3xl p-8 sm:p-12 border border-brand-500/30 relative overflow-hidden shadow-2xl">
+        <div class="absolute -top-24 -right-24 w-60 h-60 bg-brand-500/15 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          
+          <div class="lg:col-span-7 space-y-6">
+            <div>
+              <span class="text-brand-500 font-extrabold text-xs uppercase tracking-widest">Calcula tu Crecimiento</span>
+              <h2 class="font-heading font-black text-2xl sm:text-3xl text-white mt-1">
+                ¿Cuánto dinero extra puedes generar con Pídetelo?
+              </h2>
+              <p class="text-xs sm:text-sm text-slate-300 mt-2">
+                Descubre el impacto directo en tu facturación mensual y el ahorro frente a las comisiones abusivas de otras aplicaciones.
+              </p>
+            </div>
+
+            <!-- Slider 1: Pedidos diarios -->
+            <div class="space-y-2">
+              <div class="flex items-center justify-between text-xs font-bold">
+                <label for="roi-orders" class="text-slate-300">Pedidos diarios estimados:</label>
+                <span id="roi-orders-val" class="text-brand-400 font-mono text-base font-black">25</span>
+              </div>
+              <input id="roi-orders" type="range" min="5" max="150" step="5" value="25" class="w-full h-2 bg-slate-800 rounded-lg cursor-pointer">
+              <div class="flex justify-between text-[10px] text-slate-500 font-mono">
+                <span>5 pedidos/día</span>
+                <span>50 pedidos/día</span>
+                <span>150 pedidos/día</span>
+              </div>
+            </div>
+
+            <!-- Slider 2: Ticket promedio -->
+            <div class="space-y-2">
+              <div class="flex items-center justify-between text-xs font-bold">
+                <label for="roi-ticket" class="text-slate-300">Ticket promedio por pedido ($):</label>
+                <span id="roi-ticket-val" class="text-brand-400 font-mono text-base font-black">$18</span>
+              </div>
+              <input id="roi-ticket" type="range" min="5" max="60" step="1" value="18" class="w-full h-2 bg-slate-800 rounded-lg cursor-pointer">
+              <div class="flex justify-between text-[10px] text-slate-500 font-mono">
+                <span>$5 USD</span>
+                <span>$30 USD</span>
+                <span>$60 USD</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Resultados del Cálculo -->
+          <div class="lg:col-span-5 bg-navy-950/90 rounded-2xl p-6 border border-white/10 space-y-4">
+            <div>
+              <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Facturación Mensual Estimada</span>
+              <div id="roi-revenue" class="text-3xl font-black font-heading text-white font-mono mt-0.5">$13,500</div>
+            </div>
+
+            <div class="pt-3 border-t border-white/10">
+              <span class="text-[11px] font-bold text-emerald-400 uppercase tracking-wider block">Ahorro en Comisiones vs Apps Tradicionales</span>
+              <div id="roi-savings" class="text-2xl font-black font-heading text-emerald-400 font-mono mt-0.5">$2,025</div>
+              <p class="text-[11px] text-slate-400 mt-1">Calculado sobre el 15% de comisión que te ahorras con nosotros.</p>
+            </div>
+
+            <div class="pt-3 border-t border-white/10">
+              <span class="text-[11px] font-bold text-amber-400 uppercase tracking-wider block">Tiempo Ahorrado en WhatsApp</span>
+              <div id="roi-time" class="text-lg font-black font-heading text-amber-400 font-mono mt-0.5">75 hrs/mes</div>
+            </div>
+
+            <a href="#contacto" class="w-full py-3 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-extrabold text-xs text-center block shadow-md transition-all">
+              Afiliar mi Negocio Ahora
+            </a>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ===================================================================
+       6. PLANES & PRECIOS TRANSPARENTES
+  =================================================================== -->
+  <section id="precios" class="py-24 relative">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center max-w-3xl mx-auto space-y-3 mb-12">
+        <span class="text-brand-500 font-extrabold text-xs uppercase tracking-widest">Inversión Inteligente</span>
+        <h2 class="font-heading font-black text-3xl sm:text-4xl text-white">
+          Planes Claros, Justos y Sin Sorpresas
+        </h2>
+        <p class="text-sm sm:text-base text-slate-300">
+          Elige el plan ideal para tu modelo de negocio. Sin contratos forzosos ni comisiones ocultas.
+        </p>
+
+        <!-- Toggle Mensual / Anual -->
+        <div class="pt-4 flex items-center justify-center gap-3">
+          <span class="text-xs font-bold text-slate-300">Mensual</span>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" id="pricing-toggle" class="sr-only peer">
+            <div class="w-12 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-500"></div>
+          </label>
+          <span class="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+            <span>Anual</span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+              Ahorra 20%
+            </span>
+          </span>
+        </div>
+      </div>
+
+      <!-- Tarjetas de Precios -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
+        
+        <!-- Plan 1: Emprendedor -->
+        <div class="glass-panel rounded-3xl p-8 border border-white/10 flex flex-col justify-between hover:border-slate-600 transition-all">
+          <div class="space-y-5">
+            <div>
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Para Negocios que Inician</span>
+              <h3 class="font-heading font-black text-2xl text-white mt-1">Plan Emprendedor</h3>
+              <p class="text-xs text-slate-400 mt-2">Ideal para dark kitchens, reposterías y negocios de comida rápida.</p>
+            </div>
+
+            <div class="flex items-baseline gap-1">
+              <span class="text-4xl font-black font-heading text-white">$<span class="plan-price" data-plan="starter">0</span></span>
+              <span class="text-xs text-slate-400 plan-period">/mes</span>
+            </div>
+
+            <ul class="space-y-3 text-xs text-slate-300 pt-4 border-t border-white/10">
+              <li class="flex items-center gap-2">✓ Catálogo digital en la App Móvil</li>
+              <li class="flex items-center gap-2">✓ Menú con fotos y modificadores</li>
+              <li class="flex items-center gap-2">✓ 1 Sucursal incluida</li>
+              <li class="flex items-center gap-2">✓ Pedidos por App y Tienda Web</li>
+              <li class="flex items-center gap-2">✓ Tasa oficial BCV automática</li>
+              <li class="flex items-center gap-2 text-slate-500">✕ Bot automatizado de WhatsApp</li>
+              <li class="flex items-center gap-2 text-slate-500">✕ Reportes avanzados en Excel</li>
+            </ul>
+          </div>
+
+          <a href="#contacto" class="mt-8 w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs text-center block transition-all">
+            Comenzar Gratis
+          </a>
+        </div>
+
+        <!-- Plan 2: Comercio Pro (MÁS POPULAR) -->
+        <div class="glass-panel rounded-3xl p-8 border-2 border-brand-500 relative flex flex-col justify-between shadow-2xl glow-brand transform md:-translate-y-2">
+          <!-- Badge Destacado -->
+          <div class="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-brand-500 to-amber-500 text-white text-[11px] font-black uppercase tracking-wider shadow-md">
+            ⭐ Más Elegido por Restaurantes
+          </div>
+
+          <div class="space-y-5">
+            <div>
+              <span class="text-xs font-bold uppercase tracking-wider text-brand-400">Máxima Rentabilidad</span>
+              <h3 class="font-heading font-black text-2xl text-white mt-1">Plan Comercio Pro</h3>
+              <p class="text-xs text-slate-300 mt-2">Para locales comerciales establecidos que buscan automatizar al 100% sus pedidos.</p>
+            </div>
+
+            <div class="flex items-baseline gap-1">
+              <span class="text-5xl font-black font-heading text-brand-400">$<span class="plan-price" data-plan="pro">29</span></span>
+              <span class="text-xs text-slate-400 plan-period">/mes</span>
+            </div>
+
+            <ul class="space-y-3 text-xs text-slate-200 pt-4 border-t border-white/10">
+              <li class="flex items-center gap-2">✓ <strong>Todo lo del Plan Emprendedor</strong></li>
+              <li class="flex items-center gap-2">✓ <strong>🤖 Bot Inteligente de WhatsApp</strong> incluido</li>
+              <li class="flex items-center gap-2">✓ Vinculación directa por código QR</li>
+              <li class="flex items-center gap-2">✓ Pantalla interactiva para Cocina / Despacho</li>
+              <li class="flex items-center gap-2">✓ Asignación de motorizados con PIN</li>
+              <li class="flex items-center gap-2">✓ Hasta 3 sucursales conectadas</li>
+              <li class="flex items-center gap-2">✓ Exportación de ventas a Excel / CSV</li>
+              <li class="flex items-center gap-2">✓ Soporte prioritario vía WhatsApp</li>
+            </ul>
+          </div>
+
+          <a href="#contacto" class="mt-8 w-full py-3.5 rounded-xl bg-gradient-to-r from-brand-500 to-amber-500 hover:from-brand-600 hover:to-amber-600 text-white font-extrabold text-xs text-center block shadow-lg shadow-brand-500/30 transition-all">
+            Solicitar Plan Pro
+          </a>
+        </div>
+
+        <!-- Plan 3: Enterprise / Franquicia -->
+        <div class="glass-panel rounded-3xl p-8 border border-white/10 flex flex-col justify-between hover:border-slate-600 transition-all">
+          <div class="space-y-5">
+            <div>
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Grandes Cadenas</span>
+              <h3 class="font-heading font-black text-2xl text-white mt-1">Plan Franquicia</h3>
+              <p class="text-xs text-slate-400 mt-2">Para cadenas de comida, supermercados y franquicias multi-ciudad.</p>
+            </div>
+
+            <div class="flex items-baseline gap-1">
+              <span class="text-4xl font-black font-heading text-white">$<span class="plan-price" data-plan="enterprise">79</span></span>
+              <span class="text-xs text-slate-400 plan-period">/mes</span>
+            </div>
+
+            <ul class="space-y-3 text-xs text-slate-300 pt-4 border-t border-white/10">
+              <li class="flex items-center gap-2">✓ <strong>Todo lo del Plan Pro</strong></li>
+              <li class="flex items-center gap-2">✓ Sucursales ilimitadas</li>
+              <li class="flex items-center gap-2">✓ Flota privada de repartidores dedicada</li>
+              <li class="flex items-center gap-2">✓ Banners destacados en la app móvil</li>
+              <li class="flex items-center gap-2">✓ Dominio web personalizado propio</li>
+              <li class="flex items-center gap-2">✓ Auditoría y control de accesos por rol</li>
+              <li class="flex items-center gap-2">✓ Gerente de cuenta dedicado 24/7</li>
+            </ul>
+          </div>
+
+          <a href="#contacto" class="mt-8 w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs text-center block transition-all">
+            Hablar con Ventas
+          </a>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ===================================================================
+       7. PREGUNTAS FRECUENTES (FAQ INTERACTIVO)
+  =================================================================== -->
+  <section id="faq" class="py-20 bg-navy-900/40 border-t border-white/5">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center space-y-3 mb-12">
+        <span class="text-brand-500 font-extrabold text-xs uppercase tracking-widest">Resolvemos tus Dudas</span>
+        <h2 class="font-heading font-black text-3xl sm:text-4xl text-white">
+          Preguntas Frecuentes
+        </h2>
+        <p class="text-sm text-slate-300">
+          Todo lo que necesitas saber antes de afiliar tu negocio a la plataforma.
+        </p>
+      </div>
+
+      <div class="space-y-4">
+        
+        <div class="faq-item glass-panel rounded-2xl border border-white/10 overflow-hidden">
+          <button class="faq-header w-full p-5 text-left font-bold text-sm text-white flex items-center justify-between cursor-pointer">
+            <span>¿Cuánto tiempo tarda en activarse mi comercio en Pídetelo?</span>
+            <span class="faq-icon text-brand-400 transition-transform duration-300">▼</span>
+          </button>
+          <div class="faq-content hidden p-5 pt-0 text-xs text-slate-300 leading-relaxed border-t border-white/5">
+            Tu tienda queda completamente configurada en menos de 24 horas. Nuestro equipo te ayuda a cargar tu menú digital, horarios de atención, coordenadas de despacho y datos bancarios para empezar a recibir pedidos de inmediato.
+          </div>
+        </div>
+
+        <div class="faq-item glass-panel rounded-2xl border border-white/10 overflow-hidden">
+          <button class="faq-header w-full p-5 text-left font-bold text-sm text-white flex items-center justify-between cursor-pointer">
+            <span>¿Cómo se maneja la tasa de cambio de Bolívares y Dólares?</span>
+            <span class="faq-icon text-brand-400 transition-transform duration-300">▼</span>
+          </button>
+          <div class="faq-content hidden p-5 pt-0 text-xs text-slate-300 leading-relaxed border-t border-white/5">
+            Pídetelo sincroniza automáticamente los precios con la tasa oficial publicada por el Banco Central de Venezuela (BCV). Los clientes siempre ven los montos claros en USD y en Bs., evitando discrepancias o errores manuales al momento de pagar.
+          </div>
+        </div>
+
+        <div class="faq-item glass-panel rounded-2xl border border-white/10 overflow-hidden">
+          <button class="faq-header w-full p-5 text-left font-bold text-sm text-white flex items-center justify-between cursor-pointer">
+            <span>¿Puedo usar mis propios motorizados o la red de repartidores de Pídetelo?</span>
+            <span class="faq-icon text-brand-400 transition-transform duration-300">▼</span>
+          </button>
+          <div class="faq-content hidden p-5 pt-0 text-xs text-slate-300 leading-relaxed border-t border-white/5">
+            ¡Ambas opciones son compatibles! Puedes registrar a tus propios repartidores para que utilicen la App Rider exclusiva de tu negocio, o apoyarte en los repartidores afiliados a la red abierta de Pídetelo.
+          </div>
+        </div>
+
+        <div class="faq-item glass-panel rounded-2xl border border-white/10 overflow-hidden">
+          <button class="faq-header w-full p-5 text-left font-bold text-sm text-white flex items-center justify-between cursor-pointer">
+            <span>¿Cómo funciona el bot de WhatsApp? ¿Reemplaza a mi personal?</span>
+            <span class="faq-icon text-brand-400 transition-transform duration-300">▼</span>
+          </button>
+          <div class="faq-content hidden p-5 pt-0 text-xs text-slate-300 leading-relaxed border-t border-white/5">
+            El bot automatiza las tareas repetitivas (saludo inicial, envío de la carta, cálculo de delivery y toma de orden). Si un cliente necesita hablar con una persona, con solo marcar la opción o si tu operador escribe en el chat, el bot se pausa inteligentemente.
+          </div>
+        </div>
+
+        <div class="faq-item glass-panel rounded-2xl border border-white/10 overflow-hidden">
+          <button class="faq-header w-full p-5 text-left font-bold text-sm text-white flex items-center justify-between cursor-pointer">
+            <span>¿Dónde se descargan las aplicaciones para Android e iOS?</span>
+            <span class="faq-icon text-brand-400 transition-transform duration-300">▼</span>
+          </button>
+          <div class="faq-content hidden p-5 pt-0 text-xs text-slate-300 leading-relaxed border-t border-white/5">
+            Puedes descargar los instaladores oficiales (.APK para Android y .IPA/TestFlight para iOS) directamente desde esta landing page haciendo clic en el botón superior "Descargar Apps", o solicitando el enlace a nuestro soporte oficial.
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ===================================================================
+       8. FORMULARIO DE CONTACTO & AFILIACIÓN DE COMERCIOS
+  =================================================================== -->
+  <section id="contacto" class="py-24 relative overflow-hidden">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      
+      <div class="glass-panel rounded-3xl p-8 sm:p-12 border border-white/10 shadow-2xl">
+        <div class="text-center max-w-xl mx-auto space-y-2 mb-8">
+          <span class="text-brand-500 font-extrabold text-xs uppercase tracking-widest">Da el Siguiente Paso</span>
+          <h2 class="font-heading font-black text-3xl text-white">
+            Afiliar mi Comercio o Solicitar Demo
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-300">
+            Completa tus datos y nuestro equipo comercial te contactará por WhatsApp en menos de 15 minutos para activar tu cuenta.
+          </p>
+        </div>
+
+        <div id="contact-success" class="hidden mb-6 p-4 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold text-center">
+          ✓ ¡Datos enviados exitosamente! Abriendo chat de WhatsApp oficial...
+        </div>
+
+        <form id="contact-form" class="space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label for="contact-name" class="block text-xs font-bold text-slate-300 mb-1">Nombre y Apellido *</label>
+              <input type="text" id="contact-name" required placeholder="Ej: Jorge Medina" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:ring-2 focus:ring-brand-500">
+            </div>
+
+            <div>
+              <label for="contact-phone" class="block text-xs font-bold text-slate-300 mb-1">Teléfono / WhatsApp *</label>
+              <input type="tel" id="contact-phone" required placeholder="Ej: +58 412 123 4567" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:ring-2 focus:ring-brand-500">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label for="contact-store" class="block text-xs font-bold text-slate-300 mb-1">Nombre del Comercio / Restaurante *</label>
+              <input type="text" id="contact-store" required placeholder="Ej: Burger Lab Barquisimeto" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:ring-2 focus:ring-brand-500">
+            </div>
+
+            <div>
+              <label for="contact-city" class="block text-xs font-bold text-slate-300 mb-1">Ciudad / Ubicación *</label>
+              <input type="text" id="contact-city" required placeholder="Ej: Barquisimeto, Cabudare..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:ring-2 focus:ring-brand-500">
+            </div>
+          </div>
+
+          <div>
+            <label for="contact-message" class="block text-xs font-bold text-slate-300 mb-1">Mensaje o Requerimiento Especial</label>
+            <textarea id="contact-message" rows="3" placeholder="¿Manejas delivery propio? ¿Tienes varias sucursales? Cuéntanos..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:ring-2 focus:ring-brand-500"></textarea>
+          </div>
+
+          <button type="submit" class="w-full py-4 rounded-xl bg-gradient-to-r from-brand-500 via-brand-600 to-amber-500 hover:from-brand-600 hover:to-amber-600 text-white font-extrabold text-sm shadow-xl shadow-brand-500/25 transition-all transform hover:-translate-y-0.5 cursor-pointer">
+            Enviar Solicitud de Afiliación Inmediata
+          </button>
+        </form>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ===================================================================
+       9. FOOTER CORPORATIVO
+  =================================================================== -->
+  <footer class="border-t border-white/10 bg-navy-950 py-12 text-slate-400 text-xs">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+        
+        <!-- Columna 1: Brand Info -->
+        <div class="space-y-3 md:col-span-1">
+          <div class="flex items-center gap-2.5">
+            <img src="assets/images/logo.png" alt="Pídetelo" class="w-8 h-8 object-contain rounded-lg p-0.5 bg-white">
+            <span class="font-heading font-black text-xl text-white">Pídetelo.</span>
+          </div>
+          <p class="text-[12px] text-slate-400 leading-relaxed">
+            Plataforma corporativa de gestión de pedidos, delivery y analítica para el comercio venezolano.
+          </p>
+        </div>
+
+        <!-- Columna 2: Ecosistema -->
+        <div>
+          <h4 class="font-bold text-white uppercase tracking-wider text-[11px] mb-3">Ecosistema</h4>
+          <ul class="space-y-2">
+            <li><a href="#modulos" class="hover:text-brand-400">App Móvil de Clientes</a></li>
+            <li><a href="#modulos" class="hover:text-brand-400">Portal de Comercios</a></li>
+            <li><a href="#modulos" class="hover:text-brand-400">App para Repartidores</a></li>
+            <li><a href="#modulos" class="hover:text-brand-400">Bot de WhatsApp</a></li>
+            <li><a href="#modulos" class="hover:text-brand-400">Super Admin Metrics</a></li>
+          </ul>
+        </div>
+
+        <!-- Columna 3: Enlaces Rápidos -->
+        <div>
+          <h4 class="font-bold text-white uppercase tracking-wider text-[11px] mb-3">Enlaces Rápidos</h4>
+          <ul class="space-y-2">
+            <li><a href="#precios" class="hover:text-brand-400">Planes y Precios</a></li>
+            <li><a href="#calculadora" class="hover:text-brand-400">Calculadora de ROI</a></li>
+            <li><a href="#faq" class="hover:text-brand-400">Preguntas Frecuentes</a></li>
+            <li><button class="open-download-modal hover:text-brand-400 text-left">Descargar APKs</button></li>
+          </ul>
+        </div>
+
+        <!-- Columna 4: Contacto & Redes -->
+        <div>
+          <h4 class="font-bold text-white uppercase tracking-wider text-[11px] mb-3">Contacto Oficial</h4>
+          <ul class="space-y-2">
+            <li>📍 Barquisimeto, Edo. Lara, Venezuela</li>
+            <li>💬 WhatsApp: +58 412-0000000</li>
+            <li>✉️ soporte@pidetelo.com</li>
+            <li>🕒 Atención: Lunes a Domingo, 8:00 AM - 11:00 PM</li>
+          </ul>
+        </div>
+
+      </div>
+
+      <div class="pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px]">
+        <div>
+          © 2026 Pídetelo Technologies C.A. Todos los derechos reservados.
+        </div>
+        <div class="flex gap-4">
+          <a href="#" class="hover:text-white">Términos de Servicio</a>
+          <a href="#" class="hover:text-white">Política de Privacidad</a>
+          <a href="#" class="hover:text-white">Cookies</a>
+        </div>
+      </div>
+
+    </div>
+  </footer>
+
+  <!-- ===================================================================
+       10. MODAL FLOTANTE DE DESCARGA DE APLICACIONES (APKs / iOS)
+  =================================================================== -->
+  <div id="download-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4 animate-fade-in">
+    <div class="glass-panel bg-navy-950 rounded-3xl p-6 sm:p-8 border border-white/10 max-w-lg w-full space-y-6 relative shadow-2xl">
+      
+      <button class="close-download-modal absolute top-5 right-5 w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-sm font-bold">
+        ✕
+      </button>
+
+      <div>
+        <span class="text-brand-500 font-extrabold text-xs uppercase tracking-widest">Descargas Oficiales</span>
+        <h3 class="font-heading font-black text-2xl text-white mt-1">
+          Descarga las Aplicaciones de Pídetelo
+        </h3>
+        <p class="text-xs text-slate-300 mt-1">
+          Versión oficial compilada v1.0.1 compatible con dispositivos Android e iOS.
+        </p>
+      </div>
+
+      <!-- Opciones de Descarga -->
+      <div class="space-y-3">
+        <!-- App Cliente APK -->
+        <a href="https://github.com/jorgemedina2406/pidetelo/releases/download/v1.0.1/Pidetelo-Cliente.apk" target="_blank" class="p-4 rounded-2xl bg-slate-900 border border-slate-700 hover:border-brand-500 flex items-center justify-between transition-all group">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-brand-500/20 text-brand-400 flex items-center justify-center text-xl">
+              📱
+            </div>
+            <div>
+              <div class="font-bold text-xs text-white group-hover:text-brand-400 transition-colors">
+                App Clientes (Android APK)
+              </div>
+              <div class="text-[10px] text-slate-400 font-mono">Pidetelo-Cliente.apk • 32.0 MB</div>
+            </div>
+          </div>
+          <span class="px-3 py-1.5 rounded-lg bg-brand-500 text-white font-bold text-xs">Descargar</span>
+        </a>
+
+        <!-- App Rider APK -->
+        <a href="https://github.com/jorgemedina2406/pidetelo/releases/download/v1.0.1/Pidetelo-Rider.apk" target="_blank" class="p-4 rounded-2xl bg-slate-900 border border-slate-700 hover:border-blue-500 flex items-center justify-between transition-all group">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center text-xl">
+              🛵
+            </div>
+            <div>
+              <div class="font-bold text-xs text-white group-hover:text-blue-400 transition-colors">
+                App Repartidores (Android APK)
+              </div>
+              <div class="text-[10px] text-slate-400 font-mono">Pidetelo-Rider.apk • 27.2 MB</div>
+            </div>
+          </div>
+          <span class="px-3 py-1.5 rounded-lg bg-blue-500 text-white font-bold text-xs">Descargar</span>
+        </a>
+
+        <!-- Versión iOS -->
+        <div class="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-slate-800 text-slate-300 flex items-center justify-center text-xl">
+              🍏
+            </div>
+            <div>
+              <div class="font-bold text-xs text-white">Versión iOS (iPhone / iPad)</div>
+              <div class="text-[10px] text-slate-400">Instalación vía TestFlight / IPA compilado</div>
+            </div>
+          </div>
+          <a href="https://github.com/jorgemedina2406/pidetelo/actions" target="_blank" class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white font-bold text-xs">
+            Ver Artefactos
+          </a>
+        </div>
+      </div>
+
+      <div class="text-[11px] text-slate-400 bg-slate-900/40 p-3 rounded-xl border border-white/5">
+        💡 <strong>Nota de instalación en Android:</strong> Si tu teléfono te solicita habilitar <em>"Instalar aplicaciones de fuentes desconocidas"</em>, actívalo para continuar con la instalación del archivo APK descargado.
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       11. LIGHTBOX PARA AMPLIAR IMÁGENES / SCREENSHOTS
+  =================================================================== -->
+  <div id="image-lightbox" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 hidden items-center justify-center p-4 animate-fade-in">
+    <button id="lightbox-close" class="absolute top-5 right-5 w-10 h-10 rounded-full bg-slate-800 text-white flex items-center justify-center font-bold text-lg hover:bg-slate-700">
+      ✕
+    </button>
+    <div class="max-w-4xl max-h-[90vh] overflow-hidden flex items-center justify-center">
+      <img id="lightbox-img" src="" alt="Captura ampliada" class="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl">
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       12. BOTÓN FLOTANTE DE WHATSAPP CON MENSAJE PRE-CARGADO
+  =================================================================== -->
+  <a id="floating-whatsapp" href="#" class="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center shadow-2xl shadow-emerald-500/40 transform hover:scale-110 active:scale-95 transition-all cursor-pointer group" title="Chatear por WhatsApp">
+    <span class="text-2xl">💬</span>
+    <span class="absolute right-16 bg-navy-900 text-white text-[11px] font-bold px-3 py-1.5 rounded-xl border border-white/10 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-xl">
+      ¡Escríbenos por WhatsApp!
+    </span>
+  </a>
+
+  <!-- Scripts -->
+  <script src="assets/js/main.js"></script>
+</body>
+</html>

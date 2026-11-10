@@ -1,0 +1,17 @@
+{
+  "name": "pidetelo-landing-page",
+  "version": "1.0.0",
+  "description": "Landing Page Oficial Corporativa de Pídetelo",
+  "scripts": {
+    "start": "npx serve . -l 8080",
+    "preview": "npx serve . -l 8080"
+  },
+  "keywords": [
+    "pidetelo",
+    "delivery",
+    "landing-page",
+    "venezuela"
+  ],
+  "author": "Pídetelo Technologies",
+  "license": "MIT"
+}
