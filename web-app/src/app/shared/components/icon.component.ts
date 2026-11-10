@@ -65,7 +65,8 @@ export type IconName =
   | 'play'
   | 'pause'
   | 'bot'
-  | 'package';
+  | 'package'
+  | (string & {});
 
 
 
@@ -397,7 +398,7 @@ export type IconName =
   `
 })
 export class IconComponent {
-  @Input({ required: true }) name!: IconName;
+  @Input({ required: true }) name!: IconName | string;
   @Input() size: number = 20;
   @Input() strokeWidth: number = 2;
   @Input() className: string = '';
