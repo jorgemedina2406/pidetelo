@@ -55,3 +55,4 @@ export class SupportController {
     return this.supportService.updateTicketStatus(id, status);
   }
 }
+

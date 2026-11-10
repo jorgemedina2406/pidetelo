@@ -219,3 +219,4 @@ export class SupportService {
     return { success: true, ticketId, status };
   }
 }
+

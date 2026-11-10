@@ -2256,4 +2256,7 @@ export class ApiService {
   updateSupportTicketStatus(ticketId: string, status: 'open' | 'in_progress' | 'resolved' | 'closed'): Observable<any> {
     return this.http.put<any>(this.baseUrl + '/support/tickets/' + ticketId + '/status', { status });
   }
+  notifyStockIssue(orderId: string, payload: { productName: string; customMessage?: string }): Observable<any> {
+    return this.http.post<any>(this.baseUrl + '/orders/' + orderId + '/notify-stock-issue', payload);
+  }
 }

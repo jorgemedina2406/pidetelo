@@ -98,4 +98,12 @@ export class OrdersController {
   ) {
     return this.ordersService.removeItemFromOrder(id, payload);
   }
+  @Post(':id/notify-stock-issue')
+  @ApiOperation({ summary: 'Notificar al cliente por Bot de WhatsApp o WhatsApp Web y alerta in-app' })
+  notifyStockIssue(
+    @Param('id') id: string,
+    @Body() payload: { productName: string; customMessage?: string },
+  ) {
+    return this.ordersService.notifyStockIssue(id, payload);
+  }
 }

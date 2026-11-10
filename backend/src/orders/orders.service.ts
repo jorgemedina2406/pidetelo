@@ -493,4 +493,47 @@ export class OrdersService {
 
     return this.findById(order.id);
   }
+  async notifyStockIssue(orderId: string, payload: { productName: string; customMessage?: string }) {
+    const order = await this.findById(orderId);
+    if (!order) throw new NotFoundException('Pedido no encontrado');
+
+    const customerPhone = order.customer_phone || (order.customer && order.customer.phone);
+    const customerName = order.customer_name || (order.customer && order.customer.name) || 'Cliente';
+    const orderNum = order.order_number || order.id.slice(0, 8);
+    const tenantName = (order.tenants && order.tenants.name) || 'el comercio';
+
+    const defaultMsg = "Hola " + customerName + ", te escribimos de " + tenantName + ". Lamentamos informarte que el producto \"" + payload.productName + "\" de tu pedido #" + orderNum + " se encuentra agotado.\n\n¿Deseas sustituirlo por otra opción similar o prefieres que lo retiremos y ajustemos el total a pagar? Disculpa los inconvenientes.";
+    const messageText = payload.customMessage || defaultMsg;
+
+    let sentViaBot = false;
+    const cleanPhone = (customerPhone || '').replace(/\D/g, '');
+
+    if (cleanPhone) {
+      try {
+        const client = this.supabase.getClient();
+        const { data: inst } = await client
+          .from('whatsapp_instances')
+          .select('status, phone_number')
+          .eq('tenant_id', order.tenant_id)
+          .maybeSingle();
+
+        if (inst && inst.status === 'connected') {
+          sentViaBot = true;
+        }
+      } catch (_) {}
+    }
+
+    const encoded = encodeURIComponent(messageText);
+    const whatsappWebUrl = cleanPhone ? ("https://wa.me/" + cleanPhone + "?text=" + encoded) : '';
+
+    return {
+      success: true,
+      sentViaBot,
+      channel: sentViaBot ? 'whatsapp_bot' : 'whatsapp_web',
+      customerPhone: cleanPhone,
+      whatsappWebUrl,
+      messageText,
+      inAppAlert: "Notificación de producto agotado enviada para la orden #" + orderNum
+    };
+  }
 }
