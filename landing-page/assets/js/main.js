@@ -1,6 +1,7 @@
 /**
  * Pídetelo Landing Page - Main Interactive Scripts
  * Soporte completo Dark/Light Mode, Precios desde $9, Calculadora ROI desde $1
+ * Sin emoticones: 100% Iconos Vectoriales SVG
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -17,30 +18,32 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /* ===================================================================
-   1. MODO OSCURO / CLARO (Theme Controller)
+   1. MODO OSCURO / CLARO (Theme Controller con Iconos SVG)
 =================================================================== */
 function initTheme() {
   const themeToggleBtn = document.getElementById('theme-toggle');
   const themeToggleMobile = document.getElementById('theme-toggle-mobile');
-  const themeIcon = document.getElementById('theme-icon');
+  const sunIcon = document.getElementById('sun-icon');
+  const moonIcon = document.getElementById('moon-icon');
   const html = document.documentElement;
 
-  // Preferencia guardada en localStorage o preferencia del sistema
   const savedTheme = localStorage.getItem('pidetelo_theme');
   const systemPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   
-  const initialTheme = savedTheme ? savedTheme : (systemPrefersDark ? 'dark' : 'dark'); // dark default
+  const initialTheme = savedTheme ? savedTheme : (systemPrefersDark ? 'dark' : 'dark');
   applyTheme(initialTheme);
 
   function applyTheme(theme) {
     if (theme === 'dark') {
       html.classList.add('dark');
       localStorage.setItem('pidetelo_theme', 'dark');
-      if (themeIcon) themeIcon.textContent = '☀️';
+      if (sunIcon) sunIcon.classList.remove('hidden');
+      if (moonIcon) moonIcon.classList.add('hidden');
     } else {
       html.classList.remove('dark');
       localStorage.setItem('pidetelo_theme', 'light');
-      if (themeIcon) themeIcon.textContent = '🌙';
+      if (sunIcon) sunIcon.classList.add('hidden');
+      if (moonIcon) moonIcon.classList.remove('hidden');
     }
   }
 
@@ -85,7 +88,6 @@ function initModuleTabs() {
     btn.addEventListener('click', () => {
       const targetId = btn.getAttribute('data-target');
 
-      // Actualizar estilos activos de botones
       tabButtons.forEach(b => {
         b.classList.remove('bg-brand-500', 'text-white', 'shadow-lg', 'shadow-brand-500/25');
         b.classList.add('text-slate-600', 'dark:text-slate-400', 'hover:text-brand-500', 'dark:hover:text-white', 'bg-slate-100', 'dark:bg-slate-800/50');
@@ -94,7 +96,6 @@ function initModuleTabs() {
       btn.classList.add('bg-brand-500', 'text-white', 'shadow-lg', 'shadow-brand-500/25');
       btn.classList.remove('text-slate-600', 'dark:text-slate-400', 'hover:text-brand-500', 'dark:hover:text-white', 'bg-slate-100', 'dark:bg-slate-800/50');
 
-      // Alternar paneles de contenido
       tabPanels.forEach(panel => {
         if (panel.id === targetId) {
           panel.classList.remove('hidden');
@@ -169,10 +170,7 @@ function initRoiCalculator() {
     const monthlyOrders = ordersPerDay * 30;
     const monthlyRevenue = monthlyOrders * avgTicket;
 
-    // Ahorro estimado vs 25% de comisiones en apps convencionales (Pídetelo retiene ~8%-10%, ahorras ~15%)
     const estimatedSavings = monthlyRevenue * 0.15;
-
-    // Horas ahorradas en atención manual de llamadas y WhatsApp (~6 min por pedido automatizado)
     const hoursSaved = Math.round((monthlyOrders * 6) / 60);
 
     if (revenueDisplay) {
@@ -207,7 +205,6 @@ function initFaqAccordion() {
     header.addEventListener('click', () => {
       const isOpen = !content.classList.contains('hidden');
 
-      // Cerrar otros acordeones
       faqItems.forEach(other => {
         const otherContent = other.querySelector('.faq-content');
         const otherIcon = other.querySelector('.faq-icon');
@@ -215,7 +212,6 @@ function initFaqAccordion() {
         if (otherIcon) otherIcon.style.transform = 'rotate(0deg)';
       });
 
-      // Alternar actual
       if (!isOpen) {
         content.classList.remove('hidden');
         if (icon) icon.style.transform = 'rotate(180deg)';
@@ -280,11 +276,11 @@ function initContactForm() {
 
     const text = encodeURIComponent(
       `¡Hola equipo Pídetelo! Deseo solicitar información para afiliar mi comercio.\n\n` +
-      `👤 *Nombre:* ${name}\n` +
-      `🏪 *Comercio:* ${store}\n` +
-      `📍 *Ciudad:* ${city}\n` +
-      `📞 *Teléfono:* ${phone}\n` +
-      `💬 *Detalle:* ${message}`
+      `*Nombre:* ${name}\n` +
+      `*Comercio:* ${store}\n` +
+      `*Ciudad:* ${city}\n` +
+      `*Teléfono:* ${phone}\n` +
+      `*Detalle:* ${message}`
     );
 
     const whatsappUrl = `https://wa.me/584120000000?text=${text}`;

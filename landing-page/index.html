@@ -43,7 +43,7 @@
               200: '#fed7aa',
               300: '#fdba74',
               400: '#fb923c',
-              500: '#f97316', // Color principal Pídetelo
+              500: '#f97316',
               600: '#ea580c',
               700: '#c2410c',
               800: '#9a3412',
@@ -126,9 +126,16 @@
 
       <!-- Botones de Acción / CTAs -->
       <div class="hidden sm:flex items-center gap-3">
-        <!-- Selector Modo Claro / Oscuro con Icono Activo -->
+        <!-- Selector Modo Claro / Oscuro con Iconos SVG -->
         <button id="theme-toggle" class="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-300 transition-all cursor-pointer shadow-xs" title="Cambiar Tema">
-          <span id="theme-icon" class="text-base">☀️</span>
+          <!-- Sun SVG -->
+          <svg id="sun-icon" class="w-4 h-4 text-amber-500 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+          </svg>
+          <!-- Moon SVG -->
+          <svg id="moon-icon" class="w-4 h-4 text-slate-700 dark:text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+          </svg>
         </button>
 
         <!-- Botón Descargar Apps con Logos SVG -->
@@ -147,7 +154,9 @@
         <!-- Botón Afiliar Comercio -->
         <a href="#contacto" class="shimmer-btn px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand-500 to-amber-500 hover:from-brand-600 hover:to-amber-600 text-white font-bold text-xs shadow-lg shadow-brand-500/25 flex items-center gap-2 transition-all transform hover:-translate-y-0.5 cursor-pointer">
           <span>Afiliar mi Comercio</span>
-          <span>→</span>
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+          </svg>
         </a>
       </div>
 
@@ -184,10 +193,9 @@
   </header>
 
   <!-- ===================================================================
-       2. HERO SECTION CON MOCKUPS 3D FLOTANTES Y ANIMACIONES
+       2. HERO SECTION CON MOCKUPS 3D FLOTANTES
   =================================================================== -->
   <section class="relative pt-12 pb-24 md:pt-20 md:pb-32 overflow-hidden">
-    <!-- Luces y halos de fondo decorativos -->
     <div class="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-brand-500/15 dark:bg-brand-500/15 rounded-full blur-[140px] pointer-events-none animate-pulse-slow"></div>
     <div class="absolute top-1/3 right-10 w-[450px] h-[450px] bg-emerald-500/10 rounded-full blur-[120px] pointer-events-none"></div>
 
@@ -195,7 +203,7 @@
       
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
         
-        <!-- Contenido Izquierdo (Textos & CTAs) -->
+        <!-- Contenido Izquierdo -->
         <div class="lg:col-span-7 space-y-6 text-center lg:text-left">
           
           <!-- Badge Llamativo con Pulso -->
@@ -214,11 +222,17 @@
             El ecosistema integral definitivo: <strong>App móvil nativa para clientes</strong>, <strong>panel web multi-sucursal para comercios</strong>, <strong>bot de WhatsApp con IA y operador</strong>, y <strong>app de repartidores con GPS en vivo</strong>. Todo sincronizado en USD y Bs a tasa BCV.
           </p>
 
-          <!-- Botones de Acción con Efectos Shimmer -->
+          <!-- Botones de Acción con Iconos SVG -->
           <div class="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-2">
-            <a href="#contacto" class="shimmer-btn px-7 py-4 rounded-2xl bg-gradient-to-r from-brand-500 to-amber-500 hover:from-brand-600 hover:to-amber-600 text-white font-extrabold text-sm shadow-xl shadow-brand-500/30 flex items-center gap-2 transform hover:-translate-y-1 transition-all cursor-pointer">
-              <span>🚀 Comenzar como Comercio</span>
-              <span>→</span>
+            <a href="#contacto" class="shimmer-btn px-7 py-4 rounded-2xl bg-gradient-to-r from-brand-500 to-amber-500 hover:from-brand-600 hover:to-amber-600 text-white font-extrabold text-sm shadow-xl shadow-brand-500/30 flex items-center gap-2.5 transform hover:-translate-y-1 transition-all cursor-pointer">
+              <!-- Rocket SVG -->
+              <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+              </svg>
+              <span>Comenzar como Comercio</span>
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+              </svg>
             </a>
             
             <button class="open-download-modal px-6 py-4 rounded-2xl bg-white dark:bg-slate-800/90 hover:bg-slate-100 dark:hover:bg-slate-700/90 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white font-bold text-sm flex items-center gap-3 transition-all cursor-pointer shadow-sm">
@@ -234,7 +248,7 @@
             </button>
           </div>
 
-          <!-- Badges de Confianza / Trust Metrics -->
+          <!-- Badges de Confianza -->
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-8 border-t border-slate-200 dark:border-white/10 text-left">
             <div>
               <div class="text-2xl font-black font-heading text-slate-900 dark:text-white font-mono">100%</div>
@@ -256,23 +270,23 @@
 
         </div>
 
-        <!-- Visual Derecho (Mockup Dual con Capturas Reales de Pantalla) -->
+        <!-- Visual Derecho (Mockup Dual) -->
         <div class="lg:col-span-5 flex justify-center relative">
           
-          <!-- Teléfono 1: App Cliente con Banners y Restaurantes -->
           <div class="w-64 sm:w-72 phone-mockup-frame shadow-2xl relative z-20 animate-float">
             <img src="assets/images/screenshot-customer-app.png" alt="App Cliente Pídetelo" class="w-full h-auto object-cover zoomable-image cursor-zoom-in">
           </div>
 
-          <!-- Teléfono 2: Seguimiento en Vivo con Mapa GPS Flotando Atrás -->
           <div class="hidden sm:block w-64 phone-mockup-frame shadow-2xl absolute -right-6 top-10 z-10 opacity-90 animate-float-reverse">
             <img src="assets/images/screenshot-tracking.png" alt="Rastreo en vivo con Mapa" class="w-full h-auto object-cover zoomable-image cursor-zoom-in">
           </div>
 
-          <!-- Tarjeta Flotante: Indicador de Entrega Exitosa -->
+          <!-- Badge Flotante con Icono SVG -->
           <div class="absolute -bottom-6 left-4 sm:-left-6 z-30 glass-panel p-3.5 rounded-2xl border border-slate-200 dark:border-white/10 shadow-2xl flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-lg">
-              ✓
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+              </svg>
             </div>
             <div class="text-xs">
               <span class="font-extrabold text-slate-900 dark:text-white block">PIN de Entrega Seguro</span>
@@ -288,12 +302,11 @@
   </section>
 
   <!-- ===================================================================
-       3. ECOSISTEMA TECNOLÓGICO DE MÓDULOS (SHOWCASE INTERACTIVO)
+       3. ECOSISTEMA TECNOLÓGICO DE MÓDULOS (PESTAÑAS CON ICONOS SVG)
   =================================================================== -->
   <section id="modulos" class="py-20 bg-slate-100/60 dark:bg-navy-900/60 border-y border-slate-200 dark:border-white/5 relative">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       
-      <!-- Título de Sección -->
       <div class="text-center max-w-3xl mx-auto space-y-3 mb-12">
         <span class="text-brand-500 font-extrabold text-xs uppercase tracking-widest">Tecnología de Punta a Punta</span>
         <h2 class="font-heading font-black text-3xl sm:text-4xl text-slate-900 dark:text-white">
@@ -304,22 +317,46 @@
         </p>
       </div>
 
-      <!-- Selector de Pestañas Interactivas -->
+      <!-- Selector de Pestañas con Iconos SVG -->
       <div class="flex items-center justify-center gap-2 overflow-x-auto pb-4 max-w-full">
+        <!-- Tab 1: App Clientes -->
         <button class="module-tab-btn px-4 py-2.5 rounded-xl text-xs font-bold bg-brand-500 text-white shadow-lg shadow-brand-500/25 transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer" data-target="panel-customer">
-          <span>📱 App Clientes</span>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M7 4h10a2 2 0 012 2v12a2 2 0 01-2 2H7a2 2 0 01-2-2V6a2 2 0 012-2z"></path>
+          </svg>
+          <span>App Clientes</span>
         </button>
+
+        <!-- Tab 2: Panel Comercios -->
         <button class="module-tab-btn px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-brand-500 dark:hover:text-white bg-slate-200/70 dark:bg-slate-800/50 transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer" data-target="panel-merchant">
-          <span>🏪 Panel Comercios</span>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+          </svg>
+          <span>Panel Comercios</span>
         </button>
+
+        <!-- Tab 3: App Repartidores -->
         <button class="module-tab-btn px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-brand-500 dark:hover:text-white bg-slate-200/70 dark:bg-slate-800/50 transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer" data-target="panel-rider">
-          <span>🛵 App Repartidores</span>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <circle cx="5" cy="18" r="3" stroke-width="2"/><circle cx="19" cy="18" r="3" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h4l2-7h-5M9 9l3 9m-4-9h6m-3-4v4"></path>
+          </svg>
+          <span>App Repartidores</span>
         </button>
+
+        <!-- Tab 4: WhatsApp Bot -->
         <button class="module-tab-btn px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-brand-500 dark:hover:text-white bg-slate-200/70 dark:bg-slate-800/50 transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer" data-target="panel-whatsapp">
-          <span>🤖 WhatsApp & Bot IA</span>
+          <svg class="w-4 h-4 fill-current text-emerald-500" viewBox="0 0 24 24">
+            <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.694.074-2.146-.527-1.734-.72-2.853-2.483-2.939-2.599-.086-.116-.707-.94-.707-1.793 0-.853.448-1.273.607-1.446.159-.173.346-.217.462-.217.116 0 .231.001.332.006.107.005.25-.041.391.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86.173.086.275.072.376-.044.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.043.073.043.419-.101.824zM12 2C6.477 2 2 6.477 2 12c0 1.891.524 3.662 1.435 5.176L2 22l4.957-1.399C8.423 21.499 10.155 22 12 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/>
+          </svg>
+          <span>WhatsApp & Bot IA</span>
         </button>
+
+        <!-- Tab 5: Super Admin -->
         <button class="module-tab-btn px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-brand-500 dark:hover:text-white bg-slate-200/70 dark:bg-slate-800/50 transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer" data-target="panel-superadmin">
-          <span>🛡️ Super Admin Control</span>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+          </svg>
+          <span>Super Admin Control</span>
         </button>
       </div>
 
@@ -341,21 +378,27 @@
             
             <div class="space-y-3">
               <div class="flex items-start gap-3">
-                <div class="w-6 h-6 rounded-lg bg-brand-500/20 text-brand-500 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">✓</div>
+                <div class="w-6 h-6 rounded-lg bg-brand-500/20 text-brand-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                </div>
                 <div>
                   <h4 class="font-bold text-xs text-slate-900 dark:text-white">Precios Dobles USD / Bs</h4>
                   <p class="text-[12px] text-slate-500 dark:text-slate-400">Actualización en tiempo real con la tasa oficial del Banco Central de Venezuela.</p>
                 </div>
               </div>
               <div class="flex items-start gap-3">
-                <div class="w-6 h-6 rounded-lg bg-brand-500/20 text-brand-500 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">✓</div>
+                <div class="w-6 h-6 rounded-lg bg-brand-500/20 text-brand-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                </div>
                 <div>
                   <h4 class="font-bold text-xs text-slate-900 dark:text-white">Rastreo GPS en Vivo con Mapa</h4>
                   <p class="text-[12px] text-slate-500 dark:text-slate-400">El cliente ve al motorizado acercarse a su dirección con tiempo estimado de llegada (ETA).</p>
                 </div>
               </div>
               <div class="flex items-start gap-3">
-                <div class="w-6 h-6 rounded-lg bg-brand-500/20 text-brand-500 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">✓</div>
+                <div class="w-6 h-6 rounded-lg bg-brand-500/20 text-brand-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                </div>
                 <div>
                   <h4 class="font-bold text-xs text-slate-900 dark:text-white">Calificaciones & Reseñas Reales</h4>
                   <p class="text-[12px] text-slate-500 dark:text-slate-400">Los comensales califican con estrellas y comentarios para dar reputación genuina al comercio.</p>
@@ -386,21 +429,27 @@
             
             <div class="space-y-3">
               <div class="flex items-start gap-3">
-                <div class="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-500 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">✓</div>
+                <div class="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                </div>
                 <div>
                   <h4 class="font-bold text-xs text-slate-900 dark:text-white">Pantalla de Cocina / Kanban en Vivo</h4>
                   <p class="text-[12px] text-slate-500 dark:text-slate-400">Alertas sonoras y tarjetas para pasar pedidos de Recibido a En Cocina y Despacho.</p>
                 </div>
               </div>
               <div class="flex items-start gap-3">
-                <div class="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-500 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">✓</div>
+                <div class="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                </div>
                 <div>
                   <h4 class="font-bold text-xs text-slate-900 dark:text-white">Gestor de Menú con Variantes</h4>
                   <p class="text-[12px] text-slate-500 dark:text-slate-400">Activa o pausa productos al instante, crea combos, salsas y extras con precios dinámicos.</p>
                 </div>
               </div>
               <div class="flex items-start gap-3">
-                <div class="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-500 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">✓</div>
+                <div class="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                </div>
                 <div>
                   <h4 class="font-bold text-xs text-slate-900 dark:text-white">Liquidación de Ventas y Comisiones</h4>
                   <p class="text-[12px] text-slate-500 dark:text-slate-400">Reportes automáticos de cierre de caja, comisiones de entrega y métodos de pago.</p>
@@ -410,9 +459,7 @@
           </div>
 
           <div class="lg:col-span-6 flex justify-center">
-            <!-- Marco de Navegador de Alta Fidelidad -->
             <div class="w-full max-w-lg browser-mockup-frame bg-slate-900 dark:bg-navy-900 border border-slate-700/80 dark:border-white/10 shadow-2xl">
-              <!-- Barra superior con traffic lights y URL -->
               <div class="browser-header bg-slate-800 dark:bg-navy-950 border-b border-slate-700 dark:border-white/10">
                 <div class="browser-dots">
                   <span class="browser-dot bg-rose-500"></span>
@@ -420,12 +467,13 @@
                   <span class="browser-dot bg-emerald-500"></span>
                 </div>
                 <div class="browser-url-bar bg-slate-900/80 dark:bg-navy-900 text-slate-400">
-                  <span class="text-emerald-400">🔒</span>
+                  <svg class="w-3 h-3 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                  </svg>
                   <span>pidetelo.com/merchant-admin</span>
                 </div>
                 <span class="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">En Vivo</span>
               </div>
-              <!-- Imagen del panel -->
               <div class="overflow-hidden">
                 <img src="assets/images/screenshot-merchant-web.png" alt="Panel de Comercio Pídetelo" class="w-full h-auto object-cover zoomable-image cursor-zoom-in">
               </div>
@@ -448,21 +496,27 @@
             
             <div class="space-y-3">
               <div class="flex items-start gap-3">
-                <div class="w-6 h-6 rounded-lg bg-blue-500/20 text-blue-500 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">✓</div>
+                <div class="w-6 h-6 rounded-lg bg-blue-500/20 text-blue-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                </div>
                 <div>
                   <h4 class="font-bold text-xs text-slate-900 dark:text-white">Navegación Asistida y Ruta Óptima</h4>
                   <p class="text-[12px] text-slate-500 dark:text-slate-400">Integración con mapas y GPS para llegar al comercio y a la puerta del cliente sin retrasos.</p>
                 </div>
               </div>
               <div class="flex items-start gap-3">
-                <div class="w-6 h-6 rounded-lg bg-blue-500/20 text-blue-500 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">✓</div>
+                <div class="w-6 h-6 rounded-lg bg-blue-500/20 text-blue-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                </div>
                 <div>
                   <h4 class="font-bold text-xs text-slate-900 dark:text-white">Confirmación por PIN de Entrega</h4>
                   <p class="text-[12px] text-slate-500 dark:text-slate-400">Evita confusiones y reclamos: el pedido solo se cierra cuando el cliente entrega su PIN.</p>
                 </div>
               </div>
               <div class="flex items-start gap-3">
-                <div class="w-6 h-6 rounded-lg bg-blue-500/20 text-blue-500 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">✓</div>
+                <div class="w-6 h-6 rounded-lg bg-blue-500/20 text-blue-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                </div>
                 <div>
                   <h4 class="font-bold text-xs text-slate-900 dark:text-white">Billetera Digital y Resumen de Ganancias</h4>
                   <p class="text-[12px] text-slate-500 dark:text-slate-400">Detalle transparente de cada carrera realizada, propinas y pagos pendientes.</p>
@@ -472,7 +526,6 @@
           </div>
 
           <div class="lg:col-span-6 flex justify-center">
-            <!-- Marco de Smartphone con Screenshot de Alta Resolución -->
             <div class="w-72 phone-mockup-frame shadow-2xl">
               <img src="assets/images/screenshot-rider-app.png" alt="Captura App Rider" class="w-full h-auto object-cover zoomable-image cursor-zoom-in">
             </div>
@@ -494,21 +547,27 @@
             
             <div class="space-y-3">
               <div class="flex items-start gap-3">
-                <div class="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-500 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">✓</div>
+                <div class="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                </div>
                 <div>
                   <h4 class="font-bold text-xs text-slate-900 dark:text-white">Vinculación en 10 Segundos con Código QR</h4>
                   <p class="text-[12px] text-slate-500 dark:text-slate-400">Escanea el código desde tu WhatsApp Business oficial y el bot queda activado al instante.</p>
                 </div>
               </div>
               <div class="flex items-start gap-3">
-                <div class="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-500 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">✓</div>
+                <div class="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                </div>
                 <div>
                   <h4 class="font-bold text-xs text-slate-900 dark:text-white">Transferencia Inteligente a Operador Humano</h4>
                   <p class="text-[12px] text-slate-500 dark:text-slate-400">Si el cliente digita la opción de operador o tu equipo escribe desde el panel, el bot se pausa automáticamente para no interferir.</p>
                 </div>
               </div>
               <div class="flex items-start gap-3">
-                <div class="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-500 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">✓</div>
+                <div class="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                </div>
                 <div>
                   <h4 class="font-bold text-xs text-slate-900 dark:text-white">Recepción Directa al Sistema de Pedidos</h4>
                   <p class="text-[12px] text-slate-500 dark:text-slate-400">Los pedidos de WhatsApp entran directamente a la pantalla de cocina con el mismo formato estándar.</p>
@@ -539,21 +598,27 @@
             
             <div class="space-y-3">
               <div class="flex items-start gap-3">
-                <div class="w-6 h-6 rounded-lg bg-purple-500/20 text-purple-500 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">✓</div>
+                <div class="w-6 h-6 rounded-lg bg-purple-500/20 text-purple-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                </div>
                 <div>
                   <h4 class="font-bold text-xs text-slate-900 dark:text-white">Auditoría de Inicios de Sesión en Vivo</h4>
                   <p class="text-[12px] text-slate-500 dark:text-slate-400">Monitorea accesos desde la app móvil, paneles de comercios, repartidores y administradores con IP y dispositivo.</p>
                 </div>
               </div>
               <div class="flex items-start gap-3">
-                <div class="w-6 h-6 rounded-lg bg-purple-500/20 text-purple-500 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">✓</div>
+                <div class="w-6 h-6 rounded-lg bg-purple-500/20 text-purple-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                </div>
                 <div>
                   <h4 class="font-bold text-xs text-slate-900 dark:text-white">Curvas de Demanda & Horas Pico</h4>
                   <p class="text-[12px] text-slate-500 dark:text-slate-400">Histograma de 00h a 23h para optimizar turnos y disponibilidad de motorizados en horas punta.</p>
                 </div>
               </div>
               <div class="flex items-start gap-3">
-                <div class="w-6 h-6 rounded-lg bg-purple-500/20 text-purple-500 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">✓</div>
+                <div class="w-6 h-6 rounded-lg bg-purple-500/20 text-purple-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                </div>
                 <div>
                   <h4 class="font-bold text-xs text-slate-900 dark:text-white">Exportación Ejecutiva a Excel / CSV</h4>
                   <p class="text-[12px] text-slate-500 dark:text-slate-400">Descarga reportes completos con filtros por comercio, fechas y estados en formato compatible con Excel.</p>
@@ -563,7 +628,6 @@
           </div>
 
           <div class="lg:col-span-6 flex justify-center">
-            <!-- Browser Mockup para Super Admin -->
             <div class="w-full max-w-lg browser-mockup-frame bg-slate-900 dark:bg-navy-900 border border-slate-700/80 dark:border-white/10 shadow-2xl">
               <div class="browser-header bg-slate-800 dark:bg-navy-950 border-b border-slate-700 dark:border-white/10">
                 <div class="browser-dots">
@@ -572,7 +636,9 @@
                   <span class="browser-dot bg-emerald-500"></span>
                 </div>
                 <div class="browser-url-bar bg-slate-900/80 dark:bg-navy-900 text-slate-400">
-                  <span class="text-purple-400">🔒</span>
+                  <svg class="w-3 h-3 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                  </svg>
                   <span>pidetelo.com/super-admin</span>
                 </div>
                 <span class="text-[10px] font-bold text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-full">Métricas Red</span>
@@ -748,7 +814,7 @@
   </section>
 
   <!-- ===================================================================
-       6. PLANES & PRECIOS (EMPRENDEDOR DESDE $9 / MES)
+       6. PLANES & PRECIOS (EMPRENDEDOR DESDE $9 / MES CON ICONOS VECTORIALES)
   =================================================================== -->
   <section id="precios" class="py-24 relative">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -781,7 +847,7 @@
       <!-- Tarjetas de Precios -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
         
-        <!-- Plan 1: Emprendedor (AHORA DESDE $9 / MES) -->
+        <!-- Plan 1: Emprendedor -->
         <div class="glass-panel rounded-3xl p-8 border border-slate-200/80 dark:border-white/10 flex flex-col justify-between hover:border-brand-500/50 transition-all shadow-sm hover:shadow-xl">
           <div class="space-y-5">
             <div>
@@ -796,13 +862,34 @@
             </div>
 
             <ul class="space-y-3 text-xs text-slate-700 dark:text-slate-300 pt-4 border-t border-slate-200 dark:border-white/10">
-              <li class="flex items-center gap-2">✓ Catálogo digital activo en la App Móvil</li>
-              <li class="flex items-center gap-2">✓ Menú con fotos y modificadores</li>
-              <li class="flex items-center gap-2">✓ 1 Sucursal incluida</li>
-              <li class="flex items-center gap-2">✓ Pedidos por App y Tienda Web</li>
-              <li class="flex items-center gap-2">✓ Tasa oficial BCV automática</li>
-              <li class="flex items-center gap-2">✓ Panel web básico de pedidos</li>
-              <li class="flex items-center gap-2 text-slate-400">✕ Bot automatizado de WhatsApp</li>
+              <li class="flex items-center gap-2">
+                <svg class="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                <span>Catálogo digital activo en la App Móvil</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <svg class="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                <span>Menú con fotos y modificadores</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <svg class="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                <span>1 Sucursal incluida</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <svg class="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                <span>Pedidos por App y Tienda Web</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <svg class="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                <span>Tasa oficial BCV automática</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <svg class="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                <span>Panel web básico de pedidos</span>
+              </li>
+              <li class="flex items-center gap-2 text-slate-400">
+                <svg class="w-3.5 h-3.5 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                <span>Bot automatizado de WhatsApp</span>
+              </li>
             </ul>
           </div>
 
@@ -813,9 +900,12 @@
 
         <!-- Plan 2: Comercio Pro (MÁS POPULAR) -->
         <div class="glass-panel rounded-3xl p-8 border-2 border-brand-500 relative flex flex-col justify-between shadow-xl glow-brand transform md:-translate-y-2">
-          <!-- Badge Destacado -->
-          <div class="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-brand-500 to-amber-500 text-white text-[11px] font-black uppercase tracking-wider shadow-md">
-            ⭐ Más Elegido por Restaurantes
+          <!-- Badge Destacado con Estrella SVG -->
+          <div class="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-brand-500 to-amber-500 text-white text-[11px] font-black uppercase tracking-wider shadow-md flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5 fill-current text-white" viewBox="0 0 20 20">
+              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+            </svg>
+            <span>Más Elegido por Restaurantes</span>
           </div>
 
           <div class="space-y-5">
@@ -831,14 +921,38 @@
             </div>
 
             <ul class="space-y-3 text-xs text-slate-800 dark:text-slate-200 pt-4 border-t border-slate-200 dark:border-white/10">
-              <li class="flex items-center gap-2">✓ <strong>Todo lo del Plan Emprendedor</strong></li>
-              <li class="flex items-center gap-2">✓ <strong>🤖 Bot Inteligente de WhatsApp</strong> incluido</li>
-              <li class="flex items-center gap-2">✓ Vinculación directa por código QR oficial</li>
-              <li class="flex items-center gap-2">✓ Pantalla interactiva para Cocina / Despacho</li>
-              <li class="flex items-center gap-2">✓ Asignación de motorizados con PIN de seguridad</li>
-              <li class="flex items-center gap-2">✓ Hasta 3 sucursales conectadas</li>
-              <li class="flex items-center gap-2">✓ Exportación de ventas a Excel / CSV</li>
-              <li class="flex items-center gap-2">✓ Soporte prioritario vía WhatsApp</li>
+              <li class="flex items-center gap-2">
+                <svg class="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                <span><strong>Todo lo del Plan Emprendedor</strong></span>
+              </li>
+              <li class="flex items-center gap-2">
+                <svg class="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                <span><strong>Bot Inteligente de WhatsApp</strong> incluido</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <svg class="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                <span>Vinculación directa por código QR oficial</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <svg class="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                <span>Pantalla interactiva para Cocina / Despacho</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <svg class="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                <span>Asignación de motorizados con PIN de seguridad</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <svg class="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                <span>Hasta 3 sucursales conectadas</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <svg class="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                <span>Exportación de ventas a Excel / CSV</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <svg class="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                <span>Soporte prioritario vía WhatsApp</span>
+              </li>
             </ul>
           </div>
 
@@ -862,13 +976,34 @@
             </div>
 
             <ul class="space-y-3 text-xs text-slate-700 dark:text-slate-300 pt-4 border-t border-slate-200 dark:border-white/10">
-              <li class="flex items-center gap-2">✓ <strong>Todo lo del Plan Pro</strong></li>
-              <li class="flex items-center gap-2">✓ Sucursales ilimitadas</li>
-              <li class="flex items-center gap-2">✓ Flota privada de repartidores dedicada</li>
-              <li class="flex items-center gap-2">✓ Banners destacados en la app móvil</li>
-              <li class="flex items-center gap-2">✓ Dominio web personalizado propio</li>
-              <li class="flex items-center gap-2">✓ Auditoría y control de accesos por rol</li>
-              <li class="flex items-center gap-2">✓ Gerente de cuenta dedicado 24/7</li>
+              <li class="flex items-center gap-2">
+                <svg class="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                <span><strong>Todo lo del Plan Pro</strong></span>
+              </li>
+              <li class="flex items-center gap-2">
+                <svg class="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                <span>Sucursales ilimitadas</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <svg class="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                <span>Flota privada de repartidores dedicada</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <svg class="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                <span>Banners destacados en la app móvil</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <svg class="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                <span>Dominio web personalizado propio</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <svg class="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                <span>Auditoría y control de accesos por rol</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <svg class="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                <span>Gerente de cuenta dedicado 24/7</span>
+              </li>
             </ul>
           </div>
 
@@ -883,7 +1018,7 @@
   </section>
 
   <!-- ===================================================================
-       7. PREGUNTAS FRECUENTES (FAQ INTERACTIVO)
+       7. PREGUNTAS FRECUENTES (FAQ INTERACTIVO CON CHEVRON SVG)
   =================================================================== -->
   <section id="faq" class="py-20 bg-slate-100/60 dark:bg-navy-900/40 border-t border-slate-200 dark:border-white/5">
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -903,7 +1038,9 @@
         <div class="faq-item glass-panel rounded-2xl border border-slate-200/80 dark:border-white/10 overflow-hidden shadow-xs">
           <button class="faq-header w-full p-5 text-left font-bold text-sm text-slate-900 dark:text-white flex items-center justify-between cursor-pointer">
             <span>¿Cuánto tiempo tarda en activarse mi comercio en Pídetelo?</span>
-            <span class="faq-icon text-brand-500 transition-transform duration-300">▼</span>
+            <svg class="w-4 h-4 faq-icon text-brand-500 transition-transform duration-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
           </button>
           <div class="faq-content hidden p-5 pt-0 text-xs text-slate-600 dark:text-slate-300 leading-relaxed border-t border-slate-100 dark:border-white/5">
             Tu tienda queda completamente configurada en menos de 24 horas. Nuestro equipo te ayuda a cargar tu menú digital, horarios de atención, coordenadas de despacho y datos bancarios para empezar a recibir pedidos de inmediato.
@@ -913,7 +1050,9 @@
         <div class="faq-item glass-panel rounded-2xl border border-slate-200/80 dark:border-white/10 overflow-hidden shadow-xs">
           <button class="faq-header w-full p-5 text-left font-bold text-sm text-slate-900 dark:text-white flex items-center justify-between cursor-pointer">
             <span>¿Cómo se maneja la tasa de cambio de Bolívares y Dólares?</span>
-            <span class="faq-icon text-brand-500 transition-transform duration-300">▼</span>
+            <svg class="w-4 h-4 faq-icon text-brand-500 transition-transform duration-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
           </button>
           <div class="faq-content hidden p-5 pt-0 text-xs text-slate-600 dark:text-slate-300 leading-relaxed border-t border-slate-100 dark:border-white/5">
             Pídetelo sincroniza automáticamente los precios con la tasa oficial publicada por el Banco Central de Venezuela (BCV). Los clientes siempre ven los montos claros en USD y en Bs., evitando discrepancias o errores manuales al momento de pagar.
@@ -923,7 +1062,9 @@
         <div class="faq-item glass-panel rounded-2xl border border-slate-200/80 dark:border-white/10 overflow-hidden shadow-xs">
           <button class="faq-header w-full p-5 text-left font-bold text-sm text-slate-900 dark:text-white flex items-center justify-between cursor-pointer">
             <span>¿Puedo usar mis propios motorizados o la red de repartidores de Pídetelo?</span>
-            <span class="faq-icon text-brand-500 transition-transform duration-300">▼</span>
+            <svg class="w-4 h-4 faq-icon text-brand-500 transition-transform duration-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
           </button>
           <div class="faq-content hidden p-5 pt-0 text-xs text-slate-600 dark:text-slate-300 leading-relaxed border-t border-slate-100 dark:border-white/5">
             ¡Ambas opciones son compatibles! Puedes registrar a tus propios repartidores para que utilicen la App Rider exclusiva de tu negocio, o apoyarte en los repartidores afiliados a la red abierta de Pídetelo.
@@ -933,7 +1074,9 @@
         <div class="faq-item glass-panel rounded-2xl border border-slate-200/80 dark:border-white/10 overflow-hidden shadow-xs">
           <button class="faq-header w-full p-5 text-left font-bold text-sm text-slate-900 dark:text-white flex items-center justify-between cursor-pointer">
             <span>¿Cómo funciona el bot de WhatsApp? ¿Reemplaza a mi personal?</span>
-            <span class="faq-icon text-brand-500 transition-transform duration-300">▼</span>
+            <svg class="w-4 h-4 faq-icon text-brand-500 transition-transform duration-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
           </button>
           <div class="faq-content hidden p-5 pt-0 text-xs text-slate-600 dark:text-slate-300 leading-relaxed border-t border-slate-100 dark:border-white/5">
             El bot automatiza las tareas repetitivas (saludo inicial, envío de la carta, cálculo de delivery y toma de orden). Si un cliente necesita hablar con una persona, con solo marcar la opción o si tu operador escribe en el chat, el bot se pausa inteligentemente.
@@ -943,7 +1086,9 @@
         <div class="faq-item glass-panel rounded-2xl border border-slate-200/80 dark:border-white/10 overflow-hidden shadow-xs">
           <button class="faq-header w-full p-5 text-left font-bold text-sm text-slate-900 dark:text-white flex items-center justify-between cursor-pointer">
             <span>¿Dónde se descargan las aplicaciones para Android e iOS?</span>
-            <span class="faq-icon text-brand-500 transition-transform duration-300">▼</span>
+            <svg class="w-4 h-4 faq-icon text-brand-500 transition-transform duration-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
           </button>
           <div class="faq-content hidden p-5 pt-0 text-xs text-slate-600 dark:text-slate-300 leading-relaxed border-t border-slate-100 dark:border-white/5">
             Puedes descargar los instaladores oficiales (.APK para Android y .IPA/TestFlight para iOS) directamente desde esta landing page haciendo clic en el botón superior "Descargar Apps", o solicitando el enlace a nuestro soporte oficial.
@@ -973,7 +1118,7 @@
         </div>
 
         <div id="contact-success" class="hidden mb-6 p-4 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 text-xs font-bold text-center">
-          ✓ ¡Datos enviados exitosamente! Abriendo chat de WhatsApp oficial...
+          ¡Datos enviados exitosamente! Abriendo chat de WhatsApp oficial...
         </div>
 
         <form id="contact-form" class="space-y-4">
@@ -1016,7 +1161,7 @@
   </section>
 
   <!-- ===================================================================
-       9. FOOTER CORPORATIVO
+       9. FOOTER CORPORATIVO (CON ICONOS SVG)
   =================================================================== -->
   <footer class="border-t border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-navy-950 py-12 text-slate-500 dark:text-slate-400 text-xs">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -1053,18 +1198,39 @@
             <li><a href="#precios" class="hover:text-brand-500">Planes y Precios</a></li>
             <li><a href="#calculadora" class="hover:text-brand-500">Calculadora de ROI</a></li>
             <li><a href="#faq" class="hover:text-brand-500">Preguntas Frecuentes</a></li>
-            <li><button class="open-download-modal hover:text-brand-500 text-left">Descargar APKs</button></li>
+            <li><button class="open-download-modal hover:text-brand-500 text-left cursor-pointer">Descargar APKs</button></li>
           </ul>
         </div>
 
-        <!-- Columna 4: Contacto & Redes -->
+        <!-- Columna 4: Contacto Oficial con Iconos SVG -->
         <div>
           <h4 class="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[11px] mb-3">Contacto Oficial</h4>
-          <ul class="space-y-2">
-            <li>📍 Barquisimeto, Edo. Lara, Venezuela</li>
-            <li>💬 WhatsApp: +58 412-0000000</li>
-            <li>✉️ soporte@pidetelo.com</li>
-            <li>🕒 Atención: Lunes a Domingo, 8:00 AM - 11:00 PM</li>
+          <ul class="space-y-2.5">
+            <li class="flex items-center gap-2">
+              <svg class="w-3.5 h-3.5 text-brand-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+              </svg>
+              <span>Barquisimeto, Edo. Lara, Venezuela</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <svg class="w-3.5 h-3.5 text-emerald-500 flex-shrink-0 fill-current" viewBox="0 0 24 24">
+                <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.694.074-2.146-.527-1.734-.72-2.853-2.483-2.939-2.599-.086-.116-.707-.94-.707-1.793 0-.853.448-1.273.607-1.446.159-.173.346-.217.462-.217.116 0 .231.001.332.006.107.005.25-.041.391.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86.173.086.275.072.376-.044.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.043.073.043.419-.101.824zM12 2C6.477 2 2 6.477 2 12c0 1.891.524 3.662 1.435 5.176L2 22l4.957-1.399C8.423 21.499 10.155 22 12 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/>
+              </svg>
+              <span>WhatsApp: +58 412-0000000</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <svg class="w-3.5 h-3.5 text-brand-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+              </svg>
+              <span>soporte@pidetelo.com</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <svg class="w-3.5 h-3.5 text-brand-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              <span>Lunes a Domingo, 8:00 AM - 11:00 PM</span>
+            </li>
           </ul>
         </div>
 
@@ -1085,13 +1251,13 @@
   </footer>
 
   <!-- ===================================================================
-       10. MODAL FLOTANTE DE DESCARGA CON LOGOS OFICIALES ANDROID & APPLE
+       10. MODAL DE DESCARGA CON LOGOS OFICIALES ANDROID & APPLE
   =================================================================== -->
   <div id="download-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4 animate-fade-in">
     <div class="glass-panel bg-white dark:bg-navy-950 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-white/10 max-w-lg w-full space-y-6 relative shadow-2xl">
       
-      <button class="close-download-modal absolute top-5 right-5 w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center text-sm font-bold">
-        ✕
+      <button class="close-download-modal absolute top-5 right-5 w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center text-sm font-bold cursor-pointer">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
       </button>
 
       <div>
@@ -1110,7 +1276,6 @@
         <a href="https://github.com/jorgemedina2406/pidetelo/releases/download/v1.0.1/Pidetelo-Cliente.apk" target="_blank" class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-brand-500 flex items-center justify-between transition-all group shadow-xs">
           <div class="flex items-center gap-3.5">
             <div class="w-11 h-11 rounded-xl bg-emerald-500/15 text-emerald-500 flex items-center justify-center">
-              <!-- Android Robot SVG -->
               <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M17.523 15.3414c-.5511 0-.9993-.4486-.9993-1.0007 0-.5512.4482-1.0006.9993-1.0006.5521 0 1.0003.4494 1.0003 1.0006 0 .5521-.4482 1.0007-1.0003 1.0007m-11.046 0c-.5511 0-.9993-.4486-.9993-1.0007 0-.5512.4482-1.0006.9993-1.0006.5521 0 1.0003.4494 1.0003 1.0006 0 .5521-.4482 1.0007-1.0003 1.0007m11.4045-6.02l1.9973-3.4592a.416.416 0 00-.1521-.5676.416.416 0 00-.5676.1521l-2.0223 3.503C15.5838 8.4116 13.854 8.134 12 8.134c-1.854 0-3.5838.2776-5.1368.8157L4.8409 5.4467a.416.416 0 00-.5676-.1521.416.416 0 00-.1521.5676l1.9973 3.4592C2.6889 11.1867.3432 14.6589 0 18.761h24c-.3432-4.1021-2.6889-7.5743-6.1185-9.4396"/>
               </svg>
@@ -1129,7 +1294,6 @@
         <a href="https://github.com/jorgemedina2406/pidetelo/releases/download/v1.0.1/Pidetelo-Rider.apk" target="_blank" class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-blue-500 flex items-center justify-between transition-all group shadow-xs">
           <div class="flex items-center gap-3.5">
             <div class="w-11 h-11 rounded-xl bg-blue-500/15 text-blue-500 flex items-center justify-center">
-              <!-- Android Robot SVG -->
               <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M17.523 15.3414c-.5511 0-.9993-.4486-.9993-1.0007 0-.5512.4482-1.0006.9993-1.0006.5521 0 1.0003.4494 1.0003 1.0006 0 .5521-.4482 1.0007-1.0003 1.0007m-11.046 0c-.5511 0-.9993-.4486-.9993-1.0007 0-.5512.4482-1.0006.9993-1.0006.5521 0 1.0003.4494 1.0003 1.0006 0 .5521-.4482 1.0007-1.0003 1.0007m11.4045-6.02l1.9973-3.4592a.416.416 0 00-.1521-.5676.416.416 0 00-.5676.1521l-2.0223 3.503C15.5838 8.4116 13.854 8.134 12 8.134c-1.854 0-3.5838.2776-5.1368.8157L4.8409 5.4467a.416.416 0 00-.5676-.1521.416.416 0 00-.1521.5676l1.9973 3.4592C2.6889 11.1867.3432 14.6589 0 18.761h24c-.3432-4.1021-2.6889-7.5743-6.1185-9.4396"/>
               </svg>
@@ -1144,7 +1308,7 @@
           <span class="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition-colors">Descargar</span>
         </a>
 
-        <!-- Versión iOS con Logo Oficial Apple -->
+        <!-- Versión iOS -->
         <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
           <div class="flex items-center gap-3.5">
             <div class="w-11 h-11 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-white flex items-center justify-center">
@@ -1164,7 +1328,7 @@
       </div>
 
       <div class="text-[11px] text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-900/40 p-3.5 rounded-xl border border-slate-200 dark:border-white/5">
-        💡 <strong>Nota de instalación en Android:</strong> Si tu teléfono te solicita habilitar <em>"Instalar aplicaciones de fuentes desconocidas"</em>, actívalo para continuar con la instalación del archivo APK descargado.
+        <strong>Nota de instalación en Android:</strong> Si tu teléfono te solicita habilitar <em>"Instalar aplicaciones de fuentes desconocidas"</em>, actívalo para continuar con la instalación del archivo APK descargado.
       </div>
 
     </div>
@@ -1175,7 +1339,7 @@
   =================================================================== -->
   <div id="image-lightbox" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 hidden items-center justify-center p-4 animate-fade-in">
     <button id="lightbox-close" class="absolute top-5 right-5 w-10 h-10 rounded-full bg-slate-800 text-white flex items-center justify-center font-bold text-lg hover:bg-slate-700 cursor-pointer">
-      ✕
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
     </button>
     <div class="max-w-4xl max-h-[90vh] overflow-hidden flex items-center justify-center">
       <img id="lightbox-img" src="" alt="Captura ampliada" class="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl">
@@ -1183,12 +1347,15 @@
   </div>
 
   <!-- ===================================================================
-       12. BOTÓN FLOTANTE DE WHATSAPP CON MENSAJE PRE-CARGADO
+       12. BOTÓN FLOTANTE DE WHATSAPP CON LOGO OFICIAL SVG
   =================================================================== -->
   <a id="floating-whatsapp" href="#" class="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center shadow-2xl shadow-emerald-500/40 transform hover:scale-110 active:scale-95 transition-all cursor-pointer group" title="Chatear por WhatsApp">
-    <span class="text-2xl">💬</span>
+    <!-- Official WhatsApp Logo SVG -->
+    <svg class="w-7 h-7 fill-current" viewBox="0 0 24 24">
+      <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.694.074-2.146-.527-1.734-.72-2.853-2.483-2.939-2.599-.086-.116-.707-.94-.707-1.793 0-.853.448-1.273.607-1.446.159-.173.346-.217.462-.217.116 0 .231.001.332.006.107.005.25-.041.391.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86.173.086.275.072.376-.044.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.043.073.043.419-.101.824zM12 2C6.477 2 2 6.477 2 12c0 1.891.524 3.662 1.435 5.176L2 22l4.957-1.399C8.423 21.499 10.155 22 12 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/>
+    </svg>
     <span class="absolute right-16 bg-navy-900 text-white text-[11px] font-bold px-3 py-1.5 rounded-xl border border-white/10 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-xl">
-      ¡Escríbenos por WhatsApp!
+      Escríbenos por WhatsApp
     </span>
   </a>
 
