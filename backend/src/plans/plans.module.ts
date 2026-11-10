@@ -11,3 +11,4 @@ import { SupabaseModule } from '../supabase/supabase.module.js';
   exports: [PlansService],
 })
 export class PlansModule {}
+

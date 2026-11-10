@@ -357,9 +357,21 @@ export class PlansService {
     const plan = await this.getPlanByCode(planCode);
     this.saveLocalTenantPlan(tenantId, plan.code);
 
+    // Guardar también en tenant_metadata.json
+    try {
+      const metaPath = path.join(process.cwd(), 'data', 'tenant_metadata.json');
+      let meta: Record<string, any> = {};
+      if (fs.existsSync(metaPath)) {
+        meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
+      }
+      meta[tenantId] = { ...(meta[tenantId] || {}), plan_code: plan.code, planCode: plan.code, subscription_plan_id: plan.code };
+      fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2), 'utf-8');
+    } catch (_) {}
+
     try {
       const client = this.supabase.getClient();
-      await client
+      // Intentar actualizar con plan_code y subscription_plan_id
+      const { error: err1 } = await client
         .from('tenants')
         .update({
           subscription_plan_id: plan.id.startsWith('plan_') ? null : plan.id,
@@ -367,6 +379,17 @@ export class PlansService {
           updated_at: new Date().toISOString()
         })
         .eq('id', tenantId);
+
+      if (err1) {
+        // Fallback por si la columna plan_code no existe todavía en Supabase
+        await client
+          .from('tenants')
+          .update({
+            subscription_plan_id: plan.id.startsWith('plan_') ? null : plan.id,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', tenantId);
+      }
     } catch (e) {
       console.warn('[PlansService] Error updating plan on supabase tenant:', e);
     }
@@ -374,7 +397,9 @@ export class PlansService {
     return {
       success: true,
       message: `Plan ${plan.name} asignado exitosamente al comercio`,
+      planCode: plan.code,
       plan
     };
   }
 }
+

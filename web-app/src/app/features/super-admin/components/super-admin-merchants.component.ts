@@ -45,7 +45,9 @@ export class SuperAdminMerchantsComponent {
 
   onPlanSelect(m: any, planCode: string): void {
     m.planCode = planCode;
+    m.plan_code = planCode;
     m.subscriptionPlanId = planCode;
+    this._merchants.update(list => list.map(item => item.id === m.id ? { ...item, planCode, plan_code: planCode, subscriptionPlanId: planCode } as any : item));
     this.changePlan.emit({ tenantId: m.id, planCode });
   }
 

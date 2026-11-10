@@ -156,8 +156,26 @@ export class TenantsService {
       calculatedReviewCount = 0;
     }
 
+    let planCode = t.plan_code || t.planCode || meta.plan_code || meta.planCode;
+    if (!planCode) {
+      try {
+        const tpPath = path.resolve(process.cwd(), 'data', 'tenant_plans.json');
+        if (fs.existsSync(tpPath)) {
+          const tpMap = JSON.parse(fs.readFileSync(tpPath, 'utf-8'));
+          planCode = tpMap[t.id];
+        }
+      } catch (_) {}
+    }
+    if (!planCode) {
+      planCode = t.slug === 'burger-lab' ? 'COMERCIO_PRO' : 'EMPRENDEDOR';
+    }
+
     return {
       ...t,
+      plan_code: planCode,
+      planCode: planCode,
+      subscription_plan_id: t.subscription_plan_id || planCode,
+      subscriptionPlanId: planCode,
       category,
       subcategories,
       tagline,
@@ -255,6 +273,20 @@ export class TenantsService {
       if (metaToSave.currency_settings?.displayMode) {
         metaToSave.display_mode = metaToSave.currency_settings.displayMode;
       }
+    }
+    if (updateData.plan_code || updateData.planCode || updateData.subscriptionPlanId) {
+      const pCode = updateData.plan_code || updateData.planCode || updateData.subscriptionPlanId;
+      metaToSave.plan_code = pCode;
+      metaToSave.planCode = pCode;
+      try {
+        const tpPath = path.resolve(process.cwd(), 'data', 'tenant_plans.json');
+        let tpMap: Record<string, any> = {};
+        if (fs.existsSync(tpPath)) {
+          tpMap = JSON.parse(fs.readFileSync(tpPath, 'utf-8'));
+        }
+        tpMap[id] = pCode;
+        fs.writeFileSync(tpPath, JSON.stringify(tpMap, null, 2), 'utf-8');
+      } catch (_) {}
     }
     if (Object.keys(metaToSave).length > 0) {
       this.saveTenantMetadata(id, metaToSave);

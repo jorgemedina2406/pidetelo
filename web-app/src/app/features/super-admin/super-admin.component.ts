@@ -530,11 +530,17 @@ export class SuperAdminComponent implements OnInit {
   }
 
   onMerchantPlanChange(event: { tenantId: string; planCode: string }): void {
+    // 1. Actualización inmediata y reactiva de la señal de comercios
+    this.merchants.update(list => list.map(m => m.id === event.tenantId ? { ...m, planCode: event.planCode, plan_code: event.planCode, subscriptionPlanId: event.planCode } as any : m));
+
+    // 2. Persistencia en backend
     this.api.assignTenantPlan(event.tenantId, event.planCode).subscribe({
       next: (res) => {
         this.showToast('success', 'Plan Actualizado', `El plan del comercio fue actualizado a ${event.planCode}`);
         this.api.getTenants(true).subscribe(tenants => {
-          if (tenants) this.merchants.set(tenants);
+          if (tenants && tenants.length > 0) {
+            this.merchants.set(tenants);
+          }
         });
       },
       error: (err) => {
