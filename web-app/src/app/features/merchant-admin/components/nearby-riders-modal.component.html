@@ -27,7 +27,7 @@
                 <p class="text-xs font-bold text-slate-900 dark:text-white">#{{ order.orderNumber || order.id.slice(0, 8) }} • {{ order.customer?.name || (order.customer ? order.customer.name : 'Cliente') }}</p>
                 <p class="text-[11px] text-slate-500 truncate max-w-[280px]">{{ order.customer?.deliveryAddress || '' }}</p>
               </div>
-              <span class="font-black text-sm text-brand-600 dark:text-brand-400">\${{ order.total.toFixed(2) }}</span>
+              <span class="font-black text-sm text-brand-600 dark:text-brand-400">${{ order.total.toFixed(2) }}</span>
             </div>
           }
 

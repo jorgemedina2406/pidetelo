@@ -40,7 +40,7 @@
               <span>Motorizado: <strong>{{ order.driverName || 'Repartidor de la Red' }}</strong></span>
             </div>
             <div class="text-[11px] text-slate-500 dark:text-slate-400">
-              Total del Pedido: <strong class="text-slate-800 dark:text-white font-mono">\${{ order.total.toFixed(2) }}</strong> (Bs. {{ (order.total * activeExchangeRate).toFixed(2) }})
+              Total del Pedido: <strong class="text-slate-800 dark:text-white font-mono">${{ order.total.toFixed(2) }}</strong> (Bs. {{ (order.total * activeExchangeRate).toFixed(2) }})
             </div>
           </div>
         </div>

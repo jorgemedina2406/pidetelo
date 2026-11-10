@@ -1360,8 +1360,36 @@ export class ApiService {
       },
       commissionPercentage: Number(row.commission_percentage ?? row.commissionPercentage) || 5.0,
       branches: Array.isArray(row.branches) ? row.branches.map((b: any) => this.mapBranch(b)) : [],
-      planCode: (row.plan_code || row.planCode || row.subscription_plan_id || row.subscriptionPlanId || (row.slug === 'burger-lab' ? 'COMERCIO_PRO' : 'EMPRENDEDOR')).toUpperCase() === 'COMERCIO' ? 'COMERCIO_PRO' : ((row.plan_code || row.planCode || row.subscription_plan_id || row.subscriptionPlanId || (row.slug === 'burger-lab' ? 'COMERCIO_PRO' : 'EMPRENDEDOR')).toUpperCase() === 'CORPORATIVO' ? 'FRANQUICIA' : (row.plan_code || row.planCode || row.subscription_plan_id || row.subscriptionPlanId || (row.slug === 'burger-lab' ? 'COMERCIO_PRO' : 'EMPRENDEDOR')).toUpperCase()),
-      subscriptionPlanId: (row.plan_code || row.planCode || row.subscription_plan_id || row.subscriptionPlanId || (row.slug === 'burger-lab' ? 'COMERCIO_PRO' : 'EMPRENDEDOR')).toUpperCase() === 'COMERCIO' ? 'COMERCIO_PRO' : ((row.plan_code || row.planCode || row.subscription_plan_id || row.subscriptionPlanId || (row.slug === 'burger-lab' ? 'COMERCIO_PRO' : 'EMPRENDEDOR')).toUpperCase() === 'CORPORATIVO' ? 'FRANQUICIA' : (row.plan_code || row.planCode || row.subscription_plan_id || row.subscriptionPlanId || (row.slug === 'burger-lab' ? 'COMERCIO_PRO' : 'EMPRENDEDOR')).toUpperCase()),
+      planCode: (() => {
+        let p = row.plan_code || row.planCode || row.subscription_plan_id || row.subscriptionPlanId;
+        if (!p && typeof localStorage !== 'undefined') {
+          try {
+            const stored = localStorage.getItem('pidetelo_tenant_plans');
+            if (stored) {
+              const map = JSON.parse(stored);
+              p = map[row.id] || (row.slug ? map[row.slug] : null);
+            }
+          } catch (_) {}
+        }
+        if (!p) p = row.slug === 'burger-lab' ? 'COMERCIO_PRO' : 'EMPRENDEDOR';
+        const clean = p.toUpperCase();
+        return clean === 'COMERCIO' ? 'COMERCIO_PRO' : (clean === 'CORPORATIVO' ? 'FRANQUICIA' : clean);
+      })(),
+      subscriptionPlanId: (() => {
+        let p = row.plan_code || row.planCode || row.subscription_plan_id || row.subscriptionPlanId;
+        if (!p && typeof localStorage !== 'undefined') {
+          try {
+            const stored = localStorage.getItem('pidetelo_tenant_plans');
+            if (stored) {
+              const map = JSON.parse(stored);
+              p = map[row.id] || (row.slug ? map[row.slug] : null);
+            }
+          } catch (_) {}
+        }
+        if (!p) p = row.slug === 'burger-lab' ? 'COMERCIO_PRO' : 'EMPRENDEDOR';
+        const clean = p.toUpperCase();
+        return clean === 'COMERCIO' ? 'COMERCIO_PRO' : (clean === 'CORPORATIVO' ? 'FRANQUICIA' : clean);
+      })(),
     };
   }
 
@@ -1562,6 +1590,14 @@ export class ApiService {
   }
 
   assignTenantPlan(tenantId: string, planCode: string): Observable<any> {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const stored = localStorage.getItem('pidetelo_tenant_plans');
+        const map = stored ? JSON.parse(stored) : {};
+        map[tenantId] = planCode;
+        localStorage.setItem('pidetelo_tenant_plans', JSON.stringify(map));
+      }
+    } catch (_) {}
     return this.http.put<any>(`${this.baseUrl}/plans/tenant/${tenantId}`, { planCode }).pipe(
       tap(() => {
         try {

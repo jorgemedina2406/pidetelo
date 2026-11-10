@@ -184,3 +184,4 @@ UPDATE tenants t
 SET plan_code = sp.code
 FROM subscription_plans sp
 WHERE t.subscription_plan_id = sp.id;
+

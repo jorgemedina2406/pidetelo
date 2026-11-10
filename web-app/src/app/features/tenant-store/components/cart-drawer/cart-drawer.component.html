@@ -58,7 +58,7 @@
                     </span>
                   } @else {
                     <span>
-                      Agrega <strong>\${{ (cart.activeTenant()!.deliverySettings.freeDeliveryThreshold! - cart.subtotal()).toFixed(2) }}</strong> más para delivery gratis
+                      Agrega <strong>${{ (cart.activeTenant()!.deliverySettings.freeDeliveryThreshold! - cart.subtotal()).toFixed(2) }}</strong> más para delivery gratis
                     </span>
                   }
                 </div>

@@ -37,7 +37,17 @@ export class SuperAdminMerchantsComponent {
   });
 
   getMerchantPlan(m: any): string {
-    const raw = (m.planCode || m.plan_code || m.subscriptionPlanId || 'COMERCIO_PRO').toUpperCase();
+    let p = m.planCode || m.plan_code || m.subscriptionPlanId;
+    if (!p && typeof localStorage !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('pidetelo_tenant_plans');
+        if (stored) {
+          const map = JSON.parse(stored);
+          p = map[m.id] || (m.slug ? map[m.slug] : null);
+        }
+      } catch (_) {}
+    }
+    const raw = (p || 'COMERCIO_PRO').toUpperCase();
     if (raw === 'COMERCIO') return 'COMERCIO_PRO';
     if (raw === 'CORPORATIVO') return 'FRANQUICIA';
     return raw;
@@ -47,6 +57,15 @@ export class SuperAdminMerchantsComponent {
     m.planCode = planCode;
     m.plan_code = planCode;
     m.subscriptionPlanId = planCode;
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const stored = localStorage.getItem('pidetelo_tenant_plans');
+        const map = stored ? JSON.parse(stored) : {};
+        map[m.id] = planCode;
+        if (m.slug) map[m.slug] = planCode;
+        localStorage.setItem('pidetelo_tenant_plans', JSON.stringify(map));
+      }
+    } catch (_) {}
     this._merchants.update(list => list.map(item => item.id === m.id ? { ...item, planCode, plan_code: planCode, subscriptionPlanId: planCode } as any : item));
     this.changePlan.emit({ tenantId: m.id, planCode });
   }

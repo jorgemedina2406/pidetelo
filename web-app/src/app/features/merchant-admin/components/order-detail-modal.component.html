@@ -88,7 +88,7 @@
                   }
                 </div>
                 <span class="font-mono font-bold text-slate-900 dark:text-white shrink-0">
-                  \${{ item.itemTotal.toFixed(2) }}
+                  ${{ item.itemTotal.toFixed(2) }}
                 </span>
               </div>
               }
@@ -99,22 +99,22 @@
           <div class="p-4 bg-slate-50 dark:bg-slate-850 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-1.5 font-mono">
             <div class="flex justify-between text-slate-500">
               <span>Subtotal</span>
-              <span>\${{ order.subtotal.toFixed(2) }}</span>
+              <span>${{ order.subtotal.toFixed(2) }}</span>
             </div>
             <div class="flex justify-between text-slate-500">
               <span>Tarifa de Envío</span>
-              <span>\${{ order.deliveryFee.toFixed(2) }}</span>
+              <span>${{ order.deliveryFee.toFixed(2) }}</span>
             </div>
             @if (order.discount > 0) {
             <div class="flex justify-between text-emerald-600">
               <span>Descuento Promoción</span>
-              <span>-\${{ order.discount.toFixed(2) }}</span>
+              <span>-${{ order.discount.toFixed(2) }}</span>
             </div>
             }
             <div class="pt-2 border-t border-slate-200 dark:border-slate-700 flex justify-between items-center font-black text-sm text-slate-900 dark:text-white">
               <span class="font-sans">Total Cobrado</span>
               <div class="text-right">
-                <div>\${{ order.total.toFixed(2) }} USD</div>
+                <div>${{ order.total.toFixed(2) }} USD</div>
                 <div class="text-[11px] font-medium text-slate-400">
                   Bs. {{ (order.total * activeExchangeRate).toFixed(2) }} (Tasa: {{ activeExchangeRate.toFixed(2) }})
                 </div>

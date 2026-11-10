@@ -76,7 +76,7 @@
                     @if (c.discountType === 'percentage') {
                       <span>{{ c.discountValue }}% OFF</span>
                     } @else {
-                      <span>\${{ c.discountValue | number:'1.2-2' }} OFF</span>
+                      <span>${{ c.discountValue | number:'1.2-2' }} OFF</span>
                     }
                   </div>
                   @if (c.description) {
@@ -91,7 +91,7 @@
                   @if (c.maxDiscountAmount || c.maxDiscount) {
                     <div class="flex justify-between">
                       <span>Tope máx. desc:</span>
-                      <span class="font-bold text-slate-700 dark:text-slate-300">\${{ c.maxDiscountAmount || c.maxDiscount }}</span>
+                      <span class="font-bold text-slate-700 dark:text-slate-300">${{ c.maxDiscountAmount || c.maxDiscount }}</span>
                     </div>
                   }
                   <div class="flex justify-between">

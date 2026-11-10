@@ -83,7 +83,7 @@
                   <div class="font-mono text-slate-600 dark:text-slate-400">
                     <div><strong>Lat:</strong> {{ branch.latitude }}</div>
                     <div><strong>Lng:</strong> {{ branch.longitude }}</div>
-                    <div class="pt-1"><strong>Radio:</strong> {{ branch.deliveryRadiusKm }} km • <strong>Tarifa:</strong> \${{ branch.baseDeliveryFee ? branch.baseDeliveryFee.toFixed(2) : '0.00' }}</div>
+                    <div class="pt-1"><strong>Radio:</strong> {{ branch.deliveryRadiusKm }} km • <strong>Tarifa:</strong> ${{ branch.baseDeliveryFee ? branch.baseDeliveryFee.toFixed(2) : '0.00' }}</div>
                   </div>
                   <a [href]="'https://www.google.com/maps/search/?api=1&query=' + branch.latitude + ',' + branch.longitude" 
                      target="_blank"
