@@ -659,6 +659,106 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
     );
   }
 
+
+  void _showAppendItemsSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF0F172A),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(22),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primary.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.add_circle_outline_rounded, color: AppTheme.primary, size: 24),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Adicionar a Orden ${_order.orderNumber}',
+                        style: GoogleFonts.outfit(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                      ),
+                      Text(
+                        'Estado: En Preparación en Cocina',
+                        style: GoogleFonts.outfit(
+                          fontSize: 12,
+                          color: const Color(0xFF10B981),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Text(
+              '¡Estás a tiempo! Como tu orden aún no ha salido con el repartidor, puedes adicionar bebidas, acompañantes o postres. Comunícate al WhatsApp del comercio o indícalo directamente para anexarlo a tu comanda.',
+              style: GoogleFonts.outfit(
+                fontSize: 13,
+                color: Colors.white70,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.pop(ctx);
+                _launchWhatsAppMerchant();
+              },
+              icon: const Icon(Icons.chat_rounded, size: 18),
+              label: const Text('Coordinar Adición por WhatsApp'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF22C55E),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                textStyle: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w700),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(
+                'Cerrar',
+                style: GoogleFonts.outfit(color: Colors.white54, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -1100,6 +1200,70 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                         ],
                       ),
                     ),
+
+                  
+                  // Banner Adicionar Productos antes del Despacho
+                  if (_order.status == OrderDeliveryStatus.pending ||
+                      _order.status == OrderDeliveryStatus.confirmed ||
+                      _order.status == OrderDeliveryStatus.preparing) ...[
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primary.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppTheme.primary.withOpacity(0.35)),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(7),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primary.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.add_shopping_cart_rounded, size: 18, color: AppTheme.primary),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '¿Olvidaste algo en tu pedido?',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                Text(
+                                  'Tu orden está en preparación. Puedes adicionar productos.',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 10.5,
+                                    color: Colors.white70,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton.icon(
+                            onPressed: () => _showAppendItemsSheet(context),
+                            icon: const Icon(Icons.add_rounded, size: 15),
+                            label: const Text('Añadir'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primary,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              textStyle: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w700),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
 
                   const SizedBox(height: 12),
 
