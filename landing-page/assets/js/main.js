@@ -1,6 +1,6 @@
 /**
  * Pídetelo Landing Page - Main Interactive Scripts
- * Interacciones: Pestañas de módulos, Calculadora ROI, Selector de precios, Modal de descargas y FAQ
+ * Soporte completo Dark/Light Mode, Precios desde $9, Calculadora ROI desde $1
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -22,19 +22,25 @@ document.addEventListener('DOMContentLoaded', () => {
 function initTheme() {
   const themeToggleBtn = document.getElementById('theme-toggle');
   const themeToggleMobile = document.getElementById('theme-toggle-mobile');
+  const themeIcon = document.getElementById('theme-icon');
   const html = document.documentElement;
 
-  // Preferencia guardada o por defecto oscura (modern corporate)
-  const savedTheme = localStorage.getItem('pidetelo_theme') || 'dark';
-  applyTheme(savedTheme);
+  // Preferencia guardada en localStorage o preferencia del sistema
+  const savedTheme = localStorage.getItem('pidetelo_theme');
+  const systemPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  
+  const initialTheme = savedTheme ? savedTheme : (systemPrefersDark ? 'dark' : 'dark'); // dark default
+  applyTheme(initialTheme);
 
   function applyTheme(theme) {
     if (theme === 'dark') {
       html.classList.add('dark');
       localStorage.setItem('pidetelo_theme', 'dark');
+      if (themeIcon) themeIcon.textContent = '☀️';
     } else {
       html.classList.remove('dark');
       localStorage.setItem('pidetelo_theme', 'light');
+      if (themeIcon) themeIcon.textContent = '🌙';
     }
   }
 
@@ -79,16 +85,16 @@ function initModuleTabs() {
     btn.addEventListener('click', () => {
       const targetId = btn.getAttribute('data-target');
 
-      // Actualizar botones
+      // Actualizar estilos activos de botones
       tabButtons.forEach(b => {
         b.classList.remove('bg-brand-500', 'text-white', 'shadow-lg', 'shadow-brand-500/25');
-        b.classList.add('text-slate-400', 'hover:text-white', 'hover:bg-slate-800/50');
+        b.classList.add('text-slate-600', 'dark:text-slate-400', 'hover:text-brand-500', 'dark:hover:text-white', 'bg-slate-100', 'dark:bg-slate-800/50');
       });
 
       btn.classList.add('bg-brand-500', 'text-white', 'shadow-lg', 'shadow-brand-500/25');
-      btn.classList.remove('text-slate-400', 'hover:text-white', 'hover:bg-slate-800/50');
+      btn.classList.remove('text-slate-600', 'dark:text-slate-400', 'hover:text-brand-500', 'dark:hover:text-white', 'bg-slate-100', 'dark:bg-slate-800/50');
 
-      // Actualizar paneles
+      // Alternar paneles de contenido
       tabPanels.forEach(panel => {
         if (panel.id === targetId) {
           panel.classList.remove('hidden');
@@ -104,6 +110,9 @@ function initModuleTabs() {
 
 /* ===================================================================
    4. SELECTOR DE PRECIOS (Mensual vs Anual con 20% Desc.)
+   Plan Emprendedor: $9/mes ($7 anual)
+   Plan Pro: $29/mes ($23 anual)
+   Plan Franquicia: $79/mes ($63 anual)
 =================================================================== */
 function initPricingToggle() {
   const toggle = document.getElementById('pricing-toggle');
@@ -113,8 +122,8 @@ function initPricingToggle() {
   const periodElements = document.querySelectorAll('.plan-period');
 
   const prices = {
-    monthly: { starter: '0', pro: '29', enterprise: '79' },
-    annual: { starter: '0', pro: '23', enterprise: '63' }
+    monthly: { starter: '9', pro: '29', enterprise: '79' },
+    annual: { starter: '7', pro: '23', enterprise: '63' }
   };
 
   toggle.addEventListener('change', (e) => {
@@ -136,6 +145,7 @@ function initPricingToggle() {
 
 /* ===================================================================
    5. CALCULADORA INTERACTIVA DE RETORNO DE INVERSIÓN (ROI)
+   Ticket mínimo: 1$ | Pedidos mínimos: 1
 =================================================================== */
 function initRoiCalculator() {
   const ordersSlider = document.getElementById('roi-orders');
@@ -150,8 +160,8 @@ function initRoiCalculator() {
   if (!ordersSlider || !ticketSlider) return;
 
   function recalculate() {
-    const ordersPerDay = parseInt(ordersSlider.value, 10);
-    const avgTicket = parseFloat(ticketSlider.value);
+    const ordersPerDay = Math.max(1, parseInt(ordersSlider.value, 10) || 1);
+    const avgTicket = Math.max(1, parseFloat(ticketSlider.value) || 1);
 
     ordersVal.textContent = ordersPerDay.toString();
     ticketVal.textContent = `$${avgTicket.toFixed(0)}`;
@@ -159,18 +169,17 @@ function initRoiCalculator() {
     const monthlyOrders = ordersPerDay * 30;
     const monthlyRevenue = monthlyOrders * avgTicket;
 
-    // Ahorro promedio comparado con apps de delivery tradicionales (cobran 25% - 30% vs tarifa reducida Pídetelo ~8%-10%)
-    // Ahorro estimado ~15% de facturación bruta
+    // Ahorro estimado vs 25% de comisiones en apps convencionales (Pídetelo retiene ~8%-10%, ahorras ~15%)
     const estimatedSavings = monthlyRevenue * 0.15;
 
-    // Horas ahorradas en atención de llamadas / WhatsApp manual (~6 min por pedido)
+    // Horas ahorradas en atención manual de llamadas y WhatsApp (~6 min por pedido automatizado)
     const hoursSaved = Math.round((monthlyOrders * 6) / 60);
 
     if (revenueDisplay) {
       revenueDisplay.textContent = `$${monthlyRevenue.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
     }
     if (savingsDisplay) {
-      savingsDisplay.textContent = `$${estimatedSavings.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+      savingsDisplay.textContent = `$${Math.max(1, estimatedSavings).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
     }
     if (timeSavedDisplay) {
       timeSavedDisplay.textContent = `${hoursSaved} hrs/mes`;
@@ -198,7 +207,7 @@ function initFaqAccordion() {
     header.addEventListener('click', () => {
       const isOpen = !content.classList.contains('hidden');
 
-      // Cerrar todos los demás
+      // Cerrar otros acordeones
       faqItems.forEach(other => {
         const otherContent = other.querySelector('.faq-content');
         const otherIcon = other.querySelector('.faq-icon');
@@ -206,7 +215,7 @@ function initFaqAccordion() {
         if (otherIcon) otherIcon.style.transform = 'rotate(0deg)';
       });
 
-      // Alternar el actual
+      // Alternar actual
       if (!isOpen) {
         content.classList.remove('hidden');
         if (icon) icon.style.transform = 'rotate(180deg)';
@@ -269,14 +278,13 @@ function initContactForm() {
     const city = document.getElementById('contact-city')?.value || '';
     const message = document.getElementById('contact-message')?.value || '';
 
-    // Generar enlace directo a WhatsApp corporativo
     const text = encodeURIComponent(
-      `¡Hola Pídetelo! Deseo solicitar información para afiliar mi comercio.\n\n` +
+      `¡Hola equipo Pídetelo! Deseo solicitar información para afiliar mi comercio.\n\n` +
       `👤 *Nombre:* ${name}\n` +
       `🏪 *Comercio:* ${store}\n` +
       `📍 *Ciudad:* ${city}\n` +
       `📞 *Teléfono:* ${phone}\n` +
-      `💬 *Nota:* ${message}`
+      `💬 *Detalle:* ${message}`
     );
 
     const whatsappUrl = `https://wa.me/584120000000?text=${text}`;
@@ -286,7 +294,6 @@ function initContactForm() {
       setTimeout(() => alertSuccess.classList.add('hidden'), 5000);
     }
 
-    // Abrir WhatsApp en nueva pestaña
     window.open(whatsappUrl, '_blank');
     form.reset();
   });
@@ -331,7 +338,7 @@ function initFloatingWhatsApp() {
 
   btn.addEventListener('click', (e) => {
     e.preventDefault();
-    const msg = encodeURIComponent('¡Hola Pídetelo! Me interesa conocer más sobre la plataforma y afiliar mi negocio.');
+    const msg = encodeURIComponent('¡Hola Pídetelo! Me interesa afiliar mi comercio y conocer la plataforma.');
     window.open(`https://wa.me/584120000000?text=${msg}`, '_blank');
   });
 }

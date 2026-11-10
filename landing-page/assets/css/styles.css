@@ -1,9 +1,10 @@
 /* ===================================================================
    PÍDETELO - LANDING PAGE CORPORATIVA & PREMIUM STYLES
-   Paleta: Brand Orange (#F97316), Deep Navy (#0B1120), Emerald (#10B981)
+   Paleta: Brand Orange (#F97316), Deep Navy (#060B17), Emerald (#10B981)
+   Soporte Completo Dark Mode & Light Mode
 =================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&display=swap');
 
 :root {
   --brand-50: #fff7ed;
@@ -11,11 +12,20 @@
   --brand-500: #f97316;
   --brand-600: #ea580c;
   --brand-700: #c2410c;
-  --navy-950: #060b17;
-  --navy-900: #0b1329;
-  --navy-850: #0f1933;
-  --navy-800: #162447;
-  --slate-dark: #1e293b;
+  
+  --bg-primary: #f8fafc;
+  --bg-card: rgba(255, 255, 255, 0.9);
+  --border-card: rgba(226, 232, 240, 0.9);
+  --text-primary: #0f172a;
+  --text-muted: #64748b;
+}
+
+html.dark {
+  --bg-primary: #060b17;
+  --bg-card: rgba(15, 25, 51, 0.75);
+  --border-card: rgba(255, 255, 255, 0.08);
+  --text-primary: #f8fafc;
+  --text-muted: #94a3b8;
 }
 
 html {
@@ -35,24 +45,23 @@ body {
   font-family: 'JetBrains Mono', monospace;
 }
 
-/* Glassmorphism Cards */
+/* ===================================================================
+   GLASSMORPHISM ADAPTATIVO (LIGHT & DARK)
+=================================================================== */
 .glass-panel {
-  background: rgba(15, 25, 51, 0.75);
+  background: var(--bg-card);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.glass-panel-light {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(226, 232, 240, 0.8);
+  border: 1px solid var(--border-card);
 }
 
 /* Glow & Gradient effects */
 .glow-brand {
   box-shadow: 0 0 50px -10px rgba(249, 115, 22, 0.35);
+}
+
+.glow-brand-subtle {
+  box-shadow: 0 10px 30px -10px rgba(249, 115, 22, 0.2);
 }
 
 .glow-emerald {
@@ -71,82 +80,127 @@ body {
   -webkit-text-fill-color: transparent;
 }
 
-.gradient-border {
-  position: relative;
-  background: linear-gradient(135deg, #0f1933, #0b1329);
-  border-radius: 1.5rem;
-}
-
-.gradient-border::before {
-  content: "";
-  position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(135deg, rgba(249, 115, 22, 0.5), rgba(255, 255, 255, 0.1), rgba(16, 185, 129, 0.3));
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-}
-
-/* Floating animation */
+/* ===================================================================
+   ANIMACIONES & MICRO-INTERACCIONES
+=================================================================== */
 @keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-10px); }
+  0%, 100% { transform: translateY(0px) rotate(-1deg); }
+  50% { transform: translateY(-12px) rotate(1deg); }
+}
+
+@keyframes float-reverse {
+  0%, 100% { transform: translateY(0px) rotate(2deg); }
+  50% { transform: translateY(-10px) rotate(-1deg); }
 }
 
 @keyframes pulse-slow {
-  0%, 100% { opacity: 0.3; transform: scale(1); }
-  50% { opacity: 0.6; transform: scale(1.05); }
+  0%, 100% { opacity: 0.25; transform: scale(1); }
+  50% { opacity: 0.55; transform: scale(1.08); }
+}
+
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
 }
 
 .animate-float {
-  animation: float 5s ease-in-out infinite;
+  animation: float 6s ease-in-out infinite;
 }
 
-.animate-float-delayed {
-  animation: float 6s ease-in-out 2s infinite;
+.animate-float-reverse {
+  animation: float-reverse 7s ease-in-out infinite;
 }
 
 .animate-pulse-slow {
   animation: pulse-slow 8s ease-in-out infinite;
 }
 
-/* Mockup Frame Styling */
-.phone-mockup {
-  border: 12px solid #1e293b;
-  border-radius: 42px;
-  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.1);
+.shimmer-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer-btn::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  bottom: -50%;
+  left: -50%;
+  background: linear-gradient(to right, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.25) 50%, rgba(255, 255, 255, 0) 100%);
+  transform: rotate(30deg) translate(-100%, 0);
+  animation: shimmer 4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* ===================================================================
+   MOCKUP FRAMES DE ALTA FIDELIDAD (IPHONE & LAPTOP)
+=================================================================== */
+/* Marco de Smartphone (iPhone Pro) */
+.phone-mockup-frame {
+  border: 11px solid #1e293b;
+  border-radius: 44px;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.15);
   overflow: hidden;
   position: relative;
   background: #000;
 }
 
-.phone-mockup::before {
+.phone-mockup-frame::before {
+  /* Dynamic Island */
   content: '';
   position: absolute;
   top: 10px;
   left: 50%;
   transform: translateX(-50%);
-  width: 90px;
+  width: 84px;
   height: 20px;
-  background: #1e293b;
+  background: #000;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 20px;
-  z-index: 20;
+  z-index: 30;
 }
 
-.laptop-mockup {
-  border: 12px solid #1e293b;
-  border-bottom: 24px solid #1e293b;
-  border-radius: 20px 20px 0 0;
-  box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.8);
+/* Marco de Pantalla Web / Laptop / Monitor */
+.browser-mockup-frame {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.5);
   overflow: hidden;
   position: relative;
-  background: #0b1329;
 }
 
-/* Custom Scrollbar */
+.browser-header {
+  height: 40px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.browser-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.browser-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.browser-url-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 14px;
+  border-radius: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+}
+
+/* ===================================================================
+   SCROLLBAR & SLIDERS
+=================================================================== */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -165,7 +219,6 @@ body {
   background: #f97316;
 }
 
-/* Sliders */
 input[type=range] {
   accent-color: #f97316;
 }
