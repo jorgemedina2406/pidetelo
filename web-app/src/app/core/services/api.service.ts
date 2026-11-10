@@ -2201,4 +2201,59 @@ export class ApiService {
   resumeAllWhatsAppBots(tenantId: string): Observable<any> {
     return this.http.post<any>(this.baseUrl + '/whatsapp/conversations/' + tenantId + '/resume-all-bots', {});
   }
+  deleteWhatsAppConversation(conversationId: string): Observable<any> {
+    return this.http.delete<any>(this.baseUrl + '/whatsapp/conversations/' + conversationId);
+  }
+
+  clearAllWhatsAppConversations(tenantId: string): Observable<any> {
+    return this.http.delete<any>(this.baseUrl + '/whatsapp/conversations/tenant/' + tenantId + '/clear-all');
+  }
+
+  // --- MODIFICACION Y ADICION DE ITEMS A PEDIDOS ---
+  appendOrderItems(orderId: string, items: any[]): Observable<any> {
+    return this.http.post<any>(this.baseUrl + '/orders/' + orderId + '/append-items', { items });
+  }
+
+  removeOrderItem(orderId: string, payload: { itemId: string; productId?: string; disableProduct?: boolean }): Observable<any> {
+    return this.http.post<any>(this.baseUrl + '/orders/' + orderId + '/remove-item', payload);
+  }
+
+  // --- CANAL DE SOPORTE & TICKETS (SUPERADMIN & COMERCIOS) ---
+  getSupportTickets(tenantId?: string): Observable<any[]> {
+    const params: any = {};
+    if (tenantId) params.tenantId = tenantId;
+    return this.http.get<any[]>(this.baseUrl + '/support/tickets', { params });
+  }
+
+  getSupportTicket(id: string): Observable<any> {
+    return this.http.get<any>(this.baseUrl + '/support/tickets/' + id);
+  }
+
+  createSupportTicket(payload: {
+    tenant_id: string;
+    tenant_name: string;
+    branch_name?: string;
+    subject: string;
+    priority?: 'low' | 'medium' | 'high' | 'urgent';
+    initial_message: string;
+    sender_name: string;
+  }): Observable<any> {
+    return this.http.post<any>(this.baseUrl + '/support/tickets', payload);
+  }
+
+  getSupportMessages(ticketId: string): Observable<any[]> {
+    return this.http.get<any[]>(this.baseUrl + '/support/tickets/' + ticketId + '/messages');
+  }
+
+  sendSupportMessage(ticketId: string, payload: {
+    sender_type: 'merchant' | 'superadmin';
+    sender_name: string;
+    message: string;
+  }): Observable<any> {
+    return this.http.post<any>(this.baseUrl + '/support/tickets/' + ticketId + '/messages', payload);
+  }
+
+  updateSupportTicketStatus(ticketId: string, status: 'open' | 'in_progress' | 'resolved' | 'closed'): Observable<any> {
+    return this.http.put<any>(this.baseUrl + '/support/tickets/' + ticketId + '/status', { status });
+  }
 }

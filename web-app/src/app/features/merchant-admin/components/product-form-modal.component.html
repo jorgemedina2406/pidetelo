@@ -69,7 +69,7 @@
                   </div>
                   <button type="button" (click)="imageMode = imageMode === 'upload' ? 'url' : 'upload'"
                     class="text-[11px] font-bold text-brand-600 dark:text-brand-400 hover:underline cursor-pointer">
-                    {{ imageMode === 'upload' ? '🔗 Pegar Enlace URL' : '📁 Subir desde mi PC' }}
+                    {{ imageMode === 'upload' ? 'Pegar Enlace URL' : 'Subir desde mi PC' }}
                   </button>
                 </div>
 
@@ -364,7 +364,7 @@
                     class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 font-semibold focus:outline-none focus:border-brand-500">
                     <option value="">-- Sin categoría asignada (General) --</option>
                     @for (cat of categories; track cat.id) {
-                    <option [value]="cat.id">📁 {{ cat.name }}</option>
+                    <option [value]="cat.id">{{ cat.name }}</option>
                     }
                     <option value="__NEW__">➕ + Crear nueva categoría...</option>
                   </select>

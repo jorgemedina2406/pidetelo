@@ -63,7 +63,9 @@ export type IconName =
   | 'tag'
   | 'heart'
   | 'play'
-  | 'pause';
+  | 'pause'
+  | 'bot'
+  | 'package';
 
 
 
@@ -374,6 +376,19 @@ export type IconName =
         @case ('pause') {
           <rect x="6" y="4" width="4" height="16"/>
           <rect x="14" y="4" width="4" height="16"/>
+        }
+        @case ('bot') {
+          <path d="M12 8V4H8"/>
+          <rect width="16" height="12" x="4" y="8" rx="2"/>
+          <path d="M2 14h2"/>
+          <path d="M20 14h2"/>
+          <path d="M15 13v2"/>
+          <path d="M9 13v2"/>
+        }
+        @case ('package') {
+          <path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/>
+          <path d="M12 22V12"/>
+          <polyline points="3.29 7 12 12 20.71 7"/>
         }
       }
     </svg>

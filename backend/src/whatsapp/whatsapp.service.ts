@@ -786,6 +786,60 @@ export class WhatsAppService implements OnModuleInit {
     return data;
   }
 
+  async deleteConversation(conversationId: string) {
+    try {
+      await this.supabase.getClient()
+        .from('whatsapp_messages')
+        .delete()
+        .eq('conversation_id', conversationId);
+
+      await this.supabase.getClient()
+        .from('whatsapp_conversations')
+        .delete()
+        .eq('id', conversationId);
+    } catch (_) {}
+
+    const local = this.getLocalStorage();
+    if (local.conversations && local.conversations[conversationId]) {
+      delete local.conversations[conversationId];
+    }
+    if (Array.isArray(local.messages)) {
+      local.messages = local.messages.filter((m: any) => m.conversation_id !== conversationId);
+    }
+    this.saveLocalStorage(local);
+
+    return { success: true, message: 'Conversación eliminada con éxito' };
+  }
+
+  async clearAllConversations(tenantId: string) {
+    try {
+      await this.supabase.getClient()
+        .from('whatsapp_messages')
+        .delete()
+        .eq('tenant_id', tenantId);
+
+      await this.supabase.getClient()
+        .from('whatsapp_conversations')
+        .delete()
+        .eq('tenant_id', tenantId);
+    } catch (_) {}
+
+    const local = this.getLocalStorage();
+    if (local.conversations) {
+      for (const k of Object.keys(local.conversations)) {
+        if (local.conversations[k].tenant_id === tenantId) {
+          delete local.conversations[k];
+        }
+      }
+    }
+    if (Array.isArray(local.messages)) {
+      local.messages = local.messages.filter((m: any) => m.tenant_id !== tenantId);
+    }
+    this.saveLocalStorage(local);
+
+    return { success: true, message: 'Todas las conversaciones han sido eliminadas' };
+  }
+
   // ==========================================
   // HELPERS INTERNOS
   // ==========================================

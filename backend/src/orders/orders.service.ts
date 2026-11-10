@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, NotFoundException, InternalServerErrorException, BadRequestException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service.js';
 import { PlansService } from '../plans/plans.service.js';
 
@@ -411,5 +411,86 @@ export class OrdersService {
         [destLat, destLng],
       ],
     };
+  }
+  async appendItems(orderId: string, newItems: any[]) {
+    const order = await this.findById(orderId);
+    if (!order) throw new NotFoundException('Pedido no encontrado');
+
+    const nonModifiable = ['on_the_way', 'delivered', 'cancelled'];
+    if (nonModifiable.includes(order.status)) {
+      throw new BadRequestException('No se pueden adicionar productos a un pedido que ya está en camino o finalizado.');
+    }
+
+    const client = this.supabase.getClient();
+    let addedSubtotal = 0;
+
+    const formattedItems = newItems.map(item => {
+      const unitPrice = Number(item.unit_price || item.price || 0);
+      const qty = Number(item.quantity || 1);
+      const itemTotal = Number(item.item_total || (unitPrice * qty));
+      addedSubtotal += itemTotal;
+      return {
+        order_id: order.id,
+        product_id: item.product_id || null,
+        product_name: item.product_name || item.name || 'Producto adicional',
+        unit_price: unitPrice,
+        quantity: qty,
+        item_total: itemTotal,
+        selected_modifiers: item.selected_modifiers || [],
+      };
+    });
+
+    const { error: insErr } = await client.from('order_items').insert(formattedItems);
+    if (insErr) {
+      console.warn('[OrdersService] Error inserting appended items:', insErr.message);
+    }
+
+    const newSubtotal = Number(order.subtotal || 0) + addedSubtotal;
+    const deliveryFee = Number(order.delivery_fee || 0);
+    const newTotal = newSubtotal + deliveryFee;
+
+    await client.from('orders').update({
+      subtotal: newSubtotal,
+      total_amount_usd: newTotal,
+      total: newTotal,
+      updated_at: new Date().toISOString()
+    }).eq('id', order.id);
+
+    return this.findById(order.id);
+  }
+
+  async removeItemFromOrder(orderId: string, payload: { itemId: string; productId?: string; disableProduct?: boolean }) {
+    const order = await this.findById(orderId);
+    if (!order) throw new NotFoundException('Pedido no encontrado');
+
+    const client = this.supabase.getClient();
+
+    const { data: itemToDelete } = await client
+      .from('order_items')
+      .select('*')
+      .eq('id', payload.itemId)
+      .maybeSingle();
+
+    if (itemToDelete) {
+      await client.from('order_items').delete().eq('id', payload.itemId);
+
+      const itemTotal = Number(itemToDelete.item_total || (Number(itemToDelete.unit_price) * Number(itemToDelete.quantity))) || 0;
+      const newSubtotal = Math.max(0, Number(order.subtotal || 0) - itemTotal);
+      const deliveryFee = Number(order.delivery_fee || 0);
+      const newTotal = newSubtotal + deliveryFee;
+
+      await client.from('orders').update({
+        subtotal: newSubtotal,
+        total_amount_usd: newTotal,
+        total: newTotal,
+        updated_at: new Date().toISOString()
+      }).eq('id', order.id);
+    }
+
+    if (payload.disableProduct && payload.productId) {
+      await client.from('products').update({ is_available: false }).eq('id', payload.productId);
+    }
+
+    return this.findById(order.id);
   }
 }

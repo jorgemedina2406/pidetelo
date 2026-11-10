@@ -84,4 +84,18 @@ export class OrdersController {
       orders
     };
   }
+  @Post(':id/append-items')
+  @ApiOperation({ summary: 'Adicionar productos a un pedido antes de ser despachado' })
+  appendItems(@Param('id') id: string, @Body('items') items: any[]) {
+    return this.ordersService.appendItems(id, items);
+  }
+
+  @Post(':id/remove-item')
+  @ApiOperation({ summary: 'Remover producto agotado del pedido y recalcular monto' })
+  removeItem(
+    @Param('id') id: string,
+    @Body() payload: { itemId: string; productId?: string; disableProduct?: boolean },
+  ) {
+    return this.ordersService.removeItemFromOrder(id, payload);
+  }
 }

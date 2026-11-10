@@ -1675,12 +1675,18 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     }
   }
 
-  flyToRider(rider: Rider): void {
+  async flyToRider(rider: Rider): Promise<void> {
     this.selectedRadarRider.set(rider);
     if (!this.fleetRadarMap) return;
 
     if (!rider.currentLocation?.lat || !rider.currentLocation?.lng) {
-      alert(`El motorizado ${rider.name} aún no ha reportado su ubicación GPS satelital desde su teléfono móvil.`);
+      await this.confirmModal.confirm({
+        title: 'Ubicación Satelital No Reportada',
+        message: `El motorizado ${rider.name} aún no ha reportado su ubicación GPS satelital desde su teléfono móvil.\n\nIndícale que inicie turno en la App de Repartidores para activar la señal GPS en vivo.`,
+        confirmText: 'Entendido',
+        cancelText: '',
+        isDanger: false
+      });
       return;
     }
 
@@ -2755,7 +2761,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
   openNewBranchModal(): void {
     // Regla de Negocio: Solo la Sede Principal puede crear sucursales.
     if (!this.isMainBranchOrOwner()) {
-      alert('Acceso restringido: Una sucursal secundaria no tiene permisos para crear sucursales. Esta función es exclusiva de la Sede Principal del comercio.');
+      this.confirmModal.confirm({ title: 'Acceso Restringido', message: 'Una sucursal secundaria no tiene permisos para crear sucursales. Esta función es exclusiva de la Sede Principal del comercio.', confirmText: 'Entendido', cancelText: '', isDanger: false });
       return;
     }
     if (!this.canCreateBranch()) {
@@ -2838,7 +2844,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
 
   toggleBranch(branch: Branch): void {
     if (!this.canToggleBranch(branch)) {
-      alert('Acceso denegado: Solo la Sede Principal o el encargado de esta sucursal pueden modificar su estado.');
+      this.confirmModal.confirm({ title: 'Acceso Denegado', message: 'Solo la Sede Principal o el encargado asignado a esta sucursal pueden modificar su estado.', confirmText: 'Entendido', cancelText: '', isDanger: false });
       return;
     }
     const role = this.auth.currentUser()?.role;
@@ -2857,11 +2863,11 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
 
   openDeleteBranchModal(branch: Branch): void {
     if (!this.isMainBranchOrOwner()) {
-      alert('Acceso denegado: Solo la Sede Principal puede eliminar sucursales.');
+      this.confirmModal.confirm({ title: 'Acceso Denegado', message: 'Solo la Sede Principal o dueños del comercio pueden eliminar sucursales.', confirmText: 'Entendido', cancelText: '', isDanger: false });
       return;
     }
     if (branch.isMain || branch.name.toLowerCase().includes('principal')) {
-      alert('No es posible eliminar la Sede Principal (Matriz) del comercio.');
+      this.confirmModal.confirm({ title: 'Acción No Permitida', message: 'No es posible eliminar la Sede Principal (Matriz) del comercio.', confirmText: 'Entendido', cancelText: '', isDanger: false });
       return;
     }
     this.branchToDelete.set(branch);
@@ -3199,6 +3205,62 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       }
     });
   }
+  async deleteSelectedWhatsAppConversation(conversationId?: string): Promise<void> {
+    const id = conversationId || this.selectedWhatsAppConversation()?.id;
+    if (!id) return;
+
+    const confirmed = await this.confirmModal.confirm({
+      title: 'Eliminar Conversación',
+      message: '¿Estás seguro de que deseas eliminar esta conversación y todo su historial de mensajes de WhatsApp? Esta acción no se puede deshacer.',
+      confirmText: 'Sí, Eliminar Chat',
+      cancelText: 'Cancelar',
+      isDanger: true
+    });
+
+    if (!confirmed) return;
+
+    this.api.deleteWhatsAppConversation(id).subscribe({
+      next: () => {
+        this.whatsappConversations.update(list => list.filter(c => c.id !== id));
+        if (this.selectedWhatsAppConversation()?.id === id) {
+          this.selectedWhatsAppConversation.set(null);
+          this.whatsappMessages.set([]);
+        }
+        this.showToast('success', 'Conversación Eliminada', 'El chat ha sido eliminado de la bandeja.');
+      },
+      error: (err) => {
+        this.showToast('error', 'Error al Eliminar', err.error?.message || 'No se pudo eliminar la conversación.');
+      }
+    });
+  }
+
+  async clearAllWhatsAppConversations(): Promise<void> {
+    const tenantId = this.getEffectiveTenantId();
+    if (!tenantId) return;
+
+    const confirmed = await this.confirmModal.confirm({
+      title: 'Vaciar Bandeja de WhatsApp',
+      message: '¿Estás seguro de que deseas eliminar TODAS las conversaciones y mensajes de WhatsApp de este comercio? Esta acción limpiará por completo tu historial.',
+      confirmText: 'Sí, Vaciar Bandeja',
+      cancelText: 'Cancelar',
+      isDanger: true
+    });
+
+    if (!confirmed) return;
+
+    this.api.clearAllWhatsAppConversations(tenantId).subscribe({
+      next: () => {
+        this.whatsappConversations.set([]);
+        this.selectedWhatsAppConversation.set(null);
+        this.whatsappMessages.set([]);
+        this.showToast('success', 'Bandeja Vaciada', 'Se han eliminado todas las conversaciones de WhatsApp.');
+      },
+      error: (err) => {
+        this.showToast('error', 'Error al Vaciar', err.error?.message || 'No se pudieron eliminar las conversaciones.');
+      }
+    });
+  }
+
 
   async logout(): Promise<void> {
     await this.supabase.signOut();
@@ -3216,7 +3278,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
 
     const ordersList = this.filteredOrders();
     if (ordersList.length === 0) {
-      alert('No hay pedidos disponibles para exportar en este momento.');
+      this.showToast('info', 'Reporte Vacío', 'No hay pedidos disponibles para exportar en el rango seleccionado.');
       return;
     }
 

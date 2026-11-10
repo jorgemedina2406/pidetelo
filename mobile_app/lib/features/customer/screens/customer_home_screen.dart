@@ -876,11 +876,33 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        leadingWidth: 52,
         leading: Padding(
-          padding: const EdgeInsets.only(left: 12, top: 8, bottom: 8, right: 4),
-          child: Image.asset(
-            'assets/images/logo.png',
-            fit: BoxFit.contain,
+          padding: const EdgeInsets.only(left: 12, top: 6, bottom: 6, right: 2),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.06),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            padding: const EdgeInsets.all(4),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(7),
+              child: Image.asset(
+                'assets/images/logo-isotipo.png',
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => Image.asset(
+                  'assets/images/logo.png',
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
           ),
         ),
         title: Column(

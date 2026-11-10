@@ -30,7 +30,7 @@ export class ConfirmService {
           title: opts.title || '¿Estás seguro?',
           message: opts.message,
           confirmText: opts.confirmText || 'Confirmar',
-          cancelText: opts.cancelText || 'Cancelar',
+          cancelText: opts.cancelText !== undefined ? opts.cancelText : 'Cancelar',
           isDanger: opts.isDanger !== false
         },
         resolve

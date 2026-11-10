@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Put, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
 import { WhatsAppService } from './whatsapp.service.js';
 
 @Controller('api/whatsapp')
@@ -86,5 +86,14 @@ export class WhatsAppController {
   async resumeAllBots(@Param('tenantId') tenantId: string) {
     return this.whatsappService.resumeAllBots(tenantId);
   }
-}
 
+  @Delete('conversations/:conversationId')
+  async deleteConversation(@Param('conversationId') conversationId: string) {
+    return this.whatsappService.deleteConversation(conversationId);
+  }
+
+  @Delete('conversations/tenant/:tenantId/clear-all')
+  async clearAllConversations(@Param('tenantId') tenantId: string) {
+    return this.whatsappService.clearAllConversations(tenantId);
+  }
+}

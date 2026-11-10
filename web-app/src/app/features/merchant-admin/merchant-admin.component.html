@@ -1218,7 +1218,7 @@
               [class.dark:bg-slate-800]="selectedCategoryFilter() !== cat.id"
               [class.text-slate-600]="selectedCategoryFilter() !== cat.id"
               [class.dark:text-slate-300]="selectedCategoryFilter() !== cat.id">
-              <span>📁 {{ cat.name }}</span>
+              <span class="inline-flex items-center gap-1.5"><app-icon name="folder" [size]="12"></app-icon> {{ cat.name }}</span>
             </button>
             }
           </div>
@@ -1276,7 +1276,7 @@
                       <h3 class="font-bold text-xs group-hover:text-brand-500 transition-colors truncate">{{ prod.name }}</h3>
                       @if (getCategoryName(prod.categoryId); as cName) {
                       <span class="inline-block mt-0.5 px-1.5 py-0.2 rounded text-[9px] font-semibold bg-brand-500/10 text-brand-600 dark:text-brand-400">
-                        📁 {{ cName }}
+                        <span class="inline-flex items-center gap-1"><app-icon name="folder" [size]="10"></app-icon> {{ cName }}</span>
                       </span>
                       }
                     </div>
@@ -1369,7 +1369,7 @@
                     <span class="font-bold text-xs text-slate-900 dark:text-white truncate">{{ prod.name }}</span>
                     @if (getCategoryName(prod.categoryId); as cName) {
                     <span class="px-1.5 py-0.2 rounded text-[9px] font-semibold bg-brand-500/10 text-brand-600 dark:text-brand-400">
-                      📁 {{ cName }}
+                      <span class="inline-flex items-center gap-1"><app-icon name="folder" [size]="10"></app-icon> {{ cName }}</span>
                     </span>
                     }
                     <span class="text-[9px] font-bold px-1.5 py-0.2 rounded"
@@ -3189,12 +3189,20 @@
                       <app-icon name="refresh-cw" [size]="11"></app-icon>
                     </button>
                   </div>
-                  <button (click)="resumeAllWhatsAppBots()"
-                    class="w-full py-1.5 px-2.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs"
-                    title="Reactivar el bot en todas las conversaciones para que responda automáticamente a todos los clientes">
-                    <span>🤖</span>
-                    <span>Activar Bot para Todos</span>
-                  </button>
+                  <div class="flex items-center gap-2">
+                    <button (click)="resumeAllWhatsAppBots()"
+                      class="flex-1 py-1.5 px-2.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs"
+                      title="Reactivar el bot en todas las conversaciones para que responda automáticamente a todos los clientes">
+                      <app-icon name="bot" [size]="13"></app-icon>
+                      <span>Activar Bot</span>
+                    </button>
+                    <button (click)="clearAllWhatsAppConversations()"
+                      class="py-1.5 px-2.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs"
+                      title="Eliminar todas las conversaciones para limpiar la bandeja">
+                      <app-icon name="trash" [size]="13"></app-icon>
+                      <span>Vaciar</span>
+                    </button>
+                  </div>
                 </div>
 
                 <!-- Conversation Cards -->
@@ -3229,11 +3237,11 @@
                             </span>
                             @if (conv.mode === 'human') {
                               <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 flex items-center gap-1">
-                                <span>👤</span> Operador
+                                <span class="inline-flex items-center gap-1"><app-icon name="user" [size]="10"></app-icon> Operador</span>
                               </span>
                             } @else {
                               <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 flex items-center gap-1">
-                                <span>🤖</span> Bot
+                                <span class="inline-flex items-center gap-1"><app-icon name="bot" [size]="10"></app-icon> Bot</span>
                               </span>
                             }
                           </div>
@@ -3291,17 +3299,22 @@
                         <button (click)="toggleWhatsAppBotMode('bot')"
                           class="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer"
                           title="Reanudar el bot para que responda automáticamente">
-                          <span>▶️</span>
+                          <app-icon name="play" [size]="13"></app-icon>
                           <span>Reanudar Bot</span>
                         </button>
                       } @else {
                         <button (click)="toggleWhatsAppBotMode('human')"
                           class="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer"
                           title="Pausa el bot temporalmente para que puedas hablar sin que el bot envíe menús">
-                          <span>⏸️</span>
-                          <span>Pausar Bot (Atender yo)</span>
+                          <app-icon name="pause" [size]="13"></app-icon>
+                          <span>Pausar Bot</span>
                         </button>
                       }
+                      <button (click)="deleteSelectedWhatsAppConversation(currentConv.id)"
+                        class="p-2 rounded-xl bg-slate-100 hover:bg-rose-50 dark:bg-slate-800 dark:hover:bg-rose-950/40 text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 transition-all cursor-pointer border border-slate-200 dark:border-slate-700"
+                        title="Eliminar este chat e historial">
+                        <app-icon name="trash" [size]="14"></app-icon>
+                      </button>
                     </div>
                   </div>
 
