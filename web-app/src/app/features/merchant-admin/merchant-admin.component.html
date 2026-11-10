@@ -1500,21 +1500,43 @@
               </div>
 
               <!-- Cupo de Sedes Progress Card (Solo Sede Principal lleva el conteo) -->
-              <div class="bg-white dark:bg-slate-800/90 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-xs min-w-[220px] flex-shrink-0 space-y-2">
-                <div class="flex items-center justify-between text-xs font-bold">
-                  <span class="text-slate-500 dark:text-slate-400">Conteo de Sedes Creadas:</span>
-                  <span class="font-extrabold text-brand-600 dark:text-brand-400 font-mono text-sm">
-                    {{ activeBranchesCount() }} / {{ currentSubscriptionPlan().maxBranches }}
-                  </span>
-                </div>
-                <div class="w-full h-2 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
-                  <div class="h-full bg-gradient-to-r from-brand-500 to-amber-500 transition-all duration-300"
-                    [style.width.%]="Math.min(100, (activeBranchesCount() / currentSubscriptionPlan().maxBranches) * 100)">
+              <div class="bg-white dark:bg-slate-800/90 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-xs min-w-[240px] flex-shrink-0 space-y-2">
+                @if (currentSubscriptionPlan().maxBranches === -1) {
+                  <div class="flex items-center justify-between text-xs font-bold">
+                    <span class="text-slate-500 dark:text-slate-400">Sucursales Creadas:</span>
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-black bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                      <span>{{ activeBranchesCount() }}</span>
+                      <span class="opacity-50">/</span>
+                      <span class="text-sm">Ilimitadas ∞</span>
+                    </span>
                   </div>
-                </div>
-                <span class="text-[10px] text-slate-400 block font-medium">
-                  {{ currentSubscriptionPlan().maxBranches - activeBranchesCount() }} cupo(s) disponible(s) en este plan
-                </span>
+                  <div class="w-full h-2 rounded-full bg-emerald-100 dark:bg-emerald-950/40 overflow-hidden">
+                    <div class="h-full bg-gradient-to-r from-emerald-500 to-teal-500 w-full rounded-full"></div>
+                  </div>
+                  <span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1.5">
+                    <app-icon name="check" [size]="12"></app-icon>
+                    <span>Sedes ilimitadas (Plan Franquicia)</span>
+                  </span>
+                } @else {
+                  <div class="flex items-center justify-between text-xs font-bold">
+                    <span class="text-slate-500 dark:text-slate-400">Sucursales Creadas:</span>
+                    <span class="font-extrabold text-brand-600 dark:text-brand-400 font-mono text-sm">
+                      {{ Math.max(0, activeBranchesCount() - 1) }} / {{ currentSubscriptionPlan().maxBranches }}
+                    </span>
+                  </div>
+                  <div class="w-full h-2 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
+                    <div class="h-full bg-gradient-to-r from-brand-500 to-amber-500 transition-all duration-300"
+                      [style.width.%]="currentSubscriptionPlan().maxBranches > 0 ? Math.min(100, (Math.max(0, activeBranchesCount() - 1) / currentSubscriptionPlan().maxBranches) * 100) : 100">
+                    </div>
+                  </div>
+                  <span class="text-[10px] text-slate-500 dark:text-slate-400 block font-medium">
+                    @if (currentSubscriptionPlan().maxBranches === 0) {
+                      Solo sede principal autorizada (Plan Emprendedor)
+                    } @else {
+                      {{ Math.max(0, currentSubscriptionPlan().maxBranches - Math.max(0, activeBranchesCount() - 1)) }} sucursal(es) adicional(es) disponible(s)
+                    }
+                  </span>
+                }
               </div>
 
             </div>
