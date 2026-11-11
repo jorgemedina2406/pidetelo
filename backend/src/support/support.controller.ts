@@ -10,6 +10,25 @@ export class SupportController {
     return this.supportService.getTickets(tenantId);
   }
 
+  @Post('leads')
+  async createLead(
+    @Body() payload: {
+      name: string;
+      email: string;
+      phone: string;
+      store: string;
+      city?: string;
+      message?: string;
+    },
+  ) {
+    return this.supportService.saveLead(payload);
+  }
+
+  @Get('leads')
+  async getLeads() {
+    return this.supportService.getLeads();
+  }
+
   @Get('tickets/:id')
   async getTicket(@Param('id') id: string) {
     return this.supportService.getTicket(id);

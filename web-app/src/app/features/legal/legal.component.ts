@@ -435,3 +435,4 @@ export class LegalComponent implements OnInit {
     this.isReclamoSubmitted.set(true);
   }
 }
+

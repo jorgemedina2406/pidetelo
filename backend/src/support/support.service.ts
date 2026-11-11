@@ -29,9 +29,52 @@ export interface SupportMessage {
 export class SupportService {
   private readonly logger = new Logger(SupportService.name);
   private readonly storageFilePath = path.resolve(process.cwd(), 'data/support_data.json');
+  private readonly leadsFilePath = path.resolve(process.cwd(), 'data/leads.json');
 
   constructor(private readonly supabase: SupabaseService) {
     this.ensureLocalStorage();
+  }
+
+  async saveLead(data: {
+    name: string;
+    email: string;
+    phone: string;
+    store: string;
+    city?: string;
+    message?: string;
+  }) {
+    const lead = {
+      id: crypto.randomUUID(),
+      ...data,
+      created_at: new Date().toISOString()
+    };
+
+    try {
+      let leads: any[] = [];
+      if (fs.existsSync(this.leadsFilePath)) {
+        leads = JSON.parse(fs.readFileSync(this.leadsFilePath, 'utf8'));
+      }
+      leads.unshift(lead);
+      fs.writeFileSync(this.leadsFilePath, JSON.stringify(leads, null, 2), 'utf8');
+      this.logger.log(`[Lead Saved] Comercio: ${data.store} (${data.email})`);
+    } catch (err) {
+      this.logger.warn(`Error guardando lead local: ${err}`);
+    }
+
+    try {
+      await this.supabase.getClient().from('leads').insert(lead);
+    } catch (_) {}
+
+    return { success: true, lead };
+  }
+
+  async getLeads() {
+    try {
+      if (fs.existsSync(this.leadsFilePath)) {
+        return JSON.parse(fs.readFileSync(this.leadsFilePath, 'utf8'));
+      }
+    } catch (_) {}
+    return [];
   }
 
   private ensureLocalStorage() {

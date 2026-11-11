@@ -321,9 +321,12 @@ function initContactForm() {
       `*Teléfono:* ${phone}\n` +
       `*Detalle:* ${message || 'Solicitud de demo comercial'}`
     );
-    const whatsappUrl = `https://wa.me/584120000000?text=${waText}`;
+    const whatsappUrl = `https://wa.me/584125163118?text=${waText}`;
     if (waLink) waLink.href = whatsappUrl;
 
+    let needsActivation = false;
+
+    // 1. Envío a FormSubmit (Correo a pideteloadomicilio@gmail.com)
     try {
       const response = await fetch('https://formsubmit.co/ajax/pideteloadomicilio@gmail.com', {
         method: 'POST',
@@ -333,10 +336,31 @@ function initContactForm() {
         },
         body: JSON.stringify(payload)
       });
-      console.log('[Landing Contact] FormSubmit status:', response.status);
+      const resJson = await response.json();
+      console.log('[Landing Contact] FormSubmit status:', response.status, resJson);
+
+      if (resJson?.message && resJson.message.toLowerCase().includes('activation')) {
+        needsActivation = true;
+      }
     } catch (err) {
       console.warn('[Landing Contact] Notice:', err);
     }
+
+    // 2. Respaldo simultáneo en Backend local / API Leads
+    try {
+      await fetch('/api/support/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          email,
+          phone,
+          store,
+          city,
+          message
+        })
+      });
+    } catch (_) {}
 
     if (submitBtn) {
       submitBtn.disabled = false;
@@ -345,6 +369,10 @@ function initContactForm() {
 
     form.classList.add('hidden');
     if (alertSuccess) {
+      const activationBanner = document.getElementById('contact-activation-notice');
+      if (activationBanner) {
+        activationBanner.classList.toggle('hidden', !needsActivation);
+      }
       alertSuccess.classList.remove('hidden');
     }
   });
@@ -390,7 +418,7 @@ function initFloatingWhatsApp() {
   btn.addEventListener('click', (e) => {
     e.preventDefault();
     const msg = encodeURIComponent('¡Hola Pídetelo! Me interesa afiliar mi comercio y conocer la plataforma.');
-    window.open(`https://wa.me/584120000000?text=${msg}`, '_blank');
+    window.open(`https://wa.me/584125163118?text=${msg}`, '_blank');
   });
 }
 
