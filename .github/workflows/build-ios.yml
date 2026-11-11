@@ -12,10 +12,6 @@ on:
           - ambas
           - cliente
           - rider
-  push:
-    branches:
-      - main
-      - master
 
 jobs:
   build-ios:
