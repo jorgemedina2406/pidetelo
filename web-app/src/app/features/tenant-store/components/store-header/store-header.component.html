@@ -39,7 +39,7 @@
 
       <!-- Store Hero Banner -->
       <div class="relative h-48 sm:h-64 w-full bg-slate-900 overflow-hidden">
-        <img [src]="selectedBranch?.bannerUrl || store.bannerUrl || 'assets/delivery_courier.jpg'"
+        <img [src]="selectedBranch?.bannerUrl || store.bannerUrl || '/assets/delivery_courier.jpg'"
              [alt]="selectedBranch?.name || store.name"
              (error)="onBannerError($event)"
              class="w-full h-full object-cover opacity-75" />

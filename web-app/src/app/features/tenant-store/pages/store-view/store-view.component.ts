@@ -101,7 +101,11 @@ export class StoreViewComponent implements OnInit {
     const fallbackOpen = (b as any)?.open_time || (b as any)?.openTime || rawBh?.open || (t as any)?.open_time || (t as any)?.openTime || '08:00';
     const fallbackClose = (b as any)?.close_time || (b as any)?.closeTime || rawBh?.close || (t as any)?.close_time || (t as any)?.closeTime || '23:00';
 
-    const now = new Date();
+    let now = new Date();
+    try {
+      const vzlaStr = new Date().toLocaleString('en-US', { timeZone: 'America/Caracas' });
+      now = new Date(vzlaStr);
+    } catch (_) {}
     const daysMap = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
     const todayName = daysMap[now.getDay()];
 

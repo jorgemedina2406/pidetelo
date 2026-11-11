@@ -57,6 +57,16 @@ export const routes: Routes = [
     title: 'Marketplace | Restaurantes y Comercios Cercanos'
   },
   {
+    path: 'legal',
+    loadComponent: () => import('./features/legal/legal.component').then(m => m.LegalComponent),
+    title: 'Términos, Privacidad y Cookies | Pídetelo.app'
+  },
+  {
+    path: 'legal/:doc',
+    loadComponent: () => import('./features/legal/legal.component').then(m => m.LegalComponent),
+    title: 'Documentos Legales y Transparencia | Pídetelo.app'
+  },
+  {
     path: 'merchan-admin',
     redirectTo: 'merchant-admin'
   },

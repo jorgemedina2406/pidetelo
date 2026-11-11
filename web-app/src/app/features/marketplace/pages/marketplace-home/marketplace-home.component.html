@@ -6,7 +6,7 @@
           
           <!-- Logo & Brand Badge -->
           <a routerLink="/explorar" class="flex items-center gap-2.5 group cursor-pointer focus:outline-none transition-transform active:scale-95">
-            <img src="assets/logo.png" 
+            <img src="/assets/logo.png" 
                  alt="Pídetelo Express" 
                  class="h-9 sm:h-11 w-auto max-w-[170px] sm:max-w-[220px] object-contain drop-shadow-xs" />
             <span class="hidden md:inline-flex text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 tracking-wider">
@@ -116,7 +116,7 @@
           </h1>
 
           <p class="text-sm sm:text-base text-slate-600 dark:text-slate-300 max-w-2xl leading-relaxed">
-            Explora las cartas oficiales de tus marcas favoritas en Barquisimeto y Cabudare. Precios en tiempo real, cálculo de delivery y pedidos directos por WhatsApp o en línea.
+            Explora las cartas oficiales de tus marcas favoritas. Precios en tiempo real, cálculo de delivery y pedidos directos por WhatsApp o en línea.
           </p>
 
           <!-- Floating Enhanced Search Box -->
@@ -314,7 +314,7 @@
                 <div>
                   <!-- Image Banner with Gradient & Overlay Badges -->
                   <div class="relative h-44 sm:h-48 bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                    <img [src]="tenant.bannerUrl || 'assets/delivery_courier.jpg'" 
+                    <img [src]="tenant.bannerUrl || '/assets/delivery_courier.jpg'" 
                          [alt]="tenant.name"
                          (error)="onBannerError($event)"
                          class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
@@ -439,7 +439,7 @@
             <!-- Col 1: Brand & App Download -->
             <div class="space-y-4 lg:col-span-1">
               <a routerLink="/explorar" class="inline-block">
-                <img src="assets/logo.png" alt="Pídetelo Express" class="h-10 w-auto object-contain" />
+                <img src="/assets/logo.png" alt="Pídetelo Express" class="h-10 w-auto object-contain" />
               </a>
               <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                 Tu plataforma multi-comercio para descubrir menús oficiales, calcular delivery en tiempo real y hacer pedidos directos sin intermediarios costosos.
@@ -454,14 +454,14 @@
                      rel="noopener"
                      title="Descargar APK para Android"
                      class="transition-transform hover:scale-105 active:scale-95 inline-block">
-                    <img src="assets/download-button-play.svg" alt="Disponible en Google Play" class="h-10 w-auto rounded-lg shadow-xs" />
+                    <img src="/assets/download-button-play.svg" alt="Disponible en Google Play" class="h-10 w-auto rounded-lg shadow-xs" />
                   </a>
                   <a href="https://github.com/jorgemedina2406/pidetelo/releases/latest" 
                      target="_blank" 
                      rel="noopener"
                      title="Descargar IPA para iOS"
                      class="transition-transform hover:scale-105 active:scale-95 inline-block">
-                    <img src="assets/download-button-ios.svg" alt="Descargar en App Store" class="h-10 w-auto rounded-lg shadow-xs" />
+                    <img src="/assets/download-button-ios.svg" alt="Descargar en App Store" class="h-10 w-auto rounded-lg shadow-xs" />
                   </a>
                 </div>
               </div>
@@ -494,10 +494,10 @@
             <div class="space-y-3">
               <h4 class="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">Legal & Transparencia</h4>
               <ul class="space-y-2 text-xs text-slate-600 dark:text-slate-400">
-                <li><span class="hover:text-brand-600 dark:hover:text-brand-400 cursor-pointer">Términos y Condiciones</span></li>
-                <li><span class="hover:text-brand-600 dark:hover:text-brand-400 cursor-pointer">Política de Privacidad</span></li>
-                <li><span class="hover:text-brand-600 dark:hover:text-brand-400 cursor-pointer">Política de Cookies</span></li>
-                <li><span class="hover:text-brand-600 dark:hover:text-brand-400 cursor-pointer">Libro de Reclamaciones</span></li>
+                <li><a routerLink="/legal/terminos" class="hover:text-brand-600 dark:hover:text-brand-400 transition-colors cursor-pointer">Términos y Condiciones</a></li>
+                <li><a routerLink="/legal/privacidad" class="hover:text-brand-600 dark:hover:text-brand-400 transition-colors cursor-pointer">Política de Privacidad</a></li>
+                <li><a routerLink="/legal/cookies" class="hover:text-brand-600 dark:hover:text-brand-400 transition-colors cursor-pointer">Política de Cookies</a></li>
+                <li><a routerLink="/legal/reclamaciones" class="hover:text-brand-600 dark:hover:text-brand-400 transition-colors cursor-pointer">Libro de Reclamaciones</a></li>
                 <li><a href="https://wa.me/584120000000?text=Hola,%20necesito%20soporte%20con%20Pidetelo" target="_blank" rel="noopener" class="hover:text-emerald-500 font-bold transition-colors">💬 Contacto & Soporte WhatsApp</a></li>
               </ul>
             </div>
@@ -510,10 +510,8 @@
               <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
               <span>© 2026 <strong>Pídetelo Express C.A.</strong> Todos los derechos reservados.</span>
             </div>
-            <div class="flex items-center gap-4 text-[11px]">
+            <div class="flex items-center gap-2 text-[11px]">
               <span>Hecho con ❤️ para Venezuela</span>
-              <span>•</span>
-              <span>Barquisimeto & Cabudare</span>
             </div>
           </div>
 

@@ -215,24 +215,32 @@ export class MarketplaceHomeComponent implements OnInit {
     }
 
     if (query) {
+      const normalizeText = (txt: string) => (txt || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const normQuery = normalizeText(query);
+      const strippedQuery = normQuery.replace(/[^a-z0-9]/g, '');
+
       list = list.filter(t => {
-        const name = (t.name || '').toLowerCase();
-        const category = (t.category || '').toLowerCase();
-        const tagline = (t.tagline || '').toLowerCase();
-        const description = (t.description || '').toLowerCase();
-        const address = (t.contact?.address || '').toLowerCase();
-        const inSubcats = (t.subcategories || []).some(s => (s || '').toLowerCase().includes(query));
-        const inBranches = (t.branches || []).some((b: any) =>
-          (b.name || '').toLowerCase().includes(query) || (b.address || '').toLowerCase().includes(query)
-        );
+        const name = normalizeText(t.name);
+        const strippedName = name.replace(/[^a-z0-9]/g, '');
+        const category = normalizeText(t.category);
+        const tagline = normalizeText(t.tagline);
+        const description = normalizeText(t.description);
+        const address = normalizeText(t.contact?.address || (t as any).address);
+        const inSubcats = (t.subcategories || []).some(s => normalizeText(s).includes(normQuery) || normalizeText(s).replace(/[^a-z0-9]/g, '').includes(strippedQuery));
+        const inBranches = (t.branches || []).some((b: any) => {
+          const bName = normalizeText(b.name);
+          const bAddr = normalizeText(b.address);
+          return bName.includes(normQuery) || bName.replace(/[^a-z0-9]/g, '').includes(strippedQuery) || bAddr.includes(normQuery);
+        });
 
         return (
-          name.includes(query) ||
-          category.includes(query) ||
+          name.includes(normQuery) ||
+          (strippedQuery.length > 2 && strippedName.includes(strippedQuery)) ||
+          category.includes(normQuery) ||
           inSubcats ||
-          tagline.includes(query) ||
-          description.includes(query) ||
-          address.includes(query) ||
+          tagline.includes(normQuery) ||
+          description.includes(normQuery) ||
+          address.includes(normQuery) ||
           inBranches
         );
       });
@@ -407,7 +415,11 @@ export class MarketplaceHomeComponent implements OnInit {
     const fallbackOpen = rawBh?.open || (tenant as any).open_time || (tenant as any).openTime || '11:00';
     const fallbackClose = rawBh?.close || (tenant as any).close_time || (tenant as any).closeTime || '23:00';
 
-    const now = new Date();
+    let now = new Date();
+    try {
+      const vzlaStr = new Date().toLocaleString('en-US', { timeZone: 'America/Caracas' });
+      now = new Date(vzlaStr);
+    } catch (_) {}
     const daysMap = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
     const todayName = daysMap[now.getDay()];
 
@@ -471,7 +483,8 @@ export class MarketplaceHomeComponent implements OnInit {
 
   getFallbackLogo(name?: string): string {
     const initial = (name || 'P').trim().charAt(0).toUpperCase();
-    return `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120"><rect width="120" height="120" rx="24" fill="%23f97316"/><text x="50%" y="54%" font-family="system-ui,sans-serif" font-weight="900" font-size="52" fill="white" text-anchor="middle" dominant-baseline="middle">${initial}</text></svg>`;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120"><rect width="120" height="120" rx="24" fill="#f97316"/><text x="50%" y="54%" font-family="system-ui,sans-serif" font-weight="900" font-size="52" fill="white" text-anchor="middle" dominant-baseline="middle">${initial}</text></svg>`;
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
   }
 
   onLogoError(event: Event, name?: string): void {
@@ -486,7 +499,7 @@ export class MarketplaceHomeComponent implements OnInit {
     const target = event.target as HTMLImageElement;
     if (target) {
       target.onerror = null;
-      target.src = 'assets/delivery_courier.jpg';
+      target.src = '/assets/delivery_courier.jpg';
     }
   }
 

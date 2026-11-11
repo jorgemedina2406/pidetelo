@@ -92,7 +92,11 @@ export class TenantsService {
     const fallbackClose = businessHours?.close || '23:00';
     const scheduleDays = businessHours?.scheduleDays || [];
 
-    const now = new Date();
+    let now = new Date();
+    try {
+      const vzlaStr = new Date().toLocaleString('en-US', { timeZone: 'America/Caracas' });
+      now = new Date(vzlaStr);
+    } catch (_) {}
     const daysMap = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
     const todayName = daysMap[now.getDay()];
 

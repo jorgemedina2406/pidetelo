@@ -2794,7 +2794,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
 
 
   copyWhatsAppGreeting(branch: Branch): void {
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://pidetelo.com';
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://pidetelo.app';
     const tenant = this.currentTenant();
     const slug = tenant?.slug || 'burger-king';
     const branchParam = branch.slug || branch.id;

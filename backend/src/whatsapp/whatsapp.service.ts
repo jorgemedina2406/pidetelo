@@ -621,7 +621,7 @@ export class WhatsAppService implements OnModuleInit {
 
     // OPCIÓN 1: PEDIDO WEB
     if (cleanedText === '1' || cleanedText.includes('web') || cleanedText.includes('catalogo') || cleanedText.includes('menú') || cleanedText.includes('menu') || cleanedText.includes('tienda') || cleanedText.includes('pedir')) {
-      const webUrl = `https://pidetelo.com/t/${tenantSlug}${branchId ? `?branch=${branchId}` : ''}`;
+      const webUrl = `https://pidetelo.app/t/${tenantSlug}${branchId ? `?branch=${branchId}` : ''}`;
       const reply = `🛒 *¡Excelente elección!*\n\nPuedes ver todo nuestro menú y hacer tu pedido directamente en línea con entrega a domicilio o retiro aquí:\n👉 ${webUrl}\n\n_Si deseas hablar con una persona, responde *3*._`;
       await this.sendExternalMessage(instance.instance_name, customerPhone, reply, tenantId);
       await this.saveMessage(conversation.id, tenantId, 'bot', reply);
@@ -630,7 +630,7 @@ export class WhatsAppService implements OnModuleInit {
 
     // OPCIÓN 2: DESCARGAR APP MÓVIL
     if (cleanedText === '2' || cleanedText.includes('app') || cleanedText.includes('descargar') || cleanedText.includes('aplicacion') || cleanedText.includes('apk') || cleanedText.includes('ipa')) {
-      const reply = `📱 *¡Descarga la App Móvil de ${tenantName}!* 🚀\n\nDisfruta de promociones exclusivas, cupones de descuento y seguimiento en vivo por GPS de tu motorizado:\n\n🤖 *Android (APK Directo):*\nhttps://pidetelo.com/descargas/app-cliente.apk\n\n🍏 *iOS (iPhone):*\nhttps://pidetelo.com/descargas/app-cliente.ipa\n\n_O haz tu pedido directo en la web respondiendo *1*._`;
+      const reply = `📱 *¡Descarga la App Móvil de ${tenantName}!* 🚀\n\nDisfruta de promociones exclusivas, cupones de descuento y seguimiento en vivo por GPS de tu motorizado:\n\n🤖 *Android (APK Directo):*\nhttps://pidetelo.app/descargas/app-cliente.apk\n\n🍏 *iOS (iPhone):*\nhttps://pidetelo.app/descargas/app-cliente.ipa\n\n_O haz tu pedido directo en la web respondiendo *1*._`;
       await this.sendExternalMessage(instance.instance_name, customerPhone, reply, tenantId);
       await this.saveMessage(conversation.id, tenantId, 'bot', reply);
       return;
@@ -638,7 +638,7 @@ export class WhatsAppService implements OnModuleInit {
 
     // MENÚ PRINCIPAL POR DEFECTO
     const greeting = instance.greeting_message || `¡Hola! 👋 Gracias por comunicarte con *${tenantName}*.`;
-    const webUrl = `https://pidetelo.com/t/${tenantSlug}${branchId ? `?branch=${branchId}` : ''}`;
+    const webUrl = `https://pidetelo.app/t/${tenantSlug}${branchId ? `?branch=${branchId}` : ''}`;
 
     const defaultMenu = `${greeting}\n\n*Por favor, responde con el número de la opción que prefieras:*\n\n1️⃣ 🌐 *Pedir por la Tienda Web*\n👉 ${webUrl}\n\n2️⃣ 📱 *Descargar la App Móvil*\n👉 Promociones, cupones y GPS en vivo.\n\n3️⃣ 👤 *Hablar con un Operador*\n👉 Un miembro de nuestro equipo te responderá aquí directamente.`;
 
