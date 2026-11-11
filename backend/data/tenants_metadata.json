@@ -81,25 +81,22 @@
       "baseCurrency": "USD",
       "displayMode": "usd_and_bs",
       "exchangeRate": 896.12,
-      "lastRateUpdate": "2026-11-07T16:55:45.655Z",
+      "lastRateUpdate": "2026-11-11T12:29:16.157Z",
       "acceptedPaymentMethods": [
         "cash_usd",
         "mobile_transfer",
-        "cash_local",
-        "card_terminal"
+        "cash_local"
       ]
     },
     "accepted_payment_methods": [
       "cash_usd",
       "mobile_transfer",
-      "cash_local",
-      "card_terminal"
+      "cash_local"
     ],
     "acceptedPaymentMethods": [
       "cash_usd",
       "mobile_transfer",
-      "cash_local",
-      "card_terminal"
+      "cash_local"
     ],
     "plan_code": "FRANQUICIA",
     "planCode": "FRANQUICIA"

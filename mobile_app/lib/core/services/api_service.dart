@@ -434,6 +434,15 @@ class ApiService {
         (item['deliverySettings']?['deliveryRadiusKm'] as num?)?.toDouble() ??
         15.0;
 
+    final primaryBranch = branchesList.isNotEmpty ? branchesList.first : null;
+    final rawBh = item['business_hours'] is Map
+        ? item['business_hours'] as Map<String, dynamic>
+        : (item['businessHours'] is Map ? item['businessHours'] as Map<String, dynamic> : null);
+    final openTime = item['open_time'] ?? item['openTime'] ?? rawBh?['open'] ?? primaryBranch?.openTime ?? '11:00';
+    final closeTime = item['close_time'] ?? item['closeTime'] ?? rawBh?['close'] ?? primaryBranch?.closeTime ?? '23:00';
+    final isOpenNow = item['is_open_now'] ?? item['isOpenNow'] ?? rawBh?['isOpenNow'] ?? primaryBranch?.isOpenNow ?? true;
+    final scheduleDays = rawBh?['scheduleDays'] ?? item['scheduleDays'] ?? item['schedule_days'] ?? primaryBranch?.scheduleDays;
+
     return {
       'id': item['id'],
       'name': item['name'] ?? 'Comercio',
@@ -464,6 +473,14 @@ class ApiService {
       'longitude': (item['longitude'] as num?)?.toDouble() ?? -69.2812938,
       'delivery_radius_km': deliveryRadius,
       'deliveryRadiusKm': deliveryRadius,
+      'open_time': openTime,
+      'openTime': openTime,
+      'close_time': closeTime,
+      'closeTime': closeTime,
+      'is_open_now': isOpenNow,
+      'isOpenNow': isOpenNow,
+      'business_hours': rawBh,
+      'scheduleDays': scheduleDays,
       'isPromo': false,
       'promoText': '',
       'isFeatured': item['is_featured'] ?? item['isFeatured'] ?? false,

@@ -94,17 +94,62 @@ export class StoreViewComponent implements OnInit {
 
   readonly isStoreOpen = computed(() => {
     const t = this.tenant();
-    if (!t) return { isOpen: true, label: 'Abierto', openStr: '09:00', closeStr: '23:00' };
+    if (!t) return { isOpen: true, label: 'Abierto', openStr: '11:00', closeStr: '23:00' };
     const b = this.cart.selectedBranch();
-    const hours = b?.businessHours || t.deliverySettings?.businessHours;
-    const openStr = hours?.open || '09:00';
-    const closeStr = hours?.close || '23:00';
+    const rawBh = (b as any)?.business_hours || b?.businessHours || (t as any).business_hours || (t as any).businessHours || t.deliverySettings?.businessHours;
+    const scheduleDays = rawBh?.scheduleDays;
+    const fallbackOpen = rawBh?.open || (b as any)?.open_time || (b as any)?.openTime || '11:00';
+    const fallbackClose = rawBh?.close || (b as any)?.close_time || (b as any)?.closeTime || '23:00';
 
-    const [openH, openM] = openStr.split(':').map(Number);
-    const [closeH, closeM] = closeStr.split(':').map(Number);
     const now = new Date();
+    const daysMap = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+    const todayName = daysMap[now.getDay()];
+
+    if (Array.isArray(scheduleDays) && scheduleDays.length > 0) {
+      const todayConfig = scheduleDays.find((d: any) => {
+        if (!d || !d.day) return false;
+        const norm = String(d.day).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        const target = todayName.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        return norm === target;
+      });
+
+      if (todayConfig) {
+        if (todayConfig.open === false) {
+          return {
+            isOpen: false,
+            label: 'Cerrado hoy',
+            openStr: todayConfig.from || fallbackOpen,
+            closeStr: todayConfig.to || fallbackClose
+          };
+        }
+        const openStr = todayConfig.from || fallbackOpen;
+        const closeStr = todayConfig.to || fallbackClose;
+        const [openH, openM] = openStr.split(':').map(Number);
+        const [closeH, closeM] = closeStr.split(':').map(Number);
+        const cur = now.getHours() * 60 + now.getMinutes();
+        const o = (openH || 11) * 60 + (openM || 0);
+        const c = (closeH || 23) * 60 + (closeM || 0);
+
+        let open = false;
+        if (c > o) {
+          open = cur >= o && cur < c;
+        } else {
+          open = cur >= o || cur < c;
+        }
+
+        return {
+          isOpen: open,
+          label: open ? `Abierto • Cierra a las ${closeStr}` : `Cerrado • Abre a las ${openStr}`,
+          openStr,
+          closeStr
+        };
+      }
+    }
+
+    const [openH, openM] = fallbackOpen.split(':').map(Number);
+    const [closeH, closeM] = fallbackClose.split(':').map(Number);
     const cur = now.getHours() * 60 + now.getMinutes();
-    const o = (openH || 9) * 60 + (openM || 0);
+    const o = (openH || 11) * 60 + (openM || 0);
     const c = (closeH || 23) * 60 + (closeM || 0);
 
     let open = false;
@@ -115,9 +160,9 @@ export class StoreViewComponent implements OnInit {
     }
     return {
       isOpen: open,
-      label: open ? `Abierto • Cierra a las ${closeStr}` : `Cerrado • Abre a las ${openStr}`,
-      openStr,
-      closeStr
+      label: open ? `Abierto • Cierra a las ${fallbackClose}` : `Cerrado • Abre a las ${fallbackOpen}`,
+      openStr: fallbackOpen,
+      closeStr: fallbackClose
     };
   });
 

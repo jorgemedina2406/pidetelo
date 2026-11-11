@@ -150,7 +150,7 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'El comercio está cerrado en este momento (Abre a las ${cart.currentBranch!.businessHoursOpen}). No es posible procesar pedidos ahora.',
+            'El comercio está cerrado en este momento (${cart.currentBranch!.scheduleStatusMessage}). No es posible procesar pedidos ahora.',
             style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
           ),
           backgroundColor: const Color(0xFFEF4444),
@@ -415,7 +415,7 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                                   const SizedBox(width: 10),
                                   Expanded(
                                     child: Text(
-                                      'Comercio cerrado en este momento. Horario de atención: ${cart.currentBranch!.businessHoursOpen} a ${cart.currentBranch!.businessHoursClose}.',
+                                      'Comercio cerrado en este momento (${cart.currentBranch!.scheduleStatusMessage}). Horario hoy: ${cart.currentBranch!.todayOpenTime} a ${cart.currentBranch!.todayCloseTime}.',
                                       style: GoogleFonts.outfit(
                                         color: Colors.white,
                                         fontSize: 12,

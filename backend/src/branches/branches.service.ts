@@ -46,6 +46,90 @@ export class BranchesService {
     }
   }
 
+  calculateScheduleStatus(businessHours: any): {
+    isOpen: boolean;
+    openStr: string;
+    closeStr: string;
+    isOpenToday: boolean;
+    label: string;
+  } {
+    const fallbackOpen = businessHours?.open || '11:00';
+    const fallbackClose = businessHours?.close || '23:00';
+    const scheduleDays = businessHours?.scheduleDays || [];
+
+    const now = new Date();
+    // Normalizar día de la semana en español
+    const daysMap = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+    const todayName = daysMap[now.getDay()];
+
+    if (Array.isArray(scheduleDays) && scheduleDays.length > 0) {
+      const todayConfig = scheduleDays.find((d: any) => {
+        if (!d || !d.day) return false;
+        const norm = String(d.day).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        const target = todayName.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        return norm === target;
+      });
+
+      if (todayConfig) {
+        if (todayConfig.open === false) {
+          return {
+            isOpen: false,
+            openStr: todayConfig.from || fallbackOpen,
+            closeStr: todayConfig.to || fallbackClose,
+            isOpenToday: false,
+            label: 'Cerrado hoy'
+          };
+        }
+
+        const openStr = todayConfig.from || fallbackOpen;
+        const closeStr = todayConfig.to || fallbackClose;
+        const [openH, openM] = openStr.split(':').map(Number);
+        const [closeH, closeM] = closeStr.split(':').map(Number);
+        const curMin = now.getHours() * 60 + now.getMinutes();
+        const oMin = (openH || 11) * 60 + (openM || 0);
+        const cMin = (closeH || 23) * 60 + (closeM || 0);
+
+        let isOpen = false;
+        if (cMin > oMin) {
+          isOpen = curMin >= oMin && curMin < cMin;
+        } else {
+          // Horario trasnoche (ej: 18:00 a 02:00)
+          isOpen = curMin >= oMin || curMin < cMin;
+        }
+
+        return {
+          isOpen,
+          openStr,
+          closeStr,
+          isOpenToday: true,
+          label: isOpen ? `Abierto • Cierra a las ${closeStr}` : `Cerrado • Abre a las ${openStr}`
+        };
+      }
+    }
+
+    // Fallback general sin scheduleDays detallado
+    const [openH, openM] = fallbackOpen.split(':').map(Number);
+    const [closeH, closeM] = fallbackClose.split(':').map(Number);
+    const curMin = now.getHours() * 60 + now.getMinutes();
+    const oMin = (openH || 11) * 60 + (openM || 0);
+    const cMin = (closeH || 23) * 60 + (closeM || 0);
+
+    let isOpen = false;
+    if (cMin > oMin) {
+      isOpen = curMin >= oMin && curMin < cMin;
+    } else {
+      isOpen = curMin >= oMin || curMin < cMin;
+    }
+
+    return {
+      isOpen,
+      openStr: fallbackOpen,
+      closeStr: fallbackClose,
+      isOpenToday: true,
+      label: isOpen ? `Abierto • Cierra a las ${fallbackClose}` : `Cerrado • Abre a las ${fallbackOpen}`
+    };
+  }
+
   private mergeBranchWithMetadata(branch: any, parentTenant?: any): any {
     if (!branch) return branch;
     const meta = this.getBranchMetadata(branch.id);
@@ -74,9 +158,18 @@ export class BranchesService {
 
     const deliveryTiers = branch.delivery_tiers ?? meta.delivery_tiers ?? meta.deliveryTiers ?? tenant.delivery_tiers ?? defaultDeliveryTiers;
     const acceptedPaymentMethods = branch.accepted_payment_methods ?? meta.accepted_payment_methods ?? meta.acceptedPaymentMethods ?? tenant.accepted_payment_methods ?? tenant.acceptedPaymentMethods ?? ['mobile_transfer', 'cash_usd', 'cash_local'];
-    const businessHours = branch.business_hours ?? meta.business_hours ?? { open: '11:00', close: '23:00', isOpenToday: true };
-    const openTime = businessHours?.open || '11:00';
-    const closeTime = businessHours?.close || '23:00';
+    
+    const rawBh = branch.business_hours ?? meta.business_hours ?? tenant.business_hours ?? { open: '11:00', close: '23:00', isOpenToday: true };
+    const scheduleDays = rawBh?.scheduleDays || meta.business_hours?.scheduleDays || tenant.business_hours?.scheduleDays || null;
+    const businessHours = {
+      open: rawBh?.open || '11:00',
+      close: rawBh?.close || '23:00',
+      isOpenToday: rawBh?.isOpenToday ?? true,
+      scheduleDays: scheduleDays
+    };
+    const scheduleStatus = this.calculateScheduleStatus(businessHours);
+    const openTime = scheduleStatus.openStr;
+    const closeTime = scheduleStatus.closeStr;
 
     return {
       ...branch,
@@ -99,12 +192,28 @@ export class BranchesService {
       deliveryTiers,
       accepted_payment_methods: acceptedPaymentMethods,
       acceptedPaymentMethods,
-      business_hours: businessHours,
-      businessHours,
+      business_hours: {
+        ...businessHours,
+        open: openTime,
+        close: closeTime,
+        isOpenNow: scheduleStatus.isOpen,
+        isOpenToday: scheduleStatus.isOpenToday,
+        label: scheduleStatus.label
+      },
+      businessHours: {
+        ...businessHours,
+        open: openTime,
+        close: closeTime,
+        isOpenNow: scheduleStatus.isOpen,
+        isOpenToday: scheduleStatus.isOpenToday,
+        label: scheduleStatus.label
+      },
       openTime,
       closeTime,
       open_time: openTime,
       close_time: closeTime,
+      is_open_now: scheduleStatus.isOpen,
+      isOpenNow: scheduleStatus.isOpen,
       branding: {
         accentColor,
         logoUrl,
@@ -361,12 +470,14 @@ export class BranchesService {
       metaToSave.accepted_payment_methods = branchPayload.acceptedPaymentMethods || branchPayload.accepted_payment_methods;
       metaToSave.acceptedPaymentMethods = metaToSave.accepted_payment_methods;
     }
-    if (branchPayload.openTime || branchPayload.closeTime || branchPayload.businessHours || branchPayload.business_hours) {
+    if (branchPayload.openTime || branchPayload.closeTime || branchPayload.businessHours || branchPayload.business_hours || branchPayload.scheduleDays) {
       const bh = branchPayload.businessHours || branchPayload.business_hours || {};
+      const sDays = branchPayload.scheduleDays || bh.scheduleDays || branchPayload.schedule_days || null;
       metaToSave.business_hours = {
         open: branchPayload.openTime || bh.open || '11:00',
         close: branchPayload.closeTime || bh.close || '23:00',
-        isOpenToday: true,
+        isOpenToday: bh.isOpenToday ?? true,
+        scheduleDays: sDays
       };
     }
 
@@ -405,11 +516,14 @@ export class BranchesService {
     if (metaToSave.display_mode !== undefined) updateData.display_mode = metaToSave.display_mode;
     if (metaToSave.currency_settings !== undefined) updateData.currency_settings = metaToSave.currency_settings;
 
-    if (branchPayload.openTime || branchPayload.closeTime) {
+    if (branchPayload.openTime || branchPayload.closeTime || branchPayload.businessHours || branchPayload.business_hours || branchPayload.scheduleDays) {
+      const bh = branchPayload.businessHours || branchPayload.business_hours || {};
+      const sDays = branchPayload.scheduleDays || bh.scheduleDays || branchPayload.schedule_days || null;
       updateData.business_hours = {
-        open: branchPayload.openTime || '11:00',
-        close: branchPayload.closeTime || '23:00',
-        isOpenToday: true,
+        open: branchPayload.openTime || bh.open || '11:00',
+        close: branchPayload.closeTime || bh.close || '23:00',
+        isOpenToday: bh.isOpenToday ?? true,
+        scheduleDays: sDays
       };
     }
 
@@ -509,6 +623,21 @@ export class BranchesService {
       if (updateData.base_delivery_fee !== undefined) tenantUpdate.base_delivery_fee = updateData.base_delivery_fee;
       if (updateData.phone !== undefined) tenantUpdate.phone = updateData.phone;
       if (updateData.whatsapp_number !== undefined) tenantUpdate.whatsapp_number = updateData.whatsapp_number;
+
+      if (metaToSave.business_hours) {
+        try {
+          const tMetaPath = path.resolve(process.cwd(), 'data', 'tenants_metadata.json');
+          let tData: Record<string, any> = {};
+          if (fs.existsSync(tMetaPath)) {
+            tData = JSON.parse(fs.readFileSync(tMetaPath, 'utf-8'));
+          }
+          tData[updatedBranch.company_id] = {
+            ...(tData[updatedBranch.company_id] || {}),
+            business_hours: metaToSave.business_hours
+          };
+          fs.writeFileSync(tMetaPath, JSON.stringify(tData, null, 2), 'utf-8');
+        } catch (_) {}
+      }
 
       await client.from('tenants').update(tenantUpdate).eq('id', updatedBranch.company_id);
     }

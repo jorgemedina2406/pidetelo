@@ -1075,7 +1075,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Text(
-                                  'Local actualmente cerrado • Abre a las ${_selectedBranch!.businessHoursOpen} (Horario: ${_selectedBranch!.businessHoursOpen} - ${_selectedBranch!.businessHoursClose})',
+                                  'Local cerrado en este momento • ${_selectedBranch!.scheduleStatusMessage} (Horario: ${_selectedBranch!.todayOpenTime} - ${_selectedBranch!.todayCloseTime})',
                                   style: GoogleFonts.outfit(
                                     color: Colors.white,
                                     fontSize: 12,

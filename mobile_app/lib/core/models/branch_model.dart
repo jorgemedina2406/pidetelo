@@ -95,6 +95,8 @@ class Branch {
   final String openTime;
   final String closeTime;
   final bool isOpenNow;
+  final List<Map<String, dynamic>>? scheduleDays;
+  final String? storeStatusLabel;
   final BranchPaymentCredentials paymentCredentials;
   final String? tagline;
   final String? accentColor;
@@ -127,9 +129,11 @@ class Branch {
     this.status = 'active',
     this.phone,
     this.whatsapp,
-    this.openTime = '11:30',
+    this.openTime = '11:00',
     this.closeTime = '23:00',
     this.isOpenNow = true,
+    this.scheduleDays,
+    this.storeStatusLabel,
     required this.paymentCredentials,
     this.tagline,
     this.accentColor,
@@ -145,17 +149,109 @@ class Branch {
   });
 
   /// Aliases for opening and closing business hours
-  String get businessHoursOpen => openTime;
-  String get businessHoursClose => closeTime;
+  String get businessHoursOpen => todayOpenTime;
+  String get businessHoursClose => todayCloseTime;
+
+  Map<String, dynamic>? get todayScheduleConfig {
+    if (scheduleDays == null || scheduleDays!.isEmpty) return null;
+    final now = DateTime.now();
+    const dartWeekdays = [
+      'lunes',
+      'martes',
+      'miercoles',
+      'jueves',
+      'viernes',
+      'sabado',
+      'domingo'
+    ];
+    final todayName = dartWeekdays[now.weekday - 1];
+    return scheduleDays!.firstWhere((d) {
+      final dayStr = (d['day'] ?? '')
+          .toString()
+          .toLowerCase()
+          .replaceAll('á', 'a')
+          .replaceAll('é', 'e')
+          .replaceAll('í', 'i')
+          .replaceAll('ó', 'o')
+          .replaceAll('ú', 'u');
+      return dayStr == todayName;
+    }, orElse: () => <String, dynamic>{});
+  }
+
+  bool get isOpenToday {
+    final conf = todayScheduleConfig;
+    if (conf != null && conf.isNotEmpty) {
+      return conf['open'] == true;
+    }
+    return true;
+  }
+
+  String get todayOpenTime => todayScheduleConfig?['from']?.toString() ?? openTime;
+  String get todayCloseTime => todayScheduleConfig?['to']?.toString() ?? closeTime;
+
+  String get scheduleStatusMessage {
+    if (!isOpenToday) {
+      return 'Cerrado hoy por horario semanal';
+    }
+    if (isOpenRightNow) {
+      return 'Abierto • Cierra a las $todayCloseTime';
+    }
+    return 'Cerrado • Abre a las $todayOpenTime';
+  }
 
   /// Check whether the store branch is within its open business hours
   bool get isOpenRightNow {
     try {
       final now = DateTime.now();
       final currentMinutes = now.hour * 60 + now.minute;
+
+      if (scheduleDays != null && scheduleDays!.isNotEmpty) {
+        // Normalizar día de la semana (1 = Lunes, 7 = Domingo)
+        const dartWeekdays = [
+          'lunes',
+          'martes',
+          'miercoles',
+          'jueves',
+          'viernes',
+          'sabado',
+          'domingo'
+        ];
+        final todayName = dartWeekdays[now.weekday - 1];
+
+        final todayConfig = scheduleDays!.firstWhere((d) {
+          final dayStr = (d['day'] ?? '')
+              .toString()
+              .toLowerCase()
+              .replaceAll('á', 'a')
+              .replaceAll('é', 'e')
+              .replaceAll('í', 'i')
+              .replaceAll('ó', 'o')
+              .replaceAll('ú', 'u');
+          return dayStr == todayName;
+        }, orElse: () => <String, dynamic>{});
+
+        if (todayConfig.isNotEmpty) {
+          final isOpenDay = todayConfig['open'] == true;
+          if (!isOpenDay) return false;
+
+          final dOpen = todayConfig['from']?.toString() ?? openTime;
+          final dClose = todayConfig['to']?.toString() ?? closeTime;
+          final openParts = dOpen.split(':').map(int.parse).toList();
+          final closeParts = dClose.split(':').map(int.parse).toList();
+          final openMin = (openParts.isNotEmpty ? openParts[0] : 11) * 60 + (openParts.length > 1 ? openParts[1] : 0);
+          final closeMin = (closeParts.isNotEmpty ? closeParts[0] : 23) * 60 + (closeParts.length > 1 ? closeParts[1] : 0);
+
+          if (closeMin > openMin) {
+            return currentMinutes >= openMin && currentMinutes < closeMin;
+          } else {
+            return currentMinutes >= openMin || currentMinutes < closeMin;
+          }
+        }
+      }
+
       final openParts = openTime.split(':').map(int.parse).toList();
       final closeParts = closeTime.split(':').map(int.parse).toList();
-      final openMin = (openParts.isNotEmpty ? openParts[0] : 9) * 60 + (openParts.length > 1 ? openParts[1] : 0);
+      final openMin = (openParts.isNotEmpty ? openParts[0] : 11) * 60 + (openParts.length > 1 ? openParts[1] : 0);
       final closeMin = (closeParts.isNotEmpty ? closeParts[0] : 23) * 60 + (closeParts.length > 1 ? closeParts[1] : 0);
 
       if (closeMin > openMin) {
@@ -237,6 +333,19 @@ class Branch {
             DeliveryTier(id: 'tier_3', minKm: 5, maxKm: 8, price: 4.50),
           ];
 
+    final bh = json['business_hours'] is Map
+        ? json['business_hours'] as Map<String, dynamic>
+        : (json['businessHours'] is Map ? json['businessHours'] as Map<String, dynamic> : null);
+    final rawSDays = bh?['scheduleDays'] ?? json['scheduleDays'] ?? json['schedule_days'];
+    List<Map<String, dynamic>>? parsedSDays;
+    if (rawSDays is List) {
+      parsedSDays = rawSDays.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+    }
+    final oTime = (json['open_time'] ?? json['openTime'] ?? bh?['open'] ?? '11:00').toString();
+    final cTime = (json['close_time'] ?? json['closeTime'] ?? bh?['close'] ?? '23:00').toString();
+    final isOp = json['is_open_now'] ?? json['isOpenNow'] ?? bh?['isOpenNow'] ?? true;
+    final statusLabel = json['storeStatusLabel']?.toString() ?? bh?['label']?.toString();
+
     return Branch(
       id: json['id'] ?? '',
       companyId: json['company_id'] ?? json['companyId'] ?? '',
@@ -256,9 +365,11 @@ class Branch {
       status: json['status'] ?? 'active',
       phone: json['phone'],
       whatsapp: json['whatsapp'],
-      openTime: json['open_time'] ?? json['openTime'] ?? '11:30',
-      closeTime: json['close_time'] ?? json['closeTime'] ?? '23:00',
-      isOpenNow: json['is_open_now'] ?? json['isOpenNow'] ?? true,
+      openTime: oTime,
+      closeTime: cTime,
+      isOpenNow: isOp is bool ? isOp : true,
+      scheduleDays: parsedSDays,
+      storeStatusLabel: statusLabel,
       paymentCredentials: credentials,
       tagline: json['tagline']?.toString(),
       accentColor: json['accent_color']?.toString() ?? json['accentColor']?.toString(),

@@ -361,13 +361,61 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
   bool _isStoreOpenNow(Map<String, dynamic> store) {
     try {
-      final openStr = store['open_time'] ?? store['openTime'] ?? '09:00';
-      final closeStr = store['close_time'] ?? store['closeTime'] ?? '23:00';
       final now = DateTime.now();
       final cur = now.hour * 60 + now.minute;
+
+      final rawBh = store['business_hours'] is Map ? store['business_hours'] as Map : null;
+      final rawSDays = store['scheduleDays'] ?? rawBh?['scheduleDays'];
+
+      if (rawSDays is List && rawSDays.isNotEmpty) {
+        const dartWeekdays = [
+          'lunes',
+          'martes',
+          'miercoles',
+          'jueves',
+          'viernes',
+          'sabado',
+          'domingo'
+        ];
+        final todayName = dartWeekdays[now.weekday - 1];
+
+        final todayConfig = rawSDays.firstWhere((d) {
+          if (d is! Map) return false;
+          final dayStr = (d['day'] ?? '')
+              .toString()
+              .toLowerCase()
+              .replaceAll('á', 'a')
+              .replaceAll('é', 'e')
+              .replaceAll('í', 'i')
+              .replaceAll('ó', 'o')
+              .replaceAll('ú', 'u');
+          return dayStr == todayName;
+        }, orElse: () => null);
+
+        if (todayConfig is Map) {
+          final isOpenDay = todayConfig['open'] == true;
+          if (!isOpenDay) return false;
+
+          final dOpen = (todayConfig['from'] ?? store['open_time'] ?? store['openTime'] ?? '11:00').toString();
+          final dClose = (todayConfig['to'] ?? store['close_time'] ?? store['closeTime'] ?? '23:00').toString();
+          final oParts = dOpen.split(':').map(int.parse).toList();
+          final cParts = dClose.split(':').map(int.parse).toList();
+          final o = (oParts.isNotEmpty ? oParts[0] : 11) * 60 + (oParts.length > 1 ? oParts[1] : 0);
+          final c = (cParts.isNotEmpty ? cParts[0] : 23) * 60 + (cParts.length > 1 ? cParts[1] : 0);
+
+          if (c > o) {
+            return cur >= o && cur < c;
+          } else {
+            return cur >= o || cur < c;
+          }
+        }
+      }
+
+      final openStr = store['open_time'] ?? store['openTime'] ?? rawBh?['open'] ?? '11:00';
+      final closeStr = store['close_time'] ?? store['closeTime'] ?? rawBh?['close'] ?? '23:00';
       final oParts = openStr.toString().split(':').map(int.parse).toList();
       final cParts = closeStr.toString().split(':').map(int.parse).toList();
-      final o = (oParts.isNotEmpty ? oParts[0] : 9) * 60 +
+      final o = (oParts.isNotEmpty ? oParts[0] : 11) * 60 +
           (oParts.length > 1 ? oParts[1] : 0);
       final c = (cParts.isNotEmpty ? cParts[0] : 23) * 60 +
           (cParts.length > 1 ? cParts[1] : 0);
@@ -649,6 +697,244 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     );
   }
 
+  void _showAllCategoriesSheet(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final categoriesList = [
+      {'name': 'Todos', 'icon': '✨', 'filter': 'Todos', 'desc': 'Todos los locales activos'},
+      {'name': 'Restaurantes', 'icon': '🍽️', 'filter': 'Comida', 'desc': 'Hamburguesas, pizzas, pollo y más'},
+      {'name': 'Súper & Bodegones', 'icon': '🛒', 'filter': 'Markets', 'desc': 'Víveres, compras y abastos'},
+      {'name': 'Farmacias', 'icon': '💊', 'filter': 'Farmacias', 'desc': 'Medicinas y artículos de salud'},
+      {'name': 'Mascotas', 'icon': '🐾', 'filter': 'Mascotas', 'desc': 'Alimento y accesorios para tu mascota'},
+      {'name': 'Licores', 'icon': '🍷', 'filter': 'Licores', 'desc': 'Cervezas, vinos y destilados'},
+      {'name': 'Postres & Dulces', 'icon': '🧁', 'filter': 'Postres', 'desc': 'Pastelería, helados y tortas'},
+      {'name': 'Café & Desayunos', 'icon': '☕', 'filter': 'Café', 'desc': 'Cafeterías y desayunos express'},
+      {'name': 'Pizzerías', 'icon': '🍕', 'filter': 'Pizza', 'desc': 'Pizzas al horno y comida italiana'},
+      {'name': 'Hamburguesas', 'icon': '🍔', 'filter': 'Hamburguesa', 'desc': 'Burgers gourmet y smash'},
+      {'name': 'Sushi & Asiática', 'icon': '🍣', 'filter': 'Sushi', 'desc': 'Rolls, ramen y comida oriental'},
+      {'name': 'Repuestos & Auto', 'icon': '⚙️', 'filter': 'Repuestos', 'desc': 'Accesorios y repuestos de vehículos'},
+    ];
+
+    int countStoresFor(String filter) {
+      if (filter == 'Todos') return _stores.length;
+      final target = filter.toLowerCase();
+      return _stores.where((store) {
+        final storeCat = (store['category'] ?? '').toString().toLowerCase();
+        final storeName = (store['name'] ?? '').toString().toLowerCase();
+        if (target == 'comida' || target == 'restaurantes') {
+          return storeCat.contains('hamburguesa') ||
+              storeCat.contains('sushi') ||
+              storeCat.contains('pizza') ||
+              storeCat.contains('comida') ||
+              storeCat.contains('grill') ||
+              storeCat.contains('restauran');
+        }
+        if (target == 'farmacias') {
+          return storeCat.contains('farma') ||
+              storeCat.contains('salud') ||
+              storeName.contains('farma');
+        }
+        if (target == 'markets' || target == 'súper') {
+          return storeCat.contains('market') ||
+              storeCat.contains('super') ||
+              storeName.contains('market');
+        }
+        return storeCat.contains(target) || storeName.contains(target);
+      }).length;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.75,
+          minChildSize: 0.45,
+          maxChildSize: 0.92,
+          expand: false,
+          builder: (_, scrollController) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                children: [
+                  const SizedBox(height: 12),
+                  Center(
+                    child: Container(
+                      width: 44,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.white24 : Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Explora por Categorías',
+                            style: GoogleFonts.outfit(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: isDark ? Colors.white : const Color(0xFF0F172A),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Selecciona una categoría para filtrar comercios',
+                            style: GoogleFonts.outfit(
+                              fontSize: 12,
+                              color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Expanded(
+                    child: ListView.separated(
+                      controller: scrollController,
+                      itemCount: categoriesList.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      itemBuilder: (context, idx) {
+                        final cat = categoriesList[idx];
+                        final name = cat['name'] as String;
+                        final icon = cat['icon'] as String;
+                        final filter = cat['filter'] as String;
+                        final desc = cat['desc'] as String;
+                        final isSelected = _selectedCategory == filter;
+                        final count = countStoresFor(filter);
+
+                        return InkWell(
+                          onTap: () {
+                            setState(() => _selectedCategory = filter);
+                            Navigator.pop(ctx);
+                          },
+                          borderRadius: BorderRadius.circular(16),
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? AppTheme.primary.withOpacity(isDark ? 0.2 : 0.08)
+                                  : (isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC)),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: isSelected
+                                    ? AppTheme.primary
+                                    : (isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
+                                width: isSelected ? 1.5 : 1.0,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 44,
+                                  height: 44,
+                                  decoration: BoxDecoration(
+                                    color: isDark ? const Color(0xFF0F172A) : Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.04),
+                                        blurRadius: 4,
+                                      ),
+                                    ],
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Text(icon, style: const TextStyle(fontSize: 22)),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Text(
+                                            name,
+                                            style: GoogleFonts.outfit(
+                                              fontSize: 14,
+                                              fontWeight: isSelected ? FontWeight.w800 : FontWeight.w700,
+                                              color: isSelected
+                                                  ? AppTheme.primary
+                                                  : (isDark ? Colors.white : const Color(0xFF0F172A)),
+                                            ),
+                                          ),
+                                          if (isSelected) ...[
+                                            const SizedBox(width: 6),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: AppTheme.primary,
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                              child: Text(
+                                                'Activo',
+                                                style: GoogleFonts.outfit(
+                                                  fontSize: 9,
+                                                  fontWeight: FontWeight.w800,
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        desc,
+                                        style: GoogleFonts.outfit(
+                                          fontSize: 11,
+                                          color: isDark ? Colors.white54 : const Color(0xFF64748B),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: isDark ? Colors.white10 : Colors.grey.shade200,
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    '$count',
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: isDark ? Colors.white70 : const Color(0xFF334155),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   void _showOrderReceiptDialog(BuildContext context, DeliveryOrder order) {
     final isDark = widget.sessionService.isDarkMode;
     final receiptBg = isDark ? const Color(0xFF0F172A) : Colors.white;
@@ -876,31 +1162,17 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        leadingWidth: 52,
+        leadingWidth: 50,
         leading: Padding(
-          padding: const EdgeInsets.only(left: 12, top: 6, bottom: 6, right: 2),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
-              color: isDark ? const Color(0xFF1E293B) : Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.06),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            padding: const EdgeInsets.all(4),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(7),
-              child: Image.asset(
-                'assets/images/logo-isotipo.png',
-                fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) => Image.asset(
-                  'assets/images/logo.png',
-                  fit: BoxFit.contain,
-                ),
+          padding: const EdgeInsets.only(left: 12, top: 7, bottom: 7, right: 2),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: Image.asset(
+              'assets/images/logo-isotipo.png',
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Image.asset(
+                'assets/images/logo-isotipo.jfif',
+                fit: BoxFit.cover,
               ),
             ),
           ),
@@ -1275,10 +1547,10 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                         color: isDark ? Colors.white : const Color(0xFF0F172A),
                       ),
                     ),
-                    TextButton(
-                      onPressed: () =>
-                          setState(() => _selectedCategory = 'Todos'),
-                      child: Text(
+                    TextButton.icon(
+                      onPressed: () => _showAllCategoriesSheet(context),
+                      icon: const Icon(Icons.grid_view_rounded, size: 14, color: AppTheme.primary),
+                      label: Text(
                         'Ver todos',
                         style: GoogleFonts.outfit(
                           fontSize: 12,

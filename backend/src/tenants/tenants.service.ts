@@ -81,6 +81,87 @@ export class TenantsService {
     }
   }
 
+  calculateScheduleStatus(businessHours: any): {
+    isOpen: boolean;
+    openStr: string;
+    closeStr: string;
+    isOpenToday: boolean;
+    label: string;
+  } {
+    const fallbackOpen = businessHours?.open || '11:00';
+    const fallbackClose = businessHours?.close || '23:00';
+    const scheduleDays = businessHours?.scheduleDays || [];
+
+    const now = new Date();
+    const daysMap = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+    const todayName = daysMap[now.getDay()];
+
+    if (Array.isArray(scheduleDays) && scheduleDays.length > 0) {
+      const todayConfig = scheduleDays.find((d: any) => {
+        if (!d || !d.day) return false;
+        const norm = String(d.day).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        const target = todayName.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        return norm === target;
+      });
+
+      if (todayConfig) {
+        if (todayConfig.open === false) {
+          return {
+            isOpen: false,
+            openStr: todayConfig.from || fallbackOpen,
+            closeStr: todayConfig.to || fallbackClose,
+            isOpenToday: false,
+            label: 'Cerrado hoy'
+          };
+        }
+
+        const openStr = todayConfig.from || fallbackOpen;
+        const closeStr = todayConfig.to || fallbackClose;
+        const [openH, openM] = openStr.split(':').map(Number);
+        const [closeH, closeM] = closeStr.split(':').map(Number);
+        const curMin = now.getHours() * 60 + now.getMinutes();
+        const oMin = (openH || 11) * 60 + (openM || 0);
+        const cMin = (closeH || 23) * 60 + (closeM || 0);
+
+        let isOpen = false;
+        if (cMin > oMin) {
+          isOpen = curMin >= oMin && curMin < cMin;
+        } else {
+          isOpen = curMin >= oMin || curMin < cMin;
+        }
+
+        return {
+          isOpen,
+          openStr,
+          closeStr,
+          isOpenToday: true,
+          label: isOpen ? `Abierto • Cierra a las ${closeStr}` : `Cerrado • Abre a las ${openStr}`
+        };
+      }
+    }
+
+    const [openH, openM] = fallbackOpen.split(':').map(Number);
+    const [closeH, closeM] = fallbackClose.split(':').map(Number);
+    const curMin = now.getHours() * 60 + now.getMinutes();
+    const oMin = (openH || 11) * 60 + (openM || 0);
+    const cMin = (closeH || 23) * 60 + (closeM || 0);
+
+    let isOpen = false;
+    if (cMin > oMin) {
+      isOpen = curMin >= oMin && curMin < cMin;
+    } else {
+      isOpen = curMin >= oMin || curMin < cMin;
+    }
+
+    return {
+      isOpen,
+      openStr: fallbackOpen,
+      closeStr: fallbackClose,
+      isOpenToday: true,
+      label: isOpen ? `Abierto • Cierra a las ${fallbackClose}` : `Cerrado • Abre a las ${fallbackOpen}`
+    };
+  }
+
   private mergeTenantWithMetadata(t: any): any {
     if (!t) return t;
     const meta = this.getTenantMetadata(t.id);
@@ -129,6 +210,15 @@ export class TenantsService {
           lastRateUpdate: bm.currency_settings?.lastRateUpdate || new Date().toISOString(),
           acceptedPaymentMethods: bPaymentMethods
         };
+        const rawBh = b.business_hours ?? bm.business_hours ?? { open: '11:00', close: '23:00', isOpenToday: true };
+        const sDays = rawBh?.scheduleDays || bm.business_hours?.scheduleDays || null;
+        const bHours = {
+          open: rawBh?.open || '11:00',
+          close: rawBh?.close || '23:00',
+          isOpenToday: rawBh?.isOpenToday ?? true,
+          scheduleDays: sDays
+        };
+        const bStatus = this.calculateScheduleStatus(bHours);
         return {
           ...b,
           exchange_rate: bRate,
@@ -138,7 +228,29 @@ export class TenantsService {
           accepted_payment_methods: bPaymentMethods,
           acceptedPaymentMethods: bPaymentMethods,
           currency_settings: bCurrSettings,
-          currencySettings: bCurrSettings
+          currencySettings: bCurrSettings,
+          business_hours: {
+            ...bHours,
+            open: bStatus.openStr,
+            close: bStatus.closeStr,
+            isOpenNow: bStatus.isOpen,
+            isOpenToday: bStatus.isOpenToday,
+            label: bStatus.label
+          },
+          businessHours: {
+            ...bHours,
+            open: bStatus.openStr,
+            close: bStatus.closeStr,
+            isOpenNow: bStatus.isOpen,
+            isOpenToday: bStatus.isOpenToday,
+            label: bStatus.label
+          },
+          openTime: bStatus.openStr,
+          closeTime: bStatus.closeStr,
+          open_time: bStatus.openStr,
+          close_time: bStatus.closeStr,
+          is_open_now: bStatus.isOpen,
+          isOpenNow: bStatus.isOpen
         };
       });
     }
@@ -170,6 +282,17 @@ export class TenantsService {
       planCode = t.slug === 'burger-lab' ? 'COMERCIO_PRO' : 'EMPRENDEDOR';
     }
 
+    const firstBranch = Array.isArray(enrichedBranches) && enrichedBranches.length > 0 ? enrichedBranches[0] : null;
+    const rawTenantBh = t.business_hours ?? meta.business_hours ?? firstBranch?.business_hours ?? { open: '11:00', close: '23:00', isOpenToday: true };
+    const tenantSDays = rawTenantBh?.scheduleDays || firstBranch?.business_hours?.scheduleDays || null;
+    const tenantHours = {
+      open: rawTenantBh?.open || firstBranch?.openTime || '11:00',
+      close: rawTenantBh?.close || firstBranch?.closeTime || '23:00',
+      isOpenToday: rawTenantBh?.isOpenToday ?? firstBranch?.isOpenToday ?? true,
+      scheduleDays: tenantSDays
+    };
+    const tenantScheduleStatus = this.calculateScheduleStatus(tenantHours);
+
     return {
       ...t,
       plan_code: planCode,
@@ -193,6 +316,41 @@ export class TenantsService {
       deliveryTiers,
       accepted_payment_methods: acceptedPaymentMethods,
       acceptedPaymentMethods,
+      business_hours: {
+        ...tenantHours,
+        open: tenantScheduleStatus.openStr,
+        close: tenantScheduleStatus.closeStr,
+        isOpenNow: tenantScheduleStatus.isOpen,
+        isOpenToday: tenantScheduleStatus.isOpenToday,
+        label: tenantScheduleStatus.label
+      },
+      businessHours: {
+        ...tenantHours,
+        open: tenantScheduleStatus.openStr,
+        close: tenantScheduleStatus.closeStr,
+        isOpenNow: tenantScheduleStatus.isOpen,
+        isOpenToday: tenantScheduleStatus.isOpenToday,
+        label: tenantScheduleStatus.label
+      },
+      open_time: tenantScheduleStatus.openStr,
+      openTime: tenantScheduleStatus.openStr,
+      close_time: tenantScheduleStatus.closeStr,
+      closeTime: tenantScheduleStatus.closeStr,
+      is_open_now: tenantScheduleStatus.isOpen,
+      isOpenNow: tenantScheduleStatus.isOpen,
+      deliverySettings: {
+        baseDeliveryFee: Number(t.base_delivery_fee ?? 2.50),
+        deliveryRadiusKm: Number(t.delivery_radius_km ?? 15.0),
+        deliveryTiers: deliveryTiers,
+        businessHours: {
+          ...tenantHours,
+          open: tenantScheduleStatus.openStr,
+          close: tenantScheduleStatus.closeStr,
+          isOpenNow: tenantScheduleStatus.isOpen,
+          isOpenToday: tenantScheduleStatus.isOpenToday,
+          label: tenantScheduleStatus.label
+        }
+      },
       branches: enrichedBranches,
       branding: {
         accentColor: t.accent_color || '#f97316',
@@ -273,6 +431,16 @@ export class TenantsService {
       if (metaToSave.currency_settings?.displayMode) {
         metaToSave.display_mode = metaToSave.currency_settings.displayMode;
       }
+    }
+    if (updateData.business_hours || updateData.businessHours || updateData.openTime || updateData.closeTime || updateData.scheduleDays) {
+      const bh = updateData.business_hours || updateData.businessHours || {};
+      const sDays = updateData.scheduleDays || bh.scheduleDays || null;
+      metaToSave.business_hours = {
+        open: updateData.openTime || bh.open || '11:00',
+        close: updateData.closeTime || bh.close || '23:00',
+        isOpenToday: bh.isOpenToday ?? true,
+        scheduleDays: sDays
+      };
     }
     if (updateData.plan_code || updateData.planCode || updateData.subscriptionPlanId) {
       const pCode = updateData.plan_code || updateData.planCode || updateData.subscriptionPlanId;

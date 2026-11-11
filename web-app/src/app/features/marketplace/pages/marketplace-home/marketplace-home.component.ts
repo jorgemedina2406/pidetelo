@@ -376,30 +376,66 @@ export class MarketplaceHomeComponent implements OnInit {
   }
 
   checkStoreBusinessHours(tenant: Tenant): { isOpen: boolean; label: string } {
-    const hours = tenant.deliverySettings?.businessHours;
-    const openStr = hours?.open || '09:00';
-    const closeStr = hours?.close || '23:00';
-
-    const [openH, openM] = openStr.split(':').map(Number);
-    const [closeH, closeM] = closeStr.split(':').map(Number);
+    const rawBh = (tenant as any).business_hours || (tenant as any).businessHours || tenant.deliverySettings?.businessHours;
+    const scheduleDays = rawBh?.scheduleDays || (tenant.branches && (tenant.branches[0] as any)?.business_hours?.scheduleDays);
+    const fallbackOpen = rawBh?.open || (tenant as any).open_time || (tenant as any).openTime || '11:00';
+    const fallbackClose = rawBh?.close || (tenant as any).close_time || (tenant as any).closeTime || '23:00';
 
     const now = new Date();
-    const currentMin = now.getHours() * 60 + now.getMinutes();
-    const openMin = (openH || 9) * 60 + (openM || 0);
+    const daysMap = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+    const todayName = daysMap[now.getDay()];
+
+    if (Array.isArray(scheduleDays) && scheduleDays.length > 0) {
+      const todayConfig = scheduleDays.find((d: any) => {
+        if (!d || !d.day) return false;
+        const norm = String(d.day).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        const target = todayName.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        return norm === target;
+      });
+
+      if (todayConfig) {
+        if (todayConfig.open === false) {
+          return { isOpen: false, label: 'Cerrado hoy' };
+        }
+        const openStr = todayConfig.from || fallbackOpen;
+        const closeStr = todayConfig.to || fallbackClose;
+        const [openH, openM] = openStr.split(':').map(Number);
+        const [closeH, closeM] = closeStr.split(':').map(Number);
+        const curMin = now.getHours() * 60 + now.getMinutes();
+        const oMin = (openH || 11) * 60 + (openM || 0);
+        const cMin = (closeH || 23) * 60 + (closeM || 0);
+
+        let isOpen = false;
+        if (cMin > oMin) {
+          isOpen = curMin >= oMin && curMin < cMin;
+        } else {
+          isOpen = curMin >= oMin || curMin < cMin;
+        }
+
+        return {
+          isOpen,
+          label: isOpen ? `Abierto • Cierra a las ${closeStr}` : `Cerrado • Abre a las ${openStr}`
+        };
+      }
+    }
+
+    const [openH, openM] = fallbackOpen.split(':').map(Number);
+    const [closeH, closeM] = fallbackClose.split(':').map(Number);
+    const curMin = now.getHours() * 60 + now.getMinutes();
+    const openMin = (openH || 11) * 60 + (openM || 0);
     const closeMin = (closeH || 23) * 60 + (closeM || 0);
 
     let isOpen = false;
     if (closeMin > openMin) {
-      isOpen = currentMin >= openMin && currentMin < closeMin;
+      isOpen = curMin >= openMin && curMin < closeMin;
     } else {
-      // Rango trasnoche (ej: 18:00 a 02:00)
-      isOpen = currentMin >= openMin || currentMin < closeMin;
+      isOpen = curMin >= openMin || curMin < closeMin;
     }
 
     if (isOpen) {
-      return { isOpen: true, label: `Abierto • Cierra a las ${closeStr}` };
+      return { isOpen: true, label: `Abierto • Cierra a las ${fallbackClose}` };
     } else {
-      return { isOpen: false, label: `Cerrado • Abre a las ${openStr}` };
+      return { isOpen: false, label: `Cerrado • Abre a las ${fallbackOpen}` };
     }
   }
 

@@ -2677,7 +2677,8 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         business_hours: {
           open: this.brandingForm.openTime,
           close: this.brandingForm.closeTime,
-          isOpenToday: true
+          isOpenToday: true,
+          scheduleDays: this.brandingForm.scheduleDays
         }
       }).subscribe({ error: (err) => console.warn('[MerchantAdmin] Sync tenant warning:', err) });
     }
