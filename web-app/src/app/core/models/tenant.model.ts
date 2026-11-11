@@ -81,6 +81,7 @@ export interface Tenant {
   contact: TenantContact;
   deliverySettings: TenantDeliverySettings;
   businessHours: TenantBusinessHours;
+  business_hours?: TenantBusinessHours;
   branding: TenantBranding;
   currencySettings: TenantCurrencySettings;
   deliveryTiers?: DeliveryTier[];

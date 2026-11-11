@@ -174,14 +174,16 @@ export class MarketplaceHomeComponent implements OnInit {
 
   readonly filteredTenants = computed(() => {
     let list = this.enrichedTenants();
-    const query = this.searchQuery().toLowerCase().trim();
+    const query = (this.searchQuery() || '').toLowerCase().trim();
     const cat = this.selectedCategory();
     const sub = this.selectedSubcategory();
 
-    // Mostrar comercios en rango de cobertura preferente (si ninguno está en rango exacto, mostrar disponibles para explorar)
-    const inRange = list.filter(t => t.isWithinRange);
-    if (inRange.length > 0) {
-      list = inRange;
+    // Si NO hay búsqueda por texto, aplicamos el filtro de cobertura por zona preferente
+    if (!query) {
+      const inRange = list.filter(t => t.isWithinRange);
+      if (inRange.length > 0) {
+        list = inRange;
+      }
     }
 
     if (cat === 'Favoritos') {
@@ -191,12 +193,13 @@ export class MarketplaceHomeComponent implements OnInit {
         const catLower = (t.category || '').toLowerCase();
         const mainCat = cat.toLowerCase();
         if (catLower === mainCat) return true;
-        if (cat === 'Restaurantes') return catLower.includes('hamburguesa') || catLower.includes('pizza') || catLower.includes('sushi') || catLower.includes('tacos') || catLower.includes('restaurante');
-        if (cat === 'Súper') return catLower.includes('súper') || catLower.includes('supermercado') || catLower.includes('market') || catLower.includes('bodega');
-        if (cat === 'Farmacias') return catLower.includes('farmacia') || catLower.includes('salud');
+        if (cat === 'Restaurantes') return catLower.includes('hamburguesa') || catLower.includes('pizza') || catLower.includes('sushi') || catLower.includes('tacos') || catLower.includes('restaurante') || catLower.includes('comida');
+        if (cat === 'Súper' || cat === 'Super') return catLower.includes('súper') || catLower.includes('super') || catLower.includes('supermercado') || catLower.includes('market') || catLower.includes('bodega');
+        if (cat === 'Farmacias') return catLower.includes('farmacia') || catLower.includes('salud') || catLower.includes('medic');
         if (cat === 'Mascotas') return catLower.includes('mascota') || catLower.includes('pet');
-        if (cat === 'Licores') return catLower.includes('licor') || catLower.includes('bebida') || catLower.includes('cerveza');
-        if (cat === 'Postres') return catLower.includes('postre') || catLower.includes('dulce') || catLower.includes('café') || catLower.includes('panaderia');
+        if (cat === 'Licores') return catLower.includes('licor') || catLower.includes('bebida') || catLower.includes('cerveza') || catLower.includes('vino');
+        if (cat === 'Postres') return catLower.includes('postre') || catLower.includes('dulce') || catLower.includes('café') || catLower.includes('cafe') || catLower.includes('panaderia') || catLower.includes('helado');
+        if (cat === 'Juguetes') return catLower.includes('juguet') || catLower.includes('niñ') || catLower.includes('toy');
         return catLower.includes(mainCat);
       });
     }
@@ -204,7 +207,7 @@ export class MarketplaceHomeComponent implements OnInit {
     if (sub !== 'Todos') {
       const subLower = sub.toLowerCase();
       list = list.filter(t => {
-        const inSubArray = (t.subcategories || []).some(s => s.toLowerCase().includes(subLower));
+        const inSubArray = (t.subcategories || []).some(s => (s || '').toLowerCase().includes(subLower));
         const inCat = (t.category || '').toLowerCase().includes(subLower);
         const inName = (t.name || '').toLowerCase().includes(subLower);
         return inSubArray || inCat || inName;
@@ -212,13 +215,27 @@ export class MarketplaceHomeComponent implements OnInit {
     }
 
     if (query) {
-      list = list.filter(t =>
-        t.name.toLowerCase().includes(query) ||
-        t.category.toLowerCase().includes(query) ||
-        (t.subcategories || []).some(s => s.toLowerCase().includes(query)) ||
-        t.tagline.toLowerCase().includes(query) ||
-        t.description.toLowerCase().includes(query)
-      );
+      list = list.filter(t => {
+        const name = (t.name || '').toLowerCase();
+        const category = (t.category || '').toLowerCase();
+        const tagline = (t.tagline || '').toLowerCase();
+        const description = (t.description || '').toLowerCase();
+        const address = (t.contact?.address || '').toLowerCase();
+        const inSubcats = (t.subcategories || []).some(s => (s || '').toLowerCase().includes(query));
+        const inBranches = (t.branches || []).some((b: any) =>
+          (b.name || '').toLowerCase().includes(query) || (b.address || '').toLowerCase().includes(query)
+        );
+
+        return (
+          name.includes(query) ||
+          category.includes(query) ||
+          inSubcats ||
+          tagline.includes(query) ||
+          description.includes(query) ||
+          address.includes(query) ||
+          inBranches
+        );
+      });
     }
 
     return [...list].sort((a, b) => {
@@ -232,6 +249,15 @@ export class MarketplaceHomeComponent implements OnInit {
       return 0;
     });
   });
+
+  executeSearch(): void {
+    if (typeof document !== 'undefined') {
+      const el = document.getElementById('seccion-comercios');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  }
 
 
   toggleFavorite(slug: string): void {
@@ -441,6 +467,27 @@ export class MarketplaceHomeComponent implements OnInit {
 
   encodeWhatsAppText(storeName: string): string {
     return encodeURIComponent(`Hola ${storeName}, deseo consultar su menú de delivery express.`);
+  }
+
+  getFallbackLogo(name?: string): string {
+    const initial = (name || 'P').trim().charAt(0).toUpperCase();
+    return `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120"><rect width="120" height="120" rx="24" fill="%23f97316"/><text x="50%" y="54%" font-family="system-ui,sans-serif" font-weight="900" font-size="52" fill="white" text-anchor="middle" dominant-baseline="middle">${initial}</text></svg>`;
+  }
+
+  onLogoError(event: Event, name?: string): void {
+    const target = event.target as HTMLImageElement;
+    if (target) {
+      target.onerror = null;
+      target.src = this.getFallbackLogo(name);
+    }
+  }
+
+  onBannerError(event: Event): void {
+    const target = event.target as HTMLImageElement;
+    if (target) {
+      target.onerror = null;
+      target.src = 'assets/delivery_courier.jpg';
+    }
   }
 
   private calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {

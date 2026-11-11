@@ -39,6 +39,27 @@ export class StoreHeaderComponent {
     return fee.toFixed(2);
   }
 
+  getFallbackLogo(name?: string): string {
+    const initial = (name || 'P').trim().charAt(0).toUpperCase();
+    return `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120"><rect width="120" height="120" rx="24" fill="%23f97316"/><text x="50%" y="54%" font-family="system-ui,sans-serif" font-weight="900" font-size="52" fill="white" text-anchor="middle" dominant-baseline="middle">${initial}</text></svg>`;
+  }
+
+  onLogoError(event: Event, name?: string): void {
+    const target = event.target as HTMLImageElement;
+    if (target) {
+      target.onerror = null;
+      target.src = this.getFallbackLogo(name);
+    }
+  }
+
+  onBannerError(event: Event): void {
+    const target = event.target as HTMLImageElement;
+    if (target) {
+      target.onerror = null;
+      target.src = 'assets/delivery_courier.jpg';
+    }
+  }
+
   get activeGuestOrder(): any {
     if (typeof window === 'undefined') return null;
     try {

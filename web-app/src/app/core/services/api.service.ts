@@ -1179,6 +1179,9 @@ export class ApiService {
           if (updateData.is_featured !== undefined || updateData.isFeatured !== undefined) {
             supabasePayload.is_featured = Boolean(updateData.is_featured ?? updateData.isFeatured);
           }
+          if (updateData.business_hours !== undefined || updateData.businessHours !== undefined) {
+            supabasePayload.business_hours = updateData.business_hours || updateData.businessHours;
+          }
 
           const { data } = await client.from('tenants').update(supabasePayload).eq('id', id).select('*').maybeSingle();
 
@@ -1328,6 +1331,26 @@ export class ApiService {
     const defaultLogo = row.logo_url || fallbackLogo;
     const defaultBanner = row.banner_url || fallbackBanner;
 
+    let cachedBranding: any = null;
+    if (typeof localStorage !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('deliveryhub_branding_' + row.id);
+        if (stored) cachedBranding = JSON.parse(stored);
+      } catch (_) {}
+    }
+
+    const rawBh = cachedBranding?.business_hours || cachedBranding?.businessHours || row.business_hours || row.businessHours || row.deliverySettings?.businessHours;
+    const bhOpen = rawBh?.open || cachedBranding?.openTime || row.open_time || row.openTime || '08:00';
+    const bhClose = rawBh?.close || cachedBranding?.closeTime || row.close_time || row.closeTime || '23:00';
+    const sDays = rawBh?.scheduleDays || cachedBranding?.scheduleDays || row.scheduleDays || [];
+    const bHours = {
+      open: bhOpen,
+      close: bhClose,
+      isOpenToday: rawBh?.isOpenToday ?? true,
+      scheduleDays: sDays,
+      label: rawBh?.label
+    };
+
     return {
       id: row.id,
       slug: row.slug,
@@ -1365,11 +1388,8 @@ export class ApiService {
         currency: 'USD',
         currencySymbol: '$',
       },
-      businessHours: {
-        open: '12:00',
-        close: '23:30',
-        isOpenToday: true,
-      },
+      businessHours: bHours,
+      business_hours: bHours,
       branding: {
         accentColor: defaultAccent,
         logoUrl: defaultLogo,
@@ -1936,6 +1956,9 @@ export class ApiService {
           if (branchData.currencySettings || branchData.currency_settings) {
             updateData.currency_settings = branchData.currencySettings || branchData.currency_settings;
           }
+          if (branchData.business_hours || branchData.businessHours) {
+            updateData.business_hours = branchData.business_hours || branchData.businessHours;
+          }
 
           const { data, error } = await client.from('branches').update(updateData).eq('id', branchId).select().single();
           if (!error && data) {
@@ -2073,6 +2096,27 @@ export class ApiService {
       lastRateUpdate: new Date().toISOString()
     };
 
+    let cachedBranding: any = null;
+    if (typeof localStorage !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('deliveryhub_branding_' + r.id);
+        if (stored) cachedBranding = JSON.parse(stored);
+      } catch (_) {}
+    }
+
+    const rawBh = cachedBranding?.business_hours || cachedBranding?.businessHours || r.business_hours || r.businessHours || {};
+    const openTime = rawBh.open || cachedBranding?.openTime || r.open_time || r.openTime || '08:00';
+    const closeTime = rawBh.close || cachedBranding?.closeTime || r.close_time || r.closeTime || '23:00';
+    const scheduleDays = rawBh.scheduleDays || cachedBranding?.scheduleDays || r.scheduleDays || [];
+
+    const branchBh = {
+      open: openTime,
+      close: closeTime,
+      isOpenToday: rawBh.isOpenToday ?? true,
+      scheduleDays,
+      label: rawBh.label
+    };
+
     return {
       id: r.id,
       companyId: r.company_id || r.companyId,
@@ -2106,13 +2150,11 @@ export class ApiService {
       rejectionReason: r.rejection_reason || r.rejectionReason,
       phone: r.phone,
       whatsapp: r.whatsapp_number || r.whatsapp,
-      openTime: r.business_hours?.open || r.open_time || r.openTime || '11:00',
-      closeTime: r.business_hours?.close || r.close_time || r.closeTime || '23:00',
-      businessHours: {
-        open: r.business_hours?.open || r.open_time || r.openTime || '11:00',
-        close: r.business_hours?.close || r.close_time || r.closeTime || '23:00'
-      },
-      isOpenNow: r.business_hours?.isOpenToday ?? r.is_open_now ?? (r.status === 'active'),
+      openTime,
+      closeTime,
+      businessHours: branchBh,
+      business_hours: branchBh,
+      isOpenNow: rawBh.isOpenNow ?? rawBh.isOpenToday ?? r.is_open_now ?? (r.status === 'active'),
       createdAt: r.created_at || r.createdAt,
       paymentCredentials: this.mapPaymentCredentials(r.branch_payment_credentials || r.paymentCredentials),
       isMain: Boolean(r.is_main || r.isMain || r.name?.toLowerCase().includes('principal')),

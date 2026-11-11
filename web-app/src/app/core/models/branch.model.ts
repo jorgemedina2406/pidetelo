@@ -54,6 +54,7 @@ export interface Branch {
       to: string;
     }>;
   };
+  business_hours?: any;
   isOpenNow: boolean;
   paymentCredentials: BranchPaymentCredentials;
   createdAt?: string;

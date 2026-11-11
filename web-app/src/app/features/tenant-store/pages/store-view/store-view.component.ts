@@ -96,10 +96,10 @@ export class StoreViewComponent implements OnInit {
     const t = this.tenant();
     if (!t) return { isOpen: true, label: 'Abierto', openStr: '08:00', closeStr: '23:00' };
     const b = this.cart.selectedBranch();
-    const rawBh = (b as any)?.business_hours || b?.businessHours || (t as any).business_hours || (t as any).businessHours || t.deliverySettings?.businessHours;
-    const scheduleDays = rawBh?.scheduleDays;
-    const fallbackOpen = rawBh?.open || (b as any)?.open_time || (b as any)?.openTime || '08:00';
-    const fallbackClose = rawBh?.close || (b as any)?.close_time || (b as any)?.closeTime || '23:00';
+    const rawBh = (b as any)?.business_hours || b?.businessHours || (t as any)?.business_hours || (t as any)?.businessHours || t.deliverySettings?.businessHours;
+    const scheduleDays = (b as any)?.business_hours?.scheduleDays || b?.businessHours?.scheduleDays || (t as any)?.business_hours?.scheduleDays || t?.businessHours?.scheduleDays || rawBh?.scheduleDays;
+    const fallbackOpen = (b as any)?.open_time || (b as any)?.openTime || rawBh?.open || (t as any)?.open_time || (t as any)?.openTime || '08:00';
+    const fallbackClose = (b as any)?.close_time || (b as any)?.closeTime || rawBh?.close || (t as any)?.close_time || (t as any)?.closeTime || '23:00';
 
     const now = new Date();
     const daysMap = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];

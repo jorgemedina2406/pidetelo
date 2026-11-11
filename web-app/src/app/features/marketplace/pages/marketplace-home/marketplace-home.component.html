@@ -5,21 +5,13 @@
         <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
           
           <!-- Logo & Brand Badge -->
-          <a routerLink="/explorar" class="flex items-center gap-3 group transition-transform active:scale-95">
-            <div class="relative w-10 h-10 rounded-2xl bg-gradient-to-br from-brand-500 via-orange-500 to-amber-500 p-0.5 shadow-md shadow-brand-500/20 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-all">
-              <div class="w-full h-full bg-white dark:bg-slate-900 rounded-[14px] p-1 flex items-center justify-center overflow-hidden">
-                <img src="assets/logo-isotipo.png" alt="Pídetelo Logo" class="w-full h-full object-contain filter drop-shadow-xs" />
-              </div>
-            </div>
-            <div class="flex flex-col">
-              <div class="flex items-center gap-1.5">
-                <span class="font-black text-slate-900 dark:text-white tracking-tight text-lg leading-none">Pídetelo</span>
-                <span class="text-[9px] font-black uppercase tracking-wider bg-gradient-to-r from-brand-500 to-amber-500 text-white px-1.5 py-0.5 rounded-full shadow-xs">
-                  Express
-                </span>
-              </div>
-              <span class="text-[10px] text-slate-400 font-semibold tracking-wide">Marketplace Delivery</span>
-            </div>
+          <a routerLink="/explorar" class="flex items-center gap-2.5 group cursor-pointer focus:outline-none transition-transform active:scale-95">
+            <img src="assets/logo.png" 
+                 alt="Pídetelo Express" 
+                 class="h-9 sm:h-11 w-auto max-w-[170px] sm:max-w-[220px] object-contain drop-shadow-xs" />
+            <span class="hidden md:inline-flex text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 tracking-wider">
+              MARKETPLACE
+            </span>
           </a>
 
           <!-- Location Selector: Clean SaaS Pill -->
@@ -136,6 +128,7 @@
               <input type="text" 
                      [ngModel]="searchQuery()" 
                      (ngModelChange)="searchQuery.set($event)"
+                     (keyup.enter)="executeSearch()"
                      placeholder="Buscar comida, restaurante, sushi, hamburguesas, farmacia..."
                      class="w-full text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 bg-transparent focus:outline-none py-2" />
               @if (searchQuery()) {
@@ -143,7 +136,8 @@
                   ✕
                 </button>
               }
-              <button class="bg-gradient-to-r from-brand-500 to-amber-500 hover:from-brand-600 hover:to-amber-600 text-white font-bold text-xs sm:text-sm px-5 py-2.5 rounded-xl shadow-md shadow-brand-500/20 transition-all active:scale-95 flex-shrink-0 cursor-pointer">
+              <button (click)="executeSearch()"
+                      class="bg-gradient-to-r from-brand-500 to-amber-500 hover:from-brand-600 hover:to-amber-600 text-white font-bold text-xs sm:text-sm px-5 py-2.5 rounded-xl shadow-md shadow-brand-500/20 transition-all active:scale-95 flex-shrink-0 cursor-pointer">
                 Explorar
               </button>
             </div>
@@ -175,32 +169,51 @@
       <!-- ================= MAIN CONTENT AREA ================= -->
       <main class="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex-1 w-full space-y-7">
         
-        <!-- Category Chips (Elevated Pill Carousel) -->
-        <div class="space-y-3">
-          <div class="flex items-center gap-2.5 overflow-x-auto pb-2 scrollbar-none">
-            @for (cat of categories(); track cat.id) {
-              <button (click)="selectedCategory.set(cat.filter); selectedSubcategory.set('Todos')"
-                      [class.bg-gradient-to-r]="selectedCategory() === cat.filter"
-                      [class.from-brand-500]="selectedCategory() === cat.filter"
-                      [class.to-amber-500]="selectedCategory() === cat.filter"
-                      [class.text-white]="selectedCategory() === cat.filter"
-                      [class.shadow-md]="selectedCategory() === cat.filter"
-                      [class.shadow-brand-500/25]="selectedCategory() === cat.filter"
-                      [class.border-transparent]="selectedCategory() === cat.filter"
-                      [class.bg-white]="selectedCategory() !== cat.filter"
-                      [class.dark:bg-slate-900]="selectedCategory() !== cat.filter"
-                      [class.text-slate-700]="selectedCategory() !== cat.filter"
-                      [class.dark:text-slate-300]="selectedCategory() !== cat.filter"
-                      [class.border-slate-200]="selectedCategory() !== cat.filter"
-                      [class.dark:border-slate-800]="selectedCategory() !== cat.filter"
-                      [class.hover:border-slate-300]="selectedCategory() !== cat.filter"
-                      class="px-4 py-2 rounded-2xl text-xs font-bold border transition-all flex-shrink-0 flex items-center gap-2 cursor-pointer active:scale-95">
-                <span class="text-sm">{{ cat.icon }}</span>
-                <span>{{ cat.name }}</span>
+        <!-- Category Cards (Mobile App Style Square Cards) -->
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                <span>✨</span>
+                <span>Explorar por Categorías</span>
+              </h3>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Selecciona una categoría para filtrar comercios</p>
+            </div>
+            @if (selectedCategory() !== 'Todos') {
+              <button (click)="selectedCategory.set('Todos'); selectedSubcategory.set('Todos')" 
+                      class="text-xs font-bold text-brand-600 dark:text-brand-400 hover:underline cursor-pointer">
+                Ver todas
               </button>
             }
           </div>
 
+          <!-- Square Cards Carousel -->
+          <div class="flex items-center gap-3 sm:gap-4 overflow-x-auto pb-3 pt-1 scrollbar-none scroll-smooth">
+            @for (cat of categories(); track cat.id) {
+              <button (click)="selectedCategory.set(cat.filter); selectedSubcategory.set('Todos')"
+                      [class.border-brand-500]="selectedCategory() === cat.filter"
+                      [class.bg-brand-500]="selectedCategory() === cat.filter"
+                      [class.text-white]="selectedCategory() === cat.filter"
+                      [class.shadow-lg]="selectedCategory() === cat.filter"
+                      [class.shadow-brand-500/25]="selectedCategory() === cat.filter"
+                      [class.scale-105]="selectedCategory() === cat.filter"
+                      [class.border-slate-200]="selectedCategory() !== cat.filter"
+                      [class.dark:border-slate-800]="selectedCategory() !== cat.filter"
+                      [class.bg-white]="selectedCategory() !== cat.filter"
+                      [class.dark:bg-slate-900]="selectedCategory() !== cat.filter"
+                      [class.text-slate-700]="selectedCategory() !== cat.filter"
+                      [class.dark:text-slate-300]="selectedCategory() !== cat.filter"
+                      [class.hover:border-brand-300]="selectedCategory() !== cat.filter"
+                      [class.hover:bg-slate-50]="selectedCategory() !== cat.filter"
+                      [class.dark:hover:bg-slate-800/80]="selectedCategory() !== cat.filter"
+                      class="flex-shrink-0 w-20 sm:w-24 h-22 sm:h-24 rounded-2xl border-2 flex flex-col items-center justify-center p-2 text-center transition-all duration-200 cursor-pointer group">
+                <span class="text-2xl sm:text-3xl mb-1.5 transition-transform group-hover:scale-110 filter drop-shadow-xs">{{ cat.icon }}</span>
+                <span class="text-[11px] sm:text-xs font-bold leading-tight line-clamp-1 truncate w-full px-1">{{ cat.name }}</span>
+              </button>
+            }
+          </div>
+
+          <!-- Subcategories chips (if available) -->
           @if (currentSubcategories().length > 0) {
             <div class="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none text-[11px]">
               <button (click)="selectedSubcategory.set('Todos')"
@@ -212,7 +225,7 @@
                       [class.dark:bg-slate-900]="selectedSubcategory() !== 'Todos'"
                       [class.text-slate-600]="selectedSubcategory() !== 'Todos'"
                       [class.dark:text-slate-300]="selectedSubcategory() !== 'Todos'"
-                      class="px-3 py-1.5 rounded-xl font-bold border border-slate-200 dark:border-slate-800 transition-colors flex-shrink-0 cursor-pointer">
+                      class="px-3.5 py-1.5 rounded-xl font-bold border border-slate-200 dark:border-slate-800 transition-colors flex-shrink-0 cursor-pointer shadow-2xs">
                 Todos
               </button>
               @for (sub of currentSubcategories(); track sub) {
@@ -225,7 +238,7 @@
                         [class.dark:bg-slate-900]="selectedSubcategory() !== sub"
                         [class.text-slate-600]="selectedSubcategory() !== sub"
                         [class.dark:text-slate-300]="selectedSubcategory() !== sub"
-                        class="px-3 py-1.5 rounded-xl font-bold border border-slate-200 dark:border-slate-800 transition-colors flex-shrink-0 cursor-pointer">
+                        class="px-3.5 py-1.5 rounded-xl font-bold border border-slate-200 dark:border-slate-800 transition-colors flex-shrink-0 cursor-pointer shadow-2xs">
                   {{ sub }}
                 </button>
               }
@@ -234,7 +247,7 @@
         </div>
 
         <!-- Filter & Sorting Header -->
-        <div class="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-200 dark:border-slate-800">
+        <div id="seccion-comercios" class="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-200 dark:border-slate-800 scroll-mt-20">
           <div>
             <h2 class="text-base font-bold text-slate-900 dark:text-white">
               Restaurantes Disponibles
@@ -301,20 +314,21 @@
                 <div>
                   <!-- Image Banner with Gradient & Overlay Badges -->
                   <div class="relative h-44 sm:h-48 bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                    <img [src]="tenant.bannerUrl || 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1200&auto=format&fit=crop&q=80'" 
+                    <img [src]="tenant.bannerUrl || 'assets/delivery_courier.jpg'" 
                          [alt]="tenant.name"
-                         (error)="$any($event.target).src = 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1200&auto=format&fit=crop&q=80'"
+                         (error)="onBannerError($event)"
                          class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                     <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-black/20"></div>
 
                     <!-- Top Left: Store Open/Closed Badge -->
                     <div class="absolute top-3 left-3 z-10">
+                      @let status = checkStoreBusinessHours(tenant);
                       <span class="px-2.5 py-1 rounded-full text-[11px] font-black uppercase tracking-wider shadow-sm backdrop-blur-md flex items-center gap-1.5"
-                            [class.bg-emerald-500/90]="tenant.businessHours?.isOpenNow ?? true"
+                            [class.bg-emerald-500/90]="status.isOpen"
                             [class.text-white]="true"
-                            [class.bg-rose-600/90]="!(tenant.businessHours?.isOpenNow ?? true)">
-                        <span class="w-1.5 h-1.5 rounded-full" [class.bg-white]="true" [class.animate-ping]="tenant.businessHours?.isOpenNow ?? true"></span>
-                        <span>{{ (tenant.businessHours?.isOpenNow ?? true) ? 'Abierto' : 'Cerrado' }}</span>
+                            [class.bg-rose-600/90]="!status.isOpen">
+                        <span class="w-1.5 h-1.5 rounded-full bg-white" [class.animate-ping]="status.isOpen"></span>
+                        <span>{{ status.isOpen ? 'Abierto' : 'Cerrado' }}</span>
                       </span>
                     </div>
 
@@ -349,9 +363,9 @@
                   <div class="relative px-4 pt-0">
                     <div class="flex items-end justify-between -mt-8 mb-2">
                       <div class="relative">
-                        <img [src]="tenant.logoUrl || 'https://images.unsplash.com/photo-1550547660-d9450f859349?w=500&auto=format&fit=crop&q=80'" 
+                        <img [src]="tenant.logoUrl || getFallbackLogo(tenant.name)" 
                              [alt]="tenant.name"
-                             (error)="$any($event.target).src = 'https://images.unsplash.com/photo-1550547660-d9450f859349?w=500&auto=format&fit=crop&q=80'"
+                             (error)="onLogoError($event, tenant.name)"
                              class="w-16 h-16 rounded-2xl border-3 border-white dark:border-slate-900 object-cover shadow-md bg-white flex-shrink-0" />
                       </div>
                       <span class="text-[11px] font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-full mb-1">
@@ -415,16 +429,94 @@
 
       </main>
 
-      <!-- ================= FOOTER ================= -->
-      <footer class="bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 py-6 px-4 mt-12 text-xs text-slate-500 dark:text-slate-400">
-        <div class="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div class="flex items-center gap-2">
-            <span class="font-bold text-slate-900 dark:text-white">Pídetelo</span>
-            <span>— Plataforma digital de compras y delivery local</span>
+      <!-- ================= COMPREHENSIVE FOOTER CON INFORMACIÓN LEGAL & DESCARGA DE APP ================= -->
+      <footer class="bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 mt-16 pt-12 pb-8 px-4 sm:px-6 transition-colors">
+        <div class="max-w-6xl mx-auto space-y-10">
+          
+          <!-- Top Row: Brand, Description & App Download Buttons -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 pb-10 border-b border-slate-200 dark:border-slate-800">
+            
+            <!-- Col 1: Brand & App Download -->
+            <div class="space-y-4 lg:col-span-1">
+              <a routerLink="/explorar" class="inline-block">
+                <img src="assets/logo.png" alt="Pídetelo Express" class="h-10 w-auto object-contain" />
+              </a>
+              <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                Tu plataforma multi-comercio para descubrir menús oficiales, calcular delivery en tiempo real y hacer pedidos directos sin intermediarios costosos.
+              </p>
+
+              <!-- App Store & Google Play Official Badges -->
+              <div class="pt-2 space-y-2.5">
+                <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Descarga la App Móvil</p>
+                <div class="flex flex-wrap items-center gap-2.5">
+                  <a href="https://github.com/jorgemedina2406/pidetelo/releases/latest" 
+                     target="_blank" 
+                     rel="noopener"
+                     title="Descargar APK para Android"
+                     class="transition-transform hover:scale-105 active:scale-95 inline-block">
+                    <img src="assets/download-button-play.svg" alt="Disponible en Google Play" class="h-10 w-auto rounded-lg shadow-xs" />
+                  </a>
+                  <a href="https://github.com/jorgemedina2406/pidetelo/releases/latest" 
+                     target="_blank" 
+                     rel="noopener"
+                     title="Descargar IPA para iOS"
+                     class="transition-transform hover:scale-105 active:scale-95 inline-block">
+                    <img src="assets/download-button-ios.svg" alt="Descargar en App Store" class="h-10 w-auto rounded-lg shadow-xs" />
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <!-- Col 2: Categorías Populares -->
+            <div class="space-y-3">
+              <h4 class="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">Categorías</h4>
+              <ul class="space-y-2 text-xs text-slate-600 dark:text-slate-400">
+                <li><button (click)="selectedCategory.set('Restaurantes'); selectedSubcategory.set('Todos')" class="hover:text-brand-600 dark:hover:text-brand-400 transition-colors cursor-pointer">🍔 Restaurantes & Fast Food</button></li>
+                <li><button (click)="selectedCategory.set('Súper'); selectedSubcategory.set('Todos')" class="hover:text-brand-600 dark:hover:text-brand-400 transition-colors cursor-pointer">🛒 Supermercados & Víveres</button></li>
+                <li><button (click)="selectedCategory.set('Farmacias'); selectedSubcategory.set('Todos')" class="hover:text-brand-600 dark:hover:text-brand-400 transition-colors cursor-pointer">💊 Farmacias & Cuidado</button></li>
+                <li><button (click)="selectedCategory.set('Licores'); selectedSubcategory.set('Todos')" class="hover:text-brand-600 dark:hover:text-brand-400 transition-colors cursor-pointer">🍷 Licores & Bodegones</button></li>
+                <li><button (click)="selectedCategory.set('Postres'); selectedSubcategory.set('Todos')" class="hover:text-brand-600 dark:hover:text-brand-400 transition-colors cursor-pointer">🧁 Postres & Pastelería</button></li>
+              </ul>
+            </div>
+
+            <!-- Col 3: Para Comercios y Riders -->
+            <div class="space-y-3">
+              <h4 class="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">Aliados & Socios</h4>
+              <ul class="space-y-2 text-xs text-slate-600 dark:text-slate-400">
+                <li><a routerLink="/auth/register" class="hover:text-brand-600 dark:hover:text-brand-400 transition-colors">Registra tu Comercio</a></li>
+                <li><a routerLink="/admin" class="hover:text-brand-600 dark:hover:text-brand-400 transition-colors">Merchant Portal</a></li>
+                <li><a href="https://github.com/jorgemedina2406/pidetelo/releases/latest" target="_blank" class="hover:text-brand-600 dark:hover:text-brand-400 transition-colors">App para Repartidores (Riders)</a></li>
+                <li><a routerLink="/explorar" class="hover:text-brand-600 dark:hover:text-brand-400 transition-colors">Directorio de Comercios</a></li>
+              </ul>
+            </div>
+
+            <!-- Col 4: Legal & Soporte -->
+            <div class="space-y-3">
+              <h4 class="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">Legal & Transparencia</h4>
+              <ul class="space-y-2 text-xs text-slate-600 dark:text-slate-400">
+                <li><span class="hover:text-brand-600 dark:hover:text-brand-400 cursor-pointer">Términos y Condiciones</span></li>
+                <li><span class="hover:text-brand-600 dark:hover:text-brand-400 cursor-pointer">Política de Privacidad</span></li>
+                <li><span class="hover:text-brand-600 dark:hover:text-brand-400 cursor-pointer">Política de Cookies</span></li>
+                <li><span class="hover:text-brand-600 dark:hover:text-brand-400 cursor-pointer">Libro de Reclamaciones</span></li>
+                <li><a href="https://wa.me/584120000000?text=Hola,%20necesito%20soporte%20con%20Pidetelo" target="_blank" rel="noopener" class="hover:text-emerald-500 font-bold transition-colors">💬 Contacto & Soporte WhatsApp</a></li>
+              </ul>
+            </div>
+
           </div>
-          <div class="flex items-center gap-4 text-[11px] text-slate-400">
-            <span>© 2026 Pídetelo. Todos los derechos reservados.</span>
+
+          <!-- Bottom Row: Copyright & Disclaimers -->
+          <div class="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 dark:text-slate-400">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span>© 2026 <strong>Pídetelo Express C.A.</strong> Todos los derechos reservados.</span>
+            </div>
+            <div class="flex items-center gap-4 text-[11px]">
+              <span>Hecho con ❤️ para Venezuela</span>
+              <span>•</span>
+              <span>Barquisimeto & Cabudare</span>
+            </div>
           </div>
+
         </div>
       </footer>
 
