@@ -2,6 +2,9 @@ export interface TenantBusinessHours {
   open: string;  // e.g. "11:00"
   close: string; // e.g. "23:00"
   isOpenToday: boolean;
+  isOpenNow?: boolean;
+  scheduleDays?: any[];
+  label?: string;
 }
 
 export interface TenantContact {

@@ -5,17 +5,22 @@
         <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
           
           <!-- Logo & Brand Badge -->
-          <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-lg bg-slate-900 p-1 flex items-center justify-center shadow-xs flex-shrink-0 border border-slate-200 dark:border-slate-800">
-              <img src="assets/logo.png" alt="Logo" class="w-full h-full object-contain" />
+          <a routerLink="/explorar" class="flex items-center gap-3 group transition-transform active:scale-95">
+            <div class="relative w-10 h-10 rounded-2xl bg-gradient-to-br from-brand-500 via-orange-500 to-amber-500 p-0.5 shadow-md shadow-brand-500/20 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-all">
+              <div class="w-full h-full bg-white dark:bg-slate-900 rounded-[14px] p-1 flex items-center justify-center overflow-hidden">
+                <img src="assets/logo-isotipo.png" alt="Pídetelo Logo" class="w-full h-full object-contain filter drop-shadow-xs" />
+              </div>
             </div>
-            <div class="flex items-center gap-2">
-              <span class="font-bold text-slate-900 dark:text-white tracking-tight text-base">Pídetelo</span>
-              <span class="text-[11px] bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">
-                Marketplace
-              </span>
+            <div class="flex flex-col">
+              <div class="flex items-center gap-1.5">
+                <span class="font-black text-slate-900 dark:text-white tracking-tight text-lg leading-none">Pídetelo</span>
+                <span class="text-[9px] font-black uppercase tracking-wider bg-gradient-to-r from-brand-500 to-amber-500 text-white px-1.5 py-0.5 rounded-full shadow-xs">
+                  Express
+                </span>
+              </div>
+              <span class="text-[10px] text-slate-400 font-semibold tracking-wide">Marketplace Delivery</span>
             </div>
-          </div>
+          </a>
 
           <!-- Location Selector: Clean SaaS Pill -->
           <div class="relative flex-1 max-w-xs hidden md:block">
@@ -102,41 +107,44 @@
         </div>
       </nav>
 
-      <!-- ================= CLEAN CORPORATE HERO (NO NEON, NO CYBERPUNK) ================= -->
-      <section class="bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 py-12 px-4 sm:px-6">
-        <div class="max-w-4xl mx-auto space-y-4 text-center sm:text-left">
+      <!-- ================= MODERN ELEVATED HERO ================= -->
+      <section class="relative overflow-hidden bg-gradient-to-b from-brand-500/10 via-amber-500/5 to-slate-50 dark:from-brand-950/30 dark:via-slate-900/40 dark:to-slate-950 border-b border-slate-200 dark:border-slate-800/80 py-12 sm:py-16 px-4 sm:px-6">
+        <div class="max-w-4xl mx-auto space-y-5 text-center sm:text-left">
           
-          <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium">
-            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-            <span>{{ filteredTenants().length }} restaurantes disponibles en tu zona</span>
+          <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold shadow-xs">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>{{ filteredTenants().length }} comercios disponibles en tu zona</span>
           </div>
 
-          <h1 class="text-2xl sm:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-tight">
-            Restaurantes seleccionados con entrega local directa.
+          <h1 class="text-3xl sm:text-5xl font-black tracking-tight text-slate-900 dark:text-white leading-[1.15]">
+            Pide lo que te gusta, <br class="hidden sm:inline" />
+            <span class="bg-gradient-to-r from-brand-600 via-orange-600 to-amber-500 bg-clip-text text-transparent">
+              directo a tu puerta.
+            </span>
           </h1>
 
-          <p class="text-sm text-slate-500 dark:text-slate-400 max-w-2xl leading-relaxed">
-            Explora cartas digitales, consulta tiempos estimados de despacho y confirma pedidos directamente por WhatsApp o mediante la plataforma.
+          <p class="text-sm sm:text-base text-slate-600 dark:text-slate-300 max-w-2xl leading-relaxed">
+            Explora las cartas oficiales de tus marcas favoritas en Barquisimeto y Cabudare. Precios en tiempo real, cálculo de delivery y pedidos directos por WhatsApp o en línea.
           </p>
 
-          <!-- Minimalist Search Input (Linear/Stripe style) -->
-          <div class="pt-2 max-w-xl">
-            <div class="bg-slate-50 dark:bg-slate-900 rounded-lg p-1 flex items-center gap-2 border border-slate-300 dark:border-slate-700 focus-within:border-brand-500 focus-within:ring-1 focus-within:ring-brand-500 shadow-xs transition-all">
-              <span class="pl-2.5 text-slate-400 flex-shrink-0">
-                <app-icon name="search" [size]="16"></app-icon>
+          <!-- Floating Enhanced Search Box -->
+          <div class="pt-2 max-w-2xl">
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-1.5 sm:p-2 flex items-center gap-2 border border-slate-200 dark:border-slate-800 shadow-xl shadow-brand-500/5 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/20 transition-all">
+              <span class="pl-3 text-brand-500 flex-shrink-0">
+                <app-icon name="search" [size]="18"></app-icon>
               </span>
               <input type="text" 
                      [ngModel]="searchQuery()" 
                      (ngModelChange)="searchQuery.set($event)"
-                     placeholder="Buscar por restaurante, sushi, hamburguesas, pizzas..."
-                     class="w-full text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 bg-transparent focus:outline-none py-1.5" />
+                     placeholder="Buscar comida, restaurante, sushi, hamburguesas, farmacia..."
+                     class="w-full text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 bg-transparent focus:outline-none py-2" />
               @if (searchQuery()) {
                 <button (click)="searchQuery.set('')" class="text-slate-400 hover:text-slate-600 px-2 text-xs font-bold">
                   ✕
                 </button>
               }
-              <button class="bg-brand-500 hover:bg-brand-600 text-white font-semibold text-xs px-4 py-2 rounded-md shadow-xs transition-colors flex-shrink-0">
-                Buscar
+              <button class="bg-gradient-to-r from-brand-500 to-amber-500 hover:from-brand-600 hover:to-amber-600 text-white font-bold text-xs sm:text-sm px-5 py-2.5 rounded-xl shadow-md shadow-brand-500/20 transition-all active:scale-95 flex-shrink-0 cursor-pointer">
+                Explorar
               </button>
             </div>
           </div>
@@ -165,57 +173,65 @@
       }
 
       <!-- ================= MAIN CONTENT AREA ================= -->
-      <main class="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex-1 w-full space-y-6">
+      <main class="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex-1 w-full space-y-7">
         
-        <!-- Category Chips (Subtle 8px Border Radius) -->
-        <div class="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-          @for (cat of categories(); track cat.id) {
-            <button (click)="selectedCategory.set(cat.filter); selectedSubcategory.set('Todos')"
-                    [class.bg-slate-900]="selectedCategory() === cat.filter"
-                    [class.dark:bg-white]="selectedCategory() === cat.filter"
-                    [class.text-white]="selectedCategory() === cat.filter"
-                    [class.dark:text-slate-900]="selectedCategory() === cat.filter"
-                    [class.border-slate-900]="selectedCategory() === cat.filter"
-                    [class.dark:border-white]="selectedCategory() === cat.filter"
-                    [class.bg-white]="selectedCategory() !== cat.filter"
-                    [class.dark:bg-slate-900]="selectedCategory() !== cat.filter"
-                    [class.text-slate-600]="selectedCategory() !== cat.filter"
-                    [class.dark:text-slate-300]="selectedCategory() !== cat.filter"
-                    [class.border-slate-200]="selectedCategory() !== cat.filter"
-                    [class.dark:border-slate-800]="selectedCategory() !== cat.filter"
-                    class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors flex-shrink-0 flex items-center gap-1.5 cursor-pointer">
-              <span>{{ cat.icon }}</span>
-              <span>{{ cat.name }}</span>
-            </button>
-          }
-        </div>
-
-        @if (currentSubcategories().length > 0) {
-          <div class="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-[11px]">
-            <button (click)="selectedSubcategory.set('Todos')"
-                    [class.bg-brand-500]="selectedSubcategory() === 'Todos'"
-                    [class.text-white]="selectedSubcategory() === 'Todos'"
-                    [class.bg-slate-100]="selectedSubcategory() !== 'Todos'"
-                    [class.dark:bg-slate-800]="selectedSubcategory() !== 'Todos'"
-                    [class.text-slate-600]="selectedSubcategory() !== 'Todos'"
-                    [class.dark:text-slate-300]="selectedSubcategory() !== 'Todos'"
-                    class="px-2.5 py-1 rounded-md font-semibold transition-colors flex-shrink-0 cursor-pointer">
-              Todos
-            </button>
-            @for (sub of currentSubcategories(); track sub) {
-              <button (click)="selectedSubcategory.set(sub)"
-                      [class.bg-brand-500]="selectedSubcategory() === sub"
-                      [class.text-white]="selectedSubcategory() === sub"
-                      [class.bg-slate-100]="selectedSubcategory() !== sub"
-                      [class.dark:bg-slate-800]="selectedSubcategory() !== sub"
-                      [class.text-slate-600]="selectedSubcategory() !== sub"
-                      [class.dark:text-slate-300]="selectedSubcategory() !== sub"
-                      class="px-2.5 py-1 rounded-md font-semibold transition-colors flex-shrink-0 cursor-pointer">
-                {{ sub }}
+        <!-- Category Chips (Elevated Pill Carousel) -->
+        <div class="space-y-3">
+          <div class="flex items-center gap-2.5 overflow-x-auto pb-2 scrollbar-none">
+            @for (cat of categories(); track cat.id) {
+              <button (click)="selectedCategory.set(cat.filter); selectedSubcategory.set('Todos')"
+                      [class.bg-gradient-to-r]="selectedCategory() === cat.filter"
+                      [class.from-brand-500]="selectedCategory() === cat.filter"
+                      [class.to-amber-500]="selectedCategory() === cat.filter"
+                      [class.text-white]="selectedCategory() === cat.filter"
+                      [class.shadow-md]="selectedCategory() === cat.filter"
+                      [class.shadow-brand-500/25]="selectedCategory() === cat.filter"
+                      [class.border-transparent]="selectedCategory() === cat.filter"
+                      [class.bg-white]="selectedCategory() !== cat.filter"
+                      [class.dark:bg-slate-900]="selectedCategory() !== cat.filter"
+                      [class.text-slate-700]="selectedCategory() !== cat.filter"
+                      [class.dark:text-slate-300]="selectedCategory() !== cat.filter"
+                      [class.border-slate-200]="selectedCategory() !== cat.filter"
+                      [class.dark:border-slate-800]="selectedCategory() !== cat.filter"
+                      [class.hover:border-slate-300]="selectedCategory() !== cat.filter"
+                      class="px-4 py-2 rounded-2xl text-xs font-bold border transition-all flex-shrink-0 flex items-center gap-2 cursor-pointer active:scale-95">
+                <span class="text-sm">{{ cat.icon }}</span>
+                <span>{{ cat.name }}</span>
               </button>
             }
           </div>
-        }
+
+          @if (currentSubcategories().length > 0) {
+            <div class="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none text-[11px]">
+              <button (click)="selectedSubcategory.set('Todos')"
+                      [class.bg-slate-900]="selectedSubcategory() === 'Todos'"
+                      [class.dark:bg-white]="selectedSubcategory() === 'Todos'"
+                      [class.text-white]="selectedSubcategory() === 'Todos'"
+                      [class.dark:text-slate-900]="selectedSubcategory() === 'Todos'"
+                      [class.bg-white]="selectedSubcategory() !== 'Todos'"
+                      [class.dark:bg-slate-900]="selectedSubcategory() !== 'Todos'"
+                      [class.text-slate-600]="selectedSubcategory() !== 'Todos'"
+                      [class.dark:text-slate-300]="selectedSubcategory() !== 'Todos'"
+                      class="px-3 py-1.5 rounded-xl font-bold border border-slate-200 dark:border-slate-800 transition-colors flex-shrink-0 cursor-pointer">
+                Todos
+              </button>
+              @for (sub of currentSubcategories(); track sub) {
+                <button (click)="selectedSubcategory.set(sub)"
+                        [class.bg-slate-900]="selectedSubcategory() === sub"
+                        [class.dark:bg-white]="selectedSubcategory() === sub"
+                        [class.text-white]="selectedSubcategory() === sub"
+                        [class.dark:text-slate-900]="selectedSubcategory() === sub"
+                        [class.bg-white]="selectedSubcategory() !== sub"
+                        [class.dark:bg-slate-900]="selectedSubcategory() !== sub"
+                        [class.text-slate-600]="selectedSubcategory() !== sub"
+                        [class.dark:text-slate-300]="selectedSubcategory() !== sub"
+                        class="px-3 py-1.5 rounded-xl font-bold border border-slate-200 dark:border-slate-800 transition-colors flex-shrink-0 cursor-pointer">
+                  {{ sub }}
+                </button>
+              }
+            </div>
+          }
+        </div>
 
         <!-- Filter & Sorting Header -->
         <div class="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-200 dark:border-slate-800">
@@ -278,73 +294,98 @@
             </div>
           </div>
         } @else {
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             @for (tenant of filteredTenants(); track tenant.id) {
-              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden shadow-xs hover:border-slate-300 dark:hover:border-slate-700 transition-colors flex flex-col justify-between">
+              <div class="group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-xs hover:shadow-xl hover:border-brand-500/40 transition-all duration-300 flex flex-col justify-between">
                 
-                <!-- Image Banner with subtle 1px border -->
                 <div>
-                  <div class="relative h-40 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-800 overflow-hidden">
-
-                    <!-- Heart Favorite Button -->
-                    <button (click)="$event.stopPropagation(); $event.preventDefault(); toggleFavorite(tenant.slug)"
-                            [title]="favorites.isFavorite(tenant.slug) ? 'Quitar de favoritos' : 'Guardar en favoritos'"
-                            class="absolute top-2 left-2 w-8 h-8 rounded-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm border border-slate-200 dark:border-slate-700 flex items-center justify-center transition-all hover:scale-110 active:scale-95 shadow-xs cursor-pointer z-10">
-                      <app-icon name="heart" [size]="15" [className]="favorites.isFavorite(tenant.slug) ? 'fill-red-500 text-red-500' : 'text-slate-400 dark:text-slate-500'"></app-icon>
-                    </button>
-
-                    <img [src]="tenant.bannerUrl" 
+                  <!-- Image Banner with Gradient & Overlay Badges -->
+                  <div class="relative h-44 sm:h-48 bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                    <img [src]="tenant.bannerUrl || 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1200&auto=format&fit=crop&q=80'" 
                          [alt]="tenant.name"
-                         class="w-full h-full object-cover" />
+                         (error)="$any($event.target).src = 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1200&auto=format&fit=crop&q=80'"
+                         class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-black/20"></div>
 
-                    <!-- Badges (Subtle 4px / 6px radius) -->
-                    <div class="absolute bottom-2 left-2 flex items-center gap-1.5">
-                      <span class="px-2 py-0.5 rounded bg-slate-900/90 text-white text-[11px] font-medium flex items-center gap-1">
+                    <!-- Top Left: Store Open/Closed Badge -->
+                    <div class="absolute top-3 left-3 z-10">
+                      <span class="px-2.5 py-1 rounded-full text-[11px] font-black uppercase tracking-wider shadow-sm backdrop-blur-md flex items-center gap-1.5"
+                            [class.bg-emerald-500/90]="tenant.businessHours?.isOpenNow ?? true"
+                            [class.text-white]="true"
+                            [class.bg-rose-600/90]="!(tenant.businessHours?.isOpenNow ?? true)">
+                        <span class="w-1.5 h-1.5 rounded-full" [class.bg-white]="true" [class.animate-ping]="tenant.businessHours?.isOpenNow ?? true"></span>
+                        <span>{{ (tenant.businessHours?.isOpenNow ?? true) ? 'Abierto' : 'Cerrado' }}</span>
+                      </span>
+                    </div>
+
+                    <!-- Top Right: Rating & Heart Favorite Button -->
+                    <div class="absolute top-3 right-3 flex items-center gap-1.5 z-10">
+                      <div class="px-2 py-1 rounded-full bg-black/60 backdrop-blur-md text-amber-400 text-xs font-black shadow-sm flex items-center gap-1 border border-white/10">
+                        <span>★</span>
+                        <span class="text-white">{{ tenant.rating.toFixed(1) }}</span>
+                      </div>
+
+                      <button (click)="$event.stopPropagation(); $event.preventDefault(); toggleFavorite(tenant.slug)"
+                              [title]="favorites.isFavorite(tenant.slug) ? 'Quitar de favoritos' : 'Guardar en favoritos'"
+                              class="w-8 h-8 rounded-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-700 flex items-center justify-center transition-all hover:scale-110 active:scale-95 shadow-xs cursor-pointer">
+                        <app-icon name="heart" [size]="14" [className]="favorites.isFavorite(tenant.slug) ? 'fill-red-500 text-red-500' : 'text-slate-400 dark:text-slate-500'"></app-icon>
+                      </button>
+                    </div>
+
+                    <!-- Bottom Right: Distance & Delivery Time Badge -->
+                    <div class="absolute bottom-3 right-3 flex items-center gap-1.5 z-10">
+                      <span class="px-2.5 py-1 rounded-full bg-black/65 backdrop-blur-md text-white text-[11px] font-bold flex items-center gap-1 border border-white/10">
+                        <app-icon name="clock" [size]="11" className="text-amber-400"></app-icon>
+                        <span>{{ tenant.deliveryMinutesMin }}-{{ tenant.deliveryMinutesMax }} min</span>
+                      </span>
+                      <span class="px-2.5 py-1 rounded-full bg-black/65 backdrop-blur-md text-white text-[11px] font-bold flex items-center gap-1 border border-white/10">
                         <app-icon name="map-pin" [size]="11" className="text-brand-400"></app-icon>
                         <span>{{ tenant.distanceKm.toFixed(1) }} km</span>
                       </span>
-                      
-                      <span class="px-2 py-0.5 rounded bg-slate-900/90 text-white text-[11px] font-medium flex items-center gap-1">
-                        <app-icon name="clock" [size]="11" className="text-slate-300"></app-icon>
-                        <span>{{ tenant.deliveryMinutesMin }}-{{ tenant.deliveryMinutesMax }} min</span>
+                    </div>
+                  </div>
+
+                  <!-- Floating Store Logo & Card Header -->
+                  <div class="relative px-4 pt-0">
+                    <div class="flex items-end justify-between -mt-8 mb-2">
+                      <div class="relative">
+                        <img [src]="tenant.logoUrl || 'https://images.unsplash.com/photo-1550547660-d9450f859349?w=500&auto=format&fit=crop&q=80'" 
+                             [alt]="tenant.name"
+                             (error)="$any($event.target).src = 'https://images.unsplash.com/photo-1550547660-d9450f859349?w=500&auto=format&fit=crop&q=80'"
+                             class="w-16 h-16 rounded-2xl border-3 border-white dark:border-slate-900 object-cover shadow-md bg-white flex-shrink-0" />
+                      </div>
+                      <span class="text-[11px] font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-full mb-1">
+                        {{ tenant.category }}
                       </span>
                     </div>
 
-                    <div class="absolute top-2 right-2 px-2 py-0.5 rounded bg-white/95 dark:bg-slate-900/95 text-slate-900 dark:text-white text-[11px] font-bold border border-slate-200 dark:border-slate-700 flex items-center gap-1">
-                      <span class="text-amber-500">★</span>
-                      <span>{{ tenant.rating.toFixed(1) }}</span>
-                    </div>
-                  </div>
-
-                  <!-- Card Body -->
-                  <div class="p-4 space-y-2">
-                    <div class="flex items-center gap-2.5">
-                      <img [src]="tenant.logoUrl" 
-                           [alt]="tenant.name"
-                           class="w-9 h-9 rounded-md object-cover border border-slate-200 dark:border-slate-700 flex-shrink-0" />
-                      <div class="min-w-0">
-                        <h3 class="font-bold text-sm text-slate-900 dark:text-white truncate">
-                          {{ tenant.name }}
-                        </h3>
-                        <div class="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                          {{ tenant.category }} • {{ tenant.contact?.address || (tenant.branches && tenant.branches[0]?.address) || 'Venezuela' }}
-                        </div>
+                    <div class="space-y-1">
+                      <h3 class="font-extrabold text-base text-slate-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors truncate">
+                        {{ tenant.name }}
+                      </h3>
+                      <div class="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 truncate">
+                        <app-icon name="map-pin" [size]="12" className="text-slate-400 flex-shrink-0"></app-icon>
+                        <span class="truncate">{{ tenant.contact?.address || (tenant.branches && tenant.branches[0]?.address) || 'Barquisimeto, Venezuela' }}</span>
                       </div>
+                      @if (tenant.tagline) {
+                        <p class="text-xs text-slate-600 dark:text-slate-300 line-clamp-1 pt-0.5">
+                          {{ tenant.tagline }}
+                        </p>
+                      }
                     </div>
-
-                    <p class="text-xs text-slate-600 dark:text-slate-300 line-clamp-2 leading-relaxed">
-                      {{ tenant.tagline }}
-                    </p>
                   </div>
                 </div>
 
-                <!-- Footer with Action Buttons -->
-                <div class="p-4 pt-0">
+                <!-- Footer with Pricing & Action Buttons -->
+                <div class="p-4 pt-3">
                   <div class="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-3">
-                    <div class="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
-                      <span>Envío: <strong class="text-slate-900 dark:text-white">${{ (tenant.deliverySettings?.baseDeliveryFee ?? tenant.computedDeliveryFee).toFixed(2) }}</strong></span>
+                    <div class="flex items-center justify-between text-xs">
+                      <div class="flex items-center gap-1.5 text-slate-600 dark:text-slate-400 font-medium">
+                        <span>🛵 Envío:</span>
+                        <strong class="text-slate-900 dark:text-white font-bold">${{ (tenant.deliverySettings?.baseDeliveryFee ?? tenant.computedDeliveryFee).toFixed(2) }}</strong>
+                      </div>
                       @if (tenant.deliverySettings?.freeDeliveryThreshold && tenant.deliverySettings.freeDeliveryThreshold > 0) {
-                        <span class="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+                        <span class="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800/40">
                           Gratis > ${{ tenant.deliverySettings.freeDeliveryThreshold }}
                         </span>
                       }
@@ -352,15 +393,15 @@
 
                     <div class="grid grid-cols-2 gap-2">
                       <a [routerLink]="['/t', tenant.slug]"
-                         class="py-2 rounded-md bg-brand-500 hover:bg-brand-600 text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors">
+                         class="py-2.5 rounded-xl bg-gradient-to-r from-brand-500 to-amber-500 hover:from-brand-600 hover:to-amber-600 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm shadow-brand-500/20 transition-all active:scale-95 cursor-pointer">
                         <app-icon name="utensils" [size]="13" className="text-white"></app-icon>
                         <span>Ver Menú</span>
                       </a>
 
                       <a [href]="'https://wa.me/' + ((tenant.contact?.whatsappNumber || tenant.whatsapp_number || tenant.phone || '').replace('+', '')) + '?text=' + encodeWhatsAppText(tenant.name)" 
                          target="_blank"
-                         class="py-2 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs border border-slate-200 dark:border-slate-700 flex items-center justify-center gap-1.5 transition-colors">
-                        <app-icon name="message-circle" [size]="13"></app-icon>
+                         class="py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-bold text-xs border border-emerald-200 dark:border-emerald-800 flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer">
+                        <app-icon name="message-circle" [size]="14"></app-icon>
                         <span>WhatsApp</span>
                       </a>
                     </div>

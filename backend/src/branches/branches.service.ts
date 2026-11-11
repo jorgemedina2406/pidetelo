@@ -140,8 +140,10 @@ export class BranchesService {
     const displayMode = branch.display_mode ?? meta.display_mode ?? meta.currency_settings?.displayMode ?? tenant.display_mode ?? 'usd_and_bs';
     const tagline = branch.tagline ?? meta.tagline ?? tenant.tagline ?? '';
     const accentColor = branch.accent_color ?? meta.accent_color ?? tenant.accent_color ?? '#f97316';
-    const logoUrl = branch.logo_url ?? meta.logo_url ?? tenant.logo_url ?? '';
-    const bannerUrl = branch.banner_url ?? meta.banner_url ?? tenant.banner_url ?? '';
+    const defaultLogo = 'https://images.unsplash.com/photo-1550547660-d9450f859349?w=500&auto=format&fit=crop&q=80';
+    const defaultBanner = 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1200&auto=format&fit=crop&q=80';
+    const logoUrl = branch.logo_url || meta.logo_url || tenant.logo_url || tenant.branding?.logoUrl || defaultLogo;
+    const bannerUrl = branch.banner_url || meta.banner_url || tenant.banner_url || tenant.branding?.bannerUrl || defaultBanner;
 
     const currencySettings = {
       baseCurrency,
@@ -159,10 +161,10 @@ export class BranchesService {
     const deliveryTiers = branch.delivery_tiers ?? meta.delivery_tiers ?? meta.deliveryTiers ?? tenant.delivery_tiers ?? defaultDeliveryTiers;
     const acceptedPaymentMethods = branch.accepted_payment_methods ?? meta.accepted_payment_methods ?? meta.acceptedPaymentMethods ?? tenant.accepted_payment_methods ?? tenant.acceptedPaymentMethods ?? ['mobile_transfer', 'cash_usd', 'cash_local'];
     
-    const rawBh = branch.business_hours ?? meta.business_hours ?? tenant.business_hours ?? { open: '11:00', close: '23:00', isOpenToday: true };
+    const rawBh = branch.business_hours ?? meta.business_hours ?? tenant.business_hours ?? { open: '08:00', close: '23:00', isOpenToday: true };
     const scheduleDays = rawBh?.scheduleDays || meta.business_hours?.scheduleDays || tenant.business_hours?.scheduleDays || null;
     const businessHours = {
-      open: rawBh?.open || '11:00',
+      open: rawBh?.open || '08:00',
       close: rawBh?.close || '23:00',
       isOpenToday: rawBh?.isOpenToday ?? true,
       scheduleDays: scheduleDays
@@ -773,16 +775,23 @@ export class BranchesService {
     const newIsOpen = isOpen !== undefined ? isOpen : !currentOpen;
     const newStatus = status || (newIsOpen ? 'active' : 'inactive');
 
+    const meta = this.getBranchMetadata(id);
+    const existingSDays = currentBh.scheduleDays || meta.business_hours?.scheduleDays || null;
+
     const updatePayload: any = {
       status: branch.status === 'pending_approval' ? 'pending_approval' : newStatus,
       business_hours: {
         ...currentBh,
-        open: currentBh.open || '11:00',
-        close: currentBh.close || '23:00',
-        isOpenToday: newIsOpen
+        open: currentBh.open || meta.business_hours?.open || '08:00',
+        close: currentBh.close || meta.business_hours?.close || '23:00',
+        isOpenToday: newIsOpen,
+        scheduleDays: existingSDays
       },
       updated_at: new Date().toISOString()
     };
+
+    meta.business_hours = updatePayload.business_hours;
+    this.saveBranchMetadata(id, meta);
 
     const { data: updated, error: updateErr } = await client
       .from('branches')

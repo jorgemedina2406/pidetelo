@@ -12,11 +12,18 @@ on:
           - ambas
           - cliente
           - rider
+  push:
+    branches:
+      - main
+    paths:
+      - 'mobile_app/**'
+      - 'rider_app/**'
+      - '.github/workflows/build-ios.yml'
 
 jobs:
   build-ios:
     name: Build iOS IPAs
-    runs-on: macos-15
+    runs-on: macos-14
     timeout-minutes: 60
     steps:
       - name: Checkout Code

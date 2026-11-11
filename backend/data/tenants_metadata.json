@@ -39,7 +39,58 @@
     "category": "Restaurantes",
     "subcategories": [
       "Hamburguesas"
-    ]
+    ],
+    "business_hours": {
+      "open": "08:00",
+      "close": "23:00",
+      "isOpenToday": true,
+      "scheduleDays": [
+        {
+          "day": "Lunes",
+          "open": true,
+          "from": "08:00",
+          "to": "23:00"
+        },
+        {
+          "day": "Martes",
+          "open": true,
+          "from": "08:00",
+          "to": "23:00"
+        },
+        {
+          "day": "Miércoles",
+          "open": true,
+          "from": "08:00",
+          "to": "23:00"
+        },
+        {
+          "day": "Jueves",
+          "open": true,
+          "from": "08:00",
+          "to": "23:00"
+        },
+        {
+          "day": "Viernes",
+          "open": true,
+          "from": "08:00",
+          "to": "23:30"
+        },
+        {
+          "day": "Sábado",
+          "open": true,
+          "from": "08:00",
+          "to": "23:30"
+        },
+        {
+          "day": "Domingo",
+          "open": true,
+          "from": "08:00",
+          "to": "22:30"
+        }
+      ]
+    },
+    "logo_url": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&auto=format&fit=crop&q=80",
+    "banner_url": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=1200&auto=format&fit=crop&q=80"
   },
   "3611773f-7d57-4675-af87-9ce4b0002eb5": {
     "category": "Restaurantes",
@@ -99,7 +150,58 @@
       "cash_local"
     ],
     "plan_code": "FRANQUICIA",
-    "planCode": "FRANQUICIA"
+    "planCode": "FRANQUICIA",
+    "business_hours": {
+      "open": "08:00",
+      "close": "23:00",
+      "isOpenToday": true,
+      "scheduleDays": [
+        {
+          "day": "Lunes",
+          "open": true,
+          "from": "08:00",
+          "to": "23:00"
+        },
+        {
+          "day": "Martes",
+          "open": true,
+          "from": "08:00",
+          "to": "23:00"
+        },
+        {
+          "day": "Miércoles",
+          "open": true,
+          "from": "08:00",
+          "to": "23:00"
+        },
+        {
+          "day": "Jueves",
+          "open": true,
+          "from": "08:00",
+          "to": "23:00"
+        },
+        {
+          "day": "Viernes",
+          "open": true,
+          "from": "08:00",
+          "to": "23:30"
+        },
+        {
+          "day": "Sábado",
+          "open": true,
+          "from": "08:00",
+          "to": "23:30"
+        },
+        {
+          "day": "Domingo",
+          "open": true,
+          "from": "08:00",
+          "to": "22:30"
+        }
+      ]
+    },
+    "logo_url": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&auto=format&fit=crop&q=80",
+    "banner_url": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=1200&auto=format&fit=crop&q=80"
   },
   "5ecb4b6c-6ad8-45a2-8a5d-26af406cd31c": {
     "category": "Restaurantes",
@@ -157,6 +259,57 @@
         "mobile_transfer",
         "cash_local"
       ]
-    }
+    },
+    "business_hours": {
+      "open": "08:00",
+      "close": "23:00",
+      "isOpenToday": true,
+      "scheduleDays": [
+        {
+          "day": "Lunes",
+          "open": true,
+          "from": "08:00",
+          "to": "23:00"
+        },
+        {
+          "day": "Martes",
+          "open": true,
+          "from": "08:00",
+          "to": "23:00"
+        },
+        {
+          "day": "Miércoles",
+          "open": true,
+          "from": "08:00",
+          "to": "23:00"
+        },
+        {
+          "day": "Jueves",
+          "open": true,
+          "from": "08:00",
+          "to": "23:00"
+        },
+        {
+          "day": "Viernes",
+          "open": true,
+          "from": "08:00",
+          "to": "23:30"
+        },
+        {
+          "day": "Sábado",
+          "open": true,
+          "from": "08:00",
+          "to": "23:30"
+        },
+        {
+          "day": "Domingo",
+          "open": true,
+          "from": "08:00",
+          "to": "22:30"
+        }
+      ]
+    },
+    "logo_url": "https://images.unsplash.com/photo-1550547660-d9450f859349?w=500&auto=format&fit=crop&q=80",
+    "banner_url": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1200&auto=format&fit=crop&q=80"
   }
 }

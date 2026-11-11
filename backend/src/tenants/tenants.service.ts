@@ -219,8 +219,23 @@ export class TenantsService {
           scheduleDays: sDays
         };
         const bStatus = this.calculateScheduleStatus(bHours);
+        const bLogo = b.logo_url || bm.logo_url || meta.logo_url || t.logo_url || 'https://images.unsplash.com/photo-1550547660-d9450f859349?w=500&auto=format&fit=crop&q=80';
+        const bBanner = b.banner_url || bm.banner_url || meta.banner_url || t.banner_url || 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1200&auto=format&fit=crop&q=80';
+        const bAccent = b.accent_color || bm.accent_color || meta.accent_color || t.accent_color || '#f97316';
+
         return {
           ...b,
+          logo_url: bLogo,
+          logoUrl: bLogo,
+          banner_url: bBanner,
+          bannerUrl: bBanner,
+          accent_color: bAccent,
+          accentColor: bAccent,
+          branding: {
+            accentColor: bAccent,
+            logoUrl: bLogo,
+            bannerUrl: bBanner
+          },
           exchange_rate: bRate,
           exchangeRate: bRate,
           delivery_tiers: bTiers,
@@ -283,10 +298,16 @@ export class TenantsService {
     }
 
     const firstBranch = Array.isArray(enrichedBranches) && enrichedBranches.length > 0 ? enrichedBranches[0] : null;
-    const rawTenantBh = t.business_hours ?? meta.business_hours ?? firstBranch?.business_hours ?? { open: '11:00', close: '23:00', isOpenToday: true };
+    const defaultLogo = 'https://images.unsplash.com/photo-1550547660-d9450f859349?w=500&auto=format&fit=crop&q=80';
+    const defaultBanner = 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1200&auto=format&fit=crop&q=80';
+    const resolvedLogo = t.logo_url || meta.logo_url || firstBranch?.logoUrl || firstBranch?.logo_url || defaultLogo;
+    const resolvedBanner = t.banner_url || meta.banner_url || firstBranch?.bannerUrl || firstBranch?.banner_url || defaultBanner;
+    const resolvedAccent = t.accent_color || meta.accent_color || firstBranch?.accentColor || firstBranch?.accent_color || '#f97316';
+
+    const rawTenantBh = t.business_hours ?? meta.business_hours ?? firstBranch?.business_hours ?? { open: '08:00', close: '23:00', isOpenToday: true };
     const tenantSDays = rawTenantBh?.scheduleDays || firstBranch?.business_hours?.scheduleDays || null;
     const tenantHours = {
-      open: rawTenantBh?.open || firstBranch?.openTime || '11:00',
+      open: rawTenantBh?.open || firstBranch?.openTime || '08:00',
       close: rawTenantBh?.close || firstBranch?.closeTime || '23:00',
       isOpenToday: rawTenantBh?.isOpenToday ?? firstBranch?.isOpenToday ?? true,
       scheduleDays: tenantSDays
@@ -295,6 +316,12 @@ export class TenantsService {
 
     return {
       ...t,
+      logo_url: resolvedLogo,
+      logoUrl: resolvedLogo,
+      banner_url: resolvedBanner,
+      bannerUrl: resolvedBanner,
+      accent_color: resolvedAccent,
+      accentColor: resolvedAccent,
       plan_code: planCode,
       planCode: planCode,
       subscription_plan_id: t.subscription_plan_id || planCode,
@@ -353,19 +380,19 @@ export class TenantsService {
       },
       branches: enrichedBranches,
       contact: {
-        address: t.address || '',
-        phone: t.phone || '',
-        whatsappNumber: t.whatsapp_number || t.phone || '',
-        whatsapp_number: t.whatsapp_number || t.phone || '',
+        address: t.address || (firstBranch && firstBranch.address) || '',
+        phone: t.phone || (firstBranch && firstBranch.phone) || '',
+        whatsappNumber: t.whatsapp_number || t.phone || (firstBranch && (firstBranch.whatsapp_number || firstBranch.phone)) || '',
+        whatsapp_number: t.whatsapp_number || t.phone || (firstBranch && (firstBranch.whatsapp_number || firstBranch.phone)) || '',
         coordinates: {
-          lat: Number(t.latitude) || 10.0633,
-          lng: Number(t.longitude) || -69.2865
+          lat: Number(t.latitude) || Number(firstBranch?.latitude) || 10.0633,
+          lng: Number(t.longitude) || Number(firstBranch?.longitude) || -69.2865
         }
       },
       branding: {
-        accentColor: t.accent_color || '#f97316',
-        logoUrl: t.logo_url || '',
-        bannerUrl: t.banner_url || ''
+        accentColor: resolvedAccent,
+        logoUrl: resolvedLogo,
+        bannerUrl: resolvedBanner
       }
     };
   }

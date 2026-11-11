@@ -1296,6 +1296,11 @@ export class ApiService {
   // HELPERS DE NORMALIZACIÓN (SNAKE -> CAMEL)
   // ==========================================
   private mapTenant(row: any): Tenant {
+    const fallbackLogo = row.slug?.includes('burger') 
+      ? 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&auto=format&fit=crop&q=80' 
+      : 'https://images.unsplash.com/photo-1550547660-d9450f859349?w=500&auto=format&fit=crop&q=80';
+    const fallbackBanner = 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1200&auto=format&fit=crop&q=80';
+
     // Si ya viene formateado en camelCase, asegurar que contact exista y retornarlo
     if (row.deliverySettings && row.branding) {
       if (!row.contact) {
@@ -1310,12 +1315,18 @@ export class ApiService {
           },
         };
       }
+      row.logoUrl = row.logoUrl || row.branding?.logoUrl || row.logo_url || fallbackLogo;
+      row.bannerUrl = row.bannerUrl || row.branding?.bannerUrl || row.banner_url || fallbackBanner;
+      if (row.branding) {
+        row.branding.logoUrl = row.branding.logoUrl || row.logoUrl;
+        row.branding.bannerUrl = row.branding.bannerUrl || row.bannerUrl;
+      }
       return row as Tenant;
     }
 
     const defaultAccent = row.accent_color || (row.slug === 'burger-lab' ? '#f97316' : '#ea580c');
-    const defaultLogo = row.logo_url || 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=300&auto=format&fit=crop&q=80';
-    const defaultBanner = row.banner_url || 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1200&auto=format&fit=crop&q=80';
+    const defaultLogo = row.logo_url || fallbackLogo;
+    const defaultBanner = row.banner_url || fallbackBanner;
 
     return {
       id: row.id,

@@ -94,11 +94,11 @@ export class StoreViewComponent implements OnInit {
 
   readonly isStoreOpen = computed(() => {
     const t = this.tenant();
-    if (!t) return { isOpen: true, label: 'Abierto', openStr: '11:00', closeStr: '23:00' };
+    if (!t) return { isOpen: true, label: 'Abierto', openStr: '08:00', closeStr: '23:00' };
     const b = this.cart.selectedBranch();
     const rawBh = (b as any)?.business_hours || b?.businessHours || (t as any).business_hours || (t as any).businessHours || t.deliverySettings?.businessHours;
     const scheduleDays = rawBh?.scheduleDays;
-    const fallbackOpen = rawBh?.open || (b as any)?.open_time || (b as any)?.openTime || '11:00';
+    const fallbackOpen = rawBh?.open || (b as any)?.open_time || (b as any)?.openTime || '08:00';
     const fallbackClose = rawBh?.close || (b as any)?.close_time || (b as any)?.closeTime || '23:00';
 
     const now = new Date();
@@ -114,7 +114,7 @@ export class StoreViewComponent implements OnInit {
       });
 
       if (todayConfig) {
-        if (todayConfig.open === false) {
+        if (todayConfig.open === false || todayConfig.active === false || todayConfig.isOpen === false) {
           return {
             isOpen: false,
             label: 'Cerrado hoy',
@@ -122,13 +122,13 @@ export class StoreViewComponent implements OnInit {
             closeStr: todayConfig.to || fallbackClose
           };
         }
-        const openStr = todayConfig.from || fallbackOpen;
-        const closeStr = todayConfig.to || fallbackClose;
+        const openStr = todayConfig.from || todayConfig.open_time || todayConfig.openTime || fallbackOpen;
+        const closeStr = todayConfig.to || todayConfig.close_time || todayConfig.closeTime || fallbackClose;
         const [openH, openM] = openStr.split(':').map(Number);
         const [closeH, closeM] = closeStr.split(':').map(Number);
         const cur = now.getHours() * 60 + now.getMinutes();
-        const o = (openH || 11) * 60 + (openM || 0);
-        const c = (closeH || 23) * 60 + (closeM || 0);
+        const o = (isNaN(openH) ? 8 : openH) * 60 + (isNaN(openM) ? 0 : openM);
+        const c = (isNaN(closeH) ? 23 : closeH) * 60 + (isNaN(closeM) ? 0 : closeM);
 
         let open = false;
         if (c > o) {
@@ -149,8 +149,8 @@ export class StoreViewComponent implements OnInit {
     const [openH, openM] = fallbackOpen.split(':').map(Number);
     const [closeH, closeM] = fallbackClose.split(':').map(Number);
     const cur = now.getHours() * 60 + now.getMinutes();
-    const o = (openH || 11) * 60 + (openM || 0);
-    const c = (closeH || 23) * 60 + (closeM || 0);
+    const o = (isNaN(openH) ? 8 : openH) * 60 + (isNaN(openM) ? 0 : openM);
+    const c = (isNaN(closeH) ? 23 : closeH) * 60 + (isNaN(closeM) ? 0 : closeM);
 
     let open = false;
     if (c > o) {
