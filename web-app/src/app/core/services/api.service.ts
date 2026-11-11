@@ -1296,8 +1296,20 @@ export class ApiService {
   // HELPERS DE NORMALIZACIÓN (SNAKE -> CAMEL)
   // ==========================================
   private mapTenant(row: any): Tenant {
-    // Si ya viene formateado en camelCase, retornarlo
+    // Si ya viene formateado en camelCase, asegurar que contact exista y retornarlo
     if (row.deliverySettings && row.branding) {
+      if (!row.contact) {
+        row.contact = {
+          whatsappNumber: row.whatsapp_number || row.phone || '',
+          phone: row.phone || '',
+          instagram: row.instagram || '',
+          address: row.address || '',
+          coordinates: {
+            lat: Number(row.latitude) || 10.0633,
+            lng: Number(row.longitude) || -69.2865,
+          },
+        };
+      }
       return row as Tenant;
     }
 

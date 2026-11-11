@@ -352,6 +352,16 @@ export class TenantsService {
         }
       },
       branches: enrichedBranches,
+      contact: {
+        address: t.address || '',
+        phone: t.phone || '',
+        whatsappNumber: t.whatsapp_number || t.phone || '',
+        whatsapp_number: t.whatsapp_number || t.phone || '',
+        coordinates: {
+          lat: Number(t.latitude) || 10.0633,
+          lng: Number(t.longitude) || -69.2865
+        }
+      },
       branding: {
         accentColor: t.accent_color || '#f97316',
         logoUrl: t.logo_url || '',

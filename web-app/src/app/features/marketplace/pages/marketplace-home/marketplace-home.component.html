@@ -327,7 +327,7 @@
                           {{ tenant.name }}
                         </h3>
                         <div class="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                          {{ tenant.category }} • {{ tenant.contact.address }}
+                          {{ tenant.category }} • {{ tenant.contact?.address || (tenant.branches && tenant.branches[0]?.address) || 'Venezuela' }}
                         </div>
                       </div>
                     </div>
@@ -357,7 +357,7 @@
                         <span>Ver Menú</span>
                       </a>
 
-                      <a [href]="'https://wa.me/' + tenant.contact.whatsappNumber.replace('+', '') + '?text=' + encodeWhatsAppText(tenant.name)" 
+                      <a [href]="'https://wa.me/' + ((tenant.contact?.whatsappNumber || tenant.whatsapp_number || tenant.phone || '').replace('+', '')) + '?text=' + encodeWhatsAppText(tenant.name)" 
                          target="_blank"
                          class="py-2 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs border border-slate-200 dark:border-slate-700 flex items-center justify-center gap-1.5 transition-colors">
                         <app-icon name="message-circle" [size]="13"></app-icon>

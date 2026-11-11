@@ -86,11 +86,11 @@
               <button (click)="openBranchModal.emit()"
                       class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-brand-50 hover:bg-brand-100 dark:bg-slate-800 text-brand-700 dark:text-brand-400 border border-brand-200 dark:border-slate-700 text-xs font-bold transition-all cursor-pointer">
                 <span>📍 Sede:</span>
-                <span class="underline decoration-dotted">{{ selectedBranch?.name || store.contact.address }}</span>
+                <span class="underline decoration-dotted">{{ selectedBranch?.name || store.contact?.address || store.address || 'Venezuela' }}</span>
                 <span class="text-[10px]">▼</span>
               </button>
             } @else {
-              <span>📍 {{ selectedBranch?.name || store.contact.address }}</span>
+              <span>📍 {{ selectedBranch?.name || store.contact?.address || store.address || 'Venezuela' }}</span>
             }
           </div>
         </div>
@@ -117,7 +117,7 @@
             <span>{{ favorites.isFavorite(store.slug) ? 'Guardado ❤️' : 'Favorito' }}</span>
           </button>
 
-          <a [href]="'https://wa.me/' + (selectedBranch?.whatsapp || selectedBranch?.phone || store.contact.whatsappNumber || '').replace('+', '')" target="_blank"
+          <a [href]="'https://wa.me/' + (selectedBranch?.whatsapp || selectedBranch?.phone || store.contact?.whatsappNumber || store.whatsapp_number || store.phone || '').replace('+', '')" target="_blank"
             class="text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 px-3 py-1.5 rounded-xl border border-emerald-200 dark:border-emerald-800 flex items-center gap-1.5 transition-colors cursor-pointer">
             <app-icon name="message-circle" [size]="14"></app-icon>
             <span>WhatsApp</span>

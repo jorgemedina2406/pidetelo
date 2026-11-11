@@ -71,6 +71,10 @@ export interface Tenant {
   subcategories?: string[]; // e.g. ["Hamburguesas", "Sushi"]
   isActive: boolean;
   isFeatured?: boolean;
+  address?: string;
+  phone?: string;
+  whatsapp_number?: string;
+  whatsappNumber?: string;
   contact: TenantContact;
   deliverySettings: TenantDeliverySettings;
   businessHours: TenantBusinessHours;
