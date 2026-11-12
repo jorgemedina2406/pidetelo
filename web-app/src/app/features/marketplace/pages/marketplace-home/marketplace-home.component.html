@@ -8,7 +8,7 @@
           <a routerLink="/explorar" class="flex items-center gap-2.5 group cursor-pointer focus:outline-none transition-transform active:scale-95">
             <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-brand-500 via-orange-500 to-amber-500 p-0.5 shadow-md shadow-brand-500/20 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-all">
               <div class="w-full h-full bg-white dark:bg-slate-900 rounded-[14px] p-1 flex items-center justify-center overflow-hidden">
-                <img src="/assets/logo-isotipo.png" alt="Pídetelo" class="w-full h-full object-contain filter drop-shadow-xs" />
+                <img [src]="theme.isDark() ? '/assets/logo-isotipo-dark.png' : '/assets/logo-isotipo.png'" alt="Pídetelo" class="w-full h-full object-contain filter drop-shadow-xs" />
               </div>
             </div>
             <div class="flex flex-col">
@@ -108,7 +108,7 @@
       </nav>
 
       <!-- ================= MODERN ELEVATED HERO ================= -->
-      <section class="relative z-30 bg-gradient-to-b from-brand-500/10 via-amber-500/5 to-slate-50 dark:from-brand-950/30 dark:via-slate-900/40 dark:to-slate-950 border-b border-slate-200 dark:border-slate-800/80 py-12 sm:py-16 px-4 sm:px-6">
+      <section class="relative z-50 bg-gradient-to-b from-brand-500/10 via-amber-500/5 to-slate-50 dark:from-brand-950/30 dark:via-slate-900/40 dark:to-slate-950 border-b border-slate-200 dark:border-slate-800/80 py-8 sm:py-10 px-4 sm:px-6">
         <div class="max-w-4xl mx-auto space-y-5 text-center sm:text-left">
           
           <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold shadow-xs">
@@ -128,7 +128,7 @@
           </p>
 
           <!-- Floating Enhanced Search Box -->
-          <div class="pt-2 max-w-2xl relative">
+          <div class="pt-1 max-w-2xl relative z-50">
             <div class="bg-white dark:bg-slate-900 rounded-2xl p-1.5 sm:p-2 flex items-center gap-2 border border-slate-200 dark:border-slate-800 shadow-xl shadow-brand-500/5 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/20 transition-all">
               <span class="pl-3 text-brand-500 flex-shrink-0">
                 <app-icon name="search" [size]="18"></app-icon>
@@ -152,7 +152,7 @@
 
             <!-- Instant Live Search Dropdown -->
             @if (liveSearchSuggestions().length > 0) {
-              <div class="absolute left-0 right-0 top-full mt-2 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-2 z-50 animate-fade-in divide-y divide-slate-100 dark:divide-slate-800/60 max-h-80 overflow-y-auto">
+              <div class="absolute left-0 right-0 top-full mt-2 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-2 z-[999] animate-fade-in divide-y divide-slate-100 dark:divide-slate-800/60 max-h-96 overflow-y-auto">
                 <div class="px-3 py-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
                   <span>Comercios encontrados ({{ liveSearchSuggestions().length }})</span>
                   <span class="text-brand-500 text-[10px]">Enter para ver todos ↓</span>
@@ -208,7 +208,7 @@
       }
 
       <!-- ================= MAIN CONTENT AREA ================= -->
-      <main class="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex-1 w-full space-y-7">
+      <main class="max-w-6xl mx-auto px-4 sm:px-6 py-6 flex-1 w-full space-y-6 relative z-10">
         
         <!-- Category Cards (Mobile App Style Square Cards) -->
         <div class="space-y-4">
@@ -370,9 +370,9 @@
                 <div>
                   <!-- Image Banner with Gradient & Overlay Badges -->
                   <div class="relative h-44 sm:h-48 bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                    <img [src]="tenant.bannerUrl || '/assets/delivery_courier.jpg'" 
+                    <img [src]="tenant.bannerUrl || getFallbackBanner(tenant.name)" 
                          [alt]="tenant.name"
-                         (error)="onBannerError($event)"
+                         (error)="onBannerError($event, tenant.name)"
                          class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                     <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-black/20"></div>
 

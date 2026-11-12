@@ -42,11 +42,13 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   bool _isFirstNotifSync = true;
 
   List<Map<String, dynamic>> _stores = [];
+  List<Map<String, dynamic>> _supabaseCategories = [];
 
   @override
   void initState() {
     super.initState();
     _loadTenants();
+    _loadCategories();
     _loadBanners();
     _startLiveOrdersSync();
     _startNotificationsSync();
@@ -361,7 +363,9 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
   bool _isStoreOpenNow(Map<String, dynamic> store) {
     try {
-      final rawBh = store['business_hours'] is Map ? store['business_hours'] as Map : null;
+      final rawBh = store['business_hours'] is Map
+          ? store['business_hours'] as Map
+          : null;
       if (rawBh?['forceOpen'] == true || rawBh?['force_open'] == true) {
         return true;
       }
@@ -405,12 +409,22 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
           final isOpenDay = todayConfig['open'] == true;
           if (!isOpenDay) return false;
 
-          final dOpen = (todayConfig['from'] ?? store['open_time'] ?? store['openTime'] ?? '11:00').toString();
-          final dClose = (todayConfig['to'] ?? store['close_time'] ?? store['closeTime'] ?? '23:00').toString();
+          final dOpen = (todayConfig['from'] ??
+                  store['open_time'] ??
+                  store['openTime'] ??
+                  '11:00')
+              .toString();
+          final dClose = (todayConfig['to'] ??
+                  store['close_time'] ??
+                  store['closeTime'] ??
+                  '23:00')
+              .toString();
           final oParts = dOpen.split(':').map(int.parse).toList();
           final cParts = dClose.split(':').map(int.parse).toList();
-          final o = (oParts.isNotEmpty ? oParts[0] : 11) * 60 + (oParts.length > 1 ? oParts[1] : 0);
-          final c = (cParts.isNotEmpty ? cParts[0] : 23) * 60 + (cParts.length > 1 ? cParts[1] : 0);
+          final o = (oParts.isNotEmpty ? oParts[0] : 11) * 60 +
+              (oParts.length > 1 ? oParts[1] : 0);
+          final c = (cParts.isNotEmpty ? cParts[0] : 23) * 60 +
+              (cParts.length > 1 ? cParts[1] : 0);
 
           if (c > o) {
             return cur >= o && cur < c;
@@ -420,8 +434,12 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
         }
       }
 
-      final openStr = store['open_time'] ?? store['openTime'] ?? rawBh?['open'] ?? '11:00';
-      final closeStr = store['close_time'] ?? store['closeTime'] ?? rawBh?['close'] ?? '23:00';
+      final openStr =
+          store['open_time'] ?? store['openTime'] ?? rawBh?['open'] ?? '11:00';
+      final closeStr = store['close_time'] ??
+          store['closeTime'] ??
+          rawBh?['close'] ??
+          '23:00';
       final oParts = openStr.toString().split(':').map(int.parse).toList();
       final cParts = closeStr.toString().split(':').map(int.parse).toList();
       final o = (oParts.isNotEmpty ? oParts[0] : 11) * 60 +
@@ -460,6 +478,17 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
         _isLoadingStores = false;
       });
     }
+  }
+
+  Future<void> _loadCategories() async {
+    try {
+      final cats = await ApiService().fetchBusinessCategories();
+      if (mounted && cats.isNotEmpty) {
+        setState(() {
+          _supabaseCategories = cats;
+        });
+      }
+    } catch (_) {}
   }
 
   void _showOrderTrackingModal(DeliveryOrder order) {
@@ -709,27 +738,70 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   void _showAllCategoriesSheet(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final categoriesList = [
-      {'name': 'Todos', 'icon': '✨', 'filter': 'Todos', 'desc': 'Todos los locales activos'},
-      {'name': 'Restaurantes', 'icon': '🍽️', 'filter': 'Comida', 'desc': 'Hamburguesas, pizzas, pollo y más'},
-      {'name': 'Súper & Bodegones', 'icon': '🛒', 'filter': 'Markets', 'desc': 'Víveres, compras y abastos'},
-      {'name': 'Farmacias', 'icon': '💊', 'filter': 'Farmacias', 'desc': 'Medicinas y artículos de salud'},
-      {'name': 'Mascotas', 'icon': '🐾', 'filter': 'Mascotas', 'desc': 'Alimento y accesorios para tu mascota'},
-      {'name': 'Licores', 'icon': '🍷', 'filter': 'Licores', 'desc': 'Cervezas, vinos y destilados'},
-      {'name': 'Postres & Dulces', 'icon': '🧁', 'filter': 'Postres', 'desc': 'Pastelería, helados y tortas'},
-      {'name': 'Café & Desayunos', 'icon': '☕', 'filter': 'Café', 'desc': 'Cafeterías y desayunos express'},
-      {'name': 'Pizzerías', 'icon': '🍕', 'filter': 'Pizza', 'desc': 'Pizzas al horno y comida italiana'},
-      {'name': 'Hamburguesas', 'icon': '🍔', 'filter': 'Hamburguesa', 'desc': 'Burgers gourmet y smash'},
-      {'name': 'Sushi & Asiática', 'icon': '🍣', 'filter': 'Sushi', 'desc': 'Rolls, ramen y comida oriental'},
-      {'name': 'Repuestos & Auto', 'icon': '⚙️', 'filter': 'Repuestos', 'desc': 'Accesorios y repuestos de vehículos'},
+    final List<Map<String, dynamic>> categoriesList = [
+      {
+        'name': 'Todos',
+        'icon': '✨',
+        'filter': 'Todos',
+        'desc': 'Todos los locales activos'
+      },
     ];
+
+    // Cargar categorías oficiales de Supabase
+    if (_supabaseCategories.isNotEmpty) {
+      for (final cat in _supabaseCategories) {
+        final catName = (cat['name'] ?? '').toString().trim();
+        if (catName.isEmpty) continue;
+        final subcats = (cat['subcategories'] is List)
+            ? (cat['subcategories'] as List).join(', ')
+            : '';
+        categoriesList.add({
+          'name': catName,
+          'icon': (cat['icon'] != null && cat['icon'].toString().trim().isNotEmpty)
+              ? cat['icon'].toString().trim()
+              : '🏷️',
+          'filter': catName,
+          'desc': cat['description']?.toString() ??
+              (subcats.isNotEmpty ? subcats : 'Comercios de $catName'),
+        });
+      }
+    }
+
+    // Agregar categorías descubiertas de los comercios en vivo si no están en la lista
+    for (final s in _stores) {
+      final rawCat = (s['category'] ?? '').toString().trim();
+      if (rawCat.isNotEmpty &&
+          !categoriesList.any((c) =>
+              c['name'].toString().toLowerCase() == rawCat.toLowerCase())) {
+        categoriesList.add({
+          'name': rawCat,
+          'icon': '🏬',
+          'filter': rawCat,
+          'desc': 'Locales oficiales de $rawCat',
+        });
+      }
+    }
+
+    // Si aún está vacía o no hay conexión, mantener catálogo base
+    if (categoriesList.length <= 1) {
+      final fallbackList = [
+        {'name': 'Restaurantes', 'icon': '🍽️', 'filter': 'Comida', 'desc': 'Hamburguesas, pizzas, sushi y más'},
+        {'name': 'Súper & Bodegones', 'icon': '🛒', 'filter': 'Markets', 'desc': 'Víveres, compras y abastos'},
+        {'name': 'Farmacias', 'icon': '💊', 'filter': 'Farmacias', 'desc': 'Medicinas y artículos de salud'},
+        {'name': 'Mascotas', 'icon': '🐾', 'filter': 'Mascotas', 'desc': 'Alimento y accesorios'},
+        {'name': 'Licores', 'icon': '🍷', 'filter': 'Licores', 'desc': 'Cervezas, vinos y destilados'},
+        {'name': 'Postres & Dulces', 'icon': '🧁', 'filter': 'Postres', 'desc': 'Pastelería, helados y tortas'},
+      ];
+      categoriesList.addAll(fallbackList);
+    }
 
     int countStoresFor(String filter) {
       if (filter == 'Todos') return _stores.length;
-      final target = filter.toLowerCase();
+      final target = filter.toLowerCase().trim();
       return _stores.where((store) {
-        final storeCat = (store['category'] ?? '').toString().toLowerCase();
+        final storeCat = (store['category'] ?? '').toString().toLowerCase().trim();
         final storeName = (store['name'] ?? '').toString().toLowerCase();
+        final storeDesc = (store['tagline'] ?? store['description'] ?? '').toString().toLowerCase();
         if (target == 'comida' || target == 'restaurantes') {
           return storeCat.contains('hamburguesa') ||
               storeCat.contains('sushi') ||
@@ -748,7 +820,10 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
               storeCat.contains('super') ||
               storeName.contains('market');
         }
-        return storeCat.contains(target) || storeName.contains(target);
+        return storeCat.contains(target) ||
+            target.contains(storeCat) ||
+            storeName.contains(target) ||
+            storeDesc.contains(target);
       }).length;
     }
 
@@ -793,7 +868,9 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                             style: GoogleFonts.outfit(
                               fontSize: 18,
                               fontWeight: FontWeight.w800,
-                              color: isDark ? Colors.white : const Color(0xFF0F172A),
+                              color: isDark
+                                  ? Colors.white
+                                  : const Color(0xFF0F172A),
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -801,7 +878,9 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                             'Selecciona una categoría para filtrar comercios',
                             style: GoogleFonts.outfit(
                               fontSize: 12,
-                              color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                              color: isDark
+                                  ? Colors.white60
+                                  : const Color(0xFF64748B),
                             ),
                           ),
                         ],
@@ -837,13 +916,18 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
                               color: isSelected
-                                  ? AppTheme.primary.withOpacity(isDark ? 0.2 : 0.08)
-                                  : (isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC)),
+                                  ? AppTheme.primary
+                                      .withOpacity(isDark ? 0.2 : 0.08)
+                                  : (isDark
+                                      ? const Color(0xFF1E293B)
+                                      : const Color(0xFFF8FAFC)),
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
                                 color: isSelected
                                     ? AppTheme.primary
-                                    : (isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
+                                    : (isDark
+                                        ? Colors.white10
+                                        : const Color(0xFFE2E8F0)),
                                 width: isSelected ? 1.5 : 1.0,
                               ),
                             ),
@@ -853,7 +937,9 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                                   width: 44,
                                   height: 44,
                                   decoration: BoxDecoration(
-                                    color: isDark ? const Color(0xFF0F172A) : Colors.white,
+                                    color: isDark
+                                        ? const Color(0xFF0F172A)
+                                        : Colors.white,
                                     borderRadius: BorderRadius.circular(12),
                                     boxShadow: [
                                       BoxShadow(
@@ -863,12 +949,14 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                                     ],
                                   ),
                                   alignment: Alignment.center,
-                                  child: Text(icon, style: const TextStyle(fontSize: 22)),
+                                  child: Text(icon,
+                                      style: const TextStyle(fontSize: 22)),
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Row(
                                         children: [
@@ -876,19 +964,28 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                                             name,
                                             style: GoogleFonts.outfit(
                                               fontSize: 14,
-                                              fontWeight: isSelected ? FontWeight.w800 : FontWeight.w700,
+                                              fontWeight: isSelected
+                                                  ? FontWeight.w800
+                                                  : FontWeight.w700,
                                               color: isSelected
                                                   ? AppTheme.primary
-                                                  : (isDark ? Colors.white : const Color(0xFF0F172A)),
+                                                  : (isDark
+                                                      ? Colors.white
+                                                      : const Color(
+                                                          0xFF0F172A)),
                                             ),
                                           ),
                                           if (isSelected) ...[
                                             const SizedBox(width: 6),
                                             Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 6,
+                                                      vertical: 2),
                                               decoration: BoxDecoration(
                                                 color: AppTheme.primary,
-                                                borderRadius: BorderRadius.circular(6),
+                                                borderRadius:
+                                                    BorderRadius.circular(6),
                                               ),
                                               child: Text(
                                                 'Activo',
@@ -907,16 +1004,21 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                                         desc,
                                         style: GoogleFonts.outfit(
                                           fontSize: 11,
-                                          color: isDark ? Colors.white54 : const Color(0xFF64748B),
+                                          color: isDark
+                                              ? Colors.white54
+                                              : const Color(0xFF64748B),
                                         ),
                                       ),
                                     ],
                                   ),
                                 ),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 9, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: isDark ? Colors.white10 : Colors.grey.shade200,
+                                    color: isDark
+                                        ? Colors.white10
+                                        : Colors.grey.shade200,
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                   child: Text(
@@ -924,7 +1026,9 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                                     style: GoogleFonts.outfit(
                                       fontSize: 11,
                                       fontWeight: FontWeight.w700,
-                                      color: isDark ? Colors.white70 : const Color(0xFF334155),
+                                      color: isDark
+                                          ? Colors.white70
+                                          : const Color(0xFF334155),
                                     ),
                                   ),
                                 ),
@@ -1179,7 +1283,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
               color: isDark ? const Color(0xFF1E293B) : Colors.white,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                color:
+                    isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
                 width: 1.2,
               ),
               boxShadow: [
@@ -1194,12 +1299,18 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: Image.asset(
-                'assets/images/logo-isotipo.png',
+                isDark
+                    ? 'assets/images/logo-isotipo-dark.png'
+                    : 'assets/images/logo-isotipo.png',
                 fit: BoxFit.contain,
                 filterQuality: FilterQuality.high,
                 errorBuilder: (_, __, ___) => Image.asset(
-                  'assets/images/logo.png',
+                  'assets/images/logo-isotipo.png',
                   fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => Image.asset(
+                    'assets/images/logo.png',
+                    fit: BoxFit.contain,
+                  ),
                 ),
               ),
             ),
@@ -1546,7 +1657,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 // Search Bar
                 TextField(
                   decoration: InputDecoration(
-                    hintText: '¿Qué te gustaría comer hoy en Cabudare?',
+                    hintText: '¿Qué te gustaría pedri hoy?',
                     prefixIcon: const Icon(Icons.search_rounded, size: 20),
                     suffixIcon: Container(
                       margin: const EdgeInsets.all(6),
@@ -1577,7 +1688,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                     ),
                     TextButton.icon(
                       onPressed: () => _showAllCategoriesSheet(context),
-                      icon: const Icon(Icons.grid_view_rounded, size: 14, color: AppTheme.primary),
+                      icon: const Icon(Icons.grid_view_rounded,
+                          size: 14, color: AppTheme.primary),
                       label: Text(
                         'Ver todos',
                         style: GoogleFonts.outfit(

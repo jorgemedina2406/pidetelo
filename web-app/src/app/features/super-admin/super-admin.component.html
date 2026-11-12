@@ -412,6 +412,49 @@
               }
             </div>
 
+            
+            <!-- Soporte & Mesa de Ayuda a Comercios -->
+            <div class="relative group">
+              <button (click)="setActiveTab('support')"
+                      [class.bg-brand-500]="activeTab() === 'support'"
+                      [class.text-white]="activeTab() === 'support'"
+                      [class.shadow-md]="activeTab() === 'support'"
+                      [class.shadow-brand-500/25]="activeTab() === 'support'"
+                      [class.text-slate-600]="activeTab() !== 'support'"
+                      [class.dark:text-slate-400]="activeTab() !== 'support'"
+                      [class.hover:bg-slate-100]="activeTab() !== 'support'"
+                      [class.dark:hover:bg-slate-850]="activeTab() !== 'support'"
+                      [class.justify-center]="!isSidebarExpanded()"
+                      [class.w-12]="!isSidebarExpanded()"
+                      [class.h-12]="!isSidebarExpanded()"
+                      [class.mx-auto]="!isSidebarExpanded()"
+                      [class.w-full]="isSidebarExpanded()"
+                      [class.px-3]="isSidebarExpanded()"
+                      [class.py-2.5]="isSidebarExpanded()"
+                      class="flex items-center gap-3 rounded-xl font-bold text-xs transition-all duration-150 active:scale-95 cursor-pointer">
+                <span class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
+                      [class.bg-white/20]="activeTab() === 'support'"
+                      [class.text-white]="activeTab() === 'support'"
+                      [class.bg-slate-100]="activeTab() !== 'support'"
+                      [class.dark:bg-slate-800]="activeTab() !== 'support'"
+                      [class.text-slate-500]="activeTab() !== 'support'"
+                      [class.dark:text-slate-400]="activeTab() !== 'support'">
+                  <app-icon name="headphones" [size]="17"></app-icon>
+                </span>
+                @if (isSidebarExpanded()) {
+                  <span class="truncate flex-1 text-left font-semibold">Soporte Comercios</span>
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500 text-white">
+                    🎧
+                  </span>
+                }
+              </button>
+              @if (!isSidebarExpanded()) {
+                <div class="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 flex items-center gap-2">
+                  <span>Soporte Comercios</span>
+                </div>
+              }
+            </div>
+
             <!-- Cupones Globales -->
             <div class="relative group">
               <button (click)="setActiveTab('global_coupons')"
@@ -662,6 +705,12 @@
               (deleteCoupon)="deleteGlobalCoupon($event)">
             </app-super-admin-coupons>
           }
+          
+          <!-- ================= TAB: SOPORTE A COMERCIOS (KANBAN & CHAT) ================= -->
+          @if (activeTab() === 'support') {
+            <app-support-kanban mode="superadmin"></app-support-kanban>
+          }
+
           </main>
         </div>
 

@@ -42,6 +42,10 @@ export class SupabaseService {
     return this.client;
   }
 
+  getClient(): SupabaseClient | null {
+    return this.client;
+  }
+
   // --- AUTHENTICATION ---
   async resetPasswordForEmail(email: string, redirectTo?: string) {
     if (!this.client) throw new Error('Supabase no está configurado');

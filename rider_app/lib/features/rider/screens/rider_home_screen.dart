@@ -1,5 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/models/order_model.dart';
 import '../../../core/models/user_model.dart';
 import '../../../core/services/dolar_api_service.dart';
@@ -471,6 +474,68 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
     );
   }
 
+  ImageProvider? _getAvatarProvider(String? url) {
+    if (url == null || url.trim().isEmpty) return null;
+    final trimmed = url.trim();
+    if (trimmed.startsWith('data:image')) {
+      try {
+        final commaIdx = trimmed.indexOf(',');
+        final base64Data = commaIdx != -1 ? trimmed.substring(commaIdx + 1) : trimmed;
+        return MemoryImage(base64Decode(base64Data));
+      } catch (_) {
+        return null;
+      }
+    }
+    return NetworkImage(trimmed);
+  }
+
+  Future<void> _pickAvatarFromDevice(BuildContext ctx, ImageSource source, RiderUser rider) async {
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(
+        source: source,
+        maxWidth: 720,
+        maxHeight: 720,
+        imageQuality: 85,
+      );
+      if (picked == null) return;
+
+      final bytes = await picked.readAsBytes();
+      final base64Img = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+
+      String finalUrl = base64Img;
+      try {
+        final supabase = Supabase.instance.client;
+        final filename = 'rider_${rider.id}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        await supabase.storage.from('avatars').uploadBinary(
+          filename,
+          bytes,
+          fileOptions: const FileOptions(contentType: 'image/jpeg', upsert: true),
+        );
+        final publicUrl = supabase.storage.from('avatars').getPublicUrl(filename);
+        if (publicUrl.isNotEmpty) {
+          finalUrl = publicUrl;
+        }
+      } catch (storageErr) {
+        debugPrint('[RiderApp] Storage fallback a data URI: $storageErr');
+      }
+
+      await widget.sessionService.updateAvatar(finalUrl);
+      if (ctx.mounted) {
+        Navigator.pop(ctx);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('¡Foto de perfil actualizada con éxito! 🎉'),
+            backgroundColor: AppTheme.primary,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('[RiderApp] Error seleccionando imagen de perfil: $e');
+    }
+  }
+
   // --- MODAL: SUBIR / ACTUALIZAR FOTO DE PERFIL ---
   void _showAvatarPickerModal(BuildContext context, RiderUser rider) {
     final defaultAvatars = [
@@ -480,11 +545,12 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
       'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=300',
     ];
     final urlCtrl = TextEditingController(text: rider.avatarUrl ?? '');
+    final isDark = widget.sessionService.isDarkMode;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
@@ -503,20 +569,69 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
               child: Container(
                 width: 44,
                 height: 4,
-                decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white24 : Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
             ),
             const SizedBox(height: 18),
             Text(
               'Actualizar Foto de Perfil',
-              style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w800, color: Colors.white),
+              style: GoogleFonts.outfit(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: isDark ? Colors.white : const Color(0xFF0F172A),
+              ),
             ),
             const SizedBox(height: 6),
             Text(
-              'Elige un avatar o pega el enlace URL de tu foto de perfil.',
-              style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFF94A3B8)),
+              'Toma una foto, selecciona de tu galería o elige un avatar sugerido.',
+              style: GoogleFonts.outfit(
+                fontSize: 12,
+                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 18),
+
+            // Botones de carga directa desde el dispositivo
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _pickAvatarFromDevice(ctx, ImageSource.camera, rider),
+                    icon: const Icon(Icons.camera_alt_rounded, size: 18),
+                    label: const Text('Cámara'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      elevation: 0,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _pickAvatarFromDevice(ctx, ImageSource.gallery, rider),
+                    icon: const Icon(Icons.photo_library_rounded, size: 18),
+                    label: const Text('Galería'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                      foregroundColor: isDark ? Colors.white : const Color(0xFF0F172A),
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        side: BorderSide(color: isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
+                      ),
+                      elevation: 0,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
 
             // Suggested Avatar Row
             Row(
@@ -528,24 +643,28 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
                     if (ctx.mounted) Navigator.pop(ctx);
                   },
                   child: CircleAvatar(
-                    radius: 28,
+                    radius: 26,
                     backgroundImage: NetworkImage(url),
                   ),
                 );
               }).toList(),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 16),
 
             // Or enter URL
             TextField(
               controller: urlCtrl,
-              style: GoogleFonts.outfit(color: Colors.white),
-              decoration: const InputDecoration(
+              style: GoogleFonts.outfit(color: isDark ? Colors.white : const Color(0xFF0F172A)),
+              decoration: InputDecoration(
                 hintText: 'https://ejemplo.com/mifoto.jpg',
-                labelText: 'Enlace URL de tu fotografía',
+                labelText: 'O ingresa enlace URL',
+                labelStyle: GoogleFonts.outfit(color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                filled: true,
+                fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
               ),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 14),
 
             ElevatedButton(
               onPressed: () async {
@@ -556,13 +675,15 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
                 if (ctx.mounted) Navigator.pop(ctx);
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primary,
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                backgroundColor: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                foregroundColor: isDark ? Colors.white : const Color(0xFF0F172A),
+                padding: const EdgeInsets.symmetric(vertical: 13),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                elevation: 0,
               ),
               child: Text(
-                'Guardar Foto',
-                style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w800, color: Colors.white),
+                'Guardar Enlace URL',
+                style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w700),
               ),
             ),
           ],
@@ -610,11 +731,53 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
         final activeOrder = _riderService.activeOrder;
         final availableOrders = _riderService.availableOrders;
 
+        final isDark = widget.sessionService.isDarkMode;
+        final bgColor = isDark ? AppTheme.darkBackground : AppTheme.lightBackground;
+        final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+
         return Scaffold(
-          backgroundColor: AppTheme.darkBackground,
+          backgroundColor: bgColor,
           appBar: AppBar(
-            backgroundColor: AppTheme.darkBackground,
+            backgroundColor: bgColor,
             elevation: 0,
+            leadingWidth: 54,
+            leading: Padding(
+              padding: const EdgeInsets.only(left: 12, top: 8, bottom: 8, right: 2),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                    width: 1.2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.06),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                padding: const EdgeInsets.all(3.5),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.asset(
+                    'assets/images/logo-isotipo-rider.png',
+                    fit: BoxFit.contain,
+                    filterQuality: FilterQuality.high,
+                    errorBuilder: (_, __, ___) => Image.asset(
+                      'assets/images/logo-isotipo.png',
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => Image.asset(
+                        'assets/images/logo.png',
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
             title: Row(
               children: [
                 GestureDetector(
@@ -624,36 +787,46 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
                   child: CircleAvatar(
                     radius: 16,
                     backgroundColor: AppTheme.primary.withOpacity(0.2),
-                    backgroundImage: (rider?.avatarUrl != null && rider!.avatarUrl!.isNotEmpty)
-                        ? NetworkImage(rider.avatarUrl!)
-                        : null,
+                    backgroundImage: _getAvatarProvider(rider?.avatarUrl),
                     child: (rider?.avatarUrl == null || rider!.avatarUrl!.isEmpty)
                         ? const Icon(Icons.person_rounded, color: AppTheme.primary, size: 18)
                         : null,
                   ),
                 ),
-                const SizedBox(width: 10),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      rider?.name ?? 'Repartidor',
-                      style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white),
-                    ),
-                    Text(
-                      'Tasa BCV: Bs. ${_dolarApi.officialRate.toStringAsFixed(2)} / \$',
-                      style: GoogleFonts.outfit(fontSize: 11, color: const Color(0xFF65A30D), fontWeight: FontWeight.w600),
-                    ),
-                  ],
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        rider?.name ?? 'Repartidor',
+                        style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w700, color: textColor),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        'Tasa BCV: Bs. ${_dolarApi.officialRate.toStringAsFixed(2)} / \$',
+                        style: GoogleFonts.outfit(fontSize: 10, color: const Color(0xFF10B981), fontWeight: FontWeight.w700),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
             actions: [
+              IconButton(
+                onPressed: () => widget.sessionService.toggleTheme(),
+                tooltip: isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro',
+                icon: Icon(
+                  isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+                  color: isDark ? Colors.amber : const Color(0xFF475569),
+                  size: 20,
+                ),
+              ),
               GestureDetector(
                 onTap: () => widget.sessionService.toggleOnlineStatus(),
                 child: Container(
-                  margin: const EdgeInsets.only(right: 14),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  margin: const EdgeInsets.only(right: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                   decoration: BoxDecoration(
                     color: (rider?.isOnline ?? true)
                         ? AppTheme.primary.withOpacity(0.15)
@@ -679,7 +852,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
                       Text(
                         (rider?.isOnline ?? true) ? 'EN LÍNEA' : 'OFFLINE',
                         style: GoogleFonts.outfit(
-                          fontSize: 11,
+                          fontSize: 10,
                           fontWeight: FontWeight.w800,
                           color: (rider?.isOnline ?? true) ? AppTheme.primary : Colors.redAccent,
                         ),
@@ -1601,9 +1774,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
                   CircleAvatar(
                     radius: 46,
                     backgroundColor: AppTheme.primary.withOpacity(0.15),
-                    backgroundImage: (rider?.avatarUrl != null && rider!.avatarUrl!.isNotEmpty)
-                        ? NetworkImage(rider.avatarUrl!)
-                        : null,
+                    backgroundImage: _getAvatarProvider(rider?.avatarUrl),
                     child: (rider?.avatarUrl == null || rider!.avatarUrl!.isEmpty)
                         ? const Icon(Icons.person_rounded, size: 54, color: AppTheme.primary)
                         : null,

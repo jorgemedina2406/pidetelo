@@ -16,15 +16,28 @@ class SessionService extends ChangeNotifier {
   RiderUser? _currentRider;
   bool _isInitialized = false;
   String? _lastErrorMessage;
+  bool _isDarkMode = true; // Por defecto modo oscuro (Dark Theme prioritario)
 
   RiderUser? get currentRider => _currentRider;
   bool get isAuthenticated => _currentRider != null;
   bool get isInitialized => _isInitialized;
   String? get lastErrorMessage => _lastErrorMessage;
+  bool get isDarkMode => _isDarkMode;
+  ThemeMode get themeMode => _isDarkMode ? ThemeMode.dark : ThemeMode.light;
+
+  void toggleTheme() async {
+    _isDarkMode = !_isDarkMode;
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('rider_dark_mode', _isDarkMode);
+    } catch (_) {}
+  }
 
   Future<void> init() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      _isDarkMode = prefs.getBool('rider_dark_mode') ?? true;
       final riderJson = prefs.getString(_keyRiderData);
       if (riderJson != null) {
         _currentRider = RiderUser.fromJson(jsonDecode(riderJson));
@@ -34,6 +47,29 @@ class SessionService extends ChangeNotifier {
     }
     _isInitialized = true;
     notifyListeners();
+  }
+
+  Future<bool> updateAvatar(String newAvatarUrl) async {
+    if (_currentRider == null) return false;
+    _currentRider = _currentRider!.copyWith(avatarUrl: newAvatarUrl);
+    notifyListeners();
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_keyRiderData, jsonEncode(_currentRider!.toJson()));
+    } catch (_) {}
+
+    try {
+      final supabase = Supabase.instance.client;
+      await supabase
+          .from('riders')
+          .update({'avatar_url': newAvatarUrl})
+          .eq('id', _currentRider!.id);
+      return true;
+    } catch (e) {
+      debugPrint('[SessionService] Error actualizando avatar en Supabase: $e');
+      return true;
+    }
   }
 
   Future<void> saveRider(RiderUser rider) async {

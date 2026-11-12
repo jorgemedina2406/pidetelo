@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 450" width="1200" height="450">
+  <defs>
+    <linearGradient id="bkBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2D1102"/>
+      <stop offset="45%" stop-color="#5E1D05"/>
+      <stop offset="85%" stop-color="#D62300"/>
+      <stop offset="100%" stop-color="#EC7A08"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="450" fill="url(#bkBg)"/>
+  
+  <text x="80" y="170" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="56" fill="#FBF8EE" letter-spacing="-1">
+    Burger King
+  </text>
+  <text x="80" y="225" font-family="system-ui, -apple-system, sans-serif" font-weight="800" font-size="24" fill="#FFC72C" letter-spacing="2">
+    A LA PARRILLA SABE MEJOR 🔥
+  </text>
+  <text x="80" y="270" font-family="system-ui, -apple-system, sans-serif" font-weight="500" font-size="17" fill="#F8FAFC" opacity="0.85">
+    Whopper 100% carne a la parrilla, crujientes aros de cebolla y King Jr.
+  </text>
+</svg>

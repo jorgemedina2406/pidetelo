@@ -40,12 +40,18 @@ export class StoreHeaderComponent {
   }
 
   getFallbackLogo(name?: string): string {
+    const n = (name || '').toLowerCase();
+    if (n.includes('mcdonald')) return '/assets/stores/mcdonalds-logo.svg';
+    if (n.includes('burger')) return '/assets/stores/burgerking-logo.svg';
     const initial = (name || 'P').trim().charAt(0).toUpperCase();
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120"><rect width="120" height="120" rx="24" fill="#f97316"/><text x="50%" y="54%" font-family="system-ui,sans-serif" font-weight="900" font-size="52" fill="white" text-anchor="middle" dominant-baseline="middle">${initial}</text></svg>`;
     return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
   }
 
-  getFallbackBanner(): string {
+  getFallbackBanner(name?: string): string {
+    const n = (name || '').toLowerCase();
+    if (n.includes('mcdonald')) return '/assets/stores/mcdonalds-banner.svg';
+    if (n.includes('burger')) return '/assets/stores/burgerking-banner.svg';
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="400" viewBox="0 0 1200 400"><defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#0f172a"/><stop offset="50%" stop-color="#1e293b"/><stop offset="100%" stop-color="#c2410c"/></linearGradient></defs><rect width="1200" height="400" fill="url(#g)"/><circle cx="1100" cy="80" r="140" fill="#f97316" opacity="0.15"/><circle cx="150" cy="320" r="200" fill="#f59e0b" opacity="0.1"/></svg>`;
     return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
   }
@@ -58,14 +64,11 @@ export class StoreHeaderComponent {
     }
   }
 
-  onBannerError(event: Event): void {
+  onBannerError(event: Event, name?: string): void {
     const target = event.target as HTMLImageElement;
     if (target) {
-      target.onerror = () => {
-        target.onerror = null;
-        target.src = this.getFallbackBanner();
-      };
-      target.src = '/assets/delivery_courier.jpg';
+      target.onerror = null;
+      target.src = this.getFallbackBanner(name);
     }
   }
 

@@ -1299,10 +1299,10 @@ export class ApiService {
   // HELPERS DE NORMALIZACIÓN (SNAKE -> CAMEL)
   // ==========================================
   private mapTenant(row: any): Tenant {
-    const fallbackLogo = row.slug?.includes('burger') 
-      ? 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&auto=format&fit=crop&q=80' 
-      : 'https://images.unsplash.com/photo-1550547660-d9450f859349?w=500&auto=format&fit=crop&q=80';
-    const fallbackBanner = 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1200&auto=format&fit=crop&q=80';
+    const isMcd = (row.slug || '').toLowerCase().includes('mcdonald') || (row.name || '').toLowerCase().includes('mcdonald');
+    const isBk = (row.slug || '').toLowerCase().includes('burger') || (row.name || '').toLowerCase().includes('burger');
+    const fallbackLogo = isMcd ? '/assets/stores/mcdonalds-logo.svg' : (isBk ? '/assets/stores/burgerking-logo.svg' : '/assets/delivery_courier.jpg');
+    const fallbackBanner = isMcd ? '/assets/stores/mcdonalds-banner.svg' : (isBk ? '/assets/stores/burgerking-banner.svg' : '/assets/delivery_courier.jpg');
 
     // Si ya viene formateado en camelCase, asegurar que contact exista y retornarlo
     if (row.deliverySettings && row.branding) {
@@ -2082,8 +2082,22 @@ export class ApiService {
 
   private mapBranch(r: any): Branch {
     const accentColor = r.accent_color || r.accentColor || r.branding?.accentColor || r.tenants?.accent_color || '#f97316';
-    const logoUrl = r.logo_url || r.logoUrl || r.branding?.logoUrl || r.tenants?.logo_url || '';
-    const bannerUrl = r.banner_url || r.bannerUrl || r.branding?.bannerUrl || r.tenants?.banner_url || '';
+    const isBranchMcd = (r.name || r.tenants?.name || r.companyName || '').toLowerCase().includes('mcdonald');
+    const isBranchBk = (r.name || r.tenants?.name || r.companyName || '').toLowerCase().includes('burger');
+    const bFallbackLogo = isBranchMcd ? '/assets/stores/mcdonalds-logo.svg' : (isBranchBk ? '/assets/stores/burgerking-logo.svg' : '/assets/delivery_courier.jpg');
+    const bFallbackBanner = isBranchMcd ? '/assets/stores/mcdonalds-banner.svg' : (isBranchBk ? '/assets/stores/burgerking-banner.svg' : '/assets/delivery_courier.jpg');
+
+    let rawLogo = r.logo_url || r.logoUrl || r.branding?.logoUrl || r.tenants?.logo_url || bFallbackLogo;
+    let rawBanner = r.banner_url || r.bannerUrl || r.branding?.bannerUrl || r.tenants?.banner_url || bFallbackBanner;
+
+    if (typeof rawLogo === 'string' && rawLogo.startsWith('data:image/webp') && rawLogo.length > 5000) {
+      rawLogo = bFallbackLogo;
+    }
+    if (typeof rawBanner === 'string' && rawBanner.startsWith('data:image/webp') && rawBanner.length > 5000) {
+      rawBanner = bFallbackBanner;
+    }
+    const logoUrl = rawLogo;
+    const bannerUrl = rawBanner;
     const tagline = r.tagline || r.tenants?.tagline || '';
     const exchangeRate = Number(r.exchange_rate ?? r.exchangeRate ?? r.currency_settings?.exchangeRate ?? r.currencySettings?.exchangeRate ?? r.tenants?.exchange_rate ?? 45.50);
     const baseCurrency = (r.base_currency || r.baseCurrency || r.currency_settings?.baseCurrency || r.currencySettings?.baseCurrency || r.tenants?.base_currency || 'USD') as 'USD' | 'VES';

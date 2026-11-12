@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/constants/legal_terms.dart';
 import '../../../core/models/order_model.dart';
@@ -42,6 +44,168 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     final email = user?.email.trim() ?? '';
     if (email.isNotEmpty) return email.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_');
     return 'guest';
+  }
+
+  ImageProvider? _getAvatarProvider(String? url) {
+    if (url == null || url.trim().isEmpty) return null;
+    final trimmed = url.trim();
+    if (trimmed.startsWith('data:image')) {
+      try {
+        final commaIdx = trimmed.indexOf(',');
+        final base64Data = commaIdx != -1 ? trimmed.substring(commaIdx + 1) : trimmed;
+        return MemoryImage(base64Decode(base64Data));
+      } catch (_) {
+        return null;
+      }
+    }
+    return NetworkImage(trimmed);
+  }
+
+  Future<void> _pickAvatarFromDevice(ImageSource source, AppUser user) async {
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(
+        source: source,
+        maxWidth: 720,
+        maxHeight: 720,
+        imageQuality: 85,
+      );
+      if (picked == null) return;
+
+      final bytes = await picked.readAsBytes();
+      final base64Img = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+
+      String finalUrl = base64Img;
+      try {
+        final supabase = Supabase.instance.client;
+        final filename = 'customer_${user.id}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        await supabase.storage.from('avatars').uploadBinary(
+          filename,
+          bytes,
+          fileOptions: const FileOptions(contentType: 'image/jpeg', upsert: true),
+        );
+        final publicUrl = supabase.storage.from('avatars').getPublicUrl(filename);
+        if (publicUrl.isNotEmpty) {
+          finalUrl = publicUrl;
+        }
+      } catch (_) {}
+
+      final updated = user.copyWith(avatarUrl: finalUrl);
+      await widget.sessionService.saveUser(updated);
+
+      try {
+        final supabase = Supabase.instance.client;
+        await supabase
+            .from('customer_profiles')
+            .upsert({'id': user.id, 'avatar_url': finalUrl});
+      } catch (_) {}
+
+      if (mounted) {
+        setState(() {});
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('¡Foto de perfil actualizada con éxito! 🎉'),
+            backgroundColor: AppTheme.primary,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('[UserProfile] Error seleccionando imagen de perfil: $e');
+    }
+  }
+
+  void _showAvatarPickerSheet(BuildContext context, AppUser user) {
+    final isDark = widget.sessionService.isDarkMode;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 44,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white24 : Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                'Cambiar Foto de Perfil',
+                style: GoogleFonts.outfit(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Elige cómo deseas actualizar tu fotografía de perfil:',
+                style: GoogleFonts.outfit(
+                  fontSize: 12,
+                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        _pickAvatarFromDevice(ImageSource.camera, user);
+                      },
+                      icon: const Icon(Icons.camera_alt_rounded, size: 20),
+                      label: const Text('Cámara'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        elevation: 0,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        _pickAvatarFromDevice(ImageSource.gallery, user);
+                      },
+                      icon: const Icon(Icons.photo_library_rounded, size: 20),
+                      label: const Text('Galería'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                        foregroundColor: isDark ? Colors.white : const Color(0xFF0F172A),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          side: BorderSide(color: isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
+                        ),
+                        elevation: 0,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -1319,30 +1483,39 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   children: [
                     Stack(
                       children: [
-                        CircleAvatar(
-                          radius: 46,
-                          backgroundColor: AppTheme.primary.withOpacity(0.15),
-                          child: Text(
-                            user.name.isNotEmpty
-                                ? user.name.split(' ').map((n) => n.isNotEmpty ? n[0] : '').take(2).join()
-                                : 'C',
-                            style: GoogleFonts.outfit(
-                              fontSize: 32,
-                              fontWeight: FontWeight.w800,
-                              color: AppTheme.primary,
-                            ),
+                        GestureDetector(
+                          onTap: () => _showAvatarPickerSheet(context, user),
+                          child: CircleAvatar(
+                            radius: 46,
+                            backgroundColor: AppTheme.primary.withOpacity(0.15),
+                            backgroundImage: _getAvatarProvider(user.avatarUrl),
+                            child: (user.avatarUrl == null || user.avatarUrl!.isEmpty)
+                                ? Text(
+                                    user.name.isNotEmpty
+                                        ? user.name.split(' ').map((n) => n.isNotEmpty ? n[0] : '').take(2).join()
+                                        : 'C',
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 32,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppTheme.primary,
+                                    ),
+                                  )
+                                : null,
                           ),
                         ),
                         Positioned(
                           bottom: 0,
                           right: 0,
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: const BoxDecoration(
-                              color: AppTheme.primary,
-                              shape: BoxShape.circle,
+                          child: GestureDetector(
+                            onTap: () => _showAvatarPickerSheet(context, user),
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: const BoxDecoration(
+                                color: AppTheme.primary,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.camera_alt_rounded, size: 16, color: Colors.white),
                             ),
-                            child: const Icon(Icons.verified_rounded, size: 20, color: Colors.white),
                           ),
                         ),
                       ],

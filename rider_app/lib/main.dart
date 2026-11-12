@@ -75,9 +75,9 @@ class RiderApp extends StatelessWidget {
         return MaterialApp(
           title: 'Pídetelo Riders',
           debugShowCheckedModeBanner: false,
-          theme: AppTheme.darkTheme,
+          theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
-          themeMode: ThemeMode.dark,
+          themeMode: sessionService.themeMode,
           home: SplashScreen(
             appTitle: 'Pídetelo. Riders',
             subtitle: 'Despacho ágil, entregas inteligentes',

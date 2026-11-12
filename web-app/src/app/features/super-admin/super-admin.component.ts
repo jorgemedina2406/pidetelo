@@ -24,6 +24,7 @@ import { SuperAdminMetricsComponent } from './components/super-admin-metrics.com
 import { SuperAdminBannersComponent } from './components/super-admin-banners.component';
 import { SuperAdminCategoriesComponent } from './components/super-admin-categories.component';
 import { SuperAdminCouponsComponent } from './components/super-admin-coupons.component';
+import { SupportKanbanComponent } from '../../shared/components/support-kanban/support-kanban.component';
 
 export interface ToastNotification {
   id: string;
@@ -47,7 +48,8 @@ export interface ToastNotification {
     SuperAdminMetricsComponent,
     SuperAdminBannersComponent,
     SuperAdminCategoriesComponent,
-    SuperAdminCouponsComponent
+    SuperAdminCouponsComponent,
+    SupportKanbanComponent
   ],
   templateUrl: './super-admin.component.html'
 })
@@ -62,7 +64,7 @@ export class SuperAdminComponent implements OnInit {
 
   readonly isSidebarExpanded = signal(true);
   readonly isMobileMenuOpen = signal(false);
-  readonly activeTab = signal<'merchants' | 'branch_approvals' | 'categories' | 'roles' | 'metrics' | 'banners' | 'users' | 'global_coupons'>('merchants');
+  readonly activeTab = signal<'merchants' | 'branch_approvals' | 'categories' | 'roles' | 'metrics' | 'banners' | 'users' | 'global_coupons' | 'support'>('merchants');
   searchMerchant = '';
   readonly isCreateModalOpen = signal(false);
 

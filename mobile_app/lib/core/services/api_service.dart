@@ -1211,6 +1211,38 @@ class ApiService {
       });
     } catch (_) {}
   }
+
+  /// Recupera las categorías maestras oficiales de comercios guardadas en Supabase
+  Future<List<Map<String, dynamic>>> fetchBusinessCategories() async {
+    try {
+      final supabase = Supabase.instance.client;
+      final res = await supabase
+          .from('business_categories')
+          .select('*')
+          .eq('is_active', true)
+          .order('sort_order', ascending: true);
+
+      if (res is List && res.isNotEmpty) {
+        return List<Map<String, dynamic>>.from(res);
+      }
+    } catch (e) {
+      debugPrint('[ApiService] Notice fetching business_categories from Supabase: $e');
+    }
+
+    // Fallback via API backend /api/categories
+    try {
+      final url = Uri.parse('${AppConfig.backendBaseUrl}/api/categories');
+      final resp = await http.get(url).timeout(const Duration(seconds: 4));
+      if (resp.statusCode == 200) {
+        final decoded = jsonDecode(resp.body);
+        if (decoded is List && decoded.isNotEmpty) {
+          return List<Map<String, dynamic>>.from(decoded);
+        }
+      }
+    } catch (_) {}
+
+    return [];
+  }
 }
 
 

@@ -34,6 +34,7 @@ import { DispatchConfigModalComponent } from './components/dispatch-config-modal
 import { MerchantCouponsTabComponent } from './components/merchant-coupons-tab.component';
 import { MerchantRidersTabComponent } from './components/merchant-riders-tab.component';
 import { MerchantUsersTabComponent } from './components/merchant-users-tab.component';
+import { SupportKanbanComponent } from '../../shared/components/support-kanban/support-kanban.component';
 
 export interface Rider {
   id: string;
@@ -75,7 +76,8 @@ export interface Rider {
     DispatchConfigModalComponent,
     MerchantCouponsTabComponent,
     MerchantRidersTabComponent,
-    MerchantUsersTabComponent
+    MerchantUsersTabComponent,
+    SupportKanbanComponent
   ],
   templateUrl: './merchant-admin.component.html'
 })
@@ -97,7 +99,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
   readonly isSidebarExpanded = signal(true);
   readonly isMobileMenuOpen = signal(false);
   readonly productViewMode = signal<'grid' | 'list'>('grid');
-  readonly activeTab = signal<'orders' | 'products' | 'branches' | 'riders' | 'gps_map' | 'users' | 'settings' | 'coupons' | 'whatsapp'>('orders');
+  readonly activeTab = signal<'orders' | 'products' | 'branches' | 'riders' | 'gps_map' | 'users' | 'settings' | 'coupons' | 'whatsapp' | 'support'>('orders');
 
   // --- WHATSAPP BOT & CENTRAL DE MENSAJERIA ---
   readonly whatsappSubTab = signal<'chat' | 'settings'>('chat');

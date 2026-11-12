@@ -28,6 +28,11 @@
 	<string>Pídetelo necesita tu ubicación para calcular las rutas y tiempos de entrega exactos.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Pídetelo necesita tu ubicación para mostrarte el seguimiento de tu pedido en vivo.</string>
+
+	<key>NSCameraUsageDescription</key>
+	<string>Pídetelo requiere acceso a la cámara para tomar tu foto de perfil.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Pídetelo requiere acceso a tu galería de fotos para actualizar tu imagen de perfil.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
