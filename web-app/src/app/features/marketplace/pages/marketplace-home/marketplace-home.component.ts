@@ -172,6 +172,39 @@ export class MarketplaceHomeComponent implements OnInit {
     return this.enrichedTenants().filter(t => t.isFeatured && t.isWithinRange);
   });
 
+  private getTenantKeywords(tenant: any): string[] {
+    const keywords: string[] = [];
+    const name = (tenant.name || '').toLowerCase();
+    const cat = (tenant.category || '').toLowerCase();
+    const sub = (tenant.subcategories || []).map((s: string) => (s || '').toLowerCase());
+
+    if (name.includes('mcdonald') || name.includes('burger') || sub.includes('hamburguesas') || sub.includes('comida rápida')) {
+      keywords.push('hamburguesa', 'hamburguesas', 'burger', 'burgers', 'papas', 'papas fritas', 'fries', 'bacon', 'doble', 'queso', 'cheddar', 'refresco', 'combo', 'nuggets', 'alitas', 'ensalada', 'fit', 'carne', 'smash', 'snack', 'postre', 'sundae', 'helado', 'desayuno');
+    }
+    if (cat.includes('restaurante') || cat.includes('comida')) {
+      keywords.push('comida', 'almuerzo', 'cena', 'delivery', 'plato', 'menu', 'orden');
+    }
+    if (cat.includes('farmacia') || name.includes('farmacia') || name.includes('farma')) {
+      keywords.push('farmacia', 'medicinas', 'salud', 'remedios', 'pastillas', 'cuidado', 'bienestar', 'jarabe', 'analgesico');
+    }
+    if (cat.includes('super') || cat.includes('súper') || name.includes('market') || name.includes('bodega')) {
+      keywords.push('supermercado', 'viveres', 'abarrotes', 'mercado', 'comestibles', 'despensa');
+    }
+    if (cat.includes('licor') || name.includes('licor') || name.includes('bodegon')) {
+      keywords.push('licor', 'licores', 'cerveza', 'cervezas', 'ron', 'whisky', 'vino', 'bebidas', 'hielo', 'tragos');
+    }
+    if (cat.includes('postre') || cat.includes('dulce') || cat.includes('cafe')) {
+      keywords.push('postre', 'postres', 'dulces', 'tortas', 'pastel', 'cafe', 'cafeteria', 'helado', 'galletas');
+    }
+    return keywords;
+  }
+
+  readonly liveSearchSuggestions = computed(() => {
+    const q = (this.searchQuery() || '').toLowerCase().trim();
+    if (!q || q.length < 2) return [];
+    return this.filteredTenants().slice(0, 5);
+  });
+
   readonly filteredTenants = computed(() => {
     let list = this.enrichedTenants();
     const query = (this.searchQuery() || '').toLowerCase().trim();
@@ -188,7 +221,7 @@ export class MarketplaceHomeComponent implements OnInit {
 
     if (cat === 'Favoritos') {
       list = list.filter(t => this.favorites.isFavorite(t.slug) || this.favorites.isFavorite(t.id));
-    } else if (cat !== 'Todos') {
+    } else if (cat !== 'Todos' && !query) {
       list = list.filter(t => {
         const catLower = (t.category || '').toLowerCase();
         const mainCat = cat.toLowerCase();
@@ -204,7 +237,7 @@ export class MarketplaceHomeComponent implements OnInit {
       });
     }
 
-    if (sub !== 'Todos') {
+    if (sub !== 'Todos' && !query) {
       const subLower = sub.toLowerCase();
       list = list.filter(t => {
         const inSubArray = (t.subcategories || []).some(s => (s || '').toLowerCase().includes(subLower));
@@ -233,11 +266,15 @@ export class MarketplaceHomeComponent implements OnInit {
           return bName.includes(normQuery) || bName.replace(/[^a-z0-9]/g, '').includes(strippedQuery) || bAddr.includes(normQuery);
         });
 
+        const tenantKeywords = this.getTenantKeywords(t).map(normalizeText);
+        const inKeywords = tenantKeywords.some(k => k.includes(normQuery) || normQuery.includes(k));
+
         return (
           name.includes(normQuery) ||
           (strippedQuery.length > 2 && strippedName.includes(strippedQuery)) ||
           category.includes(normQuery) ||
           inSubcats ||
+          inKeywords ||
           tagline.includes(normQuery) ||
           description.includes(normQuery) ||
           address.includes(normQuery) ||
@@ -415,20 +452,44 @@ export class MarketplaceHomeComponent implements OnInit {
     const fallbackOpen = rawBh?.open || (tenant as any).open_time || (tenant as any).openTime || '11:00';
     const fallbackClose = rawBh?.close || (tenant as any).close_time || (tenant as any).closeTime || '23:00';
 
-    let now = new Date();
+    if (rawBh?.forceOpen === true || rawBh?.force_open === true) {
+      return { isOpen: true, label: 'Abierto 24 Horas' };
+    }
+
+    if (rawBh?.isOpenToday === false) {
+      return { isOpen: false, label: 'Pausado temporalmente' };
+    }
+
+    let todayName = 'lunes';
+    let curMin = 0;
     try {
-      const vzlaStr = new Date().toLocaleString('en-US', { timeZone: 'America/Caracas' });
-      now = new Date(vzlaStr);
-    } catch (_) {}
-    const daysMap = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
-    const todayName = daysMap[now.getDay()];
+      const formatter = new Intl.DateTimeFormat('es-VE', {
+        timeZone: 'America/Caracas',
+        weekday: 'long',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
+      const parts = formatter.formatToParts(new Date());
+      let hour = 0, minute = 0;
+      for (const p of parts) {
+        if (p.type === 'weekday') todayName = p.value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        if (p.type === 'hour') hour = parseInt(p.value, 10);
+        if (p.type === 'minute') minute = parseInt(p.value, 10);
+      }
+      curMin = hour * 60 + minute;
+    } catch (_) {
+      const now = new Date();
+      const daysMap = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+      todayName = daysMap[now.getDay()];
+      curMin = now.getHours() * 60 + now.getMinutes();
+    }
 
     if (Array.isArray(scheduleDays) && scheduleDays.length > 0) {
       const todayConfig = scheduleDays.find((d: any) => {
         if (!d || !d.day) return false;
         const norm = String(d.day).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-        const target = todayName.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-        return norm === target;
+        return norm === todayName;
       });
 
       if (todayConfig) {
@@ -439,9 +500,8 @@ export class MarketplaceHomeComponent implements OnInit {
         const closeStr = todayConfig.to || fallbackClose;
         const [openH, openM] = openStr.split(':').map(Number);
         const [closeH, closeM] = closeStr.split(':').map(Number);
-        const curMin = now.getHours() * 60 + now.getMinutes();
-        const oMin = (openH || 11) * 60 + (openM || 0);
-        const cMin = (closeH || 23) * 60 + (closeM || 0);
+        const oMin = (isNaN(openH) ? 11 : openH) * 60 + (isNaN(openM) ? 0 : openM);
+        const cMin = (isNaN(closeH) ? 23 : closeH) * 60 + (isNaN(closeM) ? 0 : closeM);
 
         let isOpen = false;
         if (cMin > oMin) {
@@ -459,9 +519,8 @@ export class MarketplaceHomeComponent implements OnInit {
 
     const [openH, openM] = fallbackOpen.split(':').map(Number);
     const [closeH, closeM] = fallbackClose.split(':').map(Number);
-    const curMin = now.getHours() * 60 + now.getMinutes();
-    const openMin = (openH || 11) * 60 + (openM || 0);
-    const closeMin = (closeH || 23) * 60 + (closeM || 0);
+    const openMin = (isNaN(openH) ? 11 : openH) * 60 + (isNaN(openM) ? 0 : openM);
+    const closeMin = (isNaN(closeH) ? 23 : closeH) * 60 + (isNaN(closeM) ? 0 : closeM);
 
     let isOpen = false;
     if (closeMin > openMin) {

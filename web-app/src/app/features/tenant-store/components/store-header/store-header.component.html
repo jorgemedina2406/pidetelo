@@ -38,7 +38,7 @@
       </header>
 
       <!-- Store Hero Banner -->
-      <div class="relative h-48 sm:h-64 w-full bg-slate-900 overflow-hidden">
+      <div class="relative h-48 sm:h-64 w-full bg-gradient-to-r from-slate-950 via-slate-900 to-amber-950/40 overflow-hidden">
         <img [src]="selectedBranch?.bannerUrl || store.bannerUrl || '/assets/delivery_courier.jpg'"
              [alt]="selectedBranch?.name || store.name"
              (error)="onBannerError($event)"

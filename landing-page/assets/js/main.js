@@ -341,45 +341,46 @@ function initContactForm() {
 
     let needsActivation = false;
 
-    // 1. Envío a FormSubmit con timeout estricto de 3.5 segundos para evitar cuelgues
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3500);
+    // 1. Envío a FormSubmit solo si se navega vía HTTP/HTTPS (FormSubmit rechaza file:///)
+    if (window.location.protocol.startsWith('http')) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3500);
 
-      const response = await fetch('https://formsubmit.co/ajax/pideteloadomicilio@gmail.com', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify(payload),
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
+        const response = await fetch('https://formsubmit.co/ajax/pideteloadomicilio@gmail.com', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(payload),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
 
-      const resJson = await response.json();
-      console.log('[Landing Contact] FormSubmit status:', response.status, resJson);
+        const resJson = await response.json().catch(() => null);
+        console.log('[Landing Contact] FormSubmit status:', response.status, resJson);
 
-      if (resJson?.message && resJson.message.toLowerCase().includes('activation')) {
-        needsActivation = true;
+        if (resJson?.message && resJson.message.toLowerCase().includes('activation')) {
+          needsActivation = true;
+        }
+      } catch (err) {
+        console.warn('[Landing Contact] FormSubmit finalizó:', err.message);
       }
-    } catch (err) {
-      console.warn('[Landing Contact] FormSubmit finalizó (proceso en segundo plano):', err.message);
     }
 
-    // 2. Respaldo simultáneo en Backend local / API Leads (Guarda en base de datos y envía por SMTP oficial si está activo)
+    // 2. Envío por Backend / Nodemailer oficial (directo a pideteloadomicilio@gmail.com)
     try {
-      const leadEndpoints = ['/api/support/leads', 'https://pidetelo.app/api/support/leads', 'http://localhost:3000/api/support/leads'];
-      for (const endpoint of leadEndpoints) {
-        try {
-          const bRes = await fetch(endpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, email, phone, store, city, message })
-          });
-          if (bRes.ok) break;
-        } catch (_) {}
+      let leadEndpoint = '/api/support/leads';
+      if (window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        leadEndpoint = 'http://localhost:3000/api/support/leads';
       }
+
+      await fetch(leadEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, phone, store, city, message })
+      });
     } catch (_) {}
 
     // 3. Guardar copia en localStorage del navegador como respaldo adicional

@@ -6,12 +6,20 @@
           
           <!-- Logo & Brand Badge -->
           <a routerLink="/explorar" class="flex items-center gap-2.5 group cursor-pointer focus:outline-none transition-transform active:scale-95">
-            <img src="/assets/logo.png" 
-                 alt="Pídetelo Express" 
-                 class="h-9 sm:h-11 w-auto max-w-[170px] sm:max-w-[220px] object-contain drop-shadow-xs" />
-            <span class="hidden md:inline-flex text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 tracking-wider">
-              MARKETPLACE
-            </span>
+            <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-brand-500 via-orange-500 to-amber-500 p-0.5 shadow-md shadow-brand-500/20 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-all">
+              <div class="w-full h-full bg-white dark:bg-slate-900 rounded-[14px] p-1 flex items-center justify-center overflow-hidden">
+                <img src="/assets/logo-isotipo.png" alt="Pídetelo" class="w-full h-full object-contain filter drop-shadow-xs" />
+              </div>
+            </div>
+            <div class="flex flex-col">
+              <div class="flex items-center gap-1.5">
+                <span class="font-black text-slate-900 dark:text-white tracking-tight text-xl leading-none">Pídetelo</span>
+                <span class="text-[9px] font-black uppercase tracking-wider bg-gradient-to-r from-brand-500 to-amber-500 text-white px-2 py-0.5 rounded-full shadow-xs">
+                  EXPRESS
+                </span>
+              </div>
+              <span class="text-[10px] text-slate-400 font-bold tracking-wider uppercase">Marketplace Delivery</span>
+            </div>
           </a>
 
           <!-- Location Selector: Clean SaaS Pill -->
@@ -120,7 +128,7 @@
           </p>
 
           <!-- Floating Enhanced Search Box -->
-          <div class="pt-2 max-w-2xl">
+          <div class="pt-2 max-w-2xl relative">
             <div class="bg-white dark:bg-slate-900 rounded-2xl p-1.5 sm:p-2 flex items-center gap-2 border border-slate-200 dark:border-slate-800 shadow-xl shadow-brand-500/5 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/20 transition-all">
               <span class="pl-3 text-brand-500 flex-shrink-0">
                 <app-icon name="search" [size]="18"></app-icon>
@@ -132,7 +140,7 @@
                      placeholder="Buscar comida, restaurante, sushi, hamburguesas, farmacia..."
                      class="w-full text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 bg-transparent focus:outline-none py-2" />
               @if (searchQuery()) {
-                <button (click)="searchQuery.set('')" class="text-slate-400 hover:text-slate-600 px-2 text-xs font-bold">
+                <button (click)="searchQuery.set('')" class="text-slate-400 hover:text-slate-600 px-2 text-xs font-bold cursor-pointer">
                   ✕
                 </button>
               }
@@ -141,6 +149,39 @@
                 Explorar
               </button>
             </div>
+
+            <!-- Instant Live Search Dropdown -->
+            @if (liveSearchSuggestions().length > 0) {
+              <div class="absolute left-0 right-0 top-full mt-2 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-2 z-50 animate-fade-in divide-y divide-slate-100 dark:divide-slate-800/60">
+                <div class="px-3 py-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                  <span>Comercios encontrados ({{ liveSearchSuggestions().length }})</span>
+                  <span class="text-brand-500 text-[10px]">Enter para ver todos ↓</span>
+                </div>
+                @for (item of liveSearchSuggestions(); track item.id) {
+                  <a [routerLink]="['/comercio', item.slug]"
+                     (click)="searchQuery.set('')"
+                     class="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors group cursor-pointer">
+                    <img [src]="item.logoUrl || getFallbackLogo(item.name)" [alt]="item.name"
+                         (error)="onLogoError($event, item.name)"
+                         class="w-9 h-9 rounded-xl object-cover border border-slate-200 dark:border-slate-700 bg-white flex-shrink-0" />
+                    <div class="flex-1 min-w-0 text-left">
+                      <div class="flex items-center gap-2">
+                        <span class="text-xs font-extrabold text-slate-900 dark:text-white truncate group-hover:text-brand-600 transition-colors">
+                          {{ item.name }}
+                        </span>
+                        <span class="text-[10px] font-bold px-1.5 py-0.2 rounded-full"
+                              [class.bg-emerald-100]="item.isOpenNow" [class.text-emerald-700]="item.isOpenNow"
+                              [class.bg-rose-100]="!item.isOpenNow" [class.text-rose-700]="!item.isOpenNow">
+                          {{ item.isOpenNow ? 'Abierto' : 'Cerrado' }}
+                        </span>
+                      </div>
+                      <p class="text-[11px] text-slate-400 truncate">{{ item.category }} • {{ item.distanceKm.toFixed(1) }} km</p>
+                    </div>
+                    <span class="text-xs text-brand-500 font-bold group-hover:translate-x-0.5 transition-transform">Ver menú →</span>
+                  </a>
+                }
+              </div>
+            }
           </div>
 
         </div>
@@ -268,6 +309,21 @@
             </select>
           </div>
         </div>
+
+        <!-- Active Search Notice -->
+        @if (searchQuery()) {
+          <div class="flex items-center justify-between gap-3 p-3 rounded-2xl bg-brand-500/10 border border-brand-500/20 text-xs">
+            <div class="flex items-center gap-2">
+              <span class="text-sm">🔍</span>
+              <span class="text-slate-800 dark:text-slate-200">
+                Mostrando <strong>{{ filteredTenants().length }}</strong> {{ filteredTenants().length === 1 ? 'comercio' : 'comercios' }} para la búsqueda: <strong class="text-brand-600 dark:text-brand-400">"{{ searchQuery() }}"</strong>
+              </span>
+            </div>
+            <button (click)="searchQuery.set('')" class="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 transition-colors text-[11px] cursor-pointer">
+              ✕ Limpiar filtro
+            </button>
+          </div>
+        }
 
         <!-- ================= LOADING SKELETON ================= -->
         @if (isLoading()) {

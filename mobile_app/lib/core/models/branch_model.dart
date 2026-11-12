@@ -202,7 +202,16 @@ class Branch {
   /// Check whether the store branch is within its open business hours
   bool get isOpenRightNow {
     try {
-      final now = DateTime.now();
+      if (businessHours?['forceOpen'] == true || businessHours?['force_open'] == true) {
+        return true;
+      }
+      if (businessHours?['isOpenToday'] == false || !isOpenNow) {
+        return false;
+      }
+
+      // Always calculate using Venezuela timezone (UTC-4)
+      final nowUtc = DateTime.now().toUtc();
+      final now = nowUtc.subtract(const Duration(hours: 4));
       final currentMinutes = now.hour * 60 + now.minute;
 
       if (scheduleDays != null && scheduleDays!.isNotEmpty) {

@@ -45,6 +45,11 @@ export class StoreHeaderComponent {
     return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
   }
 
+  getFallbackBanner(): string {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="400" viewBox="0 0 1200 400"><defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#0f172a"/><stop offset="50%" stop-color="#1e293b"/><stop offset="100%" stop-color="#c2410c"/></linearGradient></defs><rect width="1200" height="400" fill="url(#g)"/><circle cx="1100" cy="80" r="140" fill="#f97316" opacity="0.15"/><circle cx="150" cy="320" r="200" fill="#f59e0b" opacity="0.1"/></svg>`;
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+  }
+
   onLogoError(event: Event, name?: string): void {
     const target = event.target as HTMLImageElement;
     if (target) {
@@ -56,7 +61,10 @@ export class StoreHeaderComponent {
   onBannerError(event: Event): void {
     const target = event.target as HTMLImageElement;
     if (target) {
-      target.onerror = null;
+      target.onerror = () => {
+        target.onerror = null;
+        target.src = this.getFallbackBanner();
+      };
       target.src = '/assets/delivery_courier.jpg';
     }
   }

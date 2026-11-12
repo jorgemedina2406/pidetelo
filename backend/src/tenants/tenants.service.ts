@@ -81,6 +81,48 @@ export class TenantsService {
     }
   }
 
+  private getVenezuelaTime(): { weekday: string; curMin: number; hourStr: string; timeStr: string } {
+    try {
+      const d = new Date();
+      const formatter = new Intl.DateTimeFormat('es-VE', {
+        timeZone: 'America/Caracas',
+        weekday: 'long',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
+      const parts = formatter.formatToParts(d);
+      let weekday = '';
+      let hour = 0;
+      let minute = 0;
+      for (const p of parts) {
+        if (p.type === 'weekday') weekday = p.value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        if (p.type === 'hour') hour = parseInt(p.value, 10);
+        if (p.type === 'minute') minute = parseInt(p.value, 10);
+      }
+      const hh = String(hour).padStart(2, '0');
+      const mm = String(minute).padStart(2, '0');
+      return {
+        weekday: weekday || 'lunes',
+        curMin: hour * 60 + minute,
+        hourStr: `${hh}:${mm}`,
+        timeStr: `${hh}:${mm}`
+      };
+    } catch (_) {
+      const d = new Date();
+      const days = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+      const hour = d.getUTCHours() - 4; // UTC-4 fallback
+      const normH = hour < 0 ? hour + 24 : hour;
+      const min = d.getUTCMinutes();
+      return {
+        weekday: days[d.getDay()],
+        curMin: normH * 60 + min,
+        hourStr: `${String(normH).padStart(2, '0')}:${String(min).padStart(2, '0')}`,
+        timeStr: `${String(normH).padStart(2, '0')}:${String(min).padStart(2, '0')}`
+      };
+    }
+  }
+
   calculateScheduleStatus(businessHours: any): {
     isOpen: boolean;
     openStr: string;
@@ -88,24 +130,38 @@ export class TenantsService {
     isOpenToday: boolean;
     label: string;
   } {
+    if (businessHours?.forceOpen === true || businessHours?.force_open === true) {
+      return {
+        isOpen: true,
+        openStr: '00:00',
+        closeStr: '23:59',
+        isOpenToday: true,
+        label: 'Abierto 24 Horas'
+      };
+    }
+
+    if (businessHours?.isOpenToday === false || businessHours?.isOpenNow === false) {
+      return {
+        isOpen: false,
+        openStr: businessHours?.open || '11:00',
+        closeStr: businessHours?.close || '23:00',
+        isOpenToday: false,
+        label: 'Pausado temporalmente'
+      };
+    }
+
     const fallbackOpen = businessHours?.open || '11:00';
     const fallbackClose = businessHours?.close || '23:00';
     const scheduleDays = businessHours?.scheduleDays || [];
 
-    let now = new Date();
-    try {
-      const vzlaStr = new Date().toLocaleString('en-US', { timeZone: 'America/Caracas' });
-      now = new Date(vzlaStr);
-    } catch (_) {}
-    const daysMap = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
-    const todayName = daysMap[now.getDay()];
+    const vzla = this.getVenezuelaTime();
+    const todayName = vzla.weekday;
 
     if (Array.isArray(scheduleDays) && scheduleDays.length > 0) {
       const todayConfig = scheduleDays.find((d: any) => {
         if (!d || !d.day) return false;
         const norm = String(d.day).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-        const target = todayName.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-        return norm === target;
+        return norm === todayName;
       });
 
       if (todayConfig) {
@@ -123,9 +179,9 @@ export class TenantsService {
         const closeStr = todayConfig.to || fallbackClose;
         const [openH, openM] = openStr.split(':').map(Number);
         const [closeH, closeM] = closeStr.split(':').map(Number);
-        const curMin = now.getHours() * 60 + now.getMinutes();
-        const oMin = (openH || 11) * 60 + (openM || 0);
-        const cMin = (closeH || 23) * 60 + (closeM || 0);
+        const curMin = vzla.curMin;
+        const oMin = (isNaN(openH) ? 11 : openH) * 60 + (openM || 0);
+        const cMin = (isNaN(closeH) ? 23 : closeH) * 60 + (closeM || 0);
 
         let isOpen = false;
         if (cMin > oMin) {
@@ -146,9 +202,9 @@ export class TenantsService {
 
     const [openH, openM] = fallbackOpen.split(':').map(Number);
     const [closeH, closeM] = fallbackClose.split(':').map(Number);
-    const curMin = now.getHours() * 60 + now.getMinutes();
-    const oMin = (openH || 11) * 60 + (openM || 0);
-    const cMin = (closeH || 23) * 60 + (closeM || 0);
+    const curMin = vzla.curMin;
+    const oMin = (isNaN(openH) ? 11 : openH) * 60 + (isNaN(openM) ? 0 : openM);
+    const cMin = (isNaN(closeH) ? 23 : closeH) * 60 + (isNaN(closeM) ? 0 : closeM);
 
     let isOpen = false;
     if (cMin > oMin) {

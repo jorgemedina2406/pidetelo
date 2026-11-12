@@ -497,7 +497,18 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     }
   }
 
-  applySchedulePreset(preset: 'all' | 'weekdays' | 'weekends'): void {
+  applySchedulePreset(preset: 'all' | 'weekdays' | 'weekends' | '24h'): void {
+    if (preset === '24h') {
+      this.brandingForm.openTime = '00:00';
+      this.brandingForm.closeTime = '23:59';
+      this.brandingForm.scheduleDays = this.brandingForm.scheduleDays.map((d: any) => ({
+        ...d,
+        open: true,
+        from: '00:00',
+        to: '23:59'
+      }));
+      return;
+    }
     const from = this.brandingForm.openTime || '11:00';
     const to = this.brandingForm.closeTime || '23:00';
     this.brandingForm.scheduleDays = this.brandingForm.scheduleDays.map((d: any) => {
@@ -512,6 +523,61 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       }
       return d;
     });
+  }
+
+  currentVzlaTimeFormatted(): string {
+    try {
+      return new Intl.DateTimeFormat('es-VE', {
+        timeZone: 'America/Caracas',
+        weekday: 'long',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      }).format(new Date());
+    } catch (_) {
+      return new Date().toLocaleTimeString();
+    }
+  }
+
+  isCurrentScheduleOpenNow(): boolean {
+    const rawBh = {
+      open: this.brandingForm.openTime || '11:00',
+      close: this.brandingForm.closeTime || '23:00',
+      scheduleDays: this.brandingForm.scheduleDays
+    };
+    try {
+      const formatter = new Intl.DateTimeFormat('es-VE', {
+        timeZone: 'America/Caracas',
+        weekday: 'long',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
+      const parts = formatter.formatToParts(new Date());
+      let weekday = '', hour = 0, minute = 0;
+      for (const p of parts) {
+        if (p.type === 'weekday') weekday = p.value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        if (p.type === 'hour') hour = parseInt(p.value, 10);
+        if (p.type === 'minute') minute = parseInt(p.value, 10);
+      }
+      const cur = hour * 60 + minute;
+      const todayConfig = (this.brandingForm.scheduleDays || []).find((d: any) => {
+        if (!d || !d.day) return false;
+        const norm = String(d.day).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        return norm === weekday;
+      });
+      if (todayConfig) {
+        if (!todayConfig.open) return false;
+        const [oH, oM] = (todayConfig.from || rawBh.open).split(':').map(Number);
+        const [cH, cM] = (todayConfig.to || rawBh.close).split(':').map(Number);
+        const o = (isNaN(oH) ? 11 : oH) * 60 + (isNaN(oM) ? 0 : oM);
+        const c = (isNaN(cH) ? 23 : cH) * 60 + (isNaN(cM) ? 0 : cM);
+        return c > o ? (cur >= o && cur < c) : (cur >= o || cur < c);
+      }
+      return false;
+    } catch (_) {
+      return true;
+    }
   }
 
   copyGeneralHoursToAllDays(): void {

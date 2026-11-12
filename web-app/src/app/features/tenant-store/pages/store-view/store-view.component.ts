@@ -101,20 +101,44 @@ export class StoreViewComponent implements OnInit {
     const fallbackOpen = (b as any)?.open_time || (b as any)?.openTime || rawBh?.open || (t as any)?.open_time || (t as any)?.openTime || '08:00';
     const fallbackClose = (b as any)?.close_time || (b as any)?.closeTime || rawBh?.close || (t as any)?.close_time || (t as any)?.closeTime || '23:00';
 
-    let now = new Date();
+    if (rawBh?.forceOpen === true || rawBh?.force_open === true) {
+      return { isOpen: true, label: 'Abierto 24 Horas', openStr: '00:00', closeStr: '23:59' };
+    }
+
+    if (rawBh?.isOpenToday === false || (b && b.isOpenNow === false)) {
+      return { isOpen: false, label: 'Pausado temporalmente', openStr: fallbackOpen, closeStr: fallbackClose };
+    }
+
+    let todayName = 'lunes';
+    let cur = 0;
     try {
-      const vzlaStr = new Date().toLocaleString('en-US', { timeZone: 'America/Caracas' });
-      now = new Date(vzlaStr);
-    } catch (_) {}
-    const daysMap = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
-    const todayName = daysMap[now.getDay()];
+      const formatter = new Intl.DateTimeFormat('es-VE', {
+        timeZone: 'America/Caracas',
+        weekday: 'long',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
+      const parts = formatter.formatToParts(new Date());
+      let hour = 0, minute = 0;
+      for (const p of parts) {
+        if (p.type === 'weekday') todayName = p.value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        if (p.type === 'hour') hour = parseInt(p.value, 10);
+        if (p.type === 'minute') minute = parseInt(p.value, 10);
+      }
+      cur = hour * 60 + minute;
+    } catch (_) {
+      const now = new Date();
+      const daysMap = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+      todayName = daysMap[now.getDay()];
+      cur = now.getHours() * 60 + now.getMinutes();
+    }
 
     if (Array.isArray(scheduleDays) && scheduleDays.length > 0) {
       const todayConfig = scheduleDays.find((d: any) => {
         if (!d || !d.day) return false;
         const norm = String(d.day).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-        const target = todayName.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-        return norm === target;
+        return norm === todayName;
       });
 
       if (todayConfig) {
@@ -130,7 +154,6 @@ export class StoreViewComponent implements OnInit {
         const closeStr = todayConfig.to || todayConfig.close_time || todayConfig.closeTime || fallbackClose;
         const [openH, openM] = openStr.split(':').map(Number);
         const [closeH, closeM] = closeStr.split(':').map(Number);
-        const cur = now.getHours() * 60 + now.getMinutes();
         const o = (isNaN(openH) ? 8 : openH) * 60 + (isNaN(openM) ? 0 : openM);
         const c = (isNaN(closeH) ? 23 : closeH) * 60 + (isNaN(closeM) ? 0 : closeM);
 
@@ -152,7 +175,6 @@ export class StoreViewComponent implements OnInit {
 
     const [openH, openM] = fallbackOpen.split(':').map(Number);
     const [closeH, closeM] = fallbackClose.split(':').map(Number);
-    const cur = now.getHours() * 60 + now.getMinutes();
     const o = (isNaN(openH) ? 8 : openH) * 60 + (isNaN(openM) ? 0 : openM);
     const c = (isNaN(closeH) ? 23 : closeH) * 60 + (isNaN(closeM) ? 0 : closeM);
 

@@ -361,10 +361,19 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
   bool _isStoreOpenNow(Map<String, dynamic> store) {
     try {
-      final now = DateTime.now();
+      final rawBh = store['business_hours'] is Map ? store['business_hours'] as Map : null;
+      if (rawBh?['forceOpen'] == true || rawBh?['force_open'] == true) {
+        return true;
+      }
+      if (rawBh?['isOpenToday'] == false || store['is_open_now'] == false) {
+        return false;
+      }
+
+      // Timezone Venezuela UTC-4
+      final nowUtc = DateTime.now().toUtc();
+      final now = nowUtc.subtract(const Duration(hours: 4));
       final cur = now.hour * 60 + now.minute;
 
-      final rawBh = store['business_hours'] is Map ? store['business_hours'] as Map : null;
       final rawSDays = store['scheduleDays'] ?? rawBh?['scheduleDays'];
 
       if (rawSDays is List && rawSDays.isNotEmpty) {

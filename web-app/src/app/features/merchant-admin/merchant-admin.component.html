@@ -2963,6 +2963,10 @@
                 <!-- Presets Rápidos -->
                 <div class="flex items-center gap-2 flex-wrap">
                   <span class="text-[11px] font-bold text-slate-400">Plantillas:</span>
+                  <button type="button" (click)="applySchedulePreset('24h')"
+                    class="px-2.5 py-1 text-[11px] font-black rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800 hover:bg-emerald-500 hover:text-white transition-colors cursor-pointer">
+                    ⚡ 24 Horas (Siempre Abierto)
+                  </button>
                   <button type="button" (click)="applySchedulePreset('all')"
                     class="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-brand-500 hover:text-white transition-colors cursor-pointer">
                     Todos los días
@@ -2975,6 +2979,26 @@
                     class="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-brand-500 hover:text-white transition-colors cursor-pointer">
                     Fines de Semana
                   </button>
+                </div>
+              </div>
+
+              <!-- Indicador de Tiempo Real Venezuela (UTC-4) y Estado Actual -->
+              <div class="px-3.5 py-2.5 rounded-xl bg-blue-50/80 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div class="flex items-center gap-2">
+                  <span class="text-base">🇻🇪</span>
+                  <span class="text-slate-700 dark:text-slate-300">
+                    Zona horaria oficial: <strong>Venezuela (UTC-4)</strong> • Hora actual: <strong class="text-blue-700 dark:text-blue-300">{{ currentVzlaTimeFormatted() }}</strong>
+                  </span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-[11px] font-bold text-slate-500 dark:text-slate-400">Estado en este momento:</span>
+                  <span class="px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider shadow-xs flex items-center gap-1.5"
+                        [class.bg-emerald-500]="isCurrentScheduleOpenNow()"
+                        [class.text-white]="true"
+                        [class.bg-rose-500]="!isCurrentScheduleOpenNow()">
+                    <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                    <span>{{ isCurrentScheduleOpenNow() ? 'Abierto Ahora' : 'Cerrado Ahora' }}</span>
+                  </span>
                 </div>
               </div>
 
