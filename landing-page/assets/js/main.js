@@ -112,9 +112,9 @@ function initModuleTabs() {
 
 /* ===================================================================
    4. SELECTOR DE PRECIOS (Mensual vs Anual con 20% Desc.)
-   Plan Emprendedor: $9/mes ($7 anual)
-   Plan Pro: $29/mes ($23 anual)
-   Plan Franquicia: $79/mes ($63 anual)
+   Plan Emprendedor: $20/mes ($16 anual)
+   Plan Pro: $35/mes ($28 anual)
+   Plan Franquicia: $80/mes ($64 anual)
 =================================================================== */
 function initPricingToggle() {
   const toggle = document.getElementById('pricing-toggle');
@@ -124,8 +124,8 @@ function initPricingToggle() {
   const periodElements = document.querySelectorAll('.plan-period');
 
   const prices = {
-    monthly: { starter: '9', pro: '29', enterprise: '79' },
-    annual: { starter: '7', pro: '23', enterprise: '63' }
+    monthly: { starter: '20', pro: '35', enterprise: '80' },
+    annual: { starter: '16', pro: '28', enterprise: '64' }
   };
 
   toggle.addEventListener('change', (e) => {
@@ -322,7 +322,7 @@ function initContactForm() {
       `*Teléfono:* ${phone}\n` +
       `*Detalle:* ${message || 'Solicitud de demo comercial'}`
     );
-    const whatsappUrl = `https://wa.me/584125163118?text=${waText}`;
+    const whatsappUrl = `https://wa.me/584245065032?text=${waText}`;
     if (waLink) waLink.href = whatsappUrl;
 
     if (mailLink) {
@@ -446,7 +446,7 @@ function initFloatingWhatsApp() {
   btn.addEventListener('click', (e) => {
     e.preventDefault();
     const msg = encodeURIComponent('¡Hola Pídetelo! Me interesa afiliar mi comercio y conocer la plataforma.');
-    window.open(`https://wa.me/584125163118?text=${msg}`, '_blank');
+    window.open(`https://wa.me/584245065032?text=${msg}`, '_blank');
   });
 }
 

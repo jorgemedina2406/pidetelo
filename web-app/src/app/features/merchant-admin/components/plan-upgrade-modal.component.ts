@@ -70,7 +70,7 @@ export class PlanUpgradeModalComponent {
   }
 
   getWhatsAppUpgradeUrl(planCode: string): string {
-    const text = encodeURIComponent(`Hola equipo Pídetelo, deseo solicitar la actualización de mi comercio al ${planCode === 'FRANQUICIA' ? 'Plan Franquicia ($79/mes)' : 'Plan Comercio Pro ($29/mes)'}.`);
-    return `https://wa.me/584121234567?text=${text}`;
+    const text = encodeURIComponent(`Hola equipo Pídetelo, deseo solicitar la actualización de mi comercio al ${planCode === 'FRANQUICIA' ? 'Plan Franquicia ($80/mes)' : 'Plan Comercio Pro ($35/mes)'}.`);
+    return `https://wa.me/584245065032?text=${text}`;
   }
 }

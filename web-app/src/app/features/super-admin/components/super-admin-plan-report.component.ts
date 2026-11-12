@@ -51,8 +51,8 @@ export class SuperAdminPlanReportComponent {
       if (planCode === 'COMERCIO') planCode = 'COMERCIO_PRO';
       if (planCode === 'CORPORATIVO') planCode = 'FRANQUICIA';
 
-      const monthlyFee = planCode === 'FRANQUICIA' ? 79 : (planCode === 'COMERCIO_PRO' ? 29 : 9);
-      const planName = planCode === 'FRANQUICIA' ? 'Franquicia ($79/m)' : (planCode === 'COMERCIO_PRO' ? 'Comercio Pro ($29/m)' : 'Emprendedor ($9/m)');
+      const monthlyFee = planCode === 'FRANQUICIA' ? 80 : (planCode === 'COMERCIO_PRO' ? 35 : 20);
+      const planName = planCode === 'FRANQUICIA' ? 'Franquicia ($80/m)' : (planCode === 'COMERCIO_PRO' ? 'Comercio Pro ($35/m)' : 'Emprendedor ($20/m)');
 
       let expStr = t.planExpiresAt;
       if (!expStr && typeof localStorage !== 'undefined') {

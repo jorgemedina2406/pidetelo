@@ -1,7 +1,7 @@
 <div class="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-150">
       
       <!-- ================= STRIPE-STYLE MINIMALIST TOPBAR ================= -->
-      <nav class="bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 sticky top-0 z-[100] shadow-xs">
+      <nav class="bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-[100] shadow-sm">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
           
           <!-- Logo & Brand Badge -->
@@ -85,11 +85,13 @@
               <app-icon [name]="theme.isDark() ? 'sun' : 'moon'" [size]="14" [className]="theme.isDark() ? 'text-amber-400' : 'text-slate-600'"></app-icon>
             </button>
 
-            <!-- Language Switcher -->
-            <button (click)="i18n.toggleLang()" 
-                    class="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs transition-colors">
-              {{ i18n.lang() === 'es' ? 'ES' : 'EN' }}
-            </button>
+            <!-- Language Switcher (Oculto temporalmente) -->
+            @if (false) {
+              <button (click)="i18n.toggleLang()" 
+                      class="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs transition-colors">
+                {{ i18n.lang() === 'es' ? 'ES' : 'EN' }}
+              </button>
+            }
 
           </div>
 
@@ -108,7 +110,7 @@
       </nav>
 
       <!-- ================= MODERN ELEVATED HERO ================= -->
-      <section class="relative z-10 bg-gradient-to-b from-brand-500/10 via-amber-500/5 to-slate-50 dark:from-brand-950/30 dark:via-slate-900/40 dark:to-slate-950 border-b border-slate-200 dark:border-slate-800/80 py-8 sm:py-10 px-4 sm:px-6">
+      <section class="relative z-40 bg-gradient-to-b from-brand-500/10 via-amber-500/5 to-slate-50 dark:from-brand-950/30 dark:via-slate-900/40 dark:to-slate-950 border-b border-slate-200 dark:border-slate-800/80 py-8 sm:py-10 px-4 sm:px-6">
         <div class="max-w-4xl mx-auto space-y-5 text-center sm:text-left">
           
           <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold shadow-xs">
@@ -208,7 +210,7 @@
       }
 
       <!-- ================= MAIN CONTENT AREA ================= -->
-      <main class="max-w-6xl mx-auto px-4 sm:px-6 py-6 flex-1 w-full space-y-6 relative z-10">
+      <main class="max-w-6xl mx-auto px-4 sm:px-6 py-6 flex-1 w-full space-y-6 relative z-0">
         
         <!-- Category Cards (Mobile App Style Square Cards) -->
         <div class="space-y-4">
@@ -554,7 +556,7 @@
                 <li><a routerLink="/legal/privacidad" class="hover:text-brand-600 dark:hover:text-brand-400 transition-colors cursor-pointer">Política de Privacidad</a></li>
                 <li><a routerLink="/legal/cookies" class="hover:text-brand-600 dark:hover:text-brand-400 transition-colors cursor-pointer">Política de Cookies</a></li>
                 <li><a routerLink="/legal/reclamaciones" class="hover:text-brand-600 dark:hover:text-brand-400 transition-colors cursor-pointer">Libro de Reclamaciones</a></li>
-                <li><a href="https://wa.me/584120000000?text=Hola,%20necesito%20soporte%20con%20Pidetelo" target="_blank" rel="noopener" class="hover:text-emerald-500 font-bold transition-colors">💬 Contacto & Soporte WhatsApp</a></li>
+                <li><a href="https://wa.me/584245065032?text=Hola,%20necesito%20soporte%20con%20Pidetelo" target="_blank" rel="noopener" class="hover:text-emerald-500 font-bold transition-colors">💬 Contacto & Soporte WhatsApp</a></li>
               </ul>
             </div>
 
