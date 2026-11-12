@@ -53,6 +53,7 @@ jobs:
         if: github.event_name == 'push' || github.event.inputs.target_app == 'ambas' || github.event.inputs.target_app == 'cliente'
         run: |
           cd mobile_app/build/ios/iphoneos
+          rm -rf Payload
           mkdir -p Payload
           cp -r Runner.app Payload/
           zip -r -q "Pidetelo-Cliente-iOS.ipa" Payload
@@ -82,6 +83,7 @@ jobs:
         if: github.event_name == 'push' || github.event.inputs.target_app == 'ambas' || github.event.inputs.target_app == 'rider'
         run: |
           cd rider_app/build/ios/iphoneos
+          rm -rf Payload
           mkdir -p Payload
           cp -r Runner.app Payload/
           zip -r -q "Pidetelo-Rider-iOS.ipa" Payload

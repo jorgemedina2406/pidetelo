@@ -256,3 +256,4 @@ export class SuperAdminPlanReportComponent {
     URL.revokeObjectURL(url);
   }
 }
+
