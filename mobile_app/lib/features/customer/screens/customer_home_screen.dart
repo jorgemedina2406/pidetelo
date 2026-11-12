@@ -43,6 +43,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
   List<Map<String, dynamic>> _stores = [];
   List<Map<String, dynamic>> _supabaseCategories = [];
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -272,6 +274,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
   @override
   void dispose() {
+    _searchController.dispose();
     _bannerController.dispose();
     _liveOrdersSyncTimer?.cancel();
     _notifSyncTimer?.cancel();
@@ -1656,19 +1659,35 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
                 // Search Bar
                 TextField(
+                  controller: _searchController,
+                  onChanged: (val) {
+                    setState(() {
+                      _searchQuery = val.trim().toLowerCase();
+                    });
+                  },
                   decoration: InputDecoration(
-                    hintText: '¿Qué te gustaría pedri hoy?',
+                    hintText: '¿Qué te gustaría pedir hoy?',
                     prefixIcon: const Icon(Icons.search_rounded, size: 20),
-                    suffixIcon: Container(
-                      margin: const EdgeInsets.all(6),
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primary.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(Icons.tune_rounded,
-                          size: 18, color: AppTheme.primary),
-                    ),
+                    suffixIcon: _searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear_rounded, size: 18),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() {
+                                _searchQuery = '';
+                              });
+                            },
+                          )
+                        : Container(
+                            margin: const EdgeInsets.all(6),
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primary.withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.tune_rounded,
+                                size: 18, color: AppTheme.primary),
+                          ),
                   ),
                 ),
 
@@ -2753,8 +2772,28 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   List<Map<String, dynamic>> _filterStores() {
     final selectedAddr = CartService().selectedAddress;
 
-    // 1. Filtrado por categoría seleccionada
-    final categoryFiltered = _stores.where((store) {
+    // 1. Filtrado por búsqueda de texto
+    List<Map<String, dynamic>> searchFiltered = _stores;
+    if (_searchQuery.isNotEmpty) {
+      searchFiltered = _stores.where((store) {
+        final storeName = (store['name'] ?? '').toString().toLowerCase();
+        final storeCat = (store['category'] ?? '').toString().toLowerCase();
+        final storeDesc = (store['description'] ?? '').toString().toLowerCase();
+        final storeTag = (store['tagline'] ?? '').toString().toLowerCase();
+        final subcats = (store['subcategories'] as List<dynamic>?)
+                ?.map((e) => e.toString().toLowerCase())
+                .join(' ') ??
+            '';
+        return storeName.contains(_searchQuery) ||
+            storeCat.contains(_searchQuery) ||
+            storeDesc.contains(_searchQuery) ||
+            storeTag.contains(_searchQuery) ||
+            subcats.contains(_searchQuery);
+      }).toList();
+    }
+
+    // 2. Filtrado por categoría seleccionada
+    final categoryFiltered = searchFiltered.where((store) {
       if (_selectedCategory == 'Todos') return true;
       final storeCat = (store['category'] ?? '').toString().toLowerCase();
       final storeName = (store['name'] ?? '').toString().toLowerCase();

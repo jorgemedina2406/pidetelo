@@ -1105,13 +1105,76 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       this.currentTenant.update(t => ({ ...t, name: user.tenantName! }));
     }
 
+    // 1. Cargar datos del comercio real desde la base de datos (para reflejar cualquier cambio de nombre en SuperAdmin)
+    const tenantIdentifier = activeTenantId || 'burger-king';
+    this.api.getTenantBySlug(tenantIdentifier).subscribe(tenant => {
+      if (tenant) {
+        this.currentTenant.set(tenant);
+        this.brandingForm.name = tenant.name;
+        if (tenant.tagline) this.brandingForm.tagline = tenant.tagline;
+        if (tenant.branding?.accentColor) this.brandingForm.accentColor = tenant.branding.accentColor;
+        if (tenant.branding?.logoUrl) this.brandingForm.logoUrl = tenant.branding.logoUrl;
+        if (tenant.branding?.bannerUrl) this.brandingForm.bannerUrl = tenant.branding.bannerUrl;
+        this.brandingForm.whatsappNumber = tenant.contact?.whatsappNumber || '';
+        this.brandingForm.phone = tenant.contact?.phone || '';
+        this.brandingForm.address = tenant.contact?.address || '';
+        if ((tenant as any).latitude) {
+          this.brandingForm.latitude = Number((tenant as any).latitude);
+        } else if (tenant.contact?.coordinates?.lat) {
+          this.brandingForm.latitude = Number(tenant.contact.coordinates.lat);
+        }
+        if ((tenant as any).longitude) {
+          this.brandingForm.longitude = Number((tenant as any).longitude);
+        } else if (tenant.contact?.coordinates?.lng) {
+          this.brandingForm.longitude = Number(tenant.contact.coordinates.lng);
+        }
+        if (tenant.deliverySettings?.deliveryRadiusKm) {
+          this.brandingForm.deliveryRadiusKm = tenant.deliverySettings.deliveryRadiusKm;
+        }
+        this.brandingForm.baseDeliveryFee = tenant.deliverySettings?.baseDeliveryFee ?? 2.50;
+        const tiers = tenant.deliverySettings?.deliveryTiers || (tenant as any).delivery_tiers;
+        if (Array.isArray(tiers) && tiers.length > 0) {
+          this.brandingForm.deliveryTiers = tiers;
+        }
+        const curr = tenant.currencySettings || (tenant as any).currency_settings;
+        if (curr?.exchangeRate || (tenant as any).exchange_rate) {
+          this.brandingForm.exchangeRate = Number(curr?.exchangeRate ?? (tenant as any).exchange_rate);
+        }
+        if (curr?.baseCurrency || (tenant as any).base_currency) {
+          this.brandingForm.baseCurrency = curr?.baseCurrency ?? (tenant as any).base_currency;
+        }
+        if (curr?.displayMode || (tenant as any).display_mode) {
+          this.brandingForm.displayMode = curr?.displayMode ?? (tenant as any).display_mode;
+        }
+
+        // Mantener sincronizado el usuario en sesión con el nombre real de la tienda
+        const cur = this.auth.currentUser();
+        if (cur && cur.tenantName !== tenant.name) {
+          this.auth.login({ ...cur, tenantName: tenant.name, tenantId: tenant.id });
+        }
+      } else {
+        // Fallback: buscar en la lista general de tenants
+        this.api.getTenants(true).subscribe(list => {
+          const match = list.find(t => t.id === activeTenantId || t.slug === activeTenantId || t.slug === 'burger-king');
+          if (match) {
+            this.currentTenant.set(match);
+            this.brandingForm.name = match.name;
+            const cur = this.auth.currentUser();
+            if (cur && cur.tenantName !== match.name) {
+              this.auth.login({ ...cur, tenantName: match.name, tenantId: match.id });
+            }
+          }
+        });
+      }
+    });
+
     if (activeTenantId) {
       // 0. Intentar precargar caché local inmediato de marca y moneda
       try {
         const cached = localStorage.getItem('deliveryhub_branding_' + activeTenantId);
         if (cached) {
           const parsed = JSON.parse(cached);
-          if (parsed.name) this.brandingForm.name = parsed.name;
+          if (parsed.name && !this.currentTenant().name) this.brandingForm.name = parsed.name;
           if (parsed.tagline) this.brandingForm.tagline = parsed.tagline;
           if (parsed.accentColor) this.brandingForm.accentColor = parsed.accentColor;
           if (parsed.logoUrl) this.brandingForm.logoUrl = parsed.logoUrl;
@@ -1131,49 +1194,6 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
           if (parsed.closeTime) this.brandingForm.closeTime = parsed.closeTime;
         }
       } catch (_) {}
-
-      // 1. Cargar datos del comercio real
-      this.api.getTenantBySlug(activeTenantId).subscribe(tenant => {
-        if (tenant) {
-          this.currentTenant.set(tenant);
-          this.brandingForm.name = tenant.name;
-          this.brandingForm.tagline = tenant.tagline || '';
-          this.brandingForm.accentColor = tenant.branding?.accentColor || '#f97316';
-          this.brandingForm.logoUrl = tenant.branding?.logoUrl || '';
-          this.brandingForm.bannerUrl = tenant.branding?.bannerUrl || '';
-          this.brandingForm.whatsappNumber = tenant.contact?.whatsappNumber || '';
-          this.brandingForm.phone = tenant.contact?.phone || '';
-          this.brandingForm.address = tenant.contact?.address || '';
-          if ((tenant as any).latitude) {
-            this.brandingForm.latitude = Number((tenant as any).latitude);
-          } else if (tenant.contact?.coordinates?.lat) {
-            this.brandingForm.latitude = Number(tenant.contact.coordinates.lat);
-          }
-          if ((tenant as any).longitude) {
-            this.brandingForm.longitude = Number((tenant as any).longitude);
-          } else if (tenant.contact?.coordinates?.lng) {
-            this.brandingForm.longitude = Number(tenant.contact.coordinates.lng);
-          }
-          if (tenant.deliverySettings?.deliveryRadiusKm) {
-            this.brandingForm.deliveryRadiusKm = tenant.deliverySettings.deliveryRadiusKm;
-          }
-          this.brandingForm.baseDeliveryFee = tenant.deliverySettings?.baseDeliveryFee ?? 2.50;
-          const tiers = tenant.deliverySettings?.deliveryTiers || (tenant as any).delivery_tiers;
-          if (Array.isArray(tiers) && tiers.length > 0) {
-            this.brandingForm.deliveryTiers = tiers;
-          }
-          const curr = tenant.currencySettings || (tenant as any).currency_settings;
-          if (curr?.exchangeRate || (tenant as any).exchange_rate) {
-            this.brandingForm.exchangeRate = Number(curr?.exchangeRate ?? (tenant as any).exchange_rate);
-          }
-          if (curr?.baseCurrency || (tenant as any).base_currency) {
-            this.brandingForm.baseCurrency = curr?.baseCurrency ?? (tenant as any).base_currency;
-          }
-          if (curr?.displayMode || (tenant as any).display_mode) {
-            this.brandingForm.displayMode = curr?.displayMode ?? (tenant as any).display_mode;
-          }
-        }
-      });
 
       // 2. Cargar categorías de productos del comercio
       this.loadCategories(activeTenantId);

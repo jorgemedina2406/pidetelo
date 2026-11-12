@@ -372,79 +372,84 @@
 
   <!-- ================= MODAL: NUEVO TICKET DE SOPORTE ================= -->
   @if (isNewTicketModalOpen()) {
-    <div class="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
+    <div class="fixed inset-0 z-[9999] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-fade-in"
          (click)="isNewTicketModalOpen.set(false)">
       
-      <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl w-full max-w-lg p-5 sm:p-6 overflow-hidden animate-scale-in space-y-4"
+      <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl w-full max-w-xl p-6 sm:p-7 overflow-hidden space-y-5 my-auto"
            (click)="$event.stopPropagation()">
         
-        <div class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
-          <div>
-            <h3 class="text-base sm:text-lg font-black text-slate-900 dark:text-white">
-              Abrir Ticket de Soporte
-            </h3>
-            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Tu mensaje será atendido prioritariamente por la administración central de Pídetelo.
-            </p>
+        <div class="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
+          <div class="flex items-center gap-3">
+            <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-brand-500 via-orange-500 to-amber-500 text-white flex items-center justify-center shadow-lg shadow-brand-500/25 flex-shrink-0 text-xl">
+              🎧
+            </div>
+            <div>
+              <h3 class="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+                Abrir Ticket de Soporte
+              </h3>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Canal prioritario con la administración central de Pídetelo.
+              </p>
+            </div>
           </div>
-          <button (click)="isNewTicketModalOpen.set(false)" class="text-slate-400 hover:text-slate-600">✕</button>
+          <button (click)="isNewTicketModalOpen.set(false)" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-white flex items-center justify-center transition-colors font-bold text-sm">✕</button>
         </div>
 
-        <div class="space-y-3">
+        <div class="space-y-4">
           <div>
-            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-              Asunto / Motivo del requerimiento
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+              Asunto / Motivo del requerimiento <span class="text-brand-500">*</span>
             </label>
             <input type="text"
                    [(ngModel)]="newSubject"
                    placeholder="Ej: Duda con recargo de delivery en zona norte"
-                   class="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-slate-200 focus:outline-none" />
+                   class="w-full text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 transition-all font-medium" />
           </div>
 
-          <div class="grid grid-cols-2 gap-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
-              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                 Prioridad
               </label>
               <select [(ngModel)]="newPriority"
-                      class="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-slate-200 focus:outline-none">
-                <option value="low">Baja</option>
-                <option value="medium">Media</option>
-                <option value="high">Alta ⚡</option>
-                <option value="urgent">Urgente 🔥</option>
+                      class="w-full text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 transition-all font-medium">
+                <option value="low">🟢 Baja</option>
+                <option value="medium">🟡 Media</option>
+                <option value="high">🟠 Alta ⚡</option>
+                <option value="urgent">🔴 Urgente 🔥</option>
               </select>
             </div>
 
             <div>
-              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                 Sucursal (Opcional)
               </label>
               <input type="text"
                      [(ngModel)]="newBranchName"
                      placeholder="Ej: Sede Principal"
-                     class="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-slate-200 focus:outline-none" />
+                     class="w-full text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 transition-all font-medium" />
             </div>
           </div>
 
           <div>
-            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-              Descripción detallada
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+              Descripción detallada <span class="text-brand-500">*</span>
             </label>
             <textarea [(ngModel)]="newInitialMessage"
                       rows="4"
                       placeholder="Explica detalladamente la situación para que el equipo pueda darte solución inmediata..."
-                      class="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-slate-800 dark:text-slate-200 focus:outline-none resize-none"></textarea>
+                      class="w-full text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl p-3.5 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 transition-all resize-none font-medium leading-relaxed"></textarea>
           </div>
         </div>
 
-        <div class="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2">
+        <div class="pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-3">
           <button (click)="isNewTicketModalOpen.set(false)"
-                  class="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">
+                  class="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
             Cancelar
           </button>
           <button (click)="submitNewTicket()"
                   [disabled]="!newSubject.trim() || !newInitialMessage.trim()"
-                  class="bg-gradient-to-r from-brand-500 to-amber-500 hover:from-brand-600 hover:to-amber-600 disabled:opacity-40 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md shadow-brand-500/20 transition-all cursor-pointer">
+                  class="bg-gradient-to-r from-brand-500 via-orange-500 to-amber-500 hover:from-brand-600 hover:to-amber-600 disabled:opacity-40 text-white font-extrabold text-xs px-6 py-2.5 rounded-xl shadow-lg shadow-brand-500/25 transition-all cursor-pointer active:scale-95">
             Crear Ticket de Soporte
           </button>
         </div>

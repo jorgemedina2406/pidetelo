@@ -763,7 +763,9 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: Image.asset(
-                    'assets/images/logo-isotipo-rider.png',
+                    isDark
+                        ? 'assets/images/logo-isotipo-dark.png'
+                        : 'assets/images/logo-isotipo-rider.png',
                     fit: BoxFit.contain,
                     filterQuality: FilterQuality.high,
                     errorBuilder: (_, __, ___) => Image.asset(
