@@ -16,16 +16,16 @@ import { BusinessCategory } from '../../core/models/category.model';
 import { Coupon } from '../../core/models/coupon.model';
 import { ConfirmService } from '../../core/services/confirm.service';
 import { IconComponent } from '../../shared/components/icon.component';
-import { SuperAdminUsersComponent } from './components/super-admin-users.component';
-import { SuperAdminMerchantsComponent } from './components/super-admin-merchants.component';
-import { SuperAdminBranchesComponent } from './components/super-admin-branches.component';
-import { SuperAdminRolesComponent } from './components/super-admin-roles.component';
-import { SuperAdminMetricsComponent } from './components/super-admin-metrics.component';
-import { SuperAdminBannersComponent } from './components/super-admin-banners.component';
-import { SuperAdminCategoriesComponent } from './components/super-admin-categories.component';
-import { SuperAdminCouponsComponent } from './components/super-admin-coupons.component';
+import { SuperAdminUsersComponent } from './components/super-admin-users/super-admin-users.component';
+import { SuperAdminMerchantsComponent } from './components/super-admin-merchants/super-admin-merchants.component';
+import { SuperAdminBranchesComponent } from './components/super-admin-branches/super-admin-branches.component';
+import { SuperAdminRolesComponent } from './components/super-admin-roles/super-admin-roles.component';
+import { SuperAdminMetricsComponent } from './components/super-admin-metrics/super-admin-metrics.component';
+import { SuperAdminBannersComponent } from './components/super-admin-banners/super-admin-banners.component';
+import { SuperAdminCategoriesComponent } from './components/super-admin-categories/super-admin-categories.component';
+import { SuperAdminCouponsComponent } from './components/super-admin-coupons/super-admin-coupons.component';
 import { SupportKanbanComponent } from '../../shared/components/support-kanban/support-kanban.component';
-import { SuperAdminPlanReportComponent } from './components/super-admin-plan-report.component';
+import { SuperAdminPlanReportComponent } from './components/super-admin-plan-report/super-admin-plan-report.component';
 
 export interface ToastNotification {
   id: string;

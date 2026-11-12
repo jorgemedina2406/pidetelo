@@ -94,40 +94,40 @@
 <body class="bg-slate-50 dark:bg-navy-950 text-slate-800 dark:text-slate-100 transition-colors duration-300 selection:bg-brand-500 selection:text-white antialiased overflow-x-hidden">
 
   <!-- ===================================================================
-       1. BARRA DE NAVEGACIÓN PRINCIPAL (STICKY & BLUR)
+       1. BARRA DE NAVEGACIÓN PRINCIPAL (STICKY, BLUR & 100% RESPONSIVE)
   =================================================================== -->
-  <header class="sticky top-0 z-50 bg-white/85 dark:bg-navy-950/85 backdrop-blur-md border-b border-slate-200/80 dark:border-white/10 transition-colors">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+  <header class="sticky top-0 z-50 bg-white/95 dark:bg-navy-950/95 backdrop-blur-md border-b border-slate-200/80 dark:border-white/10 transition-colors">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-2 sm:gap-4">
       
       <!-- Logo Pídetelo Oficial -->
-      <a href="#" class="flex items-center gap-3 group">
-        <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-brand-600 via-brand-500 to-amber-500 p-0.5 shadow-lg shadow-brand-500/25 flex items-center justify-center transition-transform group-hover:scale-105">
+      <a href="#" class="flex items-center gap-2.5 sm:gap-3 group flex-shrink-0">
+        <div class="w-9 h-9 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-tr from-brand-600 via-brand-500 to-amber-500 p-0.5 shadow-lg shadow-brand-500/25 flex items-center justify-center transition-transform group-hover:scale-105 flex-shrink-0">
           <img src="assets/images/logo.png" alt="Logo Pídetelo" class="w-full h-full object-contain rounded-xl p-1 bg-white">
         </div>
         <div class="leading-none">
-          <span class="font-heading font-black text-2xl tracking-tight text-slate-900 dark:text-white flex items-center gap-1">
+          <span class="font-heading font-black text-xl sm:text-2xl tracking-tight text-slate-900 dark:text-white flex items-center gap-0.5 sm:gap-1">
             Pídetelo<span class="text-brand-500">.</span>
           </span>
-          <span class="text-[10px] uppercase font-bold tracking-widest text-slate-500 dark:text-slate-400 block mt-0.5">
+          <span class="text-[9px] sm:text-[10px] uppercase font-extrabold tracking-widest text-slate-500 dark:text-slate-400 block mt-0.5">
             Delivery & Comercio
           </span>
         </div>
       </a>
 
-      <!-- Menú Escritorio -->
-      <nav class="hidden lg:flex items-center gap-7 text-sm font-semibold text-slate-600 dark:text-slate-300">
-        <a href="#ecosistema" class="hover:text-brand-500 dark:hover:text-brand-400 transition-colors">Ecosistema</a>
-        <a href="#modulos" class="hover:text-brand-500 dark:hover:text-brand-400 transition-colors">Módulos</a>
-        <a href="#pantallas" class="hover:text-brand-500 dark:hover:text-brand-400 transition-colors">Capturas Reales</a>
-        <a href="#precios" class="hover:text-brand-500 dark:hover:text-brand-400 transition-colors">Precios</a>
-        <a href="#calculadora" class="hover:text-brand-500 dark:hover:text-brand-400 transition-colors">Calculadora ROI</a>
-        <a href="#faq" class="hover:text-brand-500 dark:hover:text-brand-400 transition-colors">Preguntas</a>
+      <!-- Menú Escritorio (Solo Pantallas Grandes LG+) -->
+      <nav class="hidden lg:flex items-center gap-6 xl:gap-7 text-xs xl:text-sm font-semibold text-slate-600 dark:text-slate-300">
+        <a href="#ecosistema" class="hover:text-brand-500 dark:hover:text-brand-400 transition-colors py-1">Ecosistema</a>
+        <a href="#modulos" class="hover:text-brand-500 dark:hover:text-brand-400 transition-colors py-1">Módulos</a>
+        <a href="#pantallas" class="hover:text-brand-500 dark:hover:text-brand-400 transition-colors py-1">Capturas Reales</a>
+        <a href="#precios" class="hover:text-brand-500 dark:hover:text-brand-400 transition-colors py-1">Precios</a>
+        <a href="#calculadora" class="hover:text-brand-500 dark:hover:text-brand-400 transition-colors py-1">Calculadora ROI</a>
+        <a href="#faq" class="hover:text-brand-500 dark:hover:text-brand-400 transition-colors py-1">Preguntas</a>
       </nav>
 
       <!-- Botones de Acción / CTAs -->
-      <div class="hidden sm:flex items-center gap-3">
-        <!-- Selector Modo Claro / Oscuro con Iconos SVG -->
-        <button id="theme-toggle" class="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-300 transition-all cursor-pointer shadow-xs" title="Cambiar Tema">
+      <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+        <!-- Selector Modo Claro / Oscuro con Iconos SVG (Visible en móvil, tablet y escritorio) -->
+        <button id="theme-toggle" class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-300 transition-all cursor-pointer shadow-xs" title="Cambiar Tema">
           <!-- Sun SVG -->
           <svg id="sun-icon" class="w-4 h-4 text-amber-500 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
@@ -138,8 +138,8 @@
           </svg>
         </button>
 
-        <!-- Botón Descargar Apps con Logos SVG -->
-        <button class="open-download-modal px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800/90 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-white flex items-center gap-2 transition-all cursor-pointer shadow-xs">
+        <!-- Botón Descargar Apps con Logos SVG (Oculto en móvil/tablet para no apretar el header) -->
+        <button class="open-download-modal hidden xl:flex px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800/90 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-white items-center gap-2 transition-all cursor-pointer shadow-xs">
           <!-- Logo Android SVG -->
           <svg class="w-4 h-4 text-emerald-500" viewBox="0 0 24 24" fill="currentColor">
             <path d="M17.523 15.3414c-.5511 0-.9993-.4486-.9993-1.0007 0-.5512.4482-1.0006.9993-1.0006.5521 0 1.0003.4494 1.0003 1.0006 0 .5521-.4482 1.0007-1.0003 1.0007m-11.046 0c-.5511 0-.9993-.4486-.9993-1.0007 0-.5512.4482-1.0006.9993-1.0006.5521 0 1.0003.4494 1.0003 1.0006 0 .5521-.4482 1.0007-1.0003 1.0007m11.4045-6.02l1.9973-3.4592a.416.416 0 00-.1521-.5676.416.416 0 00-.5676.1521l-2.0223 3.503C15.5838 8.4116 13.854 8.134 12 8.134c-1.854 0-3.5838.2776-5.1368.8157L4.8409 5.4467a.416.416 0 00-.5676-.1521.416.416 0 00-.1521.5676l1.9973 3.4592C2.6889 11.1867.3432 14.6589 0 18.761h24c-.3432-4.1021-2.6889-7.5743-6.1185-9.4396"/>
@@ -151,42 +151,63 @@
           <span>Descargar Apps</span>
         </button>
 
-        <!-- Botón Afiliar Comercio -->
-        <a href="#contacto" class="shimmer-btn px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand-500 to-amber-500 hover:from-brand-600 hover:to-amber-600 text-white font-bold text-xs shadow-lg shadow-brand-500/25 flex items-center gap-2 transition-all transform hover:-translate-y-0.5 cursor-pointer">
-          <span>Afiliar mi Comercio</span>
+        <!-- Botón Afiliar Comercio (Visible desde sm: en adelante) -->
+        <a href="#contacto" class="shimmer-btn hidden sm:flex px-3.5 py-2 sm:px-5 sm:py-2.5 rounded-xl bg-gradient-to-r from-brand-500 to-amber-500 hover:from-brand-600 hover:to-amber-600 text-white font-bold text-xs shadow-lg shadow-brand-500/25 items-center gap-1.5 sm:gap-2 transition-all transform hover:-translate-y-0.5 cursor-pointer">
+          <span class="whitespace-nowrap">Afiliar mi Comercio</span>
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
           </svg>
         </a>
-      </div>
 
-      <!-- Botón Menú Móvil (Hamburger) -->
-      <button id="mobile-menu-btn" class="lg:hidden p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-brand-500 transition-colors">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path>
-        </svg>
-      </button>
+        <!-- Botón Menú Móvil (Hamburger para pantallas < LG) -->
+        <button id="mobile-menu-btn" class="lg:hidden p-2 sm:p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-brand-500 transition-colors cursor-pointer" aria-label="Abrir Menú">
+          <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path>
+          </svg>
+        </button>
+      </div>
 
     </div>
 
-    <!-- Menú Desplegable Móvil -->
-    <div id="mobile-menu" class="hidden lg:hidden border-t border-slate-200 dark:border-white/10 bg-white/95 dark:bg-navy-900/95 backdrop-blur-xl px-4 py-5 space-y-3">
-      <a href="#ecosistema" class="mobile-nav-link block py-2 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:text-brand-500">Ecosistema</a>
-      <a href="#modulos" class="mobile-nav-link block py-2 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:text-brand-500">Módulos</a>
-      <a href="#pantallas" class="mobile-nav-link block py-2 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:text-brand-500">Capturas Reales</a>
-      <a href="#precios" class="mobile-nav-link block py-2 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:text-brand-500">Precios</a>
-      <a href="#calculadora" class="mobile-nav-link block py-2 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:text-brand-500">Calculadora ROI</a>
-      <a href="#faq" class="mobile-nav-link block py-2 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:text-brand-500">Preguntas Frecuentes</a>
+    <!-- Menú Desplegable Móvil Moderno y Fluido -->
+    <div id="mobile-menu" class="hidden lg:hidden border-t border-slate-200/80 dark:border-white/10 bg-white/95 dark:bg-navy-950/95 backdrop-blur-xl px-4 py-5 shadow-2xl transition-all">
+      <div class="space-y-1">
+        <a href="#ecosistema" class="mobile-nav-link flex items-center justify-between py-2.5 px-3 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-brand-500 transition-colors">
+          <span>Ecosistema</span>
+          <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        </a>
+        <a href="#modulos" class="mobile-nav-link flex items-center justify-between py-2.5 px-3 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-brand-500 transition-colors">
+          <span>Módulos de la Plataforma</span>
+          <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        </a>
+        <a href="#pantallas" class="mobile-nav-link flex items-center justify-between py-2.5 px-3 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-brand-500 transition-colors">
+          <span>Capturas Reales en Vivo</span>
+          <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        </a>
+        <a href="#precios" class="mobile-nav-link flex items-center justify-between py-2.5 px-3 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-brand-500 transition-colors">
+          <span>Planes y Precios</span>
+          <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        </a>
+        <a href="#calculadora" class="mobile-nav-link flex items-center justify-between py-2.5 px-3 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-brand-500 transition-colors">
+          <span>Calculadora de Ahorro ROI</span>
+          <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        </a>
+        <a href="#faq" class="mobile-nav-link flex items-center justify-between py-2.5 px-3 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-brand-500 transition-colors">
+          <span>Preguntas Frecuentes</span>
+          <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        </a>
+      </div>
       
-      <div class="pt-4 border-t border-slate-200 dark:border-white/10 flex flex-col gap-2">
-        <button id="theme-toggle-mobile" class="w-full py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-bold text-center flex items-center justify-center gap-2">
-          <span>Cambiar Tema (Claro / Oscuro)</span>
+      <div class="pt-4 mt-3 border-t border-slate-200 dark:border-white/10 flex flex-col gap-2.5">
+        <button class="open-download-modal w-full py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-800 dark:text-white flex items-center justify-center gap-2 transition-colors">
+          <svg class="w-4 h-4 text-emerald-500" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M17.523 15.3414c-.5511 0-.9993-.4486-.9993-1.0007 0-.5512.4482-1.0006.9993-1.0006.5521 0 1.0003.4494 1.0003 1.0006 0 .5521-.4482 1.0007-1.0003 1.0007m-11.046 0c-.5511 0-.9993-.4486-.9993-1.0007 0-.5512.4482-1.0006.9993-1.0006.5521 0 1.0003.4494 1.0003 1.0006 0 .5521-.4482 1.0007-1.0003 1.0007m11.4045-6.02l1.9973-3.4592a.416.416 0 00-.1521-.5676.416.416 0 00-.5676.1521l-2.0223 3.503C15.5838 8.4116 13.854 8.134 12 8.134c-1.854 0-3.5838.2776-5.1368.8157L4.8409 5.4467a.416.416 0 00-.5676-.1521.416.416 0 00-.1521.5676l1.9973 3.4592C2.6889 11.1867.3432 14.6589 0 18.761h24c-.3432-4.1021-2.6889-7.5743-6.1185-9.4396"/>
+          </svg>
+          <span>Descargar Aplicaciones (APK / iOS)</span>
         </button>
-        <button class="open-download-modal w-full py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-bold text-center">
-          Descargar Aplicaciones (APK / iOS)
-        </button>
-        <a href="#contacto" class="mobile-nav-link w-full py-2.5 rounded-xl bg-brand-500 text-white text-xs font-bold text-center">
-          Afiliar mi Comercio Ahora
+        <a href="#contacto" class="mobile-nav-link w-full py-3 rounded-xl bg-gradient-to-r from-brand-500 to-amber-500 text-white text-xs font-black text-center shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2">
+          <span>Afiliar mi Comercio Ahora</span>
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
         </a>
       </div>
     </div>
@@ -442,6 +463,67 @@
           <div class="lg:col-span-6 flex justify-center">
             <div class="w-72 phone-mockup-frame shadow-2xl">
               <img src="assets/screenshots/app-movil-riders/IMG_1359.PNG" alt="Captura App Rider" class="w-full h-auto object-cover zoomable-image cursor-zoom-in">
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. PANEL: WHATSAPP BOT & IA -->
+        <div id="panel-whatsapp" class="module-tab-panel hidden grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          <div class="lg:col-span-6 space-y-5">
+            <span class="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              Integración Oficial WhatsApp QR & IA
+            </span>
+            <h3 class="font-heading font-black text-2xl sm:text-3xl text-slate-900 dark:text-white">
+              Bot Inteligente de WhatsApp & Atención Automatizada con IA
+            </h3>
+            <p class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+              Vende en automático por el canal donde ya están tus comensales. El bot responde inquietudes frecuentes, envía tu menú interactivo, calcula costos de envío y registra pedidos directamente en la comanda sin que tengas que atender el teléfono en horas pico.
+            </p>
+            
+            <div class="space-y-3">
+              <div class="flex items-start gap-3">
+                <div class="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                </div>
+                <div>
+                  <h4 class="font-bold text-xs text-slate-900 dark:text-white">Vinculación en 10 Segundos con Código QR</h4>
+                  <p class="text-[12px] text-slate-500 dark:text-slate-400">Escanea el código QR desde tu WhatsApp Business oficial y el bot queda sincronizado al instante con tu catálogo.</p>
+                </div>
+              </div>
+              <div class="flex items-start gap-3">
+                <div class="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                </div>
+                <div>
+                  <h4 class="font-bold text-xs text-slate-900 dark:text-white">Recepción Directa a la Pantalla de Cocina</h4>
+                  <p class="text-[12px] text-slate-500 dark:text-slate-400">Las órdenes tomadas en WhatsApp entran al panel administrativo con el mismo formato limpio que las de la app móvil.</p>
+                </div>
+              </div>
+              <div class="flex items-start gap-3">
+                <div class="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                </div>
+                <div>
+                  <h4 class="font-bold text-xs text-slate-900 dark:text-white">Transferencia Fluida a Operador Humano</h4>
+                  <p class="text-[12px] text-slate-500 dark:text-slate-400">Si el cliente pide un operador o tu personal escribe desde el chat web, el bot se pausa en automático para no interferir.</p>
+                </div>
+              </div>
+              <div class="flex items-start gap-3">
+                <div class="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                </div>
+                <div>
+                  <h4 class="font-bold text-xs text-slate-900 dark:text-white">Respuestas Automáticas con Inteligencia Artificial</h4>
+                  <p class="text-[12px] text-slate-500 dark:text-slate-400">Aclara dudas sobre métodos de pago (Pago Móvil, Zelle, Efectivo), horarios, zonas de cobertura y promociones activas.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="lg:col-span-6 flex justify-center">
+            <div class="w-full max-w-lg glass-panel p-3 sm:p-4 rounded-3xl border border-emerald-500/25 shadow-2xl relative overflow-hidden group">
+              <div class="absolute -top-12 -right-12 w-44 h-44 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+              <img src="assets/images/whatsapp-bot.png" alt="WhatsApp Bot e Inteligencia Artificial Pídetelo" class="w-full h-auto rounded-2xl shadow-md object-contain zoomable-image cursor-zoom-in group-hover:scale-[1.01] transition-transform duration-300">
             </div>
           </div>
         </div>
