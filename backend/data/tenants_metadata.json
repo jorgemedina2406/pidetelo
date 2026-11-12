@@ -90,7 +90,9 @@
       ]
     },
     "logo_url": "/assets/stores/burgerking-logo.svg",
-    "banner_url": "/assets/stores/burgerking-banner.svg"
+    "banner_url": "/assets/stores/burgerking-banner.svg",
+    "plan_expires_at": "2026-12-07T16:34:19.144Z",
+    "plan_code": "COMERCIO_PRO"
   },
   "3611773f-7d57-4675-af87-9ce4b0002eb5": {
     "category": "Restaurantes",
@@ -201,7 +203,8 @@
       ]
     },
     "logo_url": "/assets/stores/mcdonalds-logo.svg",
-    "banner_url": "/assets/stores/mcdonalds-banner.svg"
+    "banner_url": "/assets/stores/mcdonalds-banner.svg",
+    "plan_expires_at": "2026-12-07T16:34:19.144Z"
   },
   "5ecb4b6c-6ad8-45a2-8a5d-26af406cd31c": {
     "category": "Restaurantes",
@@ -310,6 +313,8 @@
       ]
     },
     "logo_url": "/assets/stores/burgerking-logo.svg",
-    "banner_url": "/assets/stores/burgerking-banner.svg"
+    "banner_url": "/assets/stores/burgerking-banner.svg",
+    "plan_expires_at": "2026-12-07T16:34:19.144Z",
+    "plan_code": "COMERCIO_PRO"
   }
 }

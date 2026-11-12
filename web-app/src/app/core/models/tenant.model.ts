@@ -87,6 +87,10 @@ export interface Tenant {
   deliveryTiers?: DeliveryTier[];
   subscriptionPlanId?: string;
   planCode?: 'EMPRENDEDOR' | 'COMERCIO_PRO' | 'FRANQUICIA' | string;
+  planExpiresAt?: string;
+  planStatus?: 'active' | 'expiring_soon' | 'expired';
+  isPlanExpired?: boolean;
+  daysRemaining?: number;
   subscriptionPlan?: any;
   commissionPercentage?: number;
   branches?: any[];

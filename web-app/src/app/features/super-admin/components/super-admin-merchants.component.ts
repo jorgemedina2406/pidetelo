@@ -70,6 +70,30 @@ export class SuperAdminMerchantsComponent {
     this.changePlan.emit({ tenantId: m.id, planCode });
   }
 
+  getPlanExpiration(m: any): { dateStr: string; daysRemaining: number; isExpired: boolean; isExpiringSoon: boolean } {
+    let expStr = m.planExpiresAt || m.plan_expires_at;
+    if (!expStr && typeof localStorage !== 'undefined') {
+      try {
+        expStr = localStorage.getItem('pidetelo_tenant_plan_exp_' + m.id);
+      } catch (_) {}
+    }
+    if (!expStr) {
+      const d = new Date();
+      d.setDate(d.getDate() + 25);
+      expStr = d.toISOString();
+    }
+    const expDate = new Date(expStr);
+    const now = Date.now();
+    const daysRemaining = Math.ceil((expDate.getTime() - now) / (1000 * 60 * 60 * 24));
+    const isExpired = daysRemaining < 0;
+    const isExpiringSoon = daysRemaining >= 0 && daysRemaining <= 5;
+    const dateStr = !isNaN(expDate.getTime()) 
+      ? expDate.toLocaleDateString('es-VE', { day: '2-digit', month: 'short' })
+      : '30 días';
+
+    return { dateStr, daysRemaining, isExpired, isExpiringSoon };
+  }
+
   getBaseFee(m: Tenant): string {
     return ((m.deliverySettings?.baseDeliveryFee) || 0).toFixed(2);
   }

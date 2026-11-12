@@ -447,6 +447,9 @@ export class MarketplaceHomeComponent implements OnInit {
   }
 
   checkStoreBusinessHours(tenant: Tenant): { isOpen: boolean; label: string } {
+    if (tenant.isPlanExpired || !tenant.isActive) {
+      return { isOpen: false, label: tenant.isPlanExpired ? 'Pausado (Plan vencido)' : 'Pausado temporalmente' };
+    }
     const rawBh = (tenant as any).business_hours || (tenant as any).businessHours || tenant.deliverySettings?.businessHours;
     const scheduleDays = rawBh?.scheduleDays || (tenant.branches && (tenant.branches[0] as any)?.business_hours?.scheduleDays);
     const fallbackOpen = rawBh?.open || (tenant as any).open_time || (tenant as any).openTime || '11:00';

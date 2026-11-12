@@ -101,6 +101,10 @@ export class StoreViewComponent implements OnInit {
     const fallbackOpen = (b as any)?.open_time || (b as any)?.openTime || rawBh?.open || (t as any)?.open_time || (t as any)?.openTime || '08:00';
     const fallbackClose = (b as any)?.close_time || (b as any)?.closeTime || rawBh?.close || (t as any)?.close_time || (t as any)?.closeTime || '23:00';
 
+    if (t?.isPlanExpired || !t?.isActive) {
+      return { isOpen: false, label: 'Comercio pausado temporalmente (Membresía)', openStr: fallbackOpen, closeStr: fallbackClose };
+    }
+
     if (rawBh?.forceOpen === true || rawBh?.force_open === true) {
       return { isOpen: true, label: 'Abierto 24 Horas', openStr: '00:00', closeStr: '23:59' };
     }

@@ -382,22 +382,6 @@ class SessionService extends ChangeNotifier {
     return false;
   }
 
-  Future<bool> updateAvatar(String avatarUrl) async {
-    if (_currentRider == null) return false;
-    final updated = _currentRider!.copyWith(avatarUrl: avatarUrl);
-    await saveRider(updated);
-
-    try {
-      final supabase = Supabase.instance.client;
-      await supabase.from('riders').update({
-        'avatar_url': avatarUrl,
-      }).eq('id', updated.id);
-    } catch (e) {
-      debugPrint('[SessionService] Error updating avatar: $e');
-    }
-    return true;
-  }
-
   Future<bool> addPaymentAccount(RiderPaymentAccount account) async {
     if (_currentRider == null) return false;
 

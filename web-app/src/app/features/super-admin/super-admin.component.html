@@ -413,6 +413,49 @@
             </div>
 
             
+            <!-- Reporte de Membresías & Planes -->
+            <div class="relative group">
+              <button (click)="setActiveTab('plan_report')"
+                      [class.bg-brand-500]="activeTab() === 'plan_report'"
+                      [class.text-white]="activeTab() === 'plan_report'"
+                      [class.shadow-md]="activeTab() === 'plan_report'"
+                      [class.shadow-brand-500/25]="activeTab() === 'plan_report'"
+                      [class.text-slate-600]="activeTab() !== 'plan_report'"
+                      [class.dark:text-slate-400]="activeTab() !== 'plan_report'"
+                      [class.hover:bg-slate-100]="activeTab() !== 'plan_report'"
+                      [class.dark:hover:bg-slate-850]="activeTab() !== 'plan_report'"
+                      [class.justify-center]="!isSidebarExpanded()"
+                      [class.w-12]="!isSidebarExpanded()"
+                      [class.h-12]="!isSidebarExpanded()"
+                      [class.mx-auto]="!isSidebarExpanded()"
+                      [class.w-full]="isSidebarExpanded()"
+                      [class.px-3]="isSidebarExpanded()"
+                      [class.py-2.5]="isSidebarExpanded()"
+                      class="flex items-center gap-3 rounded-xl font-bold text-xs transition-all duration-150 active:scale-95 cursor-pointer">
+                <span class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
+                      [class.bg-white/20]="activeTab() === 'plan_report'"
+                      [class.text-white]="activeTab() === 'plan_report'"
+                      [class.bg-slate-100]="activeTab() !== 'plan_report'"
+                      [class.dark:bg-slate-800]="activeTab() !== 'plan_report'"
+                      [class.text-slate-500]="activeTab() !== 'plan_report'"
+                      [class.dark:text-slate-400]="activeTab() !== 'plan_report'">
+                  <app-icon name="calendar" [size]="17"></app-icon>
+                </span>
+                @if (isSidebarExpanded()) {
+                  <span class="truncate flex-1 text-left font-semibold">Reporte de Planes</span>
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500 text-white">
+                    Vigencias
+                  </span>
+                }
+              </button>
+              @if (!isSidebarExpanded()) {
+                <div class="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 flex items-center gap-2">
+                  <span>Reporte de Planes</span>
+                  <span class="px-1.5 py-0.2 rounded-full bg-emerald-500 text-white text-[10px]">Vigencias</span>
+                </div>
+              }
+            </div>
+
             <!-- Soporte & Mesa de Ayuda a Comercios -->
             <div class="relative group">
               <button (click)="setActiveTab('support')"
@@ -709,6 +752,15 @@
           <!-- ================= TAB: SOPORTE A COMERCIOS (KANBAN & CHAT) ================= -->
           @if (activeTab() === 'support') {
             <app-support-kanban mode="superadmin"></app-support-kanban>
+          }
+
+          <!-- ================= TAB: REPORTE DE PLANES & MEMBRESÍAS ================= -->
+          @if (activeTab() === 'plan_report') {
+            <app-super-admin-plan-report
+              [merchants]="merchants()"
+              (updatePlan)="handleUpdateTenantPlan($event)"
+              (toggleActive)="toggleMerchantActive($event)">
+            </app-super-admin-plan-report>
           }
 
           </main>

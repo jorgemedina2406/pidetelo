@@ -621,6 +621,36 @@
     <div class="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
       <main class="p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-6 sm:space-y-8">
 
+        <!-- Alerta de Plan Expirado o Próximo a Vencer -->
+        @if (currentTenant().isPlanExpired) {
+          <div class="p-4 sm:p-5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border-2 border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm animate-fade-in">
+            <div class="flex items-center gap-3">
+              <span class="text-2xl">⚠️</span>
+              <div>
+                <h4 class="font-extrabold text-sm">Tu membresía de Pídetelo ha expirado</h4>
+                <p class="text-xs text-rose-700 dark:text-rose-300 mt-0.5">
+                  Tu comercio se encuentra en <strong>pausa temporal</strong> en el marketplace hasta que se registre el pago de renovación.
+                </p>
+              </div>
+            </div>
+            <button (click)="activeTab.set('support')"
+                    class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-black transition-all flex items-center gap-2 flex-shrink-0 cursor-pointer shadow-xs active:scale-95">
+              <span>Reportar Pago en Soporte</span>
+              <span>→</span>
+            </button>
+          </div>
+        } @else if (currentTenant().daysRemaining !== undefined && currentTenant().daysRemaining! <= 5) {
+          <div class="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 flex items-center justify-between gap-3 text-xs shadow-xs animate-fade-in">
+            <div class="flex items-center gap-2.5">
+              <span>⏰</span>
+              <span>Tu plan vencerá en <strong>{{ currentTenant().daysRemaining }} días</strong>. Renueva tu suscripción a tiempo para mantener tus ventas activas.</span>
+            </div>
+            <button (click)="activeTab.set('support')" class="text-amber-700 dark:text-amber-300 font-extrabold hover:underline flex-shrink-0">
+              Ver detalles →
+            </button>
+          </div>
+        }
+
         <!-- ================= TAB 1: COMANDAS KANBAN ================= -->
         @if (activeTab() === 'orders') {
         <div class="space-y-6">

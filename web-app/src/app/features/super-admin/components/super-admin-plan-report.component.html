@@ -1,0 +1,321 @@
+<div class="space-y-6 animate-fade-in">
+
+  <!-- ================= TOP TITLE & EXPORT BAR ================= -->
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <div class="flex items-center gap-2">
+        <h2 class="text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+          Reporte de Membresías & Planes de Comercios
+        </h2>
+        <span class="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20">
+          Facturación Recurrente
+        </span>
+      </div>
+      <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+        Supervisa las fechas de vencimiento de las suscripciones. Al expirar el plan, el comercio se pausa automáticamente en la plataforma hasta registrar el pago.
+      </p>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <button (click)="exportToCsv()"
+              class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-2 active:scale-95 cursor-pointer">
+        <app-icon name="file-text" [size]="15"></app-icon>
+        <span>Exportar Reporte CSV</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ================= KPI METRICS STRIP ================= -->
+  <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+    
+    <!-- Total Comercios -->
+    <div class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+      <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Comercios</div>
+      <div class="text-2xl font-black text-slate-900 dark:text-white mt-1">{{ metrics().total }}</div>
+      <div class="text-[10px] text-slate-500 mt-0.5">En plataforma</div>
+    </div>
+
+    <!-- Planes Activos -->
+    <div class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-emerald-500/20 shadow-xs">
+      <div class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1">
+        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+        <span>Planes Activos</span>
+      </div>
+      <div class="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">{{ metrics().active }}</div>
+      <div class="text-[10px] text-slate-400 mt-0.5">Al día con su cuota</div>
+    </div>
+
+    <!-- Por Vencer (Próximos 5-7 días) -->
+    <div class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-amber-500/20 shadow-xs">
+      <div class="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider flex items-center gap-1">
+        <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+        <span>Por Vencer</span>
+      </div>
+      <div class="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1">{{ metrics().expiringSoon }}</div>
+      <div class="text-[10px] text-slate-400 mt-0.5">Vencen en ≤ 5 días</div>
+    </div>
+
+    <!-- Vencidos / Comercios Pausados -->
+    <div class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-rose-500/20 shadow-xs">
+      <div class="text-[11px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider flex items-center gap-1">
+        <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+        <span>Vencidos / Pausados</span>
+      </div>
+      <div class="text-2xl font-black text-rose-600 dark:text-rose-400 mt-1">{{ metrics().expired }}</div>
+      <div class="text-[10px] text-slate-400 mt-0.5">Pausados por falta de pago</div>
+    </div>
+
+    <!-- MRR Recurrente Estimado -->
+    <div class="p-4 rounded-2xl bg-gradient-to-br from-brand-500/10 via-orange-500/5 to-amber-500/10 dark:from-slate-900 dark:to-slate-900 border border-brand-500/20 shadow-xs">
+      <div class="text-[11px] font-bold text-brand-600 dark:text-brand-400 uppercase tracking-wider">MRR Recurrente</div>
+      <div class="text-2xl font-black text-brand-600 dark:text-brand-400 mt-1">${{ metrics().mrr }} <span class="text-xs font-normal text-slate-400">/mes</span></div>
+      <div class="text-[10px] text-slate-400 mt-0.5">Facturación estimada</div>
+    </div>
+
+  </div>
+
+  <!-- ================= FILTERS TOOLBAR ================= -->
+  <div class="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+    
+    <!-- Search Bar -->
+    <div class="relative flex-1 min-w-[220px]">
+      <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+        <app-icon name="search" [size]="14"></app-icon>
+      </span>
+      <input type="text"
+             [ngModel]="search()"
+             (ngModelChange)="search.set($event)"
+             placeholder="Buscar comercio por nombre, slug o teléfono..."
+             class="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-3 py-2 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-brand-500" />
+    </div>
+
+    <div class="flex items-center gap-2 flex-wrap">
+      <!-- Filter Plan -->
+      <select [ngModel]="filterPlan()"
+              (ngModelChange)="filterPlan.set($event)"
+              class="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-700 dark:text-slate-300 font-bold focus:outline-none focus:border-brand-500 cursor-pointer">
+        <option value="ALL">Todos los Planes</option>
+        <option value="EMPRENDEDOR">Plan Emprendedor ($9)</option>
+        <option value="COMERCIO_PRO">Plan Comercio Pro ($29)</option>
+        <option value="FRANQUICIA">Plan Franquicia ($79)</option>
+      </select>
+
+      <!-- Filter Status -->
+      <select [ngModel]="filterStatus()"
+              (ngModelChange)="filterStatus.set($event)"
+              class="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-700 dark:text-slate-300 font-bold focus:outline-none focus:border-brand-500 cursor-pointer">
+        <option value="ALL">Todos los Estados</option>
+        <option value="ACTIVE">Activos (Al día)</option>
+        <option value="EXPIRING_SOON">Por Vencer (≤ 5 días)</option>
+        <option value="EXPIRED">Vencidos / Pausados</option>
+      </select>
+    </div>
+
+  </div>
+
+  <!-- ================= DETAILED TABLE ================= -->
+  <div class="card-adaptive rounded-2xl overflow-hidden shadow-sm border border-slate-200 dark:border-slate-800">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-xs">
+        <thead class="bg-slate-50 dark:bg-slate-900/90 text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800 uppercase font-bold text-[10px] tracking-wider">
+          <tr>
+            <th class="p-4">Comercio</th>
+            <th class="p-4">Plan Activo</th>
+            <th class="p-4">Tarifa Mensual</th>
+            <th class="p-4">Fecha de Vencimiento</th>
+            <th class="p-4">Tiempo Restante</th>
+            <th class="p-4">Estado Tienda</th>
+            <th class="p-4 text-right">Acciones Rápidas</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+          @for (r of filteredRows(); track r.tenant.id) {
+            <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors group">
+              
+              <!-- Comercio Info -->
+              <td class="p-4">
+                <div class="flex items-center gap-3">
+                  <img [src]="r.tenant.logoUrl || '/assets/stores/mcdonalds-logo.svg'" 
+                       [alt]="r.tenant.name"
+                       class="w-10 h-10 rounded-xl object-cover border border-slate-200 dark:border-slate-700 bg-white shadow-xs flex-shrink-0" />
+                  <div class="min-w-0">
+                    <div class="font-bold text-sm text-slate-900 dark:text-white group-hover:text-brand-500 transition-colors truncate">
+                      {{ r.tenant.name }}
+                    </div>
+                    <div class="text-[11px] text-slate-400 font-mono">/t/{{ r.tenant.slug }}</div>
+                    @if (r.tenant.contact?.whatsappNumber) {
+                      <div class="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold mt-0.5">
+                        📱 {{ r.tenant.contact.whatsappNumber }}
+                      </div>
+                    }
+                  </div>
+                </div>
+              </td>
+
+              <!-- Plan Badge -->
+              <td class="p-4">
+                <span class="px-2.5 py-1 rounded-lg text-[11px] font-black uppercase tracking-wider inline-flex items-center gap-1"
+                      [class.bg-purple-100]="r.planCode === 'FRANQUICIA'" [class.text-purple-700]="r.planCode === 'FRANQUICIA'" [class.dark:bg-purple-950/40]="r.planCode === 'FRANQUICIA'" [class.dark:text-purple-300]="r.planCode === 'FRANQUICIA'"
+                      [class.bg-blue-100]="r.planCode === 'COMERCIO_PRO'" [class.text-blue-700]="r.planCode === 'COMERCIO_PRO'" [class.dark:bg-blue-950/40]="r.planCode === 'COMERCIO_PRO'" [class.dark:text-blue-300]="r.planCode === 'COMERCIO_PRO'"
+                      [class.bg-amber-100]="r.planCode === 'EMPRENDEDOR'" [class.text-amber-700]="r.planCode === 'EMPRENDEDOR'" [class.dark:bg-amber-950/40]="r.planCode === 'EMPRENDEDOR'" [class.dark:text-amber-300]="r.planCode === 'EMPRENDEDOR'">
+                  <span>⭐</span>
+                  <span>{{ r.planName }}</span>
+                </span>
+              </td>
+
+              <!-- Tarifa -->
+              <td class="p-4">
+                <div class="text-sm font-extrabold text-slate-900 dark:text-white">
+                  ${{ r.monthlyFee }}.00 <span class="text-[10px] font-normal text-slate-400">/mes</span>
+                </div>
+              </td>
+
+              <!-- Fecha Vencimiento -->
+              <td class="p-4">
+                <div class="text-xs font-bold text-slate-800 dark:text-slate-200">
+                  {{ formatDate(r.expiresAtDate) }}
+                </div>
+              </td>
+
+              <!-- Días Restantes -->
+              <td class="p-4">
+                @if (r.status === 'expired') {
+                  <span class="px-2.5 py-1 rounded-full text-[11px] font-black bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-300 dark:border-rose-800 inline-flex items-center gap-1.5 shadow-xs">
+                    <span class="w-1.5 h-1.5 rounded-full bg-rose-600"></span>
+                    <span>Vencido hace {{ -r.daysRemaining }} días</span>
+                  </span>
+                } @else if (r.status === 'expiring_soon') {
+                  <span class="px-2.5 py-1 rounded-full text-[11px] font-black bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-800 inline-flex items-center gap-1.5 shadow-xs animate-pulse">
+                    <span class="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
+                    <span>⚠️ Vence en {{ r.daysRemaining }} días</span>
+                  </span>
+                } @else {
+                  <span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 inline-flex items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                    <span>{{ r.daysRemaining }} días restantes</span>
+                  </span>
+                }
+              </td>
+
+              <!-- Estado Tienda (Pausada vs Recibiendo pedidos) -->
+              <td class="p-4">
+                @if (r.status === 'expired') {
+                  <span class="px-2.5 py-1 rounded-md text-[11px] font-black bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-900 inline-flex items-center gap-1">
+                    <span>⛔</span>
+                    <span>Pausado (Plan Vencido)</span>
+                  </span>
+                } @else if (r.isPaused) {
+                  <span class="px-2.5 py-1 rounded-md text-[11px] font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 inline-flex items-center gap-1">
+                    <span>⏸️</span>
+                    <span>Pausado Manual</span>
+                  </span>
+                } @else {
+                  <span class="px-2.5 py-1 rounded-md text-[11px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900 inline-flex items-center gap-1">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                    <span>Operativo</span>
+                  </span>
+                }
+              </td>
+
+              <!-- Acciones Rápidas -->
+              <td class="p-4 text-right">
+                <div class="flex items-center justify-end gap-1.5">
+                  <button (click)="quickExtend(r, 30)"
+                          title="Extender membresía 30 días adicionales"
+                          class="px-2.5 py-1.5 rounded-lg bg-brand-50 hover:bg-brand-500 text-brand-700 hover:text-white dark:bg-slate-800 dark:hover:bg-brand-500 dark:text-brand-400 dark:hover:text-white text-[11px] font-bold border border-brand-200 dark:border-slate-700 transition-all cursor-pointer">
+                    +30 Días
+                  </button>
+
+                  <button (click)="quickExtend(r, 90)"
+                          title="Extender membresía 90 días adicionales (Trimestral)"
+                          class="px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white dark:bg-slate-800 dark:hover:bg-emerald-600 dark:text-emerald-400 dark:hover:text-white text-[11px] font-bold border border-emerald-200 dark:border-slate-700 transition-all cursor-pointer">
+                    +90 Días
+                  </button>
+
+                  <button (click)="openEditModal(r)"
+                          title="Modificar fecha exacta de vencimiento y plan"
+                          class="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer">
+                    <app-icon name="calendar" [size]="14"></app-icon>
+                  </button>
+                </div>
+              </td>
+
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="7" class="p-8 text-center text-slate-400">
+                No se encontraron comercios con los filtros seleccionados.
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- ================= MODAL AJUSTAR PLAN & FECHA VENCIMIENTO ================= -->
+@if (isModalOpen() && editingTenant(); as target) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+    <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-5">
+      
+      <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+        <div class="flex items-center gap-3">
+          <img [src]="target.logoUrl || '/assets/stores/mcdonalds-logo.svg'" class="w-10 h-10 rounded-xl object-cover border border-slate-200 dark:border-slate-700 bg-white" />
+          <div>
+            <h3 class="font-extrabold text-base text-slate-900 dark:text-white leading-tight">{{ target.name }}</h3>
+            <p class="text-xs text-slate-400 font-mono">Ajustar vigencia de membresía</p>
+          </div>
+        </div>
+        <button (click)="closeModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg font-bold">✕</button>
+      </div>
+
+      <div class="space-y-4 text-xs">
+        <!-- Selector de Plan -->
+        <div>
+          <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">Plan de Suscripción</label>
+          <select [(ngModel)]="modalPlanCode"
+                  class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-brand-500">
+            <option value="EMPRENDEDOR">Plan Emprendedor — $9.00 / mes (1 Sede, Catálogo ilimitado)</option>
+            <option value="COMERCIO_PRO">Plan Comercio Pro — $29.00 / mes (WhatsApp Bot, Multi-sede)</option>
+            <option value="FRANQUICIA">Plan Franquicia — $79.00 / mes (Dominio propio, API y Soporte VIP)</option>
+          </select>
+        </div>
+
+        <!-- Selector de Fecha de Vencimiento -->
+        <div>
+          <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">Fecha Exacta de Vencimiento</label>
+          <input type="date"
+                 [(ngModel)]="modalExpiresDate"
+                 class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-brand-500" />
+        </div>
+
+        <!-- Botones de Extensión Rápida -->
+        <div>
+          <span class="block text-[11px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">Añadir tiempo rápido:</span>
+          <div class="flex items-center gap-2 flex-wrap">
+            <button (click)="addDaysToModal(15)" type="button" class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 font-bold text-[11px]">+15 Días</button>
+            <button (click)="addDaysToModal(30)" type="button" class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 font-bold text-[11px]">+30 Días (1 Mes)</button>
+            <button (click)="addDaysToModal(90)" type="button" class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 font-bold text-[11px]">+90 Días (Trimestre)</button>
+            <button (click)="addDaysToModal(365)" type="button" class="px-2.5 py-1.5 rounded-lg bg-brand-50 text-brand-700 hover:bg-brand-500 hover:text-white dark:bg-slate-800 font-bold text-[11px]">+1 Año</button>
+          </div>
+        </div>
+
+        <div class="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 text-amber-800 dark:text-amber-300 text-[11px] leading-relaxed">
+          💡 Al guardar una fecha futura, el comercio quedará automáticamente <strong>activo</strong> y habilitado para recibir pedidos. Si la fecha es pasada, el comercio entrará en pausa por vencimiento.
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+        <button (click)="closeModal()" class="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
+          Cancelar
+        </button>
+        <button (click)="saveModal()" class="px-5 py-2.5 bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold rounded-xl shadow-md transition-all active:scale-95 cursor-pointer">
+          Guardar Membresía
+        </button>
+      </div>
+
+    </div>
+  </div>
+}

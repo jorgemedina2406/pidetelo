@@ -357,6 +357,20 @@ export class TenantsService {
       planCode = t.slug === 'burger-lab' ? 'COMERCIO_PRO' : 'EMPRENDEDOR';
     }
 
+    let planExpiresAt = t.plan_expires_at || t.planExpiresAt || meta.plan_expires_at || meta.planExpiresAt;
+    if (!planExpiresAt) {
+      const d = new Date();
+      d.setDate(d.getDate() + 30);
+      planExpiresAt = d.toISOString();
+    }
+
+    const nowTime = Date.now();
+    const expTime = new Date(planExpiresAt).getTime();
+    const isPlanExpired = !isNaN(expTime) && expTime < nowTime;
+    const daysRemaining = !isNaN(expTime) ? Math.ceil((expTime - nowTime) / (1000 * 60 * 60 * 24)) : 30;
+    const planStatus = isPlanExpired ? 'expired' : (daysRemaining <= 5 ? 'expiring_soon' : 'active');
+    const effectiveIsActive = isPlanExpired ? false : (t.is_active ?? true);
+
     const firstBranch = Array.isArray(enrichedBranches) && enrichedBranches.length > 0 ? enrichedBranches[0] : null;
     const defaultLogo = 'https://images.unsplash.com/photo-1550547660-d9450f859349?w=500&auto=format&fit=crop&q=80';
     const defaultBanner = 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1200&auto=format&fit=crop&q=80';
@@ -382,8 +396,18 @@ export class TenantsService {
       bannerUrl: resolvedBanner,
       accent_color: resolvedAccent,
       accentColor: resolvedAccent,
+      is_active: effectiveIsActive,
+      isActive: effectiveIsActive,
       plan_code: planCode,
       planCode: planCode,
+      plan_expires_at: planExpiresAt,
+      planExpiresAt: planExpiresAt,
+      is_plan_expired: isPlanExpired,
+      isPlanExpired: isPlanExpired,
+      days_remaining: daysRemaining,
+      daysRemaining: daysRemaining,
+      plan_status: planStatus,
+      planStatus: planStatus,
       subscription_plan_id: t.subscription_plan_id || planCode,
       subscriptionPlanId: planCode,
       category,
@@ -538,6 +562,11 @@ export class TenantsService {
         isOpenToday: bh.isOpenToday ?? true,
         scheduleDays: sDays
       };
+    }
+    if (updateData.plan_expires_at !== undefined || updateData.planExpiresAt !== undefined) {
+      const pExp = updateData.plan_expires_at || updateData.planExpiresAt;
+      metaToSave.plan_expires_at = pExp;
+      metaToSave.planExpiresAt = pExp;
     }
     if (updateData.plan_code || updateData.planCode || updateData.subscriptionPlanId) {
       const pCode = updateData.plan_code || updateData.planCode || updateData.subscriptionPlanId;

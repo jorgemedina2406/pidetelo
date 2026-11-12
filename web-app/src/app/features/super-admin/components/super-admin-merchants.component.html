@@ -34,6 +34,7 @@
                 <th class="p-4">{{ i18n.t('sa.colMerchant') }}</th>
                 <th class="p-4">{{ i18n.t('sa.colCategory') }}</th>
                 <th class="p-4">Plan Activo</th>
+                <th class="p-4">Vence</th>
                 <th class="p-4">{{ i18n.t('sa.colWhatsApp') }}</th>
                 <th class="p-4">{{ i18n.t('sa.colCommission') }}</th>
                 <th class="p-4">{{ i18n.t('sa.colDeliveryFee') }}</th>
@@ -68,6 +69,20 @@
                       <option value="COMERCIO_PRO">Plan Comercio Pro ($29)</option>
                       <option value="FRANQUICIA">Plan Franquicia ($79)</option>
                     </select>
+                  </td>
+
+                  <td class="p-4">
+                    @let planExp = getPlanExpiration(m);
+                    <div class="flex flex-col gap-0.5">
+                      <span class="text-xs font-bold text-slate-800 dark:text-slate-200">{{ planExp.dateStr }}</span>
+                      @if (planExp.isExpired) {
+                        <span class="text-[10px] font-black text-rose-600 dark:text-rose-400">⛔ Vencido</span>
+                      } @else if (planExp.isExpiringSoon) {
+                        <span class="text-[10px] font-black text-amber-600 dark:text-amber-400 animate-pulse">⚠️ {{ planExp.daysRemaining }}d rest.</span>
+                      } @else {
+                        <span class="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">{{ planExp.daysRemaining }}d rest.</span>
+                      }
+                    </div>
                   </td>
 
                   <td class="p-4">

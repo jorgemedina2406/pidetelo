@@ -1295,6 +1295,36 @@ export class ApiService {
     };
   }
 
+  updateTenantPlan(tenantId: string, planCode: string, planExpiresAt: string): Observable<any> {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('pidetelo_tenant_plan_exp_' + tenantId, planExpiresAt);
+        const storedPlans = localStorage.getItem('pidetelo_tenant_plans');
+        const map = storedPlans ? JSON.parse(storedPlans) : {};
+        map[tenantId] = planCode;
+        localStorage.setItem('pidetelo_tenant_plans', JSON.stringify(map));
+      }
+    } catch (_) {}
+
+    const isFuture = new Date(planExpiresAt).getTime() > Date.now();
+    return this.updateTenant(tenantId, {
+      plan_code: planCode,
+      planCode: planCode,
+      plan_expires_at: planExpiresAt,
+      planExpiresAt: planExpiresAt,
+      is_active: isFuture
+    });
+  }
+
+  extendTenantPlan(tenantId: string, days: number, currentExpiresAt?: string): Observable<any> {
+    let base = currentExpiresAt ? new Date(currentExpiresAt) : new Date();
+    if (isNaN(base.getTime()) || base.getTime() < Date.now()) {
+      base = new Date();
+    }
+    const nextDate = new Date(base.getTime() + days * 24 * 60 * 60 * 1000);
+    return this.updateTenantPlan(tenantId, 'COMERCIO_PRO', nextDate.toISOString());
+  }
+
   // ==========================================
   // HELPERS DE NORMALIZACIÓN (SNAKE -> CAMEL)
   // ==========================================
@@ -1363,7 +1393,18 @@ export class ApiService {
       reviewCount: Number(row.review_count ?? row.reviewCount) || 0,
       category: row.category || (row.slug === 'burger-lab' ? 'Restaurantes' : 'Restaurantes'),
       subcategories: Array.isArray(row.subcategories) ? row.subcategories : (row.slug === 'burger-lab' ? ['Hamburguesas'] : []),
-      isActive: row.is_active ?? true,
+      isActive: (() => {
+        let exp = row.plan_expires_at || row.planExpiresAt;
+        if (!exp && typeof localStorage !== 'undefined') {
+          try {
+            exp = localStorage.getItem('pidetelo_tenant_plan_exp_' + row.id);
+          } catch (_) {}
+        }
+        if (exp && !isNaN(new Date(exp).getTime()) && new Date(exp).getTime() < Date.now()) {
+          return false; // Pausado automáticamente si el plan venció
+        }
+        return row.is_active ?? true;
+      })(),
       isFeatured: Boolean(row.is_featured ?? row.isFeatured ?? false),
       contact: {
         whatsappNumber: row.whatsapp_number || row.phone || '',
@@ -1432,6 +1473,58 @@ export class ApiService {
         if (!p) p = row.slug === 'burger-lab' ? 'COMERCIO_PRO' : 'EMPRENDEDOR';
         const clean = p.toUpperCase();
         return clean === 'COMERCIO' ? 'COMERCIO_PRO' : (clean === 'CORPORATIVO' ? 'FRANQUICIA' : clean);
+      })(),
+      planExpiresAt: (() => {
+        let exp = row.plan_expires_at || row.planExpiresAt;
+        if (!exp && typeof localStorage !== 'undefined') {
+          try {
+            exp = localStorage.getItem('pidetelo_tenant_plan_exp_' + row.id);
+          } catch (_) {}
+        }
+        if (!exp) {
+          const d = new Date();
+          d.setDate(d.getDate() + 25);
+          exp = d.toISOString();
+        }
+        return exp;
+      })(),
+      isPlanExpired: (() => {
+        let exp = row.plan_expires_at || row.planExpiresAt;
+        if (!exp && typeof localStorage !== 'undefined') {
+          try {
+            exp = localStorage.getItem('pidetelo_tenant_plan_exp_' + row.id);
+          } catch (_) {}
+        }
+        if (!exp) return false;
+        const time = new Date(exp).getTime();
+        return !isNaN(time) && time < Date.now();
+      })(),
+      daysRemaining: (() => {
+        let exp = row.plan_expires_at || row.planExpiresAt;
+        if (!exp && typeof localStorage !== 'undefined') {
+          try {
+            exp = localStorage.getItem('pidetelo_tenant_plan_exp_' + row.id);
+          } catch (_) {}
+        }
+        if (!exp) return 25;
+        const time = new Date(exp).getTime();
+        if (isNaN(time)) return 25;
+        return Math.ceil((time - Date.now()) / (1000 * 60 * 60 * 24));
+      })(),
+      planStatus: (() => {
+        let exp = row.plan_expires_at || row.planExpiresAt;
+        if (!exp && typeof localStorage !== 'undefined') {
+          try {
+            exp = localStorage.getItem('pidetelo_tenant_plan_exp_' + row.id);
+          } catch (_) {}
+        }
+        if (!exp) return 'active';
+        const time = new Date(exp).getTime();
+        if (isNaN(time)) return 'active';
+        const diffDays = Math.ceil((time - Date.now()) / (1000 * 60 * 60 * 24));
+        if (diffDays < 0) return 'expired';
+        if (diffDays <= 5) return 'expiring_soon';
+        return 'active';
       })(),
     };
   }

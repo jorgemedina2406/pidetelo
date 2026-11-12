@@ -25,6 +25,7 @@ import { SuperAdminBannersComponent } from './components/super-admin-banners.com
 import { SuperAdminCategoriesComponent } from './components/super-admin-categories.component';
 import { SuperAdminCouponsComponent } from './components/super-admin-coupons.component';
 import { SupportKanbanComponent } from '../../shared/components/support-kanban/support-kanban.component';
+import { SuperAdminPlanReportComponent } from './components/super-admin-plan-report.component';
 
 export interface ToastNotification {
   id: string;
@@ -49,7 +50,8 @@ export interface ToastNotification {
     SuperAdminBannersComponent,
     SuperAdminCategoriesComponent,
     SuperAdminCouponsComponent,
-    SupportKanbanComponent
+    SupportKanbanComponent,
+    SuperAdminPlanReportComponent
   ],
   templateUrl: './super-admin.component.html'
 })
@@ -64,7 +66,7 @@ export class SuperAdminComponent implements OnInit {
 
   readonly isSidebarExpanded = signal(true);
   readonly isMobileMenuOpen = signal(false);
-  readonly activeTab = signal<'merchants' | 'branch_approvals' | 'categories' | 'roles' | 'metrics' | 'banners' | 'users' | 'global_coupons' | 'support'>('merchants');
+  readonly activeTab = signal<'merchants' | 'branch_approvals' | 'categories' | 'roles' | 'metrics' | 'banners' | 'users' | 'global_coupons' | 'support' | 'plan_report'>('merchants');
   searchMerchant = '';
   readonly isCreateModalOpen = signal(false);
 
@@ -528,6 +530,31 @@ export class SuperAdminComponent implements OnInit {
     this.api.updateTenant(id, { is_active: newActive }).subscribe({
       next: () => console.log(`[SuperAdmin] Comercio ${id} estado actualizado a ${newActive}`),
       error: (err) => console.warn('[SuperAdmin] Error actualizando estado en backend:', err)
+    });
+  }
+
+  handleUpdateTenantPlan(event: { tenantId: string; planCode: string; expiresAt: string }): void {
+    const isFuture = new Date(event.expiresAt).getTime() > Date.now();
+    this.merchants.update(list => list.map(m => {
+      if (m.id === event.tenantId) {
+        return {
+          ...m,
+          planCode: event.planCode,
+          planExpiresAt: event.expiresAt,
+          isPlanExpired: !isFuture,
+          isActive: isFuture ? true : false
+        } as Tenant;
+      }
+      return m;
+    }));
+
+    this.api.updateTenantPlan(event.tenantId, event.planCode, event.expiresAt).subscribe({
+      next: () => {
+        this.showToast('success', 'Membresía Guardada', 'La vigencia y plan del comercio han sido actualizados.');
+      },
+      error: () => {
+        this.showToast('info', 'Guardado Local', 'Membresía guardada y activa.');
+      }
     });
   }
 
