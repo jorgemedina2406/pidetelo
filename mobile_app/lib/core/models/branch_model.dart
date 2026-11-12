@@ -96,6 +96,7 @@ class Branch {
   final String closeTime;
   final bool isOpenNow;
   final List<Map<String, dynamic>>? scheduleDays;
+  final Map<String, dynamic>? businessHours;
   final String? storeStatusLabel;
   final BranchPaymentCredentials paymentCredentials;
   final String? tagline;
@@ -133,6 +134,7 @@ class Branch {
     this.closeTime = '23:00',
     this.isOpenNow = true,
     this.scheduleDays,
+    this.businessHours,
     this.storeStatusLabel,
     required this.paymentCredentials,
     this.tagline,
@@ -378,6 +380,7 @@ class Branch {
       closeTime: cTime,
       isOpenNow: isOp is bool ? isOp : true,
       scheduleDays: parsedSDays,
+      businessHours: bh,
       storeStatusLabel: statusLabel,
       paymentCredentials: credentials,
       tagline: json['tagline']?.toString(),
