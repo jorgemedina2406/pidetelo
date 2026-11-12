@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service.js';
 import * as fs from 'fs';
 import * as path from 'path';
+import nodemailer from 'nodemailer';
 
 export interface SupportTicket {
   id: string;
@@ -65,7 +66,85 @@ export class SupportService {
       await this.supabase.getClient().from('leads').insert(lead);
     } catch (_) {}
 
-    return { success: true, lead };
+    // Intentar envío directo de correo electrónico si hay credenciales SMTP configuradas
+    let emailSent = false;
+    const smtpUser = process.env.SMTP_USER || 'pideteloadomicilio@gmail.com';
+    const smtpPass = process.env.SMTP_PASS;
+
+    if (smtpPass) {
+      try {
+        const transporter = nodemailer.createTransport({
+          service: 'gmail',
+          auth: {
+            user: smtpUser,
+            pass: smtpPass.replace(/\s+/g, '')
+          }
+        });
+
+        const htmlContent = `
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden;">
+            <div style="background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); padding: 24px; color: #ffffff; text-align: center;">
+              <h2 style="margin: 0; font-size: 22px; font-weight: 800;">🚀 Nueva Solicitud de Afiliación</h2>
+              <p style="margin: 6px 0 0; font-size: 13px; opacity: 0.9;">Pídetelo Express • Plataforma Delivery Venezuela</p>
+            </div>
+            <div style="padding: 24px; color: #1e293b;">
+              <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 10px 0; font-weight: bold; color: #64748b; width: 140px;">Comercio / Marca:</td>
+                  <td style="padding: 10px 0; font-weight: 800; color: #0f172a; font-size: 15px;">${data.store}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 10px 0; font-weight: bold; color: #64748b;">Contacto:</td>
+                  <td style="padding: 10px 0; font-weight: 600; color: #0f172a;">${data.name}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 10px 0; font-weight: bold; color: #64748b;">Correo Electrónico:</td>
+                  <td style="padding: 10px 0;"><a href="mailto:${data.email}" style="color: #ea580c; text-decoration: none; font-weight: 600;">${data.email}</a></td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 10px 0; font-weight: bold; color: #64748b;">Teléfono / WhatsApp:</td>
+                  <td style="padding: 10px 0;"><a href="https://wa.me/${(data.phone || '').replace(/[^0-9]/g, '')}" style="color: #16a34a; text-decoration: none; font-weight: 700;">${data.phone}</a></td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 10px 0; font-weight: bold; color: #64748b;">Ciudad / Ubicación:</td>
+                  <td style="padding: 10px 0; color: #334155;">${data.city || 'No especificada'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 10px 0; font-weight: bold; color: #64748b; vertical-align: top;">Requerimiento:</td>
+                  <td style="padding: 10px 0; color: #334155; line-height: 1.5;">${data.message || 'Solicitud de información / demo comercial'}</td>
+                </tr>
+              </table>
+              <div style="margin-top: 24px; text-align: center;">
+                <a href="https://wa.me/${(data.phone || '').replace(/[^0-9]/g, '')}?text=${encodeURIComponent('Hola ' + data.name + ', te contactamos de Pídetelo Express respecto a tu solicitud para afiliar ' + data.store)}"
+                   style="display: inline-block; background: #16a34a; color: #ffffff; text-decoration: none; font-weight: bold; font-size: 13px; padding: 12px 24px; rounded: 12px; border-radius: 8px;">
+                  Abrir Chat de WhatsApp con el Comercio
+                </a>
+              </div>
+            </div>
+            <div style="background: #f8fafc; padding: 12px 24px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0;">
+              Enviado automáticamente desde <a href="https://pidetelo.app" style="color: #ea580c; text-decoration: none;">pidetelo.app</a> • ${new Date().toLocaleString('es-VE', { timeZone: 'America/Caracas' })}
+            </div>
+          </div>
+        `;
+
+        await transporter.sendMail({
+          from: `"Pídetelo.app Afiliaciones" <${smtpUser}>`,
+          to: 'pideteloadomicilio@gmail.com',
+          replyTo: data.email,
+          subject: `🚀 Nueva Solicitud de Afiliación: ${data.store} (${data.city || 'Venezuela'})`,
+          html: htmlContent
+        });
+
+        emailSent = true;
+        this.logger.log(`[Lead Email Sent] Correo enviado a pideteloadomicilio@gmail.com para ${data.store}`);
+      } catch (mailErr) {
+        this.logger.warn(`[Lead Email Error] Error al despachar correo vía SMTP: ${mailErr}`);
+      }
+    } else {
+      this.logger.log('[Lead Email Notice] SMTP_PASS no configurado en backend/.env. Lead almacenado en base de datos local y Supabase.');
+    }
+
+    return { success: true, lead, emailSent };
   }
 
   async getLeads() {

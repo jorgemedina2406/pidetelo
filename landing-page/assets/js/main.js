@@ -265,6 +265,7 @@ function initContactForm() {
   const alertSuccess = document.getElementById('contact-success');
   const submitBtn = document.getElementById('contact-submit-btn');
   const waLink = document.getElementById('contact-wa-link');
+  const mailLink = document.getElementById('contact-mail-link');
   const resetBtn = document.getElementById('contact-reset-btn');
 
   if (!form) return;
@@ -324,18 +325,38 @@ function initContactForm() {
     const whatsappUrl = `https://wa.me/584125163118?text=${waText}`;
     if (waLink) waLink.href = whatsappUrl;
 
+    if (mailLink) {
+      const mailSubject = encodeURIComponent(`Solicitud de Afiliación: ${store} (${city || 'Venezuela'})`);
+      const mailBody = encodeURIComponent(
+        `Hola equipo Pídetelo,\n\nSolicito información para afiliar mi comercio.\n\n` +
+        `Nombre: ${name}\n` +
+        `Email: ${email}\n` +
+        `Teléfono: ${phone}\n` +
+        `Comercio: ${store}\n` +
+        `Ciudad: ${city || 'No especificada'}\n\n` +
+        `Mensaje: ${message || 'Solicitud de información / demo'}\n`
+      );
+      mailLink.href = `mailto:pideteloadomicilio@gmail.com?subject=${mailSubject}&body=${mailBody}`;
+    }
+
     let needsActivation = false;
 
-    // 1. Envío a FormSubmit (Correo a pideteloadomicilio@gmail.com)
+    // 1. Envío a FormSubmit con timeout estricto de 3.5 segundos para evitar cuelgues
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
+
       const response = await fetch('https://formsubmit.co/ajax/pideteloadomicilio@gmail.com', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
+
       const resJson = await response.json();
       console.log('[Landing Contact] FormSubmit status:', response.status, resJson);
 
@@ -343,23 +364,29 @@ function initContactForm() {
         needsActivation = true;
       }
     } catch (err) {
-      console.warn('[Landing Contact] Notice:', err);
+      console.warn('[Landing Contact] FormSubmit finalizó (proceso en segundo plano):', err.message);
     }
 
-    // 2. Respaldo simultáneo en Backend local / API Leads
+    // 2. Respaldo simultáneo en Backend local / API Leads (Guarda en base de datos y envía por SMTP oficial si está activo)
     try {
-      await fetch('/api/support/leads', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name,
-          email,
-          phone,
-          store,
-          city,
-          message
-        })
-      });
+      const leadEndpoints = ['/api/support/leads', 'https://pidetelo.app/api/support/leads', 'http://localhost:3000/api/support/leads'];
+      for (const endpoint of leadEndpoints) {
+        try {
+          const bRes = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, email, phone, store, city, message })
+          });
+          if (bRes.ok) break;
+        } catch (_) {}
+      }
+    } catch (_) {}
+
+    // 3. Guardar copia en localStorage del navegador como respaldo adicional
+    try {
+      const savedLeads = JSON.parse(localStorage.getItem('pidetelo_local_leads') || '[]');
+      savedLeads.unshift({ name, email, phone, store, city, message, date: new Date().toISOString() });
+      localStorage.setItem('pidetelo_local_leads', JSON.stringify(savedLeads.slice(0, 10)));
     } catch (_) {}
 
     if (submitBtn) {
@@ -508,11 +535,15 @@ function initLegalModal() {
       };
 
       try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3500);
         await fetch('https://formsubmit.co/ajax/pideteloadomicilio@gmail.com', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-          body: JSON.stringify(claimData)
+          body: JSON.stringify(claimData),
+          signal: controller.signal
         });
+        clearTimeout(timeoutId);
       } catch (_) {}
 
       if (claimSubmitBtn) {
