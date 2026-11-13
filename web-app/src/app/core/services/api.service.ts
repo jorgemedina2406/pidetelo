@@ -1679,7 +1679,7 @@ export class ApiService {
       status: mappedStatus,
       fulfillmentType: row.fulfillment_type || 'delivery',
       paymentMethod: row.payment_method || 'mobile_transfer',
-      paymentStatus: (rawNotes.includes('[PAGO_VERIFICADO') ? 'verified' : (rawNotes.includes('[PAGO_RECHAZADO') ? 'rejected' : (row.payment_status || ((row.payment_method === 'mobile_transfer' || row.payment_method === 'pago_movil') ? 'pending' : 'not_required')))),
+      paymentStatus: (row.payment_status === 'pending' ? 'pending' : (row.payment_status === 'verified' || rawNotes.includes('[PAGO_VERIFICADO') ? 'verified' : (row.payment_status === 'rejected' || rawNotes.includes('[PAGO_RECHAZADO') ? 'rejected' : ((row.payment_method === 'mobile_transfer' || row.payment_method === 'pago_movil') ? 'pending' : 'not_required')))),
       paymentReference: row.payment_reference || (rawNotes.match(/\[PAGO_VERIFICADO:Ref\s*([^ \]]+)/)?.[1] || undefined),
       paymentOriginBank: row.payment_origin_bank || (rawNotes.match(/\[PAGO_ORIGEN:([^\]]+)\]/)?.[1] || rawNotes.match(/\[PAGO_VERIFICADO:[^)]*\(([^)]+)\)/)?.[1] || undefined),
       paymentAmountBs: row.payment_amount_bs ? Number(row.payment_amount_bs) : undefined,

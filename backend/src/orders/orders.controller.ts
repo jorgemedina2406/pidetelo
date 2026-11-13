@@ -112,7 +112,7 @@ export class OrdersController {
   verifyPayment(
     @Param('id') id: string,
     @Body() payload: {
-      status: 'verified' | 'rejected';
+      status: 'verified' | 'rejected' | 'pending';
       reference?: string;
       originBank?: string;
       verifiedBy?: string;

@@ -3,6 +3,7 @@ import { createClient, SupabaseClient, User } from '@supabase/supabase-js';
 import { environment } from '../../../environments/environment';
 import { Order, OrderStatus } from '../models/order.model';
 import { Product } from '../models/product.model';
+import { RiderWithdrawal } from '../models/rider-withdrawal.model';
 
 @Injectable({
   providedIn: 'root'
@@ -153,24 +154,54 @@ export class SupabaseService {
     return true;
   }
 
-  async verifyOrderPayment(orderId: string, payload: { status: 'verified' | 'rejected'; reference?: string; orderStatus?: OrderStatus }): Promise<boolean> {
+  async verifyOrderPayment(orderId: string, payload: { status: 'verified' | 'rejected' | 'pending'; reference?: string; originBank?: string; orderStatus?: OrderStatus }): Promise<boolean> {
     if (!this.client) return false;
-    const updateData: any = {
-      payment_status: payload.status,
-      updated_at: new Date().toISOString()
-    };
-    if (payload.reference) updateData.payment_reference = payload.reference.trim();
-    if (payload.orderStatus) updateData.status = payload.orderStatus;
-    const { error } = await this.client
-      .from('orders')
-      .update(updateData)
-      .eq('id', orderId);
+    try {
+      const { data: currentOrder } = await this.client
+        .from('orders')
+        .select('notes, payment_origin_bank')
+        .eq('id', orderId)
+        .maybeSingle();
 
-    if (error) {
-      console.error('[SupabaseService] verifyOrderPayment error:', error);
+      const existingNotes = (currentOrder?.notes || '').toString();
+      let cleanNotes = existingNotes.replace(/\[PAGO_[A-Z_]+(?::[^\]]*)?\]\s*/g, '').trim();
+      const originBank = payload.originBank || currentOrder?.payment_origin_bank || existingNotes.match(/\[PAGO_ORIGEN:([^\]]+)\]/)?.[1];
+      const originTag = originBank ? `[PAGO_ORIGEN:${originBank}]` : '';
+
+      let notesToSave: string | null = null;
+      if (payload.status === 'verified') {
+        const auditTag = `[PAGO_VERIFICADO${payload.reference ? ':Ref ' + payload.reference : ''}${originBank ? ' (' + originBank + ')' : ''}]`;
+        notesToSave = [auditTag, cleanNotes].filter(Boolean).join(' ').trim();
+      } else if (payload.status === 'rejected') {
+        const rejectTag = `[PAGO_RECHAZADO${payload.reference ? ':Ref ' + payload.reference : ''}]`;
+        notesToSave = [rejectTag, cleanNotes].filter(Boolean).join(' ').trim();
+      } else if (payload.status === 'pending') {
+        notesToSave = [originTag, cleanNotes].filter(Boolean).join(' ').trim();
+      }
+
+      const updateData: any = {
+        payment_status: payload.status,
+        notes: notesToSave && notesToSave.length > 0 ? notesToSave : null,
+        updated_at: new Date().toISOString()
+      };
+      if (payload.reference) updateData.payment_reference = payload.reference.trim();
+      if (payload.orderStatus) updateData.status = payload.orderStatus;
+      if (originBank) updateData.payment_origin_bank = originBank;
+
+      const { error } = await this.client
+        .from('orders')
+        .update(updateData)
+        .eq('id', orderId);
+
+      if (error) {
+        console.error('[SupabaseService] verifyOrderPayment error:', error);
+        return false;
+      }
+      return true;
+    } catch (e) {
+      console.error('[SupabaseService] verifyOrderPayment exception:', e);
       return false;
     }
-    return true;
   }
 
   async assignRider(orderId: string, riderId: string | null): Promise<boolean> {
@@ -302,6 +333,95 @@ export class SupabaseService {
         .subscribe();
     } catch (e) {
       console.warn('[SupabaseService] subscribeToRiders failed:', e);
+      return null;
+    }
+  }
+
+  async getRiderWithdrawalsByTenant(tenantId: string): Promise<RiderWithdrawal[]> {
+    if (!this.client) return [];
+    try {
+      const { data, error } = await this.client
+        .from('rider_withdrawals')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .order('requested_at', { ascending: false });
+
+      if (error) {
+        console.warn('[SupabaseService] getRiderWithdrawalsByTenant error:', error);
+        return [];
+      }
+
+      return (data || []).map((row: any) => ({
+        id: row.id,
+        riderId: row.rider_id,
+        riderName: row.rider_name || 'Repartidor',
+        riderPhone: row.rider_phone,
+        tenantId: row.tenant_id,
+        merchantName: row.merchant_name || 'Comercio',
+        branchId: row.branch_id,
+        amount: Number(row.amount) || 0,
+        currency: row.currency || 'USD',
+        amountBs: row.amount_bs ? Number(row.amount_bs) : undefined,
+        accountType: row.account_type || 'pago_movil',
+        paymentAccount: row.payment_account || {},
+        status: row.status || 'pending',
+        referenceCode: row.reference_code,
+        rejectionReason: row.rejection_reason,
+        notes: row.notes,
+        requestedAt: row.requested_at,
+        processedAt: row.processed_at
+      }));
+    } catch (e) {
+      console.warn('[SupabaseService] Error loading rider withdrawals:', e);
+      return [];
+    }
+  }
+
+  async processRiderWithdrawal(
+    withdrawalId: string,
+    status: 'completed' | 'rejected',
+    referenceCode?: string,
+    rejectionReason?: string
+  ): Promise<boolean> {
+    if (!this.client) return false;
+    try {
+      const payload: any = {
+        status,
+        processed_at: new Date().toISOString()
+      };
+      if (referenceCode) payload.reference_code = referenceCode.trim();
+      if (rejectionReason) payload.rejection_reason = rejectionReason.trim();
+
+      const { error } = await this.client
+        .from('rider_withdrawals')
+        .update(payload)
+        .eq('id', withdrawalId);
+
+      if (error) {
+        console.error('[SupabaseService] processRiderWithdrawal error:', error);
+        return false;
+      }
+      return true;
+    } catch (e) {
+      console.error('[SupabaseService] Error processing rider withdrawal:', e);
+      return false;
+    }
+  }
+
+  subscribeToRiderWithdrawals(tenantId: string, onChange: (payload: any) => void) {
+    if (!this.client) return null;
+    try {
+      const channelId = `withdrawals:${tenantId}:${Date.now()}`;
+      return this.client
+        .channel(channelId)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'rider_withdrawals', filter: `tenant_id=eq.${tenantId}` },
+          payload => onChange(payload)
+        )
+        .subscribe();
+    } catch (e) {
+      console.warn('[SupabaseService] subscribeToRiderWithdrawals failed:', e);
       return null;
     }
   }

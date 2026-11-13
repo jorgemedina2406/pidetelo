@@ -2029,10 +2029,13 @@
         @if (activeTab() === 'riders') {
           <app-merchant-riders-tab
             [riders]="filteredRiders()"
+            [withdrawals]="riderWithdrawals()"
+            [bcvRate]="currentTenant().currencySettings?.exchangeRate || 45.50"
             [selectedBranchName]="selectedBranch()?.name"
             (newRider)="openNewRiderModal()"
             (deleteRider)="deleteRider($event)"
-            (locateRider)="activeTab.set('gps_map'); flyToRider($event)">
+            (locateRider)="activeTab.set('gps_map'); flyToRider($event)"
+            (processWithdrawal)="handleProcessWithdrawal($event)">
           </app-merchant-riders-tab>
         }
 

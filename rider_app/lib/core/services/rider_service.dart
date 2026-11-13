@@ -9,13 +9,44 @@ import 'notification_service.dart';
 import '../models/order_model.dart';
 import '../models/user_model.dart';
 
+class MerchantEarningSummary {
+  final String tenantId;
+  final String merchantName;
+  final double totalEarned;
+  final double totalWithdrawn;
+  final int ordersCount;
+
+  double get availableBalance => (totalEarned - totalWithdrawn).clamp(0.0, double.infinity);
+
+  MerchantEarningSummary({
+    required this.tenantId,
+    required this.merchantName,
+    required this.totalEarned,
+    required this.totalWithdrawn,
+    required this.ordersCount,
+  });
+}
+
+class _MerchantAcc {
+  final String tenantId;
+  final String merchantName;
+  double totalEarned = 0.0;
+  double totalWithdrawn = 0.0;
+  int ordersCount = 0;
+  _MerchantAcc(this.tenantId, this.merchantName);
+}
+
 class RiderPayoutTransaction {
   final String id;
   final double amount;
   final String method; // 'Pago Móvil', 'Transferencia', 'Zelle'
   final String destinationDetails;
   final DateTime date;
-  final String status; // 'Completado', 'Procesando'
+  final String status; // 'Pendiente', 'Completado', 'Rechazado'
+  final String? tenantId;
+  final String? merchantName;
+  final String? referenceCode;
+  final String? rejectionReason;
 
   RiderPayoutTransaction({
     required this.id,
@@ -24,6 +55,10 @@ class RiderPayoutTransaction {
     required this.destinationDetails,
     required this.date,
     this.status = 'Completado',
+    this.tenantId,
+    this.merchantName,
+    this.referenceCode,
+    this.rejectionReason,
   });
 
   Map<String, dynamic> toJson() => {
@@ -33,6 +68,10 @@ class RiderPayoutTransaction {
         'destinationDetails': destinationDetails,
         'date': date.toIso8601String(),
         'status': status,
+        'tenantId': tenantId,
+        'merchantName': merchantName,
+        'referenceCode': referenceCode,
+        'rejectionReason': rejectionReason,
       };
 
   factory RiderPayoutTransaction.fromJson(Map<String, dynamic> json) =>
@@ -43,6 +82,10 @@ class RiderPayoutTransaction {
         destinationDetails: json['destinationDetails'] ?? '',
         date: DateTime.tryParse(json['date'] ?? '') ?? DateTime.now(),
         status: json['status'] ?? 'Completado',
+        tenantId: json['tenantId'] ?? json['tenant_id'],
+        merchantName: json['merchantName'] ?? json['merchant_name'],
+        referenceCode: json['referenceCode'] ?? json['reference_code'],
+        rejectionReason: json['rejectionReason'] ?? json['rejection_reason'],
       );
 }
 
@@ -95,6 +138,37 @@ class RiderService extends ChangeNotifier {
   double get availableBalance {
     final bal = (totalEarnings + totalTips) - totalWithdrawn;
     return bal < 0.0 ? 0.0 : bal;
+  }
+
+  List<MerchantEarningSummary> get merchantBalances {
+    final Map<String, _MerchantAcc> map = {};
+
+    for (final o in _completedDeliveries) {
+      final tId = o.tenantId.trim().isNotEmpty ? o.tenantId.trim() : 'general';
+      final mName = o.merchantName.trim().isNotEmpty ? o.merchantName.trim() : 'Comercio Pídetelo';
+      final acc = map.putIfAbsent(tId, () => _MerchantAcc(tId, mName));
+      acc.totalEarned += o.deliveryFee;
+      acc.ordersCount += 1;
+    }
+
+    for (final p in _payoutHistory) {
+      if (p.tenantId != null && p.tenantId!.isNotEmpty && p.status != 'Rechazado') {
+        final acc = map[p.tenantId!];
+        if (acc != null) {
+          acc.totalWithdrawn += p.amount;
+        }
+      }
+    }
+
+    return map.values
+        .map((a) => MerchantEarningSummary(
+              tenantId: a.tenantId,
+              merchantName: a.merchantName,
+              totalEarned: a.totalEarned,
+              totalWithdrawn: a.totalWithdrawn,
+              ordersCount: a.ordersCount,
+            ))
+        .toList();
   }
 
   Future<void> init([String? riderId]) async {
@@ -156,12 +230,15 @@ class RiderService extends ChangeNotifier {
     }
 
     await fetchAvailableOrders();
+    await fetchCompletedDeliveriesFromSupabase();
+    await fetchWithdrawalsFromSupabase();
     _setupRealtimeSubscription();
 
     // Setup periodic polling fallback every 3 seconds to guarantee updates
     _pollTimer?.cancel();
-    _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+    _pollTimer = Timer.periodic(const Duration(seconds: 4), (_) {
       fetchAvailableOrders();
+      fetchWithdrawalsFromSupabase();
     });
 
     notifyListeners();
@@ -743,28 +820,143 @@ class RiderService extends ChangeNotifier {
     } catch (_) {}
   }
 
-  Future<bool> requestPayout(double amount, String method, String destinationDetails) async {
-    if (amount <= 0 || amount > availableBalance) return false;
+  Future<void> fetchWithdrawalsFromSupabase() async {
+    if (_currentRiderId == null || _currentRiderId!.isEmpty) return;
+    try {
+      final supabase = Supabase.instance.client;
+      final res = await supabase
+          .from('rider_withdrawals')
+          .select('*')
+          .eq('rider_id', _currentRiderId!)
+          .order('requested_at', ascending: false);
 
-    final tx = RiderPayoutTransaction(
-      id: 'tx_${DateTime.now().millisecondsSinceEpoch}',
-      amount: amount,
-      method: method,
-      destinationDetails: destinationDetails,
-      date: DateTime.now(),
-      status: 'Completado',
-    );
+      if (res.isNotEmpty) {
+        final List<RiderPayoutTransaction> list = [];
+        for (final row in res) {
+          final acc = row['payment_account'];
+          final dest = acc is Map
+              ? '${acc['bank'] ?? ""} • ${acc['phone'] ?? acc['accountNumber'] ?? ""} • ${acc['nationalId'] ?? ""}'
+              : 'Pago Móvil';
 
-    _payoutHistory.insert(0, tx);
+          list.add(RiderPayoutTransaction(
+            id: row['id']?.toString() ?? '',
+            amount: (row['amount'] as num?)?.toDouble() ?? 0.0,
+            method: row['account_type'] ?? 'Pago Móvil',
+            destinationDetails: dest,
+            date: DateTime.tryParse(row['requested_at'] ?? '') ?? DateTime.now(),
+            status: row['status'] == 'completed'
+                ? 'Completado'
+                : (row['status'] == 'rejected' ? 'Rechazado' : 'Pendiente'),
+            tenantId: row['tenant_id']?.toString(),
+            merchantName: row['merchant_name']?.toString() ?? 'Comercio',
+            referenceCode: row['reference_code']?.toString(),
+            rejectionReason: row['rejection_reason']?.toString(),
+          ));
+        }
+        _payoutHistory.clear();
+        _payoutHistory.addAll(list);
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('[RiderService] Error fetching rider withdrawals from Supabase: $e');
+    }
+  }
+
+  Future<void> fetchCompletedDeliveriesFromSupabase() async {
+    if (_currentRiderId == null || _currentRiderId!.isEmpty) return;
+    try {
+      final supabase = Supabase.instance.client;
+      final res = await supabase
+          .from('orders')
+          .select('*, tenants(*), branches(*)')
+          .eq('driver_id', _currentRiderId!)
+          .eq('status', 'delivered')
+          .order('created_at', ascending: false)
+          .limit(50);
+
+      if (res.isNotEmpty) {
+        final List<DeliveryOrder> list = [];
+        for (final row in res) {
+          list.add(_parseOrderRow(row));
+        }
+        _completedDeliveries.clear();
+        _completedDeliveries.addAll(list);
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('[RiderService] Error fetching completed deliveries: $e');
+    }
+  }
+
+  Future<bool> requestPayout({
+    required double amount,
+    required String method,
+    required String destinationDetails,
+    String? tenantId,
+    String? merchantName,
+    RiderPaymentAccount? account,
+    RiderUser? rider,
+  }) async {
+    if (amount <= 0) return false;
+
+    final String finalTenantId = tenantId ?? 'general';
+    final String finalMerchantName = merchantName ?? 'Comercio Pídetelo';
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final list = _payoutHistory.map((p) => p.toJson()).toList();
-      await prefs.setString(_keyPayoutHistory, jsonEncode(list));
-    } catch (_) {}
+      final supabase = Supabase.instance.client;
+      final rowData = {
+        'rider_id': _currentRiderId ?? (rider?.id ?? 'rider_local'),
+        'rider_name': rider?.name ?? 'Repartidor',
+        'rider_phone': rider?.phone ?? '',
+        'tenant_id': (finalTenantId != 'general' && finalTenantId.isNotEmpty) ? finalTenantId : null,
+        'merchant_name': finalMerchantName,
+        'amount': amount,
+        'currency': 'USD',
+        'account_type': method,
+        'payment_account': {
+          'bank': account?.bank ?? 'Pago Móvil',
+          'phone': account?.phone ?? rider?.phone ?? '',
+          'nationalId': account?.nationalId ?? rider?.nationalId ?? '',
+          'accountNumber': account?.accountNumber ?? '',
+          'holderName': account?.holderName ?? rider?.name ?? '',
+        },
+        'status': 'pending',
+        'requested_at': DateTime.now().toIso8601String(),
+      };
 
-    notifyListeners();
-    return true;
+      String? newId;
+      try {
+        final res = await supabase.from('rider_withdrawals').insert(rowData).select().maybeSingle();
+        newId = res?['id']?.toString();
+      } catch (insertErr) {
+        debugPrint('[RiderService] Notice saving withdrawal to Supabase: $insertErr');
+      }
+
+      final tx = RiderPayoutTransaction(
+        id: newId ?? 'tx_${DateTime.now().millisecondsSinceEpoch}',
+        amount: amount,
+        method: method,
+        destinationDetails: destinationDetails,
+        date: DateTime.now(),
+        status: 'Pendiente',
+        tenantId: finalTenantId,
+        merchantName: finalMerchantName,
+      );
+
+      _payoutHistory.insert(0, tx);
+
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final list = _payoutHistory.map((p) => p.toJson()).toList();
+        await prefs.setString(_keyPayoutHistory, jsonEncode(list));
+      } catch (_) {}
+
+      notifyListeners();
+      return true;
+    } catch (e) {
+      debugPrint('[RiderService] Error in requestPayout: $e');
+      return false;
+    }
   }
 
   OrderDeliveryStatus _mapStatus(String? status) {

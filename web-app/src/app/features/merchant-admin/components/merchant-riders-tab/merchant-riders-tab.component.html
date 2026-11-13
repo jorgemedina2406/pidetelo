@@ -1,105 +1,379 @@
 <div class="space-y-6">
-      <div class="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <div class="flex items-center gap-2">
-            <h2 class="text-2xl font-extrabold tracking-tight">{{ i18n.t('ma.riders') }}</h2>
-            @if (selectedBranchName) {
-              <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20">
-                📍 Sede: {{ selectedBranchName }}
-              </span>
-            }
-          </div>
-          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">{{ i18n.t('ma.ridersDesc') }}</p>
-        </div>
+  <!-- Cabecera y Selector de Sub-pestañas -->
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <div class="flex items-center gap-2">
+        <h2 class="text-2xl font-extrabold tracking-tight">{{ i18n.t('ma.riders') }}</h2>
+        @if (selectedBranchName) {
+          <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20">
+            📍 Sede: {{ selectedBranchName }}
+          </span>
+        }
+      </div>
+      <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+        Gestiona tu flota asignada y audita las solicitudes de liquidación y retiro de los repartidores.
+      </p>
+    </div>
 
+    <!-- Sub-tab Switcher -->
+    <div class="flex items-center gap-2 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+      <button (click)="activeSubTab.set('fleet')"
+              [class.bg-white]="activeSubTab() === 'fleet'"
+              [class.dark:bg-slate-900]="activeSubTab() === 'fleet'"
+              [class.text-brand-600]="activeSubTab() === 'fleet'"
+              [class.dark:text-brand-400]="activeSubTab() === 'fleet'"
+              [class.shadow-xs]="activeSubTab() === 'fleet'"
+              class="px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer">
+        <app-icon name="bike" [size]="14"></app-icon>
+        <span>Flota de la Sede ({{ riders.length }})</span>
+      </button>
+
+      <button (click)="activeSubTab.set('withdrawals')"
+              [class.bg-white]="activeSubTab() === 'withdrawals'"
+              [class.dark:bg-slate-900]="activeSubTab() === 'withdrawals'"
+              [class.text-brand-600]="activeSubTab() === 'withdrawals'"
+              [class.dark:text-brand-400]="activeSubTab() === 'withdrawals'"
+              [class.shadow-xs]="activeSubTab() === 'withdrawals'"
+              class="px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer relative">
+        <app-icon name="dollar-sign" [size]="14"></app-icon>
+        <span>Solicitudes de Retiro</span>
+        @if (pendingWithdrawalsCount > 0) {
+          <span class="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-black bg-amber-500 text-white animate-pulse">
+            {{ pendingWithdrawalsCount }}
+          </span>
+        }
+      </button>
+    </div>
+
+    @if (activeSubTab() === 'fleet') {
+      <button (click)="newRider.emit()"
+        class="bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm flex items-center gap-2 transition-all active:scale-95 cursor-pointer">
+        <app-icon name="plus" [size]="16" className="text-white"></app-icon>
+        <span>{{ i18n.t('ma.newRider') }}</span>
+      </button>
+    }
+  </div>
+
+  <!-- VISTA 1: FLOTA DE REPARTIDORES -->
+  @if (activeSubTab() === 'fleet') {
+    @if (riders.length === 0) {
+      <div class="card-adaptive rounded-2xl p-12 text-center space-y-4 border border-dashed border-slate-300 dark:border-slate-800 animate-fade-in">
+        <div class="w-16 h-16 rounded-2xl bg-brand-500/10 text-brand-500 mx-auto flex items-center justify-center">
+          <app-icon name="bike" [size]="32"></app-icon>
+        </div>
+        <div class="space-y-1">
+          <h3 class="text-base font-extrabold text-slate-900 dark:text-white">Sin Repartidores Registrados</h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+            No hay repartidores registrados para esta sede. Agrega repartidores a tu flota para asignar y monitorear pedidos en tiempo real.
+          </p>
+        </div>
         <button (click)="newRider.emit()"
-          class="bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm flex items-center gap-2 transition-all active:scale-95 cursor-pointer">
-          <app-icon name="plus" [size]="16" className="text-white"></app-icon>
-          <span>{{ i18n.t('ma.newRider') }}</span>
+          class="px-4 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs shadow-sm inline-flex items-center gap-2 cursor-pointer transition-all active:scale-95">
+          <app-icon name="plus" [size]="15" className="text-white"></app-icon>
+          <span>Registrar Primer Repartidor</span>
         </button>
       </div>
-
-      @if (riders.length === 0) {
-        <div class="card-adaptive rounded-2xl p-12 text-center space-y-4 border border-dashed border-slate-300 dark:border-slate-800 animate-fade-in">
-          <div class="w-16 h-16 rounded-2xl bg-brand-500/10 text-brand-500 mx-auto flex items-center justify-center">
-            <app-icon name="bike" [size]="32"></app-icon>
-          </div>
-          <div class="space-y-1">
-            <h3 class="text-base font-extrabold text-slate-900 dark:text-white">Sin Repartidores Registrados</h3>
-            <p class="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
-              No hay repartidores registrados para esta sede. Agrega repartidores a tu flota para asignar y monitorear pedidos en tiempo real.
-            </p>
-          </div>
-          <button (click)="newRider.emit()"
-            class="px-4 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs shadow-sm inline-flex items-center gap-2 cursor-pointer transition-all active:scale-95">
-            <app-icon name="plus" [size]="15" className="text-white"></app-icon>
-            <span>Registrar Primer Repartidor</span>
-          </button>
-        </div>
-      } @else {
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          @for (r of riders; track r.id) {
-            <div class="card-adaptive rounded-2xl p-5 shadow-sm space-y-4">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                  <div
-                    class="w-11 h-11 rounded-xl bg-brand-500/10 text-brand-500 flex items-center justify-center font-bold">
-                    <app-icon name="bike" [size]="22"></app-icon>
-                  </div>
-                  <div>
-                    <div class="font-bold text-sm">{{ r.name }}</div>
-                    <div class="text-[11px] font-mono text-slate-400 uppercase">{{ r.vehiclePlate }} • {{ r.vehicleType }}</div>
-                  </div>
+    } @else {
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        @for (r of riders; track r.id) {
+          <div class="card-adaptive rounded-2xl p-5 shadow-sm space-y-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div
+                  class="w-11 h-11 rounded-xl bg-brand-500/10 text-brand-500 flex items-center justify-center font-bold">
+                  <app-icon name="bike" [size]="22"></app-icon>
                 </div>
+                <div>
+                  <div class="font-bold text-sm">{{ r.name }}</div>
+                  <div class="text-[11px] font-mono text-slate-400 uppercase">{{ r.vehiclePlate }} • {{ r.vehicleType }}</div>
+                </div>
+              </div>
 
-                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold border"
-                  [class.bg-emerald-50]="r.status === 'available'" [class.text-emerald-700]="r.status === 'available'"
-                  [class.border-emerald-200]="r.status === 'available'"
-                  [class.dark:bg-emerald-950/40]="r.status === 'available'"
-                  [class.dark:text-emerald-400]="r.status === 'available'"
-                  [class.bg-blue-50]="r.status === 'delivering'" [class.text-blue-700]="r.status === 'delivering'"
-                  [class.border-blue-200]="r.status === 'delivering'">
-                  {{ r.status === 'available' ? 'Disponible' : 'En Reparto' }}
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold border"
+                [class.bg-emerald-50]="r.status === 'available'" [class.text-emerald-700]="r.status === 'available'"
+                [class.border-emerald-200]="r.status === 'available'"
+                [class.dark:bg-emerald-950/40]="r.status === 'available'"
+                [class.dark:text-emerald-400]="r.status === 'available'"
+                [class.bg-blue-50]="r.status === 'delivering'" [class.text-blue-700]="r.status === 'delivering'"
+                [class.border-blue-200]="r.status === 'delivering'">
+                {{ r.status === 'available' ? 'Disponible' : 'En Reparto' }}
+              </span>
+            </div>
+
+            <div
+              class="text-xs text-slate-500 dark:text-slate-400 space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <div class="flex items-center justify-between">
+                <span>Sede Asignada:</span>
+                <span class="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1">
+                  <span>📍</span>
+                  <span>{{ r.branchName || 'Sede Asignada' }}</span>
                 </span>
               </div>
+              <div class="flex items-center justify-between">
+                <span>Teléfono:</span>
+                <span class="font-mono text-slate-900 dark:text-white font-semibold">{{ r.phone }}</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span>Ubicación GPS:</span>
+                <span class="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                  Transmitiendo
+                </span>
+              </div>
+            </div>
 
-              <div
-                class="text-xs text-slate-500 dark:text-slate-400 space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
-                <div class="flex items-center justify-between">
-                  <span>Sede Asignada:</span>
-                  <span class="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1">
-                    <span>📍</span>
-                    <span>{{ r.branchName || 'Sede Asignada' }}</span>
+            <div class="pt-2 flex items-center justify-between border-t border-slate-100 dark:border-slate-800">
+              <button (click)="deleteRider.emit(r)"
+                class="text-xs font-bold text-red-500 hover:text-red-600 hover:underline flex items-center gap-1 transition-colors cursor-pointer"
+                title="Eliminar motorizado">
+                <app-icon name="trash" [size]="13"></app-icon>
+                <span>Eliminar</span>
+              </button>
+              <button (click)="locateRider.emit(r)"
+                class="text-xs font-bold text-brand-500 hover:underline flex items-center gap-1 cursor-pointer">
+                <app-icon name="map-pin" [size]="13"></app-icon>
+                <span>Localizar en Mapa</span>
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  }
+
+  <!-- VISTA 2: SOLICITUDES DE RETIRO / LIQUIDACIÓN A RIDERS -->
+  @if (activeSubTab() === 'withdrawals') {
+    @if (withdrawals.length === 0) {
+      <div class="card-adaptive rounded-2xl p-12 text-center space-y-3 border border-dashed border-slate-300 dark:border-slate-800 animate-fade-in">
+        <div class="w-16 h-16 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 mx-auto flex items-center justify-center">
+          <app-icon name="dollar-sign" [size]="32"></app-icon>
+        </div>
+        <h3 class="text-base font-extrabold text-slate-900 dark:text-white">Sin Solicitudes de Retiro</h3>
+        <p class="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
+          Cuando los repartidores que presten servicio a tu comercio acumulen saldo por fletes de entrega y soliciten su liquidación, aparecerán listados aquí para que audites sus datos y les transfieras vía Pago Móvil.
+        </p>
+      </div>
+    } @else {
+      <div class="space-y-4 animate-fade-in">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          @for (w of withdrawals; track w.id) {
+            <div class="card-adaptive rounded-2xl p-5 shadow-sm space-y-3 border"
+                 [class.border-amber-500/40]="w.status === 'pending'"
+                 [class.border-emerald-500/30]="w.status === 'completed'"
+                 [class.border-red-500/30]="w.status === 'rejected'">
+              <!-- Header Tarjeta -->
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <h4 class="font-extrabold text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <app-icon name="user" [size]="14" className="text-slate-400"></app-icon>
+                    <span>{{ w.riderName }}</span>
+                  </h4>
+                  <p class="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                    {{ w.riderPhone || 'Teléfono no especificado' }}
+                  </p>
+                </div>
+
+                <!-- Status Badge -->
+                @if (w.status === 'pending') {
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                    Pendiente
+                  </span>
+                } @else if (w.status === 'completed') {
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30">
+                    Pagado ✓
+                  </span>
+                } @else {
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-red-500/15 text-red-700 dark:text-red-400 border border-red-500/30">
+                    Rechazado
+                  </span>
+                }
+              </div>
+
+              <!-- Monto a Liquidar -->
+              <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <div>
+                  <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Monto a Liquidar</span>
+                  <span class="text-xl font-black text-slate-900 dark:text-white font-mono">
+                    ${{ w.amount.toFixed(2) }}
                   </span>
                 </div>
-                <div class="flex items-center justify-between">
-                  <span>Teléfono:</span>
-                  <span class="font-mono text-slate-900 dark:text-white font-semibold">{{ r.phone }}</span>
-                </div>
-                <div class="flex items-center justify-between">
-                  <span>Ubicación GPS:</span>
-                  <span class="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
-                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                    Transmitiendo
+                <div class="text-right">
+                  <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 font-mono block">
+                    ≈ Bs. {{ (w.amountBs || (w.amount * bcvRate)).toFixed(2) }}
                   </span>
+                  <span class="text-[9px] text-slate-400 font-semibold">Tasa Oficial</span>
                 </div>
               </div>
 
-              <div class="pt-2 flex items-center justify-between border-t border-slate-100 dark:border-slate-800">
-                <button (click)="deleteRider.emit(r)"
-                  class="text-xs font-bold text-red-500 hover:text-red-600 hover:underline flex items-center gap-1 transition-colors cursor-pointer"
-                  title="Eliminar motorizado">
-                  <app-icon name="trash" [size]="13"></app-icon>
-                  <span>Eliminar</span>
-                </button>
-                <button (click)="locateRider.emit(r)"
-                  class="text-xs font-bold text-brand-500 hover:underline flex items-center gap-1 cursor-pointer">
-                  <app-icon name="map-pin" [size]="13"></app-icon>
-                  <span>Localizar en Mapa</span>
-                </button>
+              <!-- Datos Bancarios / Pago Móvil del Repartidor -->
+              <div class="text-xs space-y-1.5 pt-1 text-slate-600 dark:text-slate-300">
+                <div class="flex items-center justify-between text-[11px]">
+                  <span class="text-slate-400 font-semibold">Banco Destino:</span>
+                  <span class="font-bold text-slate-800 dark:text-slate-100">{{ w.paymentAccount?.bank || 'Pago Móvil' }}</span>
+                </div>
+                <div class="flex items-center justify-between text-[11px]">
+                  <span class="text-slate-400 font-semibold">Teléfono Pago Móvil:</span>
+                  <span class="font-mono font-bold">{{ w.paymentAccount?.phone || w.riderPhone }}</span>
+                </div>
+                <div class="flex items-center justify-between text-[11px]">
+                  <span class="text-slate-400 font-semibold">Cédula / RIF:</span>
+                  <span class="font-mono font-bold">{{ w.paymentAccount?.nationalId || 'V-00000000' }}</span>
+                </div>
+                @if (w.paymentAccount?.holderName) {
+                  <div class="flex items-center justify-between text-[11px]">
+                    <span class="text-slate-400 font-semibold">Titular:</span>
+                    <span class="font-bold truncate max-w-[150px]">{{ w.paymentAccount?.holderName }}</span>
+                  </div>
+                }
+              </div>
+
+              <!-- Datos de Procesamiento (Si ya se pagó o rechazó) -->
+              @if (w.status === 'completed') {
+                <div class="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-[11px] text-emerald-800 dark:text-emerald-300 font-mono">
+                  <div class="font-bold">Comprobante / Ref: #{{ w.referenceCode || 'Liquidado' }}</div>
+                  <div class="text-[10px] opacity-75">Fecha: {{ w.processedAt | date:'dd/MM/yyyy, h:mm a' }}</div>
+                </div>
+              } @else if (w.status === 'rejected') {
+                <div class="p-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-[11px] text-red-800 dark:text-red-300">
+                  <div class="font-bold">Motivo: {{ w.rejectionReason || 'No especificado' }}</div>
+                </div>
+              }
+
+              <!-- Acciones -->
+              <div class="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+                <a [href]="getWhatsAppRiderUrl(w)"
+                   target="_blank"
+                   class="text-[11px] font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 hover:underline">
+                  <app-icon name="message-circle" [size]="12"></app-icon>
+                  <span>WhatsApp</span>
+                </a>
+
+                @if (w.status === 'pending') {
+                  <div class="flex items-center gap-1.5">
+                    <button (click)="openRejectModal(w)"
+                            class="px-2.5 py-1.5 text-[11px] font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition cursor-pointer">
+                      Rechazar
+                    </button>
+                    <button (click)="openPayModal(w)"
+                            class="px-3 py-1.5 text-[11px] font-black text-white bg-emerald-600 hover:bg-emerald-500 shadow-sm rounded-lg transition cursor-pointer flex items-center gap-1">
+                      <app-icon name="check" [size]="12"></app-icon>
+                      <span>Pagar</span>
+                    </button>
+                  </div>
+                }
               </div>
             </div>
           }
         </div>
-      }
+      </div>
+    }
+  }
+
+  <!-- MODAL: REGISTRAR PAGO DE RETIRO AL REPARTIDOR -->
+  @if (selectedWithdrawalForPay(); as w) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-fade-in">
+      <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+              <app-icon name="check-circle" [size]="18"></app-icon>
+            </div>
+            <h3 class="text-base font-black text-slate-900 dark:text-white">Registrar Pago a Repartidor</h3>
+          </div>
+          <button (click)="closePayModal()" class="text-slate-400 hover:text-slate-600 cursor-pointer">
+            <app-icon name="x" [size]="18"></app-icon>
+          </button>
+        </div>
+
+        <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2 text-xs">
+          <div class="flex justify-between items-center">
+            <span class="text-slate-500 dark:text-slate-400">Repartidor:</span>
+            <span class="font-bold text-slate-900 dark:text-white">{{ w.riderName }}</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-slate-500 dark:text-slate-400">Monto en Dólares:</span>
+            <span class="font-mono font-black text-sm text-slate-900 dark:text-white">${{ w.amount.toFixed(2) }}</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-slate-500 dark:text-slate-400">Equivalente en Bolívares:</span>
+            <span class="font-mono font-bold text-emerald-600 dark:text-emerald-400">Bs. {{ (w.amountBs || (w.amount * bcvRate)).toFixed(2) }}</span>
+          </div>
+          <div class="pt-2 border-t border-slate-200 dark:border-slate-700/60 text-[11px] space-y-1">
+            <div class="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Datos de Pago Móvil:</div>
+            <div><strong>Banco:</strong> {{ w.paymentAccount?.bank }}</div>
+            <div><strong>Teléfono:</strong> <span class="font-mono">{{ w.paymentAccount?.phone || w.riderPhone }}</span></div>
+            <div><strong>Cédula:</strong> <span class="font-mono">{{ w.paymentAccount?.nationalId }}</span></div>
+          </div>
+        </div>
+
+        <div class="space-y-1.5">
+          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300">
+            Número de Referencia Bancaria *
+          </label>
+          <input type="text"
+                 [ngModel]="paymentRefCodeInput()"
+                 (ngModelChange)="paymentRefCodeInput.set($event)"
+                 placeholder="Ej: 894123 (Últimos 6 dígitos)"
+                 class="w-full text-sm font-mono font-bold rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white p-3 focus:ring-2 focus:ring-emerald-500" />
+          <p class="text-[10px] text-slate-500">
+            Ingresa la referencia del Pago Móvil realizado desde la cuenta del comercio hacia el motorizado.
+          </p>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+          <button (click)="closePayModal()"
+                  class="px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 rounded-xl transition cursor-pointer">
+            Cancelar
+          </button>
+          <button (click)="confirmPay()"
+                  [disabled]="!paymentRefCodeInput().trim()"
+                  class="px-4 py-2 text-xs font-black text-white bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 shadow-md shadow-emerald-600/20 rounded-xl transition cursor-pointer flex items-center gap-1.5">
+            <app-icon name="check" [size]="14"></app-icon>
+            <span>Confirmar Pago</span>
+          </button>
+        </div>
+      </div>
     </div>
+  }
+
+  <!-- MODAL: RECHAZAR SOLICITUD DE RETIRO -->
+  @if (isRejectModalOpen();) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-fade-in">
+      <div class="bg-white dark:bg-slate-900 border border-red-500/30 rounded-2xl shadow-2xl max-w-sm w-full p-5 space-y-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-red-500/20 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0">
+            <app-icon name="alert-triangle" [size]="20"></app-icon>
+          </div>
+          <div>
+            <h4 class="text-sm font-black text-slate-900 dark:text-white">¿Rechazar Solicitud de Retiro?</h4>
+            <span class="text-xs text-slate-500">{{ selectedWithdrawalForReject()?.riderName }}</span>
+          </div>
+        </div>
+
+        <div class="space-y-1.5">
+          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300">
+            Motivo del Rechazo (Opcional)
+          </label>
+          <textarea [ngModel]="rejectionReasonInput()"
+                    (ngModelChange)="rejectionReasonInput.set($event)"
+                    rows="3"
+                    placeholder="Ej: Datos de Pago Móvil inválidos o se pagó en efectivo..."
+                    class="w-full text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 focus:ring-2 focus:ring-red-500"></textarea>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+          <button (click)="closeRejectModal()"
+                  class="px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 rounded-xl transition cursor-pointer">
+            Cancelar
+          </button>
+          <button (click)="confirmReject()"
+                  class="px-4 py-2 text-xs font-black text-white bg-red-600 hover:bg-red-500 shadow-md shadow-red-600/25 rounded-xl transition cursor-pointer">
+            Rechazar Retiro
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>
+

@@ -552,7 +552,7 @@ export class OrdersService {
   async verifyPayment(
     id: string,
     payload: {
-      status: 'verified' | 'rejected';
+      status: 'verified' | 'rejected' | 'pending';
       reference?: string;
       originBank?: string;
       verifiedBy?: string;
@@ -589,6 +589,10 @@ export class OrdersService {
       } else if (payload.status === 'rejected') {
         const rejectTag = `[PAGO_RECHAZADO${payload.reference ? ':Ref ' + payload.reference : ''}]`;
         updateData.notes = cleanNotes.length > 0 ? `${rejectTag} ${cleanNotes}` : rejectTag;
+      } else if (payload.status === 'pending') {
+        const originTag = payload.originBank ? `[PAGO_ORIGEN:${payload.originBank}]` : '';
+        const combined = [originTag, cleanNotes].filter(Boolean).join(' ').trim();
+        updateData.notes = combined.length > 0 ? combined : null;
       }
     } catch (_) {}
 

@@ -113,6 +113,14 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
     if (!ref) return;
 
     this.isSubmittingPaymentRef.set(true);
+
+    // Actualizar directamente en Supabase para reflejo inmediato en tiempo real
+    this.supabase.verifyOrderPayment(ord.id, {
+      status: 'pending',
+      reference: ref
+    }).catch(e => console.warn('[Tracking] Supabase resend error:', e));
+
+    // Sincronizar API Backend
     this.api.verifyOrderPayment(ord.id, {
       status: 'pending',
       reference: ref
@@ -129,7 +137,7 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
         setTimeout(() => this.paymentRefUpdatedSuccess.set(false), 5000);
       },
       error: (err) => {
-        console.warn('[Tracking] Error reenviando referencia:', err);
+        console.warn('[Tracking] Error reenviando referencia a API:', err);
         this.isSubmittingPaymentRef.set(false);
         this.order.update(curr => curr ? {
           ...curr,

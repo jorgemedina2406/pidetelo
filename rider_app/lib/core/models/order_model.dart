@@ -248,6 +248,7 @@ class DeliveryOrder {
   final DateTime createdAt;
   final String? branchId;
   final String? companyId;
+  String get tenantId => companyId ?? branchId ?? 'general';
 
   DeliveryOrder({
     required this.id,

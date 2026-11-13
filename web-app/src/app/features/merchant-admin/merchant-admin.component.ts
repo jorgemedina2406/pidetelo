@@ -35,6 +35,7 @@ import { MerchantCouponsTabComponent } from './components/merchant-coupons-tab/m
 import { MerchantRidersTabComponent } from './components/merchant-riders-tab/merchant-riders-tab.component';
 import { MerchantUsersTabComponent } from './components/merchant-users-tab/merchant-users-tab.component';
 import { SupportKanbanComponent } from '../../shared/components/support-kanban/support-kanban.component';
+import { RiderWithdrawal } from '../../core/models/rider-withdrawal.model';
 
 export interface Rider {
   id: string;
@@ -722,6 +723,8 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
 
 
   readonly riders = signal<Rider[]>([]);
+  readonly riderWithdrawals = signal<RiderWithdrawal[]>([]);
+  readonly pendingWithdrawalsCount = computed(() => this.riderWithdrawals().filter(w => w.status === 'pending').length);
 
   readonly storeUsers = signal<AppUser[]>([]);
 
@@ -1208,6 +1211,12 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       // 3. Cargar sucursales reales (esto fija la sede activa y dispara la carga aislada de pedidos, productos, motorizados y colaboradores)
       this.loadBranches(activeTenantId);
       this.loadCoupons();
+      this.loadRiderWithdrawals();
+      if (activeTenantId) {
+        this.supabase.subscribeToRiderWithdrawals(activeTenantId, () => {
+          this.loadRiderWithdrawals();
+        });
+      }
       this.api.getSubscriptionPlans().subscribe(plans => {
         if (plans && plans.length > 0) {
           this.subscriptionPlans.set(plans);
@@ -2594,6 +2603,32 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         console.warn('[MerchantAdmin] Advertencia al eliminar motorizado en backend:', err);
       }
     });
+  }
+
+  async loadRiderWithdrawals(): Promise<void> {
+    const tid = this.currentTenant().id || this.auth.currentUser()?.tenantId;
+    if (!tid) return;
+    const list = await this.supabase.getRiderWithdrawalsByTenant(tid);
+    this.riderWithdrawals.set(list);
+  }
+
+  async handleProcessWithdrawal(event: {
+    withdrawal: RiderWithdrawal;
+    status: 'completed' | 'rejected';
+    referenceCode?: string;
+    rejectionReason?: string;
+  }): Promise<void> {
+    const ok = await this.supabase.processRiderWithdrawal(
+      event.withdrawal.id,
+      event.status,
+      event.referenceCode,
+      event.rejectionReason
+    );
+    if (ok) {
+      await this.loadRiderWithdrawals();
+      this.isSavedNotificationVisible.set(true);
+      setTimeout(() => this.isSavedNotificationVisible.set(false), 2500);
+    }
   }
 
   getPointAtProgress(pct: number): [number, number] {

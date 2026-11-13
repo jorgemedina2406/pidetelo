@@ -282,7 +282,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
   }
 
   // --- MODAL: SOLICITAR RETIRO ---
-  void _showWithdrawalModal(BuildContext context) {
+  void _showWithdrawalModal(BuildContext context, [MerchantEarningSummary? preselectedMerchant]) {
     final rider = widget.sessionService.currentRider;
     if (rider == null) return;
 
@@ -292,6 +292,15 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
         const SnackBar(content: Text('Primero registra un método de retiro verificado a tu nombre.')),
       );
       return;
+    }
+
+    final merchantList = _riderService.merchantBalances;
+    MerchantEarningSummary? selectedMerchant = preselectedMerchant;
+    if (selectedMerchant == null && merchantList.isNotEmpty) {
+      selectedMerchant = merchantList.firstWhere(
+        (m) => m.availableBalance > 0,
+        orElse: () => merchantList.first,
+      );
     }
 
     final amountCtrl = TextEditingController();
@@ -306,7 +315,9 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
       ),
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) {
-          final maxBalance = _riderService.availableBalance;
+          final maxBalance = selectedMerchant != null
+              ? selectedMerchant!.availableBalance
+              : _riderService.availableBalance;
 
           return Padding(
             padding: EdgeInsets.only(
@@ -315,158 +326,223 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
               top: 24,
               bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Center(
-                  child: Container(
-                    width: 44,
-                    height: 4,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 44,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.white24,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    'Solicitar Retiro de Ganancias',
+                    style: GoogleFonts.outfit(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Selecciona el comercio y tu cuenta para recibir la liquidación vía Pago Móvil.',
+                    style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFF94A3B8)),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Selector de Comercio al que se le solicita
+                  if (merchantList.isNotEmpty) ...[
+                    Text('Comercio deudor', style: GoogleFonts.outfit(fontSize: 12, color: Colors.white70, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1E293B),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: Colors.white12),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<MerchantEarningSummary>(
+                          value: selectedMerchant,
+                          isExpanded: true,
+                          dropdownColor: const Color(0xFF1E293B),
+                          items: merchantList.map((m) {
+                            return DropdownMenuItem(
+                              value: m,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      m.merchantName,
+                                      style: GoogleFonts.outfit(fontSize: 13, color: Colors.white, fontWeight: FontWeight.bold),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  Text(
+                                    '\$${m.availableBalance.toStringAsFixed(2)}',
+                                    style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.primary, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (m) {
+                            if (m != null) {
+                              setModalState(() {
+                                selectedMerchant = m;
+                                amountCtrl.text = '';
+                              });
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Saldo disponible en este local: ${_dolarApi.formatUsdWithBs(maxBalance)}',
+                      style: GoogleFonts.outfit(
+                        fontSize: 12,
+                        color: AppTheme.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                  ],
+
+                  // Account Selector
+                  Text('Cuenta Destino (Verificada)', style: GoogleFonts.outfit(fontSize: 12, color: Colors.white70, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
                     decoration: BoxDecoration(
-                      color: Colors.white24,
-                      borderRadius: BorderRadius.circular(10),
+                      color: const Color(0xFF1E293B),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.white12),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<RiderPaymentAccount>(
+                        value: selectedAcc,
+                        isExpanded: true,
+                        dropdownColor: const Color(0xFF1E293B),
+                        items: rider.paymentAccounts.map((acc) {
+                          return DropdownMenuItem(
+                            value: acc,
+                            child: Text(
+                              '${acc.type.toUpperCase()}: ${acc.bank} - ${acc.accountNumber}',
+                              style: GoogleFonts.outfit(fontSize: 13, color: Colors.white),
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (acc) {
+                          if (acc != null) setModalState(() => selectedAcc = acc);
+                        },
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 18),
-                Text(
-                  'Solicitar Retiro de Ganancias',
-                  style: GoogleFonts.outfit(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Saldo disponible: ${_dolarApi.formatUsdWithBs(maxBalance)}',
-                  style: GoogleFonts.outfit(
-                    fontSize: 13,
-                    color: AppTheme.primary,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 16),
+                  const SizedBox(height: 14),
 
-                // Account Selector
-                Text('Cuenta Destino (Verificada)', style: GoogleFonts.outfit(fontSize: 12, color: Colors.white70)),
-                const SizedBox(height: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1E293B),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: Colors.white12),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<RiderPaymentAccount>(
-                      value: selectedAcc,
-                      isExpanded: true,
-                      dropdownColor: const Color(0xFF1E293B),
-                      items: rider.paymentAccounts.map((acc) {
-                        return DropdownMenuItem(
-                          value: acc,
-                          child: Text(
-                            '${acc.type.toUpperCase()}: ${acc.bank} - ${acc.accountNumber}',
-                            style: GoogleFonts.outfit(fontSize: 13, color: Colors.white),
+                  // Amount input
+                  Text('Monto a Retirar (\$ USD)', style: GoogleFonts.outfit(fontSize: 12, color: Colors.white70, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: amountCtrl,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.w700),
+                    onChanged: (v) => setModalState(() {}),
+                    decoration: InputDecoration(
+                      hintText: '0.00',
+                      prefixText: '\$ ',
+                      prefixStyle: GoogleFonts.outfit(color: AppTheme.primary, fontWeight: FontWeight.w700),
+                      suffixIcon: TextButton(
+                        onPressed: () {
+                          amountCtrl.text = maxBalance.toStringAsFixed(2);
+                          setModalState(() {});
+                        },
+                        child: Text(
+                          'TODO',
+                          style: GoogleFonts.outfit(
+                            color: AppTheme.primary,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 12,
                           ),
-                        );
-                      }).toList(),
-                      onChanged: (acc) {
-                        if (acc != null) setModalState(() => selectedAcc = acc);
-                      },
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 14),
-
-                // Amount input
-                Text('Monto a Retirar (\$ USD)', style: GoogleFonts.outfit(fontSize: 12, color: Colors.white70)),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: amountCtrl,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.w700),
-                  onChanged: (v) => setModalState(() {}),
-                  decoration: InputDecoration(
-                    hintText: '0.00',
-                    prefixText: '\$ ',
-                    prefixStyle: GoogleFonts.outfit(color: AppTheme.primary, fontWeight: FontWeight.w700),
-                    suffixIcon: TextButton(
-                      onPressed: () {
-                        amountCtrl.text = maxBalance.toStringAsFixed(2);
-                        setModalState(() {});
-                      },
-                      child: Text(
-                        'TODO',
-                        style: GoogleFonts.outfit(
-                          color: AppTheme.primary,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 12,
                         ),
                       ),
                     ),
                   ),
-                ),
-                if ((double.tryParse(amountCtrl.text) ?? 0) > 0) ...[
-                  const SizedBox(height: 6),
-                  Text(
-                    'Equivalente oficial: ${_dolarApi.formatUsdWithBs(double.tryParse(amountCtrl.text) ?? 0)}',
-                    style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFF65A30D), fontWeight: FontWeight.w700),
+                  if ((double.tryParse(amountCtrl.text) ?? 0) > 0) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      'Equivalente oficial: ${_dolarApi.formatUsdWithBs(double.tryParse(amountCtrl.text) ?? 0)}',
+                      style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFF65A30D), fontWeight: FontWeight.w700),
+                    ),
+                  ],
+                  const SizedBox(height: 22),
+
+                  ElevatedButton(
+                    onPressed: () async {
+                      final enteredAmount = double.tryParse(amountCtrl.text.trim()) ?? 0.0;
+
+                      if (enteredAmount <= 0) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Ingresa un monto válido para retirar.')),
+                        );
+                        return;
+                      }
+
+                      if (enteredAmount > maxBalance) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('El monto supera el saldo disponible de este comercio.')),
+                        );
+                        return;
+                      }
+
+                      final destDetails = '${selectedAcc.bank} • ${selectedAcc.accountNumber} • ${selectedAcc.nationalId}';
+                      final targetTenantId = selectedMerchant?.tenantId ?? 'general';
+                      final targetMerchantName = selectedMerchant?.merchantName ?? 'Comercio Pídetelo';
+
+                      final success = await _riderService.requestPayout(
+                        amount: enteredAmount,
+                        method: selectedAcc.type,
+                        destinationDetails: destDetails,
+                        tenantId: targetTenantId,
+                        merchantName: targetMerchantName,
+                        account: selectedAcc,
+                        rider: rider,
+                      );
+
+                      if (!ctx.mounted) return;
+                      Navigator.of(ctx).pop();
+
+                      if (success && mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Retiro de ${_dolarApi.formatUsdWithBs(enteredAmount)} solicitado a $targetMerchantName exitosamente.'),
+                            backgroundColor: AppTheme.primary,
+                          ),
+                        );
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    child: Text(
+                      'Confirmar y Notificar al Comercio',
+                      style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w800),
+                    ),
                   ),
                 ],
-                const SizedBox(height: 22),
-
-                ElevatedButton(
-                  onPressed: () async {
-                    final enteredAmount = double.tryParse(amountCtrl.text.trim()) ?? 0.0;
-
-                    if (enteredAmount <= 0) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Ingresa un monto válido para retirar.')),
-                      );
-                      return;
-                    }
-
-                    if (enteredAmount > maxBalance) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('El monto supera tu saldo disponible.')),
-                      );
-                      return;
-                    }
-
-                    final destDetails = '${selectedAcc.bank} • ${selectedAcc.accountNumber} • ${selectedAcc.nationalId}';
-                    final success = await _riderService.requestPayout(
-                      enteredAmount,
-                      selectedAcc.type,
-                      destDetails,
-                    );
-
-                    if (!ctx.mounted) return;
-                    Navigator.of(ctx).pop();
-
-                    if (success && mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Retiro de ${_dolarApi.formatUsdWithBs(enteredAmount)} procesado exitosamente.'),
-                          backgroundColor: AppTheme.primary,
-                        ),
-                      );
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  ),
-                  child: Text(
-                    'Confirmar Retiro',
-                    style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w800),
-                  ),
-                ),
-              ],
+              ),
             ),
           );
         },
@@ -1504,6 +1580,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
     final totalEarned = _riderService.totalEarnings;
     final completedCount = _riderService.completedDeliveriesCount;
     final payouts = _riderService.payoutHistory;
+    final merchantBalances = _riderService.merchantBalances;
     final rider = widget.sessionService.currentRider;
 
     return ListView(
@@ -1568,6 +1645,172 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
             ],
           ),
         ),
+        const SizedBox(height: 20),
+
+        // Saldos Disponibles por Comercio
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Saldos por Comercio',
+              style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E293B),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFF334155)),
+              ),
+              child: Text(
+                '${merchantBalances.length} locales',
+                style: GoogleFonts.outfit(fontSize: 11, color: const Color(0xFF94A3B8), fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+
+        if (merchantBalances.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E293B),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFF334155)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.storefront_rounded, color: Color(0xFF94A3B8)),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Aquí verás el balance acumulado y disponible para retirar de cada restaurante o tienda donde realices entregas.',
+                    style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFF94A3B8)),
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          ...merchantBalances.map((m) {
+            final hasBalance = m.availableBalance > 0;
+            return Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E293B),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: hasBalance ? AppTheme.primary.withOpacity(0.35) : const Color(0xFF334155),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: hasBalance ? AppTheme.primary.withOpacity(0.15) : const Color(0xFF0F172A),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          Icons.store_rounded,
+                          color: hasBalance ? AppTheme.primary : const Color(0xFF94A3B8),
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              m.merchantName,
+                              style: GoogleFonts.outfit(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${m.ordersCount} entregas realizadas',
+                              style: GoogleFonts.outfit(fontSize: 11, color: const Color(0xFF94A3B8)),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (hasBalance)
+                        ElevatedButton(
+                          onPressed: () => _showWithdrawalModal(context, m),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          child: Text(
+                            'Retirar',
+                            style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0F172A),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Disponible a cobrar',
+                              style: GoogleFonts.outfit(fontSize: 10, color: const Color(0xFF94A3B8), fontWeight: FontWeight.w600),
+                            ),
+                            Text(
+                              _dolarApi.formatUsdWithBs(m.availableBalance),
+                              style: GoogleFonts.outfit(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                color: hasBalance ? AppTheme.primary : Colors.white70,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              'Total generado',
+                              style: GoogleFonts.outfit(fontSize: 10, color: const Color(0xFF94A3B8), fontWeight: FontWeight.w600),
+                            ),
+                            Text(
+                              '\$${m.totalEarned.toStringAsFixed(2)}',
+                              style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white70),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
         const SizedBox(height: 18),
 
         // Accounts section (Item 5)
@@ -1703,36 +1946,144 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
           )
         else
           ...payouts.map(
-            (p) => Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1E293B),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        p.method,
-                        style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white),
-                      ),
-                      Text(
-                        p.destinationDetails,
-                        style: GoogleFonts.outfit(fontSize: 11, color: const Color(0xFF94A3B8)),
+            (p) {
+              final isPending = p.status == 'pending';
+              final isRejected = p.status == 'rejected';
+              final isCompleted = p.status == 'completed' || p.status == 'approved';
+
+              final Color badgeBg = isPending
+                  ? Colors.amber.withOpacity(0.15)
+                  : (isCompleted ? const Color(0xFF10B981).withOpacity(0.15) : Colors.redAccent.withOpacity(0.15));
+              final Color badgeFg = isPending
+                  ? Colors.amberAccent
+                  : (isCompleted ? const Color(0xFF10B981) : Colors.redAccent);
+              final String badgeText = isPending
+                  ? 'Pendiente'
+                  : (isCompleted ? 'Liquidado' : 'Rechazado');
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E293B),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: isPending ? Colors.amber.withOpacity(0.3) : const Color(0xFF334155),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                p.merchantName ?? 'Comercio',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                '${p.method.toUpperCase()} • ${p.destinationDetails}',
+                                style: GoogleFonts.outfit(fontSize: 11, color: const Color(0xFF94A3B8)),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              '-${_dolarApi.formatUsdWithBs(p.amount)}',
+                              style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.w800, color: Colors.white),
+                            ),
+                            const SizedBox(height: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: badgeBg,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                badgeText,
+                                style: GoogleFonts.outfit(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: badgeFg,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    if (isCompleted && (p.referenceCode?.isNotEmpty ?? false)) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0F172A),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.receipt_long_rounded, size: 14, color: Color(0xFF10B981)),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Ref. Bancaria: ${p.referenceCode}',
+                              style: GoogleFonts.outfit(
+                                fontSize: 11,
+                                color: const Color(0xFF10B981),
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
-                  ),
-                  Text(
-                    '-${_dolarApi.formatUsdWithBs(p.amount)}',
-                    style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.w800, color: Colors.white),
-                  ),
-                ],
-              ),
-            ),
+                    if (isRejected && (p.rejectionReason?.isNotEmpty ?? false)) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.redAccent.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.info_outline_rounded, size: 14, color: Colors.redAccent),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                'Motivo: ${p.rejectionReason}',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 11,
+                                  color: Colors.redAccent,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              );
+            },
           ),
       ],
     );
