@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  # ===================================================
+  # 1. BACKEND API (NestJS + WhatsApp Baileys 24/7)
+  # ===================================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: pidetelo_backend
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    volumes:
+      # Volumen persistente para sesiones de WhatsApp y metadatos
+      - backend_data:/app/data
+      # Volumen para archivos multimedia subidos
+      - backend_uploads:/app/uploads
+    networks:
+      - pidetelo_net
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000/api/docs"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  # ===================================================
+  # 2. SERVIDOR REVERSE PROXY NGINX & SSL
+  # ===================================================
+  nginx:
+    image: nginx:alpine
+    container_name: pidetelo_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+      # Frontend Web App compilado
+      - ./web-app/dist/web-app/browser:/var/www/web-app:ro
+      # Landing Page estática
+      - ./landing-page:/var/www/landing:ro
+      # Descarga de APKs e IPAs
+      - ./dist-apps:/var/www/downloads:ro
+    networks:
+      - pidetelo_net
+    depends_on:
+      - backend
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+volumes:
+  backend_data:
+    name: pidetelo_backend_data
+  backend_uploads:
+    name: pidetelo_backend_uploads
+
+networks:
+  pidetelo_net:
+    name: pidetelo_network
+    driver: bridge
