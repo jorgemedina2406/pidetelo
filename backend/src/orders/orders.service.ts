@@ -66,6 +66,10 @@ export class OrdersService {
     if (paymentOriginBank && !finalNotes.includes('[PAGO_ORIGEN:')) {
       finalNotes = `[PAGO_ORIGEN:${paymentOriginBank}] ${finalNotes}`.trim();
     }
+    if (!finalNotes.includes('[PIN:')) {
+      const pinDigits = orderNumber.replace(/\D/g, '').slice(-4).padStart(4, '0');
+      finalNotes = `[PIN:${pinDigits}] ${finalNotes}`.trim();
+    }
 
     // 1. Insert order header
     const { data: newOrder, error: orderErr } = await client

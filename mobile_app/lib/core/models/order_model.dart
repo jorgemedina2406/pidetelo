@@ -506,7 +506,15 @@ class DeliveryOrder {
         riderPhone: json['riderPhone'] ?? json['driver_phone'] ?? json['driverPhone'] ?? '',
         riderVehicle: json['riderVehicle'] ?? json['driver_vehicle'] ?? '',
         riderPlate: json['riderPlate'] ?? json['driver_plate'] ?? '',
-        pin: json['pin'] ?? '1234',
+        pin: (json['pin'] != null && json['pin'].toString().isNotEmpty && json['pin'] != '1234')
+            ? json['pin'].toString()
+            : (() {
+                final num = (json['orderNumber'] ?? json['order_number'] ?? '').toString();
+                final d = num.replaceAll(RegExp(r'\D'), '');
+                if (d.length >= 4) return d.substring(d.length - 4);
+                if (d.isNotEmpty) return d.padLeft(4, '0');
+                return (json['pin'] ?? '1234').toString();
+              })(),
         status: OrderDeliveryStatus.values.firstWhere(
           (s) => s.name == json['status'],
           orElse: () => OrderDeliveryStatus.confirmed,

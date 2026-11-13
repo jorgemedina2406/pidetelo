@@ -1716,6 +1716,8 @@ export class ApiService {
       total: Number(row.total),
       createdAt: row.created_at || new Date().toISOString(),
       updatedAt: row.updated_at || new Date().toISOString(),
+      notes: rawNotes,
+      deliveryPin: rawNotes.match(/\[PIN:(\d{4})\]/)?.[1] || (row.order_number ? row.order_number.replace(/\D/g, '').slice(-4).padStart(4, '0') : undefined),
     };
   }
 

@@ -433,6 +433,8 @@ class RiderService extends ChangeNotifier {
         final digits = orderNum.replaceAll(RegExp(r'\D'), '');
         if (digits.length >= 4) {
           return digits.substring(digits.length - 4);
+        } else if (digits.isNotEmpty) {
+          return digits.padLeft(4, '0');
         }
         return row['delivery_pin']?.toString() ?? '1234';
       }(),

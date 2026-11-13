@@ -155,6 +155,8 @@ class ApiService {
           final digits = orderNum.replaceAll(RegExp(r'\D'), '');
           if (digits.length >= 4) {
             return digits.substring(digits.length - 4);
+          } else if (digits.isNotEmpty) {
+            return digits.padLeft(4, '0');
           }
           return data['delivery_pin']?.toString() ?? '1234';
         }();
@@ -1061,7 +1063,21 @@ class ApiService {
         final riderPhone = riderData != null ? (riderData['phone']?.toString() ?? '') : '';
         final riderVehicle = riderData != null ? (riderData['vehicle_model'] ?? riderData['vehicle_type'] ?? '') : '';
         final riderPlate = riderData != null ? (riderData['vehicle_plate']?.toString() ?? '') : '';
-        final pin = row['delivery_pin']?.toString() ?? '${(row['id']?.toString().hashCode.abs() ?? 1000) % 9000 + 1000}';
+        final pin = () {
+          final notes = (row['notes'] ?? '').toString();
+          if (notes.contains('[PIN:')) {
+            final m = RegExp(r'\[PIN:(\d{4})\]').firstMatch(notes);
+            if (m != null) return m.group(1)!;
+          }
+          final orderNum = (row['order_number'] ?? '').toString();
+          final digits = orderNum.replaceAll(RegExp(r'\D'), '');
+          if (digits.length >= 4) {
+            return digits.substring(digits.length - 4);
+          } else if (digits.isNotEmpty) {
+            return digits.padLeft(4, '0');
+          }
+          return row['delivery_pin']?.toString() ?? '1234';
+        }();
 
         final branchData = row['branches'] as Map<String, dynamic>?;
         final tenantData = row['tenants'] as Map<String, dynamic>?;

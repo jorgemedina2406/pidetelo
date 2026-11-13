@@ -103,4 +103,6 @@ export interface Order {
   rejectedRiderName?: string;
   branchId?: string;
   branchName?: string;
+  notes?: string;
+  deliveryPin?: string;
 }

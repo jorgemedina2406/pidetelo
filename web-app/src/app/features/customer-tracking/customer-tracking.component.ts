@@ -709,4 +709,19 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
       this.isRegistering.set(false);
     }
   }
+
+  getDeliveryPin(ord: Order | null): string {
+    if (!ord) return '----';
+    if (ord.deliveryPin && ord.deliveryPin.trim().length === 4) {
+      return ord.deliveryPin.trim();
+    }
+    const notes = (ord.notes || '').toString();
+    const pinMatch = notes.match(/\[PIN:(\d{4})\]/);
+    if (pinMatch) return pinMatch[1];
+
+    const digits = (ord.orderNumber || '').replace(/\D/g, '');
+    if (digits.length >= 4) return digits.slice(-4);
+    if (digits.length > 0) return digits.padStart(4, '0');
+    return '1234';
+  }
 }

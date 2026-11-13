@@ -446,13 +446,15 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                   final m = RegExp(r'\[PIN:(\d{4})\]').firstMatch(notes);
                   if (m != null) return m.group(1)!;
                 }
-                if (_order.pin.isNotEmpty && _order.pin != '1234' && _order.pin != '6420') {
-                  return _order.pin;
-                }
                 final orderNum = (res['order_number'] ?? _order.orderNumber).toString();
                 final digits = orderNum.replaceAll(RegExp(r'\D'), '');
                 if (digits.length >= 4) {
                   return digits.substring(digits.length - 4);
+                } else if (digits.isNotEmpty) {
+                  return digits.padLeft(4, '0');
+                }
+                if (_order.pin.isNotEmpty && _order.pin != '1234' && _order.pin != '6420') {
+                  return _order.pin;
                 }
                 return '1234';
               }(),
