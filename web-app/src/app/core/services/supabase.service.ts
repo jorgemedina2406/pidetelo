@@ -153,6 +153,26 @@ export class SupabaseService {
     return true;
   }
 
+  async verifyOrderPayment(orderId: string, payload: { status: 'verified' | 'rejected'; reference?: string; orderStatus?: OrderStatus }): Promise<boolean> {
+    if (!this.client) return false;
+    const updateData: any = {
+      payment_status: payload.status,
+      updated_at: new Date().toISOString()
+    };
+    if (payload.reference) updateData.payment_reference = payload.reference.trim();
+    if (payload.orderStatus) updateData.status = payload.orderStatus;
+    const { error } = await this.client
+      .from('orders')
+      .update(updateData)
+      .eq('id', orderId);
+
+    if (error) {
+      console.error('[SupabaseService] verifyOrderPayment error:', error);
+      return false;
+    }
+    return true;
+  }
+
   async assignRider(orderId: string, riderId: string | null): Promise<boolean> {
     if (!this.client) return false;
     try {

@@ -57,6 +57,11 @@ export class OrdersService {
     const discount = Number(orderHeader.discount) || 0;
     const total = Number(orderHeader.total) || (subtotal + deliveryFee - discount);
 
+    const paymentMethod = orderHeader.payment_method || 'mobile_transfer';
+    const isPagoMovil = paymentMethod === 'mobile_transfer' || paymentMethod === 'pago_movil';
+    const paymentStatus = orderHeader.payment_status || (isPagoMovil ? 'pending' : 'not_required');
+    const paymentReference = orderHeader.payment_reference || null;
+
     // 1. Insert order header
     const { data: newOrder, error: orderErr } = await client
       .from('orders')
@@ -67,7 +72,9 @@ export class OrdersService {
         source: orderHeader.source || 'whatsapp_link',
         status: orderHeader.status || 'received',
         fulfillment_type: orderHeader.fulfillment_type || 'delivery',
-        payment_method: orderHeader.payment_method || 'mobile_transfer',
+        payment_method: paymentMethod,
+        payment_status: paymentStatus,
+        payment_reference: paymentReference,
         customer_name: orderHeader.customer_name || 'Cliente',
         customer_phone: orderHeader.customer_phone || '04120000000',
         delivery_address: orderHeader.delivery_address || null,
@@ -535,5 +542,62 @@ export class OrdersService {
       messageText,
       inAppAlert: "Notificación de producto agotado enviada para la orden #" + orderNum
     };
+  }
+
+  async verifyPayment(
+    id: string,
+    payload: {
+      status: 'verified' | 'rejected';
+      reference?: string;
+      originBank?: string;
+      verifiedBy?: string;
+      autoSendToKitchen?: boolean;
+    },
+  ) {
+    const updateData: any = {
+      payment_status: payload.status,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (payload.reference) {
+      updateData.payment_reference = payload.reference.trim();
+    }
+
+    if (payload.status === 'verified' && payload.autoSendToKitchen) {
+      updateData.status = 'in_kitchen';
+    }
+
+    try {
+      const { data: currentOrder } = await this.supabase
+        .getClient()
+        .from('orders')
+        .select('notes')
+        .eq('id', id)
+        .maybeSingle();
+
+      const existingNotes = (currentOrder?.notes || '').toString();
+      let cleanNotes = existingNotes.replace(/\[PAGO_[A-Z_]+(?::[^\]]*)?\]\s*/g, '').trim();
+
+      if (payload.status === 'verified') {
+        const auditTag = `[PAGO_VERIFICADO${payload.reference ? ':Ref ' + payload.reference : ''}${payload.originBank ? ' (' + payload.originBank + ')' : ''}${payload.verifiedBy ? ' por ' + payload.verifiedBy : ''}]`;
+        updateData.notes = cleanNotes.length > 0 ? `${auditTag} ${cleanNotes}` : auditTag;
+      } else if (payload.status === 'rejected') {
+        const rejectTag = `[PAGO_RECHAZADO${payload.reference ? ':Ref ' + payload.reference : ''}]`;
+        updateData.notes = cleanNotes.length > 0 ? `${rejectTag} ${cleanNotes}` : rejectTag;
+      }
+    } catch (_) {}
+
+    const { data, error } = await this.supabase
+      .getClient()
+      .from('orders')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      throw new InternalServerErrorException(`Error verificando pago: ${error.message}`);
+    }
+    return data;
   }
 }

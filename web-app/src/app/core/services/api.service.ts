@@ -417,6 +417,15 @@ export class ApiService {
     );
   }
 
+  verifyOrderPayment(orderId: string, payload: { status: 'verified' | 'rejected'; reference?: string; originBank?: string; autoSendToKitchen?: boolean }): Observable<any> {
+    return this.http.patch<any>(`${this.baseUrl}/orders/${orderId}/verify-payment`, payload).pipe(
+      catchError(err => {
+        console.error(`[ApiService] Error verificando pago de pedido '${orderId}':`, err);
+        throw err;
+      })
+    );
+  }
+
   assignRider(orderId: string, riderId: string): Observable<any> {
     return this.http.patch<any>(`${this.baseUrl}/orders/${orderId}/assign-rider`, { riderId }).pipe(
       catchError(err => {
@@ -1670,6 +1679,10 @@ export class ApiService {
       status: mappedStatus,
       fulfillmentType: row.fulfillment_type || 'delivery',
       paymentMethod: row.payment_method || 'mobile_transfer',
+      paymentStatus: (rawNotes.includes('[PAGO_VERIFICADO') ? 'verified' : (rawNotes.includes('[PAGO_RECHAZADO') ? 'rejected' : (row.payment_status || ((row.payment_method === 'mobile_transfer' || row.payment_method === 'pago_movil') ? 'pending' : 'not_required')))),
+      paymentReference: row.payment_reference || (rawNotes.match(/\[PAGO_VERIFICADO:Ref\s*([^ \]]+)/)?.[1] || undefined),
+      paymentOriginBank: row.payment_origin_bank || undefined,
+      paymentAmountBs: row.payment_amount_bs ? Number(row.payment_amount_bs) : undefined,
       customer: {
         name: row.customer_name,
         phone: row.customer_phone,

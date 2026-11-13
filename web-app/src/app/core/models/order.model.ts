@@ -17,8 +17,15 @@ export type PaymentMethod =
   | 'cash_usd'
   | 'cash_local'
   | 'mobile_transfer' // Pago Móvil / Zelle / Bizum
+  | 'pago_movil'
   | 'card_terminal'
   | 'online';
+
+export type PaymentStatus = 
+  | 'pending'       // Pago Móvil reportado pero sin validar en cuenta
+  | 'verified'      // Pago Móvil confirmado en cuenta bancaria
+  | 'rejected'      // Comprobante inválido o no encontrado
+  | 'not_required'; // Efectivo / Cobro contraentrega
 
 export interface SelectedModifier {
   groupId: string;
@@ -61,6 +68,12 @@ export interface Order {
   status: OrderStatus;
   fulfillmentType: FulfillmentType;
   paymentMethod: PaymentMethod;
+  paymentStatus?: PaymentStatus;
+  paymentReference?: string;
+  paymentOriginBank?: string;
+  paymentAmountBs?: number;
+  paymentVerifiedAt?: string;
+  paymentVerifiedBy?: string;
   customer: CustomerInfo;
   items: CartItem[];
   subtotal: number;

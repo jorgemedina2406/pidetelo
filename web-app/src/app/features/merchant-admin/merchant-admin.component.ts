@@ -725,6 +725,12 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
 
   readonly storeUsers = signal<AppUser[]>([]);
 
+  // --- VERIFICACIÓN DE PAGO MÓVIL ANTES DE COMANDA DE COCINA (FASE 1) ---
+  readonly verifyingPaymentOrder = signal<Order | null>(null);
+  readonly paymentRefInput = signal<string>('');
+  readonly paymentOriginBankInput = signal<string>('');
+  readonly isProcessingVerification = signal<boolean>(false);
+
   // Modal y gestión de Colaboradores & Encargados de Sucursal
   readonly isUserModalOpen = signal(false);
   readonly isEditingUser = signal(false);
@@ -2059,6 +2065,124 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     this.api.updateOrderStatus(orderId, status).subscribe({
       next: () => console.log(`[MerchantAdmin] Orden ${orderId} actualizada en backend a ${status}`),
       error: (err) => console.warn('[MerchantAdmin] Error sincronizando estado en backend:', err)
+    });
+  }
+
+  // --- VERIFICACIÓN DE PAGO MÓVIL ANTES DE COMANDA DE COCINA (FASE 1) ---
+  getOrderBsTotal(usd: number): string {
+    const rate = this.activeExchangeRate() || 54.50;
+    return ((usd || 0) * rate).toFixed(2);
+  }
+
+  handleSendToKitchen(order: Order): void {
+    const isPagoMovil = order.paymentMethod === 'mobile_transfer' || (order.paymentMethod as any) === 'pago_movil';
+    if (isPagoMovil && order.paymentStatus !== 'verified') {
+      this.openPaymentVerificationModal(order);
+      return;
+    }
+    this.advanceOrderStatus(order.id, 'in_kitchen');
+  }
+
+  openPaymentVerificationModal(order: Order): void {
+    this.verifyingPaymentOrder.set(order);
+    this.paymentRefInput.set(order.paymentReference || '');
+    this.paymentOriginBankInput.set(order.paymentOriginBank || '');
+  }
+
+  closePaymentVerificationModal(): void {
+    this.verifyingPaymentOrder.set(null);
+    this.paymentRefInput.set('');
+    this.paymentOriginBankInput.set('');
+    this.isProcessingVerification.set(false);
+  }
+
+  confirmPaymentAndSendToKitchen(sendToKitchen: boolean = true): void {
+    const order = this.verifyingPaymentOrder();
+    if (!order) return;
+
+    const ref = this.paymentRefInput().trim();
+    if (!ref) {
+      alert('Por favor introduce el número o últimos dígitos de la referencia de Pago Móvil para auditar el ingreso.');
+      return;
+    }
+
+    this.isProcessingVerification.set(true);
+    const newStatus: OrderStatus = sendToKitchen ? 'in_kitchen' : order.status;
+
+    // Actualización reactiva inmediata en la UI local
+    this.orders.update(list =>
+      list.map(o => o.id === order.id ? {
+        ...o,
+        paymentStatus: 'verified',
+        paymentReference: ref,
+        paymentOriginBank: this.paymentOriginBankInput().trim() || o.paymentOriginBank,
+        status: newStatus,
+        updatedAt: new Date().toISOString()
+      } : o)
+    );
+
+    // Sincronizar Supabase Realtime
+    this.supabase.verifyOrderPayment(order.id, {
+      status: 'verified',
+      reference: ref,
+      orderStatus: newStatus
+    }).catch(e => console.warn('[MerchantAdmin] Supabase verify error:', e));
+
+    // Sincronizar Backend NestJS
+    this.api.verifyOrderPayment(order.id, {
+      status: 'verified',
+      reference: ref,
+      originBank: this.paymentOriginBankInput().trim(),
+      autoSendToKitchen: sendToKitchen
+    }).subscribe({
+      next: () => {
+        this.isProcessingVerification.set(false);
+        this.closePaymentVerificationModal();
+      },
+      error: (err) => {
+        console.warn('[MerchantAdmin] Error sincronizando verificación en backend:', err);
+        this.isProcessingVerification.set(false);
+        this.closePaymentVerificationModal();
+      }
+    });
+  }
+
+  rejectPayment(): void {
+    const order = this.verifyingPaymentOrder();
+    if (!order) return;
+
+    if (!confirm(`¿Confirmas marcar el pago de la orden #${order.orderNumber} como RECHAZADO / NO RECIBIDO?`)) {
+      return;
+    }
+
+    this.isProcessingVerification.set(true);
+
+    this.orders.update(list =>
+      list.map(o => o.id === order.id ? {
+        ...o,
+        paymentStatus: 'rejected',
+        updatedAt: new Date().toISOString()
+      } : o)
+    );
+
+    this.supabase.verifyOrderPayment(order.id, {
+      status: 'rejected',
+      reference: this.paymentRefInput().trim()
+    }).catch(e => console.warn('[MerchantAdmin] Supabase reject error:', e));
+
+    this.api.verifyOrderPayment(order.id, {
+      status: 'rejected',
+      reference: this.paymentRefInput().trim(),
+      autoSendToKitchen: false
+    }).subscribe({
+      next: () => {
+        this.isProcessingVerification.set(false);
+        this.closePaymentVerificationModal();
+      },
+      error: () => {
+        this.isProcessingVerification.set(false);
+        this.closePaymentVerificationModal();
+      }
     });
   }
 

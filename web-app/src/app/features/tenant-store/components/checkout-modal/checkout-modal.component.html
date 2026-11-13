@@ -196,6 +196,39 @@
                   Al enviar el pedido por WhatsApp, el comercio te indicará los datos del Pago Móvil para confirmar tu comanda.
                 </p>
               }
+
+              <!-- Reporte de Referencia para Validación Previa -->
+              <div class="mt-2.5 pt-2.5 border-t border-orange-200/60 dark:border-orange-900/40 space-y-2">
+                <div class="text-[11px] font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between">
+                  <span>Reportar Referencia de Pago Móvil:</span>
+                  <span class="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">Fase 1: Verificación</span>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <label class="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-0.5">
+                      Número de Referencia (o últimos 4-6 dígitos):
+                    </label>
+                    <input type="text"
+                           [ngModel]="cart.pagoMovilReference()"
+                           (ngModelChange)="cart.setPagoMovilReference($event)"
+                           placeholder="Ej: 849201"
+                           class="w-full text-xs font-mono font-bold rounded-lg border border-orange-300 dark:border-orange-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white p-2 focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500" />
+                  </div>
+                  <div>
+                    <label class="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-0.5">
+                      Banco Emisor (de dónde pagas):
+                    </label>
+                    <input type="text"
+                           [ngModel]="cart.pagoMovilBank()"
+                           (ngModelChange)="cart.setPagoMovilBank($event)"
+                           placeholder="Ej: Banesco, BDV, Mercantil"
+                           class="w-full text-xs rounded-lg border border-orange-300 dark:border-orange-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white p-2 focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500" />
+                  </div>
+                </div>
+                <p class="text-[10px] text-amber-700 dark:text-amber-400 font-medium">
+                  🔒 El comercio valida que el pago haya ingresado antes de preparar la comanda en cocina.
+                </p>
+              </div>
             </div>
           }
         </div>

@@ -106,4 +106,19 @@ export class OrdersController {
   ) {
     return this.ordersService.notifyStockIssue(id, payload);
   }
+
+  @Patch(':id/verify-payment')
+  @ApiOperation({ summary: 'Verificar y auditar Pago Móvil antes de enviar a comanda de cocina' })
+  verifyPayment(
+    @Param('id') id: string,
+    @Body() payload: {
+      status: 'verified' | 'rejected';
+      reference?: string;
+      originBank?: string;
+      verifiedBy?: string;
+      autoSendToKitchen?: boolean;
+    },
+  ) {
+    return this.ordersService.verifyPayment(id, payload);
+  }
 }

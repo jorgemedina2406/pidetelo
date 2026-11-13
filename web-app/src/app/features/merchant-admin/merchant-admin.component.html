@@ -790,12 +790,69 @@
                   <span class="truncate">{{ o.customer.deliveryAddress }}</span>
                 </div>
 
+                <!-- Status y Auditoría de Pago Móvil (Fase 1) -->
+                @if (o.paymentMethod === 'mobile_transfer' || (o.paymentMethod === 'pago_movil')) {
+                  @if (o.paymentStatus === 'verified') {
+                    <div class="px-2 py-1 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold flex items-center justify-between">
+                      <span class="flex items-center gap-1">
+                        <app-icon name="check-circle" [size]="11"></app-icon>
+                        <span>Pago Móvil Confirmado</span>
+                      </span>
+                      <span class="font-mono text-[9px] opacity-80">Ref: {{ o.paymentReference || 'Auditado' }}</span>
+                    </div>
+                  } @else if (o.paymentStatus === 'rejected') {
+                    <div class="px-2 py-1 rounded-md bg-red-500/15 border border-red-500/30 text-red-700 dark:text-red-300 text-[10px] font-bold flex items-center justify-between">
+                      <span class="flex items-center gap-1">
+                        <app-icon name="alert-triangle" [size]="11"></app-icon>
+                        <span>Pago No Recibido / Rechazado</span>
+                      </span>
+                      <button (click)="openPaymentVerificationModal(o)" class="underline text-[9px] hover:text-red-800 cursor-pointer">
+                        Revisar
+                      </button>
+                    </div>
+                  } @else {
+                    <div class="p-2 rounded-lg bg-amber-500/10 border border-amber-500/30 space-y-1">
+                      <div class="flex items-center justify-between text-[10px] font-bold text-amber-700 dark:text-amber-400">
+                        <span class="flex items-center gap-1">
+                          <app-icon name="clock" [size]="11"></app-icon>
+                          <span>Validar Pago Móvil</span>
+                        </span>
+                        @if (o.paymentReference) {
+                          <span class="font-mono bg-amber-500/20 text-amber-800 dark:text-amber-300 px-1.5 py-0.5 rounded text-[9px] font-bold">
+                            Ref: {{ o.paymentReference }}
+                          </span>
+                        }
+                      </div>
+                      <div class="text-[9px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
+                        <span>≈ Bs. {{ getOrderBsTotal(o.total) }}</span>
+                        @if (o.paymentOriginBank) {
+                          <span class="truncate max-w-[100px]">Banco: {{ o.paymentOriginBank }}</span>
+                        }
+                      </div>
+                    </div>
+                  }
+                }
+
                 <div class="flex items-center justify-between pt-1">
-                  <span class="font-black text-sm text-slate-900 dark:text-white">${{ o.total.toFixed(2) }}</span>
-                  <button (click)="advanceOrderStatus(o.id, 'in_kitchen')"
-                    class="bg-amber-500 hover:bg-amber-600 text-white font-bold text-[11px] px-3 py-1 rounded-md shadow-xs transition-all active:scale-95">
-                    {{ i18n.t('ma.sendToKitchen') }}
-                  </button>
+                  <div>
+                    <span class="font-black text-sm text-slate-900 dark:text-white">${{ o.total.toFixed(2) }}</span>
+                    @if (o.paymentMethod === 'mobile_transfer' || o.paymentMethod === 'pago_movil') {
+                      <span class="text-[9px] text-slate-400 block font-semibold leading-none">≈ Bs. {{ getOrderBsTotal(o.total) }}</span>
+                    }
+                  </div>
+
+                  @if ((o.paymentMethod === 'mobile_transfer' || o.paymentMethod === 'pago_movil') && o.paymentStatus !== 'verified') {
+                    <button (click)="openPaymentVerificationModal(o)"
+                      class="bg-amber-600 hover:bg-amber-500 text-white font-bold text-[11px] px-2.5 py-1.5 rounded-md shadow-xs transition-all active:scale-95 flex items-center gap-1 cursor-pointer">
+                      <app-icon name="check-circle" [size]="12"></app-icon>
+                      <span>Verificar Pago</span>
+                    </button>
+                  } @else {
+                    <button (click)="handleSendToKitchen(o)"
+                      class="bg-amber-500 hover:bg-amber-600 text-white font-bold text-[11px] px-3 py-1.5 rounded-md shadow-xs transition-all active:scale-95 cursor-pointer">
+                      {{ i18n.t('ma.sendToKitchen') }}
+                    </button>
+                  }
                 </div>
               </div>
               }
@@ -3849,4 +3906,124 @@
     (close)="isDispatchConfigModalOpen.set(false)"
     (save)="saveDispatchFilterConfig($event)">
   </app-dispatch-config-modal>
+
+  <!-- MODAL: VERIFICACIÓN DE PAGO MÓVIL ANTES DE COMANDA DE COCINA (FASE 1) -->
+  @if (verifyingPaymentOrder(); as vOrder) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-fade-in">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden flex flex-col max-h-[90vh]">
+      
+      <!-- Header -->
+      <div class="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-transparent">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+            <app-icon name="shield-check" [size]="20"></app-icon>
+          </div>
+          <div>
+            <h3 class="text-sm font-black text-slate-900 dark:text-white flex items-center gap-1.5">
+              <span>Auditoría de Pago Móvil</span>
+              <span class="font-mono text-amber-600 dark:text-amber-400">#{{ vOrder.orderNumber }}</span>
+            </h3>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400">
+              Verifica los fondos en la cuenta bancaria del comercio antes de pasar a comanda de cocina.
+            </p>
+          </div>
+        </div>
+        <button (click)="closePaymentVerificationModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg cursor-pointer">
+          <app-icon name="x" [size]="18"></app-icon>
+        </button>
+      </div>
+
+      <!-- Body con Scroll -->
+      <div class="p-5 space-y-4 overflow-y-auto text-xs">
+        
+        <!-- Tarjeta de Montos a Conciliar -->
+        <div class="grid grid-cols-2 gap-3 p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
+          <div>
+            <span class="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Monto en Dólares ($)</span>
+            <span class="text-lg font-black text-slate-900 dark:text-white">${{ vOrder.total.toFixed(2) }}</span>
+          </div>
+          <div class="text-right">
+            <span class="text-[10px] uppercase font-bold text-amber-600 dark:text-amber-400 block mb-0.5">Monto a Verificar (Bs.)</span>
+            <span class="text-lg font-black text-amber-600 dark:text-amber-400">Bs. {{ getOrderBsTotal(vOrder.total) }}</span>
+            <span class="text-[9px] text-slate-400 block">Tasa: {{ activeExchangeRate() }} Bs/$</span>
+          </div>
+        </div>
+
+        <!-- Dónde debió caer el pago (Cuenta del Comercio) -->
+        <div class="p-3 rounded-xl bg-orange-50/50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900/40 space-y-1.5">
+          <div class="text-[10px] font-black uppercase text-orange-800 dark:text-orange-300 flex items-center gap-1">
+            <span>🏦</span>
+            <span>Cuenta Receptora de la Sede / Comercio:</span>
+          </div>
+          <div class="font-mono text-[11px] text-slate-700 dark:text-slate-300 space-y-0.5">
+            <div><strong>Banco:</strong> {{ selectedBranch()?.paymentCredentials?.pagoMovilBank || brandingForm.pagoMovilBank || '0102 - Banco de Venezuela' }}</div>
+            <div><strong>Teléfono:</strong> {{ selectedBranch()?.paymentCredentials?.pagoMovilPhone || brandingForm.pagoMovilPhone || '0412-0000000' }}</div>
+            <div><strong>RIF/CI:</strong> {{ selectedBranch()?.paymentCredentials?.pagoMovilIdNumber || brandingForm.pagoMovilIdNumber || 'J-12345678-0' }} ({{ selectedBranch()?.paymentCredentials?.pagoMovilAccountName || selectedBranch()?.name || brandingForm.pagoMovilAccountName }})</div>
+          </div>
+        </div>
+
+        <!-- Datos reportados por el cliente -->
+        <div class="space-y-3 pt-1">
+          <div class="flex items-center justify-between text-[11px] text-slate-500">
+            <span>Cliente: <strong class="text-slate-800 dark:text-slate-200">{{ vOrder.customer.name }}</strong></span>
+            <span>Teléfono: <strong class="text-slate-800 dark:text-slate-200">{{ vOrder.customer.phone }}</strong></span>
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+              Referencia Bancaria Reportada: <span class="text-red-500">*</span>
+            </label>
+            <input type="text"
+                   [ngModel]="paymentRefInput()"
+                   (ngModelChange)="paymentRefInput.set($event)"
+                   placeholder="Ej: 849201"
+                   class="w-full text-sm font-mono font-black rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 shadow-xs focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500" />
+            <p class="text-[10px] text-slate-400 mt-1">
+              Ingresa o confirma la referencia que figura en el extracto de cuenta bancaria del comercio.
+            </p>
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+              Banco Emisor (Opcional):
+            </label>
+            <input type="text"
+                   [ngModel]="paymentOriginBankInput()"
+                   (ngModelChange)="paymentOriginBankInput.set($event)"
+                   placeholder="Ej: Banesco, Mercantil, BDV, Bancamiga, Provincial"
+                   class="w-full text-xs font-medium rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 shadow-xs focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500" />
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- Footer con Acciones -->
+      <div class="px-5 py-3.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-850 flex flex-wrap items-center justify-between gap-2">
+        <button (click)="rejectPayment()"
+                [disabled]="isProcessingVerification()"
+                class="px-3 py-2 text-xs font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition cursor-pointer flex items-center gap-1">
+          <app-icon name="alert-triangle" [size]="14"></app-icon>
+          <span>Rechazar / No cayó</span>
+        </button>
+
+        <div class="flex items-center gap-2">
+          <button (click)="confirmPaymentAndSendToKitchen(false)"
+                  [disabled]="isProcessingVerification()"
+                  class="px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 rounded-xl transition cursor-pointer">
+            Solo Confirmar
+          </button>
+
+          <button (click)="confirmPaymentAndSendToKitchen(true)"
+                  [disabled]="isProcessingVerification()"
+                  class="px-4 py-2 text-xs font-black text-white bg-emerald-600 hover:bg-emerald-500 shadow-md shadow-emerald-600/20 rounded-xl transition cursor-pointer flex items-center gap-1.5">
+            <app-icon name="check-circle" [size]="14"></app-icon>
+            <span>Confirmar y Enviar a Cocina</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  }
 </div>

@@ -37,6 +37,8 @@ export interface CartState {
   couponCodeInput: string;
   couponErrorMessage: string | null;
   isApplyingCoupon: boolean;
+  pagoMovilReference: string;
+  pagoMovilBank: string;
 }
 
 const initialState: CartState = {
@@ -66,7 +68,9 @@ const initialState: CartState = {
   appliedCoupon: null,
   couponCodeInput: '',
   couponErrorMessage: null,
-  isApplyingCoupon: false
+  isApplyingCoupon: false,
+  pagoMovilReference: '',
+  pagoMovilBank: ''
 };
 
 const CART_STORAGE_KEY = 'pidetelo_web_cart_v1';
@@ -689,6 +693,14 @@ export const CartStore = signalStore(
       persistCart({ items: store.items(), customer: store.customer(), fulfillmentType: store.fulfillmentType(), paymentMethod });
     },
 
+    setPagoMovilReference(pagoMovilReference: string): void {
+      patchState(store, { pagoMovilReference });
+    },
+
+    setPagoMovilBank(pagoMovilBank: string): void {
+      patchState(store, { pagoMovilBank });
+    },
+
     updateCustomer(customerData: Partial<CustomerInfo>): void {
       const updatedCust = { ...store.customer(), ...customerData };
       patchState(store, {
@@ -741,6 +753,11 @@ export const CartStore = signalStore(
       const branch = store.selectedBranch();
       const orderNumber = `ORD-${Math.floor(1000 + Math.random() * 9000)}`;
 
+      const rate = store.selectedBranch()?.currencySettings?.exchangeRate ||
+                   store.selectedBranch()?.exchangeRate ||
+                   store.activeTenant()?.currencySettings?.exchangeRate || 52.80;
+      const isPagoMovil = store.paymentMethod() === 'mobile_transfer';
+
       const order: Order = {
         id: `ord_${Date.now()}`,
         orderNumber,
@@ -752,6 +769,10 @@ export const CartStore = signalStore(
         status: 'received',
         fulfillmentType: store.fulfillmentType(),
         paymentMethod: store.paymentMethod(),
+        paymentStatus: isPagoMovil ? 'pending' : 'not_required',
+        paymentReference: isPagoMovil ? (store.pagoMovilReference() || undefined) : undefined,
+        paymentOriginBank: isPagoMovil ? (store.pagoMovilBank() || undefined) : undefined,
+        paymentAmountBs: isPagoMovil ? Number((store.total() * rate).toFixed(2)) : undefined,
         customer: { ...store.customer() },
         deliveryLat: store.customer().deliveryLat,
         deliveryLng: store.customer().deliveryLng,
@@ -840,6 +861,7 @@ export const CartStore = signalStore(
         cash_usd: 'Efectivo Divisas ($)',
         cash_local: 'Efectivo Moneda Local',
         mobile_transfer: 'Pago Móvil / Transferencia',
+        pago_movil: 'Pago Móvil',
         card_terminal: 'Punto de Venta al recibir',
         online: 'Pago Online'
       };
@@ -860,6 +882,13 @@ export const CartStore = signalStore(
         ? `🏷️ *Cupón (${order.couponCode || 'Oferta'}):* -$${order.discount.toFixed(2)}\n`
         : '';
 
+      const pagoMovilExtra = (order.paymentMethod === 'mobile_transfer' && order.paymentReference)
+        ? `📲 *Datos del Pago Móvil Reportado:*\n` +
+          `🔢 *Referencia:* ${order.paymentReference}\n` +
+          (order.paymentOriginBank ? `🏦 *Banco Emisor:* ${order.paymentOriginBank}\n` : '') +
+          `💵 *Monto Transferido:* ≈ Bs. ${totalBs}\n\n`
+        : '';
+
       const message = `👋 ¡Hola *${order.tenantName}*! Acabo de hacer un pedido web:\n\n` +
         `🧾 *Pedido #${cleanOrderNum}*\n` +
         branchHeader +
@@ -873,6 +902,7 @@ export const CartStore = signalStore(
         `🪙 *Tasa aplicada:* ${rate.toFixed(2)} Bs/$\n\n` +
         `${fulfillmentText}\n` +
         `💳 *Método de pago:* ${paymentNames[order.paymentMethod as PaymentMethod] || order.paymentMethod}\n\n` +
+        pagoMovilExtra +
         (order.customer.notes ? `📝 *Nota:* ${order.customer.notes}\n\n` : '') +
         `📍 *Rastreo en vivo del pedido (GPS):*\n${trackingUrl}\n\n` +
         `¿Podrían confirmarme el pedido y el tiempo estimado? ¡Muchas gracias!`;
