@@ -114,20 +114,32 @@
         </div>
       </a>
 
-      <!-- Menú Escritorio (Solo Pantallas Grandes LG+) -->
-      <nav class="hidden lg:flex items-center gap-6 xl:gap-7 text-xs xl:text-sm font-semibold text-slate-600 dark:text-slate-300">
-        <a href="#ecosistema" class="hover:text-brand-500 dark:hover:text-brand-400 transition-colors py-1">Ecosistema</a>
-        <a href="#modulos" class="hover:text-brand-500 dark:hover:text-brand-400 transition-colors py-1">Módulos</a>
-        <a href="#pantallas" class="hover:text-brand-500 dark:hover:text-brand-400 transition-colors py-1">Capturas Reales</a>
-        <a href="#precios" class="hover:text-brand-500 dark:hover:text-brand-400 transition-colors py-1">Precios</a>
-        <a href="#calculadora" class="hover:text-brand-500 dark:hover:text-brand-400 transition-colors py-1">Calculadora ROI</a>
-        <a href="#faq" class="hover:text-brand-500 dark:hover:text-brand-400 transition-colors py-1">Preguntas</a>
+      <!-- Menú Escritorio Moderno (Cápsula Flotante con Interacción Fluida) -->
+      <nav class="hidden lg:flex items-center gap-1 bg-slate-100/90 dark:bg-slate-900/90 backdrop-blur-md p-1.5 rounded-full border border-slate-200/80 dark:border-white/10 shadow-xs">
+        <a href="#ecosistema" class="px-3.5 py-1.5 rounded-full text-xs xl:text-[13px] font-bold text-slate-700 dark:text-slate-200 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-white dark:hover:bg-slate-800 hover:shadow-xs transition-all whitespace-nowrap">
+          Ecosistema
+        </a>
+        <a href="#modulos" class="px-3.5 py-1.5 rounded-full text-xs xl:text-[13px] font-bold text-slate-700 dark:text-slate-200 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-white dark:hover:bg-slate-800 hover:shadow-xs transition-all whitespace-nowrap">
+          Módulos
+        </a>
+        <a href="#pantallas" class="px-3.5 py-1.5 rounded-full text-xs xl:text-[13px] font-bold text-slate-700 dark:text-slate-200 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-white dark:hover:bg-slate-800 hover:shadow-xs transition-all whitespace-nowrap">
+          Capturas Reales
+        </a>
+        <a href="#precios" class="px-3.5 py-1.5 rounded-full text-xs xl:text-[13px] font-bold text-slate-700 dark:text-slate-200 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-white dark:hover:bg-slate-800 hover:shadow-xs transition-all whitespace-nowrap">
+          Precios
+        </a>
+        <a href="#calculadora" class="px-3.5 py-1.5 rounded-full text-xs xl:text-[13px] font-bold text-slate-700 dark:text-slate-200 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-white dark:hover:bg-slate-800 hover:shadow-xs transition-all whitespace-nowrap">
+          Calculadora ROI
+        </a>
+        <a href="#faq" class="px-3.5 py-1.5 rounded-full text-xs xl:text-[13px] font-bold text-slate-700 dark:text-slate-200 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-white dark:hover:bg-slate-800 hover:shadow-xs transition-all whitespace-nowrap">
+          Preguntas
+        </a>
       </nav>
 
       <!-- Botones de Acción / CTAs -->
       <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-        <!-- Selector Modo Claro / Oscuro con Iconos SVG (Visible en móvil, tablet y escritorio) -->
-        <button id="theme-toggle" class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-300 transition-all cursor-pointer shadow-xs" title="Cambiar Tema">
+        <!-- Selector Modo Claro / Oscuro con Iconos SVG -->
+        <button id="theme-toggle" class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-300 transition-all cursor-pointer shadow-xs" title="Cambiar Tema">
           <!-- Sun SVG -->
           <svg id="sun-icon" class="w-4 h-4 text-amber-500 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
@@ -138,8 +150,8 @@
           </svg>
         </button>
 
-        <!-- Botón Descargar Apps con Logos SVG (Oculto en móvil/tablet para no apretar el header) -->
-        <button class="open-download-modal hidden xl:flex px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800/90 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-white items-center gap-2 transition-all cursor-pointer shadow-xs">
+        <!-- Botón Descargar Apps con Logos SVG -->
+        <button class="open-download-modal hidden xl:flex px-4 py-2 sm:py-2.5 rounded-full bg-slate-100 dark:bg-slate-800/90 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-white items-center gap-2 transition-all cursor-pointer shadow-xs">
           <!-- Logo Android SVG -->
           <svg class="w-4 h-4 text-emerald-500" viewBox="0 0 24 24" fill="currentColor">
             <path d="M17.523 15.3414c-.5511 0-.9993-.4486-.9993-1.0007 0-.5512.4482-1.0006.9993-1.0006.5521 0 1.0003.4494 1.0003 1.0006 0 .5521-.4482 1.0007-1.0003 1.0007m-11.046 0c-.5511 0-.9993-.4486-.9993-1.0007 0-.5512.4482-1.0006.9993-1.0006.5521 0 1.0003.4494 1.0003 1.0006 0 .5521-.4482 1.0007-1.0003 1.0007m11.4045-6.02l1.9973-3.4592a.416.416 0 00-.1521-.5676.416.416 0 00-.5676.1521l-2.0223 3.503C15.5838 8.4116 13.854 8.134 12 8.134c-1.854 0-3.5838.2776-5.1368.8157L4.8409 5.4467a.416.416 0 00-.5676-.1521.416.416 0 00-.1521.5676l1.9973 3.4592C2.6889 11.1867.3432 14.6589 0 18.761h24c-.3432-4.1021-2.6889-7.5743-6.1185-9.4396"/>
@@ -148,19 +160,19 @@
           <svg class="w-3.5 h-3.5 fill-current text-slate-800 dark:text-white" viewBox="0 0 170 170">
             <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.7-3.04-7.6-7.7-11.71-13.98-5.77-8.8-10.42-19.11-13.97-30.93-3.55-11.82-5.33-23.01-5.33-33.56 0-14.15 3.52-25.79 10.57-34.92 7.05-9.13 16.03-13.79 26.94-13.98 5.34 0 11.22 1.34 17.65 4.01 6.43 2.68 10.28 4.07 11.55 4.19 1.63-.12 5.77-1.57 12.42-4.36 6.65-2.79 12.51-4.07 17.59-3.83 13.31.62 23.96 5.37 31.95 14.26-11.69 7.05-17.38 16.92-17.06 29.62.33 10.02 4.14 18.23 11.44 24.64 7.3 6.41 15.93 10.15 25.89 11.21-2.07 6.16-4.45 12.44-7.14 18.84zM119.22 33.15c0-7.44 2.66-14.39 7.98-20.85 5.32-6.46 11.83-10.52 19.53-12.19.22 1.45.33 2.69.33 3.73 0 7.33-2.76 14.39-8.28 21.18-5.52 6.79-12.33 10.74-20.43 11.86-.33-1.24-.5-2.22-.5-2.93"/>
           </svg>
-          <span>Descargar Apps</span>
+          <span class="whitespace-nowrap">Descargar Apps</span>
         </button>
 
         <!-- Botón Afiliar Comercio (Visible desde sm: en adelante) -->
-        <a href="#contacto" class="shimmer-btn hidden sm:flex px-3.5 py-2 sm:px-5 sm:py-2.5 rounded-xl bg-gradient-to-r from-brand-500 to-amber-500 hover:from-brand-600 hover:to-amber-600 text-white font-bold text-xs shadow-lg shadow-brand-500/25 items-center gap-1.5 sm:gap-2 transition-all transform hover:-translate-y-0.5 cursor-pointer">
+        <a href="#contacto" class="shimmer-btn hidden sm:flex px-4 py-2 sm:px-5 sm:py-2.5 rounded-full bg-gradient-to-r from-brand-500 to-amber-500 hover:from-brand-600 hover:to-amber-600 text-white font-black text-xs shadow-lg shadow-brand-500/25 items-center gap-1.5 sm:gap-2 transition-all transform hover:-translate-y-0.5 cursor-pointer">
           <span class="whitespace-nowrap">Afiliar mi Comercio</span>
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+          <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
           </svg>
         </a>
 
         <!-- Botón Menú Móvil (Hamburger para pantallas < LG) -->
-        <button id="mobile-menu-btn" class="lg:hidden p-2 sm:p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-brand-500 transition-colors cursor-pointer" aria-label="Abrir Menú">
+        <button id="mobile-menu-btn" class="lg:hidden p-2 sm:p-2.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-brand-500 transition-colors cursor-pointer" aria-label="Abrir Menú">
           <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path>
           </svg>
