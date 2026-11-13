@@ -415,6 +415,31 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
                       ),
                     ),
                     const SizedBox(height: 14),
+                  ] else ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1E293B),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: Colors.white12),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.storefront_outlined,
+                              color: Color(0xFF94A3B8), size: 20),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Aún no posees entregas completadas ni saldo disponible por liquidar en comercios.',
+                              style: GoogleFonts.outfit(
+                                  fontSize: 12,
+                                  color: const Color(0xFF94A3B8)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
                   ],
 
                   // Account Selector
@@ -1583,7 +1608,14 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
     final merchantBalances = _riderService.merchantBalances;
     final rider = widget.sessionService.currentRider;
 
-    return ListView(
+    return RefreshIndicator(
+      color: AppTheme.primary,
+      backgroundColor: const Color(0xFF1E293B),
+      onRefresh: () async {
+        await _riderService.fetchCompletedDeliveriesFromSupabase();
+        await _riderService.fetchWithdrawalsFromSupabase();
+      },
+      child: ListView(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       children: [
         // Balance Card with live BCV
@@ -2086,8 +2118,9 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
             },
           ),
       ],
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildMetricCard(String title, String value, IconData icon, Color color) {
     return Container(
@@ -2192,6 +2225,10 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
         // Logout Button
         ElevatedButton.icon(
           onPressed: () async {
+            _locationService.stopTracking();
+            try {
+              await BackgroundOrderService().stopService();
+            } catch (_) {}
             await widget.sessionService.logout();
             if (!mounted) return;
             Navigator.of(context).pushAndRemoveUntil(

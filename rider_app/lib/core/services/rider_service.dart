@@ -16,7 +16,8 @@ class MerchantEarningSummary {
   final double totalWithdrawn;
   final int ordersCount;
 
-  double get availableBalance => (totalEarned - totalWithdrawn).clamp(0.0, double.infinity);
+  double get availableBalance =>
+      (totalEarned - totalWithdrawn).clamp(0.0, double.infinity);
 
   MerchantEarningSummary({
     required this.tenantId,
@@ -38,6 +39,7 @@ class _MerchantAcc {
 
 class RiderPayoutTransaction {
   final String id;
+  final String? riderId;
   final double amount;
   final String method; // 'Pago Móvil', 'Transferencia', 'Zelle'
   final String destinationDetails;
@@ -50,6 +52,7 @@ class RiderPayoutTransaction {
 
   RiderPayoutTransaction({
     required this.id,
+    this.riderId,
     required this.amount,
     required this.method,
     required this.destinationDetails,
@@ -63,6 +66,7 @@ class RiderPayoutTransaction {
 
   Map<String, dynamic> toJson() => {
         'id': id,
+        'riderId': riderId,
         'amount': amount,
         'method': method,
         'destinationDetails': destinationDetails,
@@ -77,6 +81,7 @@ class RiderPayoutTransaction {
   factory RiderPayoutTransaction.fromJson(Map<String, dynamic> json) =>
       RiderPayoutTransaction(
         id: json['id'] ?? '',
+        riderId: json['riderId'] ?? json['rider_id'],
         amount: (json['amount'] as num?)?.toDouble() ?? 0.0,
         method: json['method'] ?? 'Pago Móvil',
         destinationDetails: json['destinationDetails'] ?? '',
@@ -94,10 +99,15 @@ class RiderService extends ChangeNotifier {
   factory RiderService() => _instance;
   RiderService._internal();
 
-  static const String _keyActiveOrder = 'rider_active_order_v1';
-  static const String _keyAcceptedOrder = 'rider_accepted_order_v1';
-  static const String _keyCompletedOrders = 'rider_completed_orders_v1';
-  static const String _keyPayoutHistory = 'rider_payout_history_v1';
+  String get _currentRiderKeySuffix =>
+      (_currentRiderId != null && _currentRiderId!.isNotEmpty)
+          ? '_$_currentRiderId'
+          : '';
+
+  String get _keyActiveOrder => 'rider_active_order_v1$_currentRiderKeySuffix';
+  String get _keyAcceptedOrder => 'rider_accepted_order_v1$_currentRiderKeySuffix';
+  String get _keyCompletedOrders => 'rider_completed_orders_v1$_currentRiderKeySuffix';
+  String get _keyPayoutHistory => 'rider_payout_history_v1$_currentRiderKeySuffix';
 
   DeliveryOrder? _activeOrder;
   bool _isAcceptedByRider = false;
@@ -113,24 +123,37 @@ class RiderService extends ChangeNotifier {
   DeliveryOrder? get activeOrder => _activeOrder;
   bool get hasActiveOrder => _activeOrder != null;
   bool get isAcceptedByRider => _isAcceptedByRider;
-  List<DeliveryOrder> get availableOrders => List.unmodifiable(_availableOrders);
-  List<DeliveryOrder> get completedDeliveries => List.unmodifiable(_completedDeliveries);
-  List<RiderPayoutTransaction> get payoutHistory => List.unmodifiable(_payoutHistory);
+  List<DeliveryOrder> get availableOrders =>
+      List.unmodifiable(_availableOrders);
+  List<DeliveryOrder> get completedDeliveries =>
+      List.unmodifiable(_completedDeliveries.where((o) =>
+          _currentRiderId == null ||
+          _currentRiderId!.isEmpty ||
+          o.driverId == null ||
+          o.driverId!.isEmpty ||
+          o.driverId == _currentRiderId));
+  List<RiderPayoutTransaction> get payoutHistory =>
+      List.unmodifiable(_payoutHistory.where((p) =>
+          _currentRiderId == null ||
+          _currentRiderId!.isEmpty ||
+          p.riderId == null ||
+          p.riderId!.isEmpty ||
+          p.riderId == _currentRiderId));
   bool get isLoading => _isLoading;
 
-  int get completedDeliveriesCount => _completedDeliveries.length;
+  int get completedDeliveriesCount => completedDeliveries.length;
 
-  double get totalEarnings => _completedDeliveries.fold(
+  double get totalEarnings => completedDeliveries.fold(
         0.0,
         (sum, o) => sum + o.deliveryFee,
       );
 
-  double get totalTips => _completedDeliveries.fold(
+  double get totalTips => completedDeliveries.fold(
         0.0,
         (sum, o) => sum + (o.total * 0.05), // 5% average tip
       );
 
-  double get totalWithdrawn => _payoutHistory.fold(
+  double get totalWithdrawn => payoutHistory.fold(
         0.0,
         (sum, p) => sum + p.amount,
       );
@@ -141,18 +164,26 @@ class RiderService extends ChangeNotifier {
   }
 
   List<MerchantEarningSummary> get merchantBalances {
+    if (_currentRiderId == null || _currentRiderId!.isEmpty) return [];
+
     final Map<String, _MerchantAcc> map = {};
 
-    for (final o in _completedDeliveries) {
+    // Solo acumula pedidos completados que pertenezcan explícitamente a este rider
+    for (final o in completedDeliveries) {
       final tId = o.tenantId.trim().isNotEmpty ? o.tenantId.trim() : 'general';
-      final mName = o.merchantName.trim().isNotEmpty ? o.merchantName.trim() : 'Comercio Pídetelo';
+      final mName = o.merchantName.trim().isNotEmpty
+          ? o.merchantName.trim()
+          : 'Comercio Pídetelo';
       final acc = map.putIfAbsent(tId, () => _MerchantAcc(tId, mName));
       acc.totalEarned += o.deliveryFee;
       acc.ordersCount += 1;
     }
 
-    for (final p in _payoutHistory) {
-      if (p.tenantId != null && p.tenantId!.isNotEmpty && p.status != 'Rechazado') {
+    // Solo descuenta retiros solicitados que pertenezcan explícitamente a este rider
+    for (final p in payoutHistory) {
+      if (p.tenantId != null &&
+          p.tenantId!.isNotEmpty &&
+          p.status != 'Rechazado') {
         final acc = map[p.tenantId!];
         if (acc != null) {
           acc.totalWithdrawn += p.amount;
@@ -171,70 +202,127 @@ class RiderService extends ChangeNotifier {
         .toList();
   }
 
-  Future<void> init([String? riderId]) async {
-    _currentRiderId = riderId;
+  Future<void> reset() async {
+    _pollTimer?.cancel();
+    _pollTimer = null;
     try {
-      final prefs = await SharedPreferences.getInstance();
+      _ordersSubscription?.unsubscribe();
+    } catch (_) {}
+    _ordersSubscription = null;
+    _activeOrder = null;
+    _isAcceptedByRider = false;
+    _availableOrders.clear();
+    _completedDeliveries.clear();
+    _payoutHistory.clear();
+    _currentRiderId = null;
+    _lastNotifiedOrderId = null;
+    notifyListeners();
+  }
 
-      if (_currentRiderId == null || _currentRiderId!.isEmpty) {
-        _currentRiderId = prefs.getString('rider_user_id_v1');
-        if (_currentRiderId == null || _currentRiderId!.isEmpty) {
-          final riderDataJson = prefs.getString('current_rider_user_v1');
-          if (riderDataJson != null) {
-            try {
-              final Map<String, dynamic> data = jsonDecode(riderDataJson);
-              _currentRiderId = data['id']?.toString();
-            } catch (_) {}
-          }
-        }
-      }
+  Future<void> init([String? riderId]) async {
+    final prefs = await SharedPreferences.getInstance();
 
-      // Load active order if still active and not delivered/cancelled
-      final activeJson = prefs.getString(_keyActiveOrder);
-      if (activeJson != null) {
-        final parsed = DeliveryOrder.fromJson(jsonDecode(activeJson));
-        if (parsed.status != OrderDeliveryStatus.delivered && parsed.status != OrderDeliveryStatus.cancelled) {
-          _activeOrder = parsed;
-          final acceptedOrderId = prefs.getString(_keyAcceptedOrder);
-          _isAcceptedByRider = (acceptedOrderId == _activeOrder?.id) || (_activeOrder?.status == OrderDeliveryStatus.onTheWay);
-        } else {
-          _activeOrder = null;
-          _isAcceptedByRider = false;
-          await prefs.remove(_keyActiveOrder);
-          await prefs.remove(_keyAcceptedOrder);
-        }
-      }
-
-      // Load completed orders
-      final completedJson = prefs.getStringList(_keyCompletedOrders);
-      if (completedJson != null) {
-        _completedDeliveries.clear();
-        for (final item in completedJson) {
+    String? targetRiderId = riderId;
+    if (targetRiderId == null || targetRiderId.isEmpty) {
+      targetRiderId = prefs.getString('rider_user_id_v1');
+      if (targetRiderId == null || targetRiderId.isEmpty) {
+        final riderDataJson = prefs.getString('current_rider_user_v1');
+        if (riderDataJson != null) {
           try {
-            _completedDeliveries.add(DeliveryOrder.fromJson(jsonDecode(item)));
+            final Map<String, dynamic> data = jsonDecode(riderDataJson);
+            targetRiderId = data['id']?.toString();
           } catch (_) {}
         }
       }
+    }
 
-      // Load payout history
-      final payoutJson = prefs.getString(_keyPayoutHistory);
-      if (payoutJson != null) {
-        final List list = jsonDecode(payoutJson);
-        _payoutHistory.clear();
-        for (final item in list) {
-          _payoutHistory.add(RiderPayoutTransaction.fromJson(item));
+    // Si cambió el rider logueado en este dispositivo, limpiamos el estado en memoria de inmediato
+    if (_currentRiderId != targetRiderId) {
+      _activeOrder = null;
+      _isAcceptedByRider = false;
+      _availableOrders.clear();
+      _completedDeliveries.clear();
+      _payoutHistory.clear();
+    }
+    _currentRiderId = targetRiderId;
+
+    // Purgar llaves globales no versionadas/sin rider para evitar fuga de datos entre cuentas
+    try {
+      await prefs.remove('rider_completed_orders_v1');
+      await prefs.remove('rider_payout_history_v1');
+      await prefs.remove('rider_active_order_v1');
+      await prefs.remove('rider_accepted_order_v1');
+    } catch (_) {}
+
+    try {
+      if (_currentRiderId != null && _currentRiderId!.isNotEmpty) {
+        // Cargar orden activa local asociada estrictamente a este rider
+        final activeJson = prefs.getString(_keyActiveOrder);
+        if (activeJson != null) {
+          final parsed = DeliveryOrder.fromJson(jsonDecode(activeJson));
+          if (parsed.status != OrderDeliveryStatus.delivered &&
+              parsed.status != OrderDeliveryStatus.cancelled &&
+              (parsed.driverId == null || parsed.driverId == _currentRiderId)) {
+            _activeOrder = parsed;
+            final acceptedOrderId = prefs.getString(_keyAcceptedOrder);
+            _isAcceptedByRider = (acceptedOrderId == _activeOrder?.id) ||
+                (_activeOrder?.status == OrderDeliveryStatus.onTheWay);
+          } else {
+            _activeOrder = null;
+            _isAcceptedByRider = false;
+            await prefs.remove(_keyActiveOrder);
+            await prefs.remove(_keyAcceptedOrder);
+          }
         }
+
+        // Cargar entregas completadas locales verificando a qué rider pertenecen
+        final completedJson = prefs.getStringList(_keyCompletedOrders);
+        _completedDeliveries.clear();
+        if (completedJson != null) {
+          for (final item in completedJson) {
+            try {
+              final o = DeliveryOrder.fromJson(jsonDecode(item));
+              if (o.driverId == null || o.driverId == _currentRiderId) {
+                _completedDeliveries.add(o);
+              }
+            } catch (_) {}
+          }
+        }
+
+        // Cargar historial de retiros local verificando a qué rider pertenece
+        final payoutJson = prefs.getString(_keyPayoutHistory);
+        _payoutHistory.clear();
+        if (payoutJson != null) {
+          try {
+            final List list = jsonDecode(payoutJson);
+            for (final item in list) {
+              final Map<String, dynamic> raw = item is String ? jsonDecode(item) : Map<String, dynamic>.from(item);
+              final p = RiderPayoutTransaction.fromJson(raw);
+              if (p.riderId == null || p.riderId == _currentRiderId) {
+                _payoutHistory.add(p);
+              }
+            }
+          } catch (_) {}
+        }
+      } else {
+        _activeOrder = null;
+        _isAcceptedByRider = false;
+        _completedDeliveries.clear();
+        _payoutHistory.clear();
       }
     } catch (e) {
       debugPrint('[RiderService] Init error: $e');
     }
 
+    notifyListeners();
+
+    // Sincronización prioritaria con la base de datos (Supabase como fuente de verdad)
     await fetchAvailableOrders();
     await fetchCompletedDeliveriesFromSupabase();
     await fetchWithdrawalsFromSupabase();
     _setupRealtimeSubscription();
 
-    // Setup periodic polling fallback every 3 seconds to guarantee updates
+    // Setup periodic polling fallback every 4 seconds to guarantee updates
     _pollTimer?.cancel();
     _pollTimer = Timer.periodic(const Duration(seconds: 4), (_) {
       fetchAvailableOrders();
@@ -254,7 +342,8 @@ class RiderService extends ChangeNotifier {
             schema: 'public',
             table: 'orders',
             callback: (payload) {
-              debugPrint('[RiderService] Realtime order event: ${payload.eventType}');
+              debugPrint(
+                  '[RiderService] Realtime order event: ${payload.eventType}');
               fetchAvailableOrders();
             },
           )
@@ -298,15 +387,18 @@ class RiderService extends ChangeNotifier {
       mappedStatus = OrderDeliveryStatus.assigned;
     }
 
-    final resolvedMerchantName = (branch['name'] ?? '').toString().trim().isNotEmpty
-        ? branch['name'].toString()
-        : (tenant['name']?.toString() ?? 'Comercio Local');
-    final resolvedMerchantPhone = (branch['phone'] ?? '').toString().trim().isNotEmpty
-        ? branch['phone'].toString()
-        : (tenant['phone']?.toString() ?? '+584121234567');
-    final resolvedMerchantAddress = (branch['address'] ?? '').toString().trim().isNotEmpty
-        ? branch['address'].toString()
-        : (tenant['address']?.toString() ?? 'Cabudare, Edo. Lara');
+    final resolvedMerchantName =
+        (branch['name'] ?? '').toString().trim().isNotEmpty
+            ? branch['name'].toString()
+            : (tenant['name']?.toString() ?? 'Comercio Local');
+    final resolvedMerchantPhone =
+        (branch['phone'] ?? '').toString().trim().isNotEmpty
+            ? branch['phone'].toString()
+            : (tenant['phone']?.toString() ?? '+584121234567');
+    final resolvedMerchantAddress =
+        (branch['address'] ?? '').toString().trim().isNotEmpty
+            ? branch['address'].toString()
+            : (tenant['address']?.toString() ?? 'Cabudare, Edo. Lara');
     final resolvedMerchantLat = (branch['latitude'] as num?)?.toDouble() ??
         (tenant['latitude'] as num?)?.toDouble() ??
         10.026743;
@@ -351,6 +443,11 @@ class RiderService extends ChangeNotifier {
       total: (row['total'] as num?)?.toDouble() ?? 0.0,
       paymentMethod: row['payment_method'] ?? 'Pago Móvil',
       createdAt: DateTime.tryParse(row['created_at'] ?? '') ?? DateTime.now(),
+      branchId: row['branch_id']?.toString(),
+      companyId: row['tenant_id']?.toString() ??
+          row['company_id']?.toString() ??
+          tenant['id']?.toString(),
+      driverId: row['driver_id']?.toString(),
     );
   }
 
@@ -387,13 +484,16 @@ class RiderService extends ChangeNotifier {
           if (assignedQuery.isNotEmpty) {
             final activeRow = assignedQuery.first;
             final assignedOrder = _parseOrderRow(activeRow);
-            
+
             // Trigger push notification if this is a newly assigned order
             final prefs = await SharedPreferences.getInstance();
-            final lastNotified = prefs.getString('rider_last_notified_order_v1');
-            if (_lastNotifiedOrderId != assignedOrder.id && lastNotified != assignedOrder.id) {
+            final lastNotified =
+                prefs.getString('rider_last_notified_order_v1');
+            if (_lastNotifiedOrderId != assignedOrder.id &&
+                lastNotified != assignedOrder.id) {
               _lastNotifiedOrderId = assignedOrder.id;
-              await prefs.setString('rider_last_notified_order_v1', assignedOrder.id);
+              await prefs.setString(
+                  'rider_last_notified_order_v1', assignedOrder.id);
               NotificationService().showOrderAssignedNotification(
                 orderNumber: assignedOrder.orderNumber,
                 customerName: assignedOrder.customerName,
@@ -403,7 +503,8 @@ class RiderService extends ChangeNotifier {
 
             _activeOrder = assignedOrder;
 
-            await prefs.setString(_keyActiveOrder, jsonEncode(assignedOrder.toJson()));
+            await prefs.setString(
+                _keyActiveOrder, jsonEncode(assignedOrder.toJson()));
             final acceptedOrderId = prefs.getString(_keyAcceptedOrder);
             final rawNotes = (activeRow['notes'] ?? '').toString();
             final isAcceptedInDb = rawNotes.contains('[RIDER_ACCEPTED]') ||
@@ -411,7 +512,8 @@ class RiderService extends ChangeNotifier {
                 rawNotes.contains('[RIDER_PICKED_UP]') ||
                 assignedOrder.status == OrderDeliveryStatus.onTheWay;
 
-            _isAcceptedByRider = isAcceptedInDb || (acceptedOrderId == assignedOrder.id);
+            _isAcceptedByRider =
+                isAcceptedInDb || (acceptedOrderId == assignedOrder.id);
           } else {
             // No active orders assigned in database: clear local cache and banner
             if (_activeOrder != null) {
@@ -430,7 +532,9 @@ class RiderService extends ChangeNotifier {
       // 2. In this merchant fleet dispatch model, orders are strictly assigned by the merchant to riders.
       // Unassigned orders (driver_id == null) in kitchen or received must NEVER be broadcast to riders.
       // Only additional queued orders assigned to this rider (if any beyond the active one) are shown.
-      if (_currentRiderId != null && _currentRiderId!.isNotEmpty && _activeOrder != null) {
+      if (_currentRiderId != null &&
+          _currentRiderId!.isNotEmpty &&
+          _activeOrder != null) {
         final query = await supabase
             .from('orders')
             .select('*, tenants(*), order_items(*)')
@@ -470,11 +574,15 @@ class RiderService extends ChangeNotifier {
             .eq('id', order.id)
             .maybeSingle();
         notes = (currentOrder?['notes'] ?? '').toString();
-        notes = notes.replaceAll(RegExp(r'\[RIDER_[A-Z_]+(?::[^\]]*)?\]\s*'), '').trim();
+        notes = notes
+            .replaceAll(RegExp(r'\[RIDER_[A-Z_]+(?::[^\]]*)?\]\s*'), '')
+            .trim();
       } catch (_) {}
-      final updatedNotes = notes.isEmpty ? '[RIDER_ACCEPTED]' : '[RIDER_ACCEPTED] $notes';
+      final updatedNotes =
+          notes.isEmpty ? '[RIDER_ACCEPTED]' : '[RIDER_ACCEPTED] $notes';
 
-      final cleanDriverId = (rider.id.isNotEmpty && !rider.id.startsWith('r_')) ? rider.id : null;
+      final cleanDriverId =
+          (rider.id.isNotEmpty && !rider.id.startsWith('r_')) ? rider.id : null;
 
       // Al aceptar, permanece en Cocina ('in_kitchen') para ir al local a buscarlo
       await supabase.from('orders').update({
@@ -510,6 +618,9 @@ class RiderService extends ChangeNotifier {
         total: order.total,
         paymentMethod: order.paymentMethod,
         createdAt: order.createdAt,
+        branchId: order.branchId,
+        companyId: order.companyId,
+        driverId: cleanDriverId,
       );
 
       _activeOrder = assignedOrder;
@@ -517,13 +628,19 @@ class RiderService extends ChangeNotifier {
       _availableOrders.removeWhere((o) => o.id == order.id);
 
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_keyActiveOrder, jsonEncode(assignedOrder.toJson()));
+      await prefs.setString(
+          _keyActiveOrder, jsonEncode(assignedOrder.toJson()));
       await prefs.setString(_keyAcceptedOrder, assignedOrder.id);
 
       // Notificar al portal web del comercio en tiempo real
       try {
-        final tenantRow = await supabase.from('orders').select('tenant_id').eq('id', order.id).maybeSingle();
-        final tenantId = tenantRow?['tenant_id'] ?? 'dac59429-fd6f-4d3e-8b2e-ab0e23828c1f';
+        final tenantRow = await supabase
+            .from('orders')
+            .select('tenant_id')
+            .eq('id', order.id)
+            .maybeSingle();
+        final tenantId =
+            tenantRow?['tenant_id'] ?? 'dac59429-fd6f-4d3e-8b2e-ab0e23828c1f';
         final channel = supabase.channel('orders:$tenantId');
         await channel.sendBroadcastMessage(
           event: 'order_status_updated',
@@ -554,7 +671,8 @@ class RiderService extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_keyAcceptedOrder, orderId);
-      await prefs.setString(_keyActiveOrder, jsonEncode(_activeOrder!.toJson()));
+      await prefs.setString(
+          _keyActiveOrder, jsonEncode(_activeOrder!.toJson()));
 
       final supabase = Supabase.instance.client;
       final currentOrder = await supabase
@@ -564,8 +682,11 @@ class RiderService extends ChangeNotifier {
           .maybeSingle();
 
       String notes = (currentOrder?['notes'] ?? '').toString();
-      notes = notes.replaceAll(RegExp(r'\[RIDER_[A-Z_]+(?::[^\]]*)?\]\s*'), '').trim();
-      final updatedNotes = notes.isEmpty ? '[RIDER_ACCEPTED]' : '[RIDER_ACCEPTED] $notes';
+      notes = notes
+          .replaceAll(RegExp(r'\[RIDER_[A-Z_]+(?::[^\]]*)?\]\s*'), '')
+          .trim();
+      final updatedNotes =
+          notes.isEmpty ? '[RIDER_ACCEPTED]' : '[RIDER_ACCEPTED] $notes';
 
       // Al aceptar la asignación, se mantiene en cocina con la etiqueta [RIDER_ACCEPTED]
       await supabase.from('orders').update({
@@ -576,8 +697,13 @@ class RiderService extends ChangeNotifier {
 
       // Notificar al comercio
       try {
-        final tenantRow = await supabase.from('orders').select('tenant_id').eq('id', orderId).maybeSingle();
-        final tenantId = tenantRow?['tenant_id'] ?? 'dac59429-fd6f-4d3e-8b2e-ab0e23828c1f';
+        final tenantRow = await supabase
+            .from('orders')
+            .select('tenant_id')
+            .eq('id', orderId)
+            .maybeSingle();
+        final tenantId =
+            tenantRow?['tenant_id'] ?? 'dac59429-fd6f-4d3e-8b2e-ab0e23828c1f';
         final channel = supabase.channel('orders:$tenantId');
         await channel.sendBroadcastMessage(
           event: 'order_status_updated',
@@ -590,7 +716,8 @@ class RiderService extends ChangeNotifier {
         );
       } catch (_) {}
 
-      debugPrint('[RiderService] Order $orderId accepted and kept in_kitchen in Supabase');
+      debugPrint(
+          '[RiderService] Order $orderId accepted and kept in_kitchen in Supabase');
     } catch (e) {
       debugPrint('[RiderService] Error accepting order in Supabase: $e');
     }
@@ -621,11 +748,19 @@ class RiderService extends ChangeNotifier {
       // 2. Fetch existing notes to preserve customer instructions
       String notes = '';
       try {
-        final currentOrder = await supabase.from('orders').select('notes').eq('id', orderId).maybeSingle();
+        final currentOrder = await supabase
+            .from('orders')
+            .select('notes')
+            .eq('id', orderId)
+            .maybeSingle();
         notes = (currentOrder?['notes'] ?? '').toString();
-        notes = notes.replaceAll(RegExp(r'\[RIDER_[A-Z_]+(?::[^\]]*)?\]\s*'), '').trim();
+        notes = notes
+            .replaceAll(RegExp(r'\[RIDER_[A-Z_]+(?::[^\]]*)?\]\s*'), '')
+            .trim();
       } catch (_) {}
-      final rejectedNotes = notes.isEmpty ? '[RIDER_REJECTED:$riderName]' : '[RIDER_REJECTED:$riderName] $notes';
+      final rejectedNotes = notes.isEmpty
+          ? '[RIDER_REJECTED:$riderName]'
+          : '[RIDER_REJECTED:$riderName] $notes';
 
       // 3. Unassign driver so order returns to available state in database
       await supabase.from('orders').update({
@@ -636,8 +771,13 @@ class RiderService extends ChangeNotifier {
 
       // 4. Broadcast explicit rejection to merchant portal
       try {
-        final orderRow = await supabase.from('orders').select('tenant_id').eq('id', orderId).maybeSingle();
-        final tenantId = orderRow?['tenant_id'] ?? 'a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d';
+        final orderRow = await supabase
+            .from('orders')
+            .select('tenant_id')
+            .eq('id', orderId)
+            .maybeSingle();
+        final tenantId =
+            orderRow?['tenant_id'] ?? 'a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d';
         final channel = supabase.channel('orders:$tenantId');
         await channel.sendBroadcastMessage(
           event: 'order_rejected',
@@ -648,7 +788,8 @@ class RiderService extends ChangeNotifier {
           },
         );
       } catch (broadcastErr) {
-        debugPrint('[RiderService] Notice broadcasting rejection: $broadcastErr');
+        debugPrint(
+            '[RiderService] Notice broadcasting rejection: $broadcastErr');
       }
 
       _activeOrder = null;
@@ -686,9 +827,15 @@ class RiderService extends ChangeNotifier {
 
     try {
       final supabase = Supabase.instance.client;
-      final currentOrder = await supabase.from('orders').select('notes, tenant_id').eq('id', orderId).maybeSingle();
+      final currentOrder = await supabase
+          .from('orders')
+          .select('notes, tenant_id')
+          .eq('id', orderId)
+          .maybeSingle();
       String notes = (currentOrder?['notes'] ?? '').toString();
-      notes = notes.replaceAll(RegExp(r'\[RIDER_[A-Z_]+(?::[^\]]*)?\]\s*'), '').trim();
+      notes = notes
+          .replaceAll(RegExp(r'\[RIDER_[A-Z_]+(?::[^\]]*)?\]\s*'), '')
+          .trim();
       final updatedNotes = riderTag.isEmpty
           ? (notes.isEmpty ? null : notes)
           : (notes.isEmpty ? riderTag : '$riderTag $notes');
@@ -701,7 +848,8 @@ class RiderService extends ChangeNotifier {
 
       // Broadcast update to merchant channel
       try {
-        final tenantId = currentOrder?['tenant_id'] ?? 'a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d';
+        final tenantId = currentOrder?['tenant_id'] ??
+            'a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d';
         final channel = supabase.channel('orders:$tenantId');
         await channel.sendBroadcastMessage(
           event: 'order_status_updated',
@@ -721,14 +869,16 @@ class RiderService extends ChangeNotifier {
 
     if (newStatus == OrderDeliveryStatus.delivered) {
       _completedDeliveries.insert(0, _activeOrder!);
-      final listStrings = _completedDeliveries.map((o) => jsonEncode(o.toJson())).toList();
+      final listStrings =
+          _completedDeliveries.map((o) => jsonEncode(o.toJson())).toList();
       await prefs.setStringList(_keyCompletedOrders, listStrings);
       await prefs.remove(_keyActiveOrder);
       await prefs.remove(_keyAcceptedOrder);
       _activeOrder = null;
       _isAcceptedByRider = false;
     } else {
-      await prefs.setString(_keyActiveOrder, jsonEncode(_activeOrder!.toJson()));
+      await prefs.setString(
+          _keyActiveOrder, jsonEncode(_activeOrder!.toJson()));
     }
 
     notifyListeners();
@@ -750,29 +900,35 @@ class RiderService extends ChangeNotifier {
     // 1. Actualizar API backend (ubicación + telemetría)
     if (riderId != null && riderId.isNotEmpty) {
       try {
-        final url = Uri.parse('${AppConfig.backendBaseUrl}/riders/$riderId/location');
-        http.post(
-          url,
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({'lat': cleanLat, 'lng': cleanLng}),
-        ).timeout(const Duration(seconds: 4));
+        final url =
+            Uri.parse('${AppConfig.backendBaseUrl}/riders/$riderId/location');
+        http
+            .post(
+              url,
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode({'lat': cleanLat, 'lng': cleanLng}),
+            )
+            .timeout(const Duration(seconds: 4));
       } catch (_) {}
 
       if (ordId != null && ordId.isNotEmpty) {
         try {
-          final telemUrl = Uri.parse('${AppConfig.backendBaseUrl}/riders/telemetry');
-          http.post(
-            telemUrl,
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({
-              'rider_id': riderId,
-              'order_id': ordId,
-              'latitude': cleanLat,
-              'longitude': cleanLng,
-              'speed_kmh': speedKmh,
-              'battery_level': 92,
-            }),
-          ).timeout(const Duration(seconds: 4));
+          final telemUrl =
+              Uri.parse('${AppConfig.backendBaseUrl}/riders/telemetry');
+          http
+              .post(
+                telemUrl,
+                headers: {'Content-Type': 'application/json'},
+                body: jsonEncode({
+                  'rider_id': riderId,
+                  'order_id': ordId,
+                  'latitude': cleanLat,
+                  'longitude': cleanLng,
+                  'speed_kmh': speedKmh,
+                  'battery_level': 92,
+                }),
+              )
+              .timeout(const Duration(seconds: 4));
         } catch (_) {}
       }
     }
@@ -821,7 +977,11 @@ class RiderService extends ChangeNotifier {
   }
 
   Future<void> fetchWithdrawalsFromSupabase() async {
-    if (_currentRiderId == null || _currentRiderId!.isEmpty) return;
+    if (_currentRiderId == null || _currentRiderId!.isEmpty) {
+      _payoutHistory.clear();
+      notifyListeners();
+      return;
+    }
     try {
       final supabase = Supabase.instance.client;
       final res = await supabase
@@ -830,40 +990,54 @@ class RiderService extends ChangeNotifier {
           .eq('rider_id', _currentRiderId!)
           .order('requested_at', ascending: false);
 
-      if (res.isNotEmpty) {
-        final List<RiderPayoutTransaction> list = [];
-        for (final row in res) {
-          final acc = row['payment_account'];
-          final dest = acc is Map
-              ? '${acc['bank'] ?? ""} • ${acc['phone'] ?? acc['accountNumber'] ?? ""} • ${acc['nationalId'] ?? ""}'
-              : 'Pago Móvil';
+      final List<RiderPayoutTransaction> list = [];
+      for (final row in res) {
+        final acc = row['payment_account'];
+        final dest = acc is Map
+            ? '${acc['bank'] ?? ""} • ${acc['phone'] ?? acc['accountNumber'] ?? ""} • ${acc['nationalId'] ?? ""}'
+            : 'Pago Móvil';
 
-          list.add(RiderPayoutTransaction(
-            id: row['id']?.toString() ?? '',
-            amount: (row['amount'] as num?)?.toDouble() ?? 0.0,
-            method: row['account_type'] ?? 'Pago Móvil',
-            destinationDetails: dest,
-            date: DateTime.tryParse(row['requested_at'] ?? '') ?? DateTime.now(),
-            status: row['status'] == 'completed'
-                ? 'Completado'
-                : (row['status'] == 'rejected' ? 'Rechazado' : 'Pendiente'),
-            tenantId: row['tenant_id']?.toString(),
-            merchantName: row['merchant_name']?.toString() ?? 'Comercio',
-            referenceCode: row['reference_code']?.toString(),
-            rejectionReason: row['rejection_reason']?.toString(),
-          ));
-        }
-        _payoutHistory.clear();
-        _payoutHistory.addAll(list);
-        notifyListeners();
+        list.add(RiderPayoutTransaction(
+          id: row['id']?.toString() ?? '',
+          riderId: row['rider_id']?.toString() ?? _currentRiderId,
+          amount: (row['amount'] as num?)?.toDouble() ?? 0.0,
+          method: row['account_type'] ?? 'Pago Móvil',
+          destinationDetails: dest,
+          date:
+              DateTime.tryParse(row['requested_at'] ?? '') ?? DateTime.now(),
+          status: row['status'] == 'completed'
+              ? 'Completado'
+              : (row['status'] == 'rejected' ? 'Rechazado' : 'Pendiente'),
+          tenantId: row['tenant_id']?.toString(),
+          merchantName: row['merchant_name']?.toString() ?? 'Comercio',
+          referenceCode: row['reference_code']?.toString(),
+          rejectionReason: row['rejection_reason']?.toString(),
+        ));
       }
+
+      _payoutHistory.clear();
+      _payoutHistory.addAll(list);
+
+      // Guardar en almacenamiento local asociado únicamente a este rider
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final rawList = _payoutHistory.map((p) => p.toJson()).toList();
+        await prefs.setString(_keyPayoutHistory, jsonEncode(rawList));
+      } catch (_) {}
+
+      notifyListeners();
     } catch (e) {
-      debugPrint('[RiderService] Error fetching rider withdrawals from Supabase: $e');
+      debugPrint(
+          '[RiderService] Error fetching rider withdrawals from Supabase: $e');
     }
   }
 
   Future<void> fetchCompletedDeliveriesFromSupabase() async {
-    if (_currentRiderId == null || _currentRiderId!.isEmpty) return;
+    if (_currentRiderId == null || _currentRiderId!.isEmpty) {
+      _completedDeliveries.clear();
+      notifyListeners();
+      return;
+    }
     try {
       final supabase = Supabase.instance.client;
       final res = await supabase
@@ -872,17 +1046,25 @@ class RiderService extends ChangeNotifier {
           .eq('driver_id', _currentRiderId!)
           .eq('status', 'delivered')
           .order('created_at', ascending: false)
-          .limit(50);
+          .limit(100);
 
-      if (res.isNotEmpty) {
-        final List<DeliveryOrder> list = [];
-        for (final row in res) {
-          list.add(_parseOrderRow(row));
-        }
-        _completedDeliveries.clear();
-        _completedDeliveries.addAll(list);
-        notifyListeners();
+      final List<DeliveryOrder> list = [];
+      for (final row in res) {
+        list.add(_parseOrderRow(row));
       }
+
+      _completedDeliveries.clear();
+      _completedDeliveries.addAll(list);
+
+      // Guardar en almacenamiento local asociado únicamente a este rider
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final listStrings =
+            _completedDeliveries.map((o) => jsonEncode(o.toJson())).toList();
+        await prefs.setStringList(_keyCompletedOrders, listStrings);
+      } catch (_) {}
+
+      notifyListeners();
     } catch (e) {
       debugPrint('[RiderService] Error fetching completed deliveries: $e');
     }
@@ -908,7 +1090,9 @@ class RiderService extends ChangeNotifier {
         'rider_id': _currentRiderId ?? (rider?.id ?? 'rider_local'),
         'rider_name': rider?.name ?? 'Repartidor',
         'rider_phone': rider?.phone ?? '',
-        'tenant_id': (finalTenantId != 'general' && finalTenantId.isNotEmpty) ? finalTenantId : null,
+        'tenant_id': (finalTenantId != 'general' && finalTenantId.isNotEmpty)
+            ? finalTenantId
+            : null,
         'merchant_name': finalMerchantName,
         'amount': amount,
         'currency': 'USD',
@@ -926,14 +1110,20 @@ class RiderService extends ChangeNotifier {
 
       String? newId;
       try {
-        final res = await supabase.from('rider_withdrawals').insert(rowData).select().maybeSingle();
+        final res = await supabase
+            .from('rider_withdrawals')
+            .insert(rowData)
+            .select()
+            .maybeSingle();
         newId = res?['id']?.toString();
       } catch (insertErr) {
-        debugPrint('[RiderService] Notice saving withdrawal to Supabase: $insertErr');
+        debugPrint(
+            '[RiderService] Notice saving withdrawal to Supabase: $insertErr');
       }
 
       final tx = RiderPayoutTransaction(
         id: newId ?? 'tx_${DateTime.now().millisecondsSinceEpoch}',
+        riderId: _currentRiderId ?? rider?.id,
         amount: amount,
         method: method,
         destinationDetails: destinationDetails,

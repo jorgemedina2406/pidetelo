@@ -469,7 +469,7 @@ export class ApiService {
                 return { distanceKm, durationMinutes, waypoints, score };
               });
           }
-        } catch {}
+        } catch { }
         return [];
       };
 
@@ -831,7 +831,7 @@ export class ApiService {
                 updated_at: r.updated_at
               }));
             }
-          } catch (_) {}
+          } catch (_) { }
         }
         return [
           { id: 'cat_restaurantes', name: 'Restaurantes', slug: 'restaurantes', icon: '🍽️', subcategories: ['Hamburguesas', 'Sushi & Asiática', 'Pastas & Italiana', 'Pizzas', 'Pollos & Brasas', 'Carnes & Grill', 'Comida Rápida', 'Comida Mexicana', 'Café & Bakery', 'Desayunos', 'Arepas & Empanadas'], sort_order: 1, is_active: true },
@@ -873,7 +873,7 @@ export class ApiService {
           try {
             const { data } = await client.from('coupons').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false });
             if (data && data.length > 0) return data.map(r => this.mapCoupon(r));
-          } catch (_) {}
+          } catch (_) { }
         }
         return [];
       })
@@ -1032,7 +1032,7 @@ export class ApiService {
           });
         });
       }
-    } catch (_) {}
+    } catch (_) { }
 
     // 2. Colaboradores de Comercio
     try {
@@ -1064,7 +1064,7 @@ export class ApiService {
           });
         });
       }
-    } catch (_) {}
+    } catch (_) { }
 
     // 3. Motorizados / Riders
     try {
@@ -1095,7 +1095,7 @@ export class ApiService {
           });
         });
       }
-    } catch (_) {}
+    } catch (_) { }
 
     const all = Array.from(usersMap.values());
     all.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -1205,7 +1205,7 @@ export class ApiService {
             if (Object.keys(branchPayload).length > 1) {
               await client.from('branches').update(branchPayload).eq('company_id', id);
             }
-          } catch (_) {}
+          } catch (_) { }
 
           return data;
         } catch (e) {
@@ -1313,7 +1313,7 @@ export class ApiService {
         map[tenantId] = planCode;
         localStorage.setItem('pidetelo_tenant_plans', JSON.stringify(map));
       }
-    } catch (_) {}
+    } catch (_) { }
 
     const isFuture = new Date(planExpiresAt).getTime() > Date.now();
     return this.updateTenant(tenantId, {
@@ -1375,7 +1375,7 @@ export class ApiService {
       try {
         const stored = localStorage.getItem('deliveryhub_branding_' + row.id);
         if (stored) cachedBranding = JSON.parse(stored);
-      } catch (_) {}
+      } catch (_) { }
     }
 
     const rawBh = cachedBranding?.business_hours || cachedBranding?.businessHours || row.business_hours || row.businessHours || row.deliverySettings?.businessHours;
@@ -1407,7 +1407,7 @@ export class ApiService {
         if (!exp && typeof localStorage !== 'undefined') {
           try {
             exp = localStorage.getItem('pidetelo_tenant_plan_exp_' + row.id);
-          } catch (_) {}
+          } catch (_) { }
         }
         if (exp && !isNaN(new Date(exp).getTime()) && new Date(exp).getTime() < Date.now()) {
           return false; // Pausado automáticamente si el plan venció
@@ -1462,7 +1462,7 @@ export class ApiService {
               const map = JSON.parse(stored);
               p = map[row.id] || (row.slug ? map[row.slug] : null);
             }
-          } catch (_) {}
+          } catch (_) { }
         }
         if (!p) p = row.slug === 'burger-lab' ? 'COMERCIO_PRO' : 'EMPRENDEDOR';
         const clean = p.toUpperCase();
@@ -1477,7 +1477,7 @@ export class ApiService {
               const map = JSON.parse(stored);
               p = map[row.id] || (row.slug ? map[row.slug] : null);
             }
-          } catch (_) {}
+          } catch (_) { }
         }
         if (!p) p = row.slug === 'burger-lab' ? 'COMERCIO_PRO' : 'EMPRENDEDOR';
         const clean = p.toUpperCase();
@@ -1488,7 +1488,7 @@ export class ApiService {
         if (!exp && typeof localStorage !== 'undefined') {
           try {
             exp = localStorage.getItem('pidetelo_tenant_plan_exp_' + row.id);
-          } catch (_) {}
+          } catch (_) { }
         }
         if (!exp) {
           const d = new Date();
@@ -1502,7 +1502,7 @@ export class ApiService {
         if (!exp && typeof localStorage !== 'undefined') {
           try {
             exp = localStorage.getItem('pidetelo_tenant_plan_exp_' + row.id);
-          } catch (_) {}
+          } catch (_) { }
         }
         if (!exp) return false;
         const time = new Date(exp).getTime();
@@ -1513,7 +1513,7 @@ export class ApiService {
         if (!exp && typeof localStorage !== 'undefined') {
           try {
             exp = localStorage.getItem('pidetelo_tenant_plan_exp_' + row.id);
-          } catch (_) {}
+          } catch (_) { }
         }
         if (!exp) return 25;
         const time = new Date(exp).getTime();
@@ -1525,7 +1525,7 @@ export class ApiService {
         if (!exp && typeof localStorage !== 'undefined') {
           try {
             exp = localStorage.getItem('pidetelo_tenant_plan_exp_' + row.id);
-          } catch (_) {}
+          } catch (_) { }
         }
         if (!exp) return 'active';
         const time = new Date(exp).getTime();
@@ -1615,12 +1615,12 @@ export class ApiService {
       quantity: i.quantity,
       selectedModifiers: Array.isArray(i.selected_modifiers)
         ? i.selected_modifiers.map((m: any) => ({
-            groupId: m.groupId || m.group_id || '',
-            groupTitle: m.groupTitle || m.group_title || '',
-            optionId: m.optionId || m.option_id || '',
-            optionName: m.optionName || m.option_name || m.name || '',
-            priceDelta: Number(m.priceDelta ?? m.price_delta ?? 0),
-          }))
+          groupId: m.groupId || m.group_id || '',
+          groupTitle: m.groupTitle || m.group_title || '',
+          optionId: m.optionId || m.option_id || '',
+          optionName: m.optionName || m.option_name || m.name || '',
+          priceDelta: Number(m.priceDelta ?? m.price_delta ?? 0),
+        }))
         : [],
       itemTotal: Number(i.item_total),
     }));
@@ -1746,7 +1746,7 @@ export class ApiService {
         map[tenantId] = planCode;
         localStorage.setItem('pidetelo_tenant_plans', JSON.stringify(map));
       }
-    } catch (_) {}
+    } catch (_) { }
     return this.http.put<any>(`${this.baseUrl}/plans/tenant/${tenantId}`, { planCode });
   }
 
@@ -1966,7 +1966,7 @@ export class ApiService {
                   password_hash: branchData.managerPassword || '123456',
                   is_active: true
                 });
-              } catch (_) {}
+              } catch (_) { }
             }
 
             return { success: true, branch: this.mapBranch(newB) };
@@ -2075,7 +2075,7 @@ export class ApiService {
                 if (branchData.phone) collabUpdate.phone = branchData.phone;
                 if (branchData.managerPassword) collabUpdate.password_hash = branchData.managerPassword;
                 await client.from('store_collaborators').update(collabUpdate).eq('branch_id', branchId);
-              } catch (_) {}
+              } catch (_) { }
             }
             return this.mapBranch(data);
           }
@@ -2221,7 +2221,7 @@ export class ApiService {
       try {
         const stored = localStorage.getItem('deliveryhub_branding_' + r.id);
         if (stored) cachedBranding = JSON.parse(stored);
-      } catch (_) {}
+      } catch (_) { }
     }
 
     const rawBh = cachedBranding?.business_hours || cachedBranding?.businessHours || r.business_hours || r.businessHours || {};

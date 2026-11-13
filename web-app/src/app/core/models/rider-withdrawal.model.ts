@@ -29,3 +29,4 @@ export interface RiderWithdrawal {
   requestedAt: string;
   processedAt?: string;
 }
+

@@ -248,6 +248,7 @@ class DeliveryOrder {
   final DateTime createdAt;
   final String? branchId;
   final String? companyId;
+  final String? driverId;
   String get tenantId => companyId ?? branchId ?? 'general';
 
   DeliveryOrder({
@@ -277,6 +278,7 @@ class DeliveryOrder {
     required this.createdAt,
     this.branchId,
     this.companyId,
+    this.driverId,
   });
 
   Map<String, dynamic> toJson() => {
@@ -306,6 +308,7 @@ class DeliveryOrder {
         'createdAt': createdAt.toIso8601String(),
         'branchId': branchId,
         'companyId': companyId,
+        'driverId': driverId,
       };
 
   factory DeliveryOrder.fromJson(Map<String, dynamic> json) => DeliveryOrder(
@@ -340,5 +343,6 @@ class DeliveryOrder {
         createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
         branchId: json['branchId'] ?? json['branch_id'],
         companyId: json['companyId'] ?? json['tenant_id'],
+        driverId: json['driverId'] ?? json['driver_id'],
       );
 }

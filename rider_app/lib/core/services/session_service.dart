@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/app_config.dart';
 import '../models/user_model.dart';
+import 'rider_service.dart';
 
 class SessionService extends ChangeNotifier {
   static final SessionService _instance = SessionService._internal();
@@ -437,8 +438,12 @@ class SessionService extends ChangeNotifier {
     _currentRider = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_keyRiderData);
+    await prefs.remove('rider_user_id_v1');
     try {
       await Supabase.instance.client.auth.signOut();
+    } catch (_) {}
+    try {
+      await RiderService().reset();
     } catch (_) {}
     notifyListeners();
   }

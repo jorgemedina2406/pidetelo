@@ -90,7 +90,7 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
           this.recentGuestOrders.set(list);
         }
       }
-    } catch (_) {}
+    } catch (_) { }
   }
 
   searchOrder(num?: string): void {
