@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # ===================================================
   # 1. BACKEND API (NestJS + WhatsApp Baileys 24/7)
