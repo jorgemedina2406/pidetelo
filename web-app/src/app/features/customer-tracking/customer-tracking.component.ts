@@ -44,6 +44,11 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
   readonly registrationError = signal<string>('');
   readonly showDownloadModal = signal<boolean>(false);
 
+  // Corrección y Reenvío de Pago Móvil Rechazado
+  readonly newPaymentRefInput = signal<string>('');
+  readonly isSubmittingPaymentRef = signal<boolean>(false);
+  readonly paymentRefUpdatedSuccess = signal<boolean>(false);
+
   private leafletMap?: L.Map;
   private storeMarker?: L.Marker;
   private clientMarker?: L.Marker;
@@ -92,6 +97,49 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
     const target = (num || this.searchQuery()).trim().replace('#', '');
     if (!target) return;
     window.location.href = `/track/${target}`;
+  }
+
+  getMerchantWhatsAppUrl(ord: Order): string {
+    const phone = ord.tenantPhone?.replace(/\D/g, '') || '584245065032';
+    const text = encodeURIComponent(
+      `👋 Hola *${ord.tenantName}*. Estoy revisando el rastreo de mi pedido *#${ord.orderNumber}* y me indica que el Pago Móvil fue rechazado o no se encontró en cuenta.\n\n` +
+      `Adjunto mi nuevo comprobante para que puedan verificarlo y preparar mi comanda en cocina. ¡Gracias!`
+    );
+    return `https://wa.me/${phone}?text=${text}`;
+  }
+
+  submitCorrectedPaymentRef(ord: Order): void {
+    const ref = this.newPaymentRefInput().trim();
+    if (!ref) return;
+
+    this.isSubmittingPaymentRef.set(true);
+    this.api.verifyOrderPayment(ord.id, {
+      status: 'pending',
+      reference: ref
+    }).subscribe({
+      next: () => {
+        this.isSubmittingPaymentRef.set(false);
+        this.paymentRefUpdatedSuccess.set(true);
+        this.order.update(curr => curr ? {
+          ...curr,
+          paymentStatus: 'pending',
+          paymentReference: ref
+        } : null);
+        this.newPaymentRefInput.set('');
+        setTimeout(() => this.paymentRefUpdatedSuccess.set(false), 5000);
+      },
+      error: (err) => {
+        console.warn('[Tracking] Error reenviando referencia:', err);
+        this.isSubmittingPaymentRef.set(false);
+        this.order.update(curr => curr ? {
+          ...curr,
+          paymentStatus: 'pending',
+          paymentReference: ref
+        } : null);
+        this.paymentRefUpdatedSuccess.set(true);
+        this.newPaymentRefInput.set('');
+      }
+    });
   }
 
   private smoothMoveRiderMarker(targetLat: number, targetLng: number): void {

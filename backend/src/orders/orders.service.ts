@@ -61,6 +61,11 @@ export class OrdersService {
     const isPagoMovil = paymentMethod === 'mobile_transfer' || paymentMethod === 'pago_movil';
     const paymentStatus = orderHeader.payment_status || (isPagoMovil ? 'pending' : 'not_required');
     const paymentReference = orderHeader.payment_reference || null;
+    const paymentOriginBank = orderHeader.payment_origin_bank || null;
+    let finalNotes = (orderHeader.notes || '').toString();
+    if (paymentOriginBank && !finalNotes.includes('[PAGO_ORIGEN:')) {
+      finalNotes = `[PAGO_ORIGEN:${paymentOriginBank}] ${finalNotes}`.trim();
+    }
 
     // 1. Insert order header
     const { data: newOrder, error: orderErr } = await client
@@ -80,7 +85,7 @@ export class OrdersService {
         delivery_address: orderHeader.delivery_address || null,
         delivery_lat: orderHeader.delivery_lat !== undefined && orderHeader.delivery_lat !== null ? Number(orderHeader.delivery_lat) : null,
         delivery_lng: orderHeader.delivery_lng !== undefined && orderHeader.delivery_lng !== null ? Number(orderHeader.delivery_lng) : null,
-        notes: orderHeader.notes || null,
+        notes: finalNotes.length > 0 ? finalNotes : null,
         subtotal: subtotal,
         delivery_fee: deliveryFee,
         discount: discount,

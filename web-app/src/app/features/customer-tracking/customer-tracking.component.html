@@ -34,28 +34,91 @@
       @if (order(); as ord) {
         <main class="p-4 space-y-4 flex-1">
           
+          <!-- ALERTA URGENTE: PAGO MÓVIL RECHAZADO / NO CONFIRMADO -->
+          @if (ord.paymentStatus === 'rejected') {
+            <div class="p-4 rounded-2xl bg-red-500/15 border-2 border-red-500/60 text-red-900 dark:text-red-200 space-y-3 animate-fade-in shadow-lg">
+              <div class="flex items-start gap-3">
+                <div class="w-10 h-10 rounded-xl bg-red-600 text-white flex items-center justify-center shrink-0 shadow-md">
+                  <app-icon name="alert-triangle" [size]="22"></app-icon>
+                </div>
+                <div class="space-y-1">
+                  <h3 class="text-sm font-black text-red-700 dark:text-red-400 uppercase tracking-wide">
+                    Pago Móvil No Confirmado en Cuenta
+                  </h3>
+                  <p class="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+                    El comercio <strong>{{ ord.tenantName }}</strong> auditó su cuenta bancaria y no encontró el ingreso
+                    @if (ord.paymentReference) {
+                      asociado a la referencia <strong class="font-mono">#{{ ord.paymentReference }}</strong>
+                    }.
+                    Tu pedido <strong>no entrará a preparación en cocina</strong> hasta validar los fondos.
+                  </p>
+                </div>
+              </div>
+
+              <!-- Formulario de Reenvío de Referencia -->
+              <div class="pt-2 border-t border-red-500/20 space-y-2">
+                <label class="block text-[11px] font-bold text-slate-800 dark:text-slate-200">
+                  ¿Ya realizaste el pago? Reenvía el número de referencia correcto:
+                </label>
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                  <input type="text"
+                         [ngModel]="newPaymentRefInput()"
+                         (ngModelChange)="newPaymentRefInput.set($event)"
+                         placeholder="Ej: 849201 (Referencia Bancaria)"
+                         class="flex-1 text-xs font-mono font-bold rounded-xl border border-red-300 dark:border-red-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 focus:ring-2 focus:ring-red-500" />
+                  
+                  <button (click)="submitCorrectedPaymentRef(ord)"
+                          [disabled]="!newPaymentRefInput().trim() || isSubmittingPaymentRef()"
+                          class="px-4 py-2.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-black text-xs rounded-xl shadow transition cursor-pointer flex items-center justify-center gap-1.5 shrink-0">
+                    <app-icon name="check" [size]="14"></app-icon>
+                    <span>{{ isSubmittingPaymentRef() ? 'Enviando...' : 'Reenviar Referencia' }}</span>
+                  </button>
+
+                  <a [href]="getMerchantWhatsAppUrl(ord)"
+                     target="_blank"
+                     class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow transition flex items-center justify-center gap-1.5 shrink-0">
+                    <app-icon name="message-circle" [size]="14"></app-icon>
+                    <span>Enviar Capture por WhatsApp</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+          }
+
+          @if (paymentRefUpdatedSuccess()) {
+            <div class="p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-800 dark:text-emerald-300 text-xs font-bold flex items-center gap-2 animate-fade-in">
+              <app-icon name="check-circle" [size]="16"></app-icon>
+              <span>¡Referencia actualizada con éxito! El comercio está validando nuevamente en su cuenta bancaria.</span>
+            </div>
+          }
+
           <!-- ================= STATUS SUMMARY CARD ================= -->
           <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-xs space-y-3">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-2">
                 <span class="w-2 h-2 rounded-full"
-                      [class.bg-brand-500]="ord.status === 'on_the_way'"
-                      [class.bg-emerald-500]="ord.status === 'delivered'"
-                      [class.bg-amber-500]="ord.status === 'received' || ord.status === 'in_kitchen'"
+                      [class.bg-rose-500]="ord.paymentStatus === 'rejected'"
+                      [class.bg-brand-500]="ord.paymentStatus !== 'rejected' && ord.status === 'on_the_way'"
+                      [class.bg-emerald-500]="ord.paymentStatus !== 'rejected' && ord.status === 'delivered'"
+                      [class.bg-amber-500]="ord.paymentStatus !== 'rejected' && (ord.status === 'received' || ord.status === 'in_kitchen')"
                       [class.animate-pulse]="ord.status !== 'delivered'"></span>
                 <span class="text-xs font-bold uppercase tracking-wider"
-                      [class.text-brand-600]="ord.status === 'on_the_way'"
-                      [class.dark:text-brand-400]="ord.status === 'on_the_way'"
-                      [class.text-emerald-600]="ord.status === 'delivered'"
-                      [class.dark:text-emerald-400]="ord.status === 'delivered'"
-                      [class.text-amber-600]="ord.status === 'received' || ord.status === 'in_kitchen'"
-                      [class.dark:text-amber-400]="ord.status === 'received' || ord.status === 'in_kitchen'">
-                  {{ ord.status === 'on_the_way' ? 'Repartidor en Ruta' : ord.status === 'in_kitchen' ? 'En Cocina' : ord.status === 'delivered' ? 'Entregado' : 'Pedido Recibido' }}
+                      [class.text-rose-600]="ord.paymentStatus === 'rejected'"
+                      [class.dark:text-rose-400]="ord.paymentStatus === 'rejected'"
+                      [class.text-brand-600]="ord.paymentStatus !== 'rejected' && ord.status === 'on_the_way'"
+                      [class.dark:text-brand-400]="ord.paymentStatus !== 'rejected' && ord.status === 'on_the_way'"
+                      [class.text-emerald-600]="ord.paymentStatus !== 'rejected' && ord.status === 'delivered'"
+                      [class.dark:text-emerald-400]="ord.paymentStatus !== 'rejected' && ord.status === 'delivered'"
+                      [class.text-amber-600]="ord.paymentStatus !== 'rejected' && (ord.status === 'received' || ord.status === 'in_kitchen')"
+                      [class.dark:text-amber-400]="ord.paymentStatus !== 'rejected' && (ord.status === 'received' || ord.status === 'in_kitchen')">
+                  {{ ord.paymentStatus === 'rejected' ? 'Pago no verificado / En pausa' : ord.status === 'on_the_way' ? 'Repartidor en Ruta' : ord.status === 'in_kitchen' ? 'En Cocina' : ord.status === 'delivered' ? 'Entregado' : 'Pedido Recibido' }}
                 </span>
               </div>
 
               <span class="text-xs font-semibold px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                @if (ord.status === 'delivered') {
+                @if (ord.paymentStatus === 'rejected') {
+                  En Pausa
+                } @else if (ord.status === 'delivered') {
                   Entregado
                 } @else {
                   Llegada estimada: ~{{ etaMinutes() }} min
@@ -64,7 +127,9 @@
             </div>
 
             <h2 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-snug">
-              @if (ord.status === 'on_the_way') {
+              @if (ord.paymentStatus === 'rejected') {
+                <span class="text-rose-600 dark:text-rose-400">Pago pendiente de confirmación bancaria (Comanda en pausa)</span>
+              } @else if (ord.status === 'on_the_way') {
                 El repartidor va en camino a tu dirección
               } @else if (ord.status === 'in_kitchen') {
                 El restaurante está preparando tu pedido en cocina

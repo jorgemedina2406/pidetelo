@@ -404,6 +404,9 @@ class DeliveryOrder {
   final double deliveryFee;
   final double total;
   final String paymentMethod;
+  final String paymentStatus;
+  final String paymentReference;
+  final String paymentOriginBank;
   final DateTime createdAt;
   final String? branchId;
   final String? companyId;
@@ -436,6 +439,9 @@ class DeliveryOrder {
     required this.deliveryFee,
     required this.total,
     required this.paymentMethod,
+    this.paymentStatus = 'pending',
+    this.paymentReference = '',
+    this.paymentOriginBank = '',
     required this.createdAt,
     this.branchId,
     this.companyId,
@@ -466,12 +472,23 @@ class DeliveryOrder {
         'deliveryFee': deliveryFee,
         'total': total,
         'paymentMethod': paymentMethod,
+        'paymentStatus': paymentStatus,
+        'paymentReference': paymentReference,
+        'paymentOriginBank': paymentOriginBank,
         'createdAt': createdAt.toIso8601String(),
         'branchId': branchId,
         'companyId': companyId,
       };
 
-  factory DeliveryOrder.fromJson(Map<String, dynamic> json) => DeliveryOrder(
+  factory DeliveryOrder.fromJson(Map<String, dynamic> json) {
+    final rawNotes = (json['notes'] ?? '').toString();
+    String originBank = (json['payment_origin_bank'] ?? json['paymentOriginBank'] ?? '').toString();
+    if (originBank.isEmpty && rawNotes.contains('[PAGO_ORIGEN:')) {
+      final m = RegExp(r'\[PAGO_ORIGEN:([^\]]+)\]').firstMatch(rawNotes);
+      if (m != null) originBank = m.group(1)!.trim();
+    }
+
+    return DeliveryOrder(
         id: json['id'] ?? '',
         orderNumber: json['orderNumber'] ?? '',
         merchantName: json['merchantName'] ?? '',
@@ -501,8 +518,12 @@ class DeliveryOrder {
         deliveryFee: (json['deliveryFee'] as num?)?.toDouble() ?? 0.0,
         total: (json['total'] as num?)?.toDouble() ?? 0.0,
         paymentMethod: json['paymentMethod'] ?? '',
+        paymentStatus: json['payment_status'] ?? json['paymentStatus'] ?? 'pending',
+        paymentReference: json['payment_reference'] ?? json['paymentReference'] ?? '',
+        paymentOriginBank: originBank,
         createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
         branchId: json['branchId'] ?? json['branch_id'],
         companyId: json['companyId'] ?? json['tenant_id'],
       );
+  }
 }

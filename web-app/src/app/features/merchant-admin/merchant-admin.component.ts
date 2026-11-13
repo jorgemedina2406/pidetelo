@@ -730,6 +730,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
   readonly paymentRefInput = signal<string>('');
   readonly paymentOriginBankInput = signal<string>('');
   readonly isProcessingVerification = signal<boolean>(false);
+  readonly isRejectPaymentConfirmOpen = signal<boolean>(false);
 
   // Modal y gestión de Colaboradores & Encargados de Sucursal
   readonly isUserModalOpen = signal(false);
@@ -2094,6 +2095,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     this.paymentRefInput.set('');
     this.paymentOriginBankInput.set('');
     this.isProcessingVerification.set(false);
+    this.isRejectPaymentConfirmOpen.set(false);
   }
 
   confirmPaymentAndSendToKitchen(sendToKitchen: boolean = true): void {
@@ -2147,13 +2149,17 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     });
   }
 
-  rejectPayment(): void {
+  openRejectPaymentConfirm(): void {
+    this.isRejectPaymentConfirmOpen.set(true);
+  }
+
+  cancelRejectPaymentConfirm(): void {
+    this.isRejectPaymentConfirmOpen.set(false);
+  }
+
+  executeRejectPayment(): void {
     const order = this.verifyingPaymentOrder();
     if (!order) return;
-
-    if (!confirm(`¿Confirmas marcar el pago de la orden #${order.orderNumber} como RECHAZADO / NO RECIBIDO?`)) {
-      return;
-    }
 
     this.isProcessingVerification.set(true);
 
@@ -2177,10 +2183,12 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     }).subscribe({
       next: () => {
         this.isProcessingVerification.set(false);
+        this.isRejectPaymentConfirmOpen.set(false);
         this.closePaymentVerificationModal();
       },
       error: () => {
         this.isProcessingVerification.set(false);
+        this.isRejectPaymentConfirmOpen.set(false);
         this.closePaymentVerificationModal();
       }
     });
@@ -2206,6 +2214,13 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         return;
       }
       targetRiderId = sorted[0].id;
+    }
+
+    const currentOrder = this.orders().find(o => o.id === orderId);
+    // Si ya tiene asignado este motorizado y ya había aceptado o está en local/camino, no resetear la aceptación
+    if (currentOrder && currentOrder.driverId === targetRiderId && (currentOrder.riderAccepted || currentOrder.status === 'at_merchant' || currentOrder.status === 'picked_up')) {
+      console.log(`[MerchantAdmin] El repartidor ya está asignado y activo en la orden ${orderId}. Manteniendo estado.`);
+      return;
     }
 
     const rider = this.riders().find(r => r.id === targetRiderId);

@@ -218,11 +218,22 @@
                     <label class="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-0.5">
                       Banco Emisor (de dónde pagas):
                     </label>
-                    <input type="text"
-                           [ngModel]="cart.pagoMovilBank()"
-                           (ngModelChange)="cart.setPagoMovilBank($event)"
-                           placeholder="Ej: Banesco, BDV, Mercantil"
-                           class="w-full text-xs rounded-lg border border-orange-300 dark:border-orange-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white p-2 focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500" />
+                    <select [ngModel]="cart.pagoMovilBank()"
+                            (ngModelChange)="cart.setPagoMovilBank($event)"
+                            class="w-full text-xs rounded-lg border border-orange-300 dark:border-orange-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white p-2 focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500 font-medium">
+                      <option value="">Selecciona tu Banco...</option>
+                      <option value="0134 - Banesco">0134 - Banesco</option>
+                      <option value="0102 - Banco de Venezuela">0102 - Banco de Venezuela</option>
+                      <option value="0105 - Mercantil">0105 - Mercantil</option>
+                      <option value="0108 - BBVA Provincial">0108 - BBVA Provincial</option>
+                      <option value="0172 - Bancamiga">0172 - Bancamiga</option>
+                      <option value="0191 - BNC">0191 - BNC</option>
+                      <option value="0114 - Bancaribe">0114 - Bancaribe</option>
+                      <option value="0115 - Banco Exterior">0115 - Banco Exterior</option>
+                      <option value="0175 - Bicentenario">0175 - Bicentenario</option>
+                      <option value="0163 - Banco del Tesoro">0163 - Banco del Tesoro</option>
+                      <option value="Otro Banco">Otro Banco</option>
+                    </select>
                   </div>
                 </div>
                 <p class="text-[10px] text-amber-700 dark:text-amber-400 font-medium">

@@ -174,7 +174,10 @@ export class CheckoutModalComponent {
         delivery_fee: order.deliveryFee,
         discount: order.discount,
         total: order.total,
-        notes: order.customer.notes || '',
+        notes: [
+          order.paymentOriginBank ? `[PAGO_ORIGEN:${order.paymentOriginBank}]` : '',
+          order.customer.notes || ''
+        ].filter(Boolean).join(' '),
         items: order.items.map((i: any) => ({
           product_id: isUuid(i.productId) ? i.productId : null,
           product_name: i.name,

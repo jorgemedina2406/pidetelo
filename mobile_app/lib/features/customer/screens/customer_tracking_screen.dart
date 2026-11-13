@@ -405,7 +405,17 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
             (_order.merchantLat - dynamicMerchantLat).abs() > 0.0001 ||
             (_order.merchantLng - dynamicMerchantLng).abs() > 0.0001;
 
+        final String newPaymentStatus = (res['payment_status'] ?? _order.paymentStatus).toString();
+        final String newPaymentReference = (res['payment_reference'] ?? _order.paymentReference).toString();
+        String originBank = (res['payment_origin_bank'] ?? _order.paymentOriginBank).toString();
+        if (originBank.isEmpty && rawNotes.contains('[PAGO_ORIGEN:')) {
+          final m = RegExp(r'\[PAGO_ORIGEN:([^\]]+)\]').firstMatch(rawNotes);
+          if (m != null) originBank = m.group(1)!.trim();
+        }
+
         if (newStatus != _order.status ||
+            newPaymentStatus != _order.paymentStatus ||
+            newPaymentReference != _order.paymentReference ||
             riderName != _order.riderName ||
             riderPlate != _order.riderPlate ||
             dynamicMerchantName != _order.merchantName ||
@@ -452,7 +462,12 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
               deliveryFee: _order.deliveryFee,
               total: _order.total,
               paymentMethod: _order.paymentMethod,
+              paymentStatus: newPaymentStatus,
+              paymentReference: newPaymentReference,
+              paymentOriginBank: originBank,
               createdAt: _order.createdAt,
+              branchId: _order.branchId,
+              companyId: _order.companyId,
             );
           });
           CartService().updateOrderStatus(newStatus, orderId: _order.id);
@@ -643,6 +658,152 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
     } catch (_) {
       _showToast('Abriendo WhatsApp...');
     }
+  }
+
+  Future<void> _launchWhatsAppPaymentIssue() async {
+    final phone = _order.merchantPhone.replaceAll('+', '').replaceAll(' ', '');
+    final cleanPhone = phone.isNotEmpty ? phone : '584245065032';
+    final ref = _order.paymentReference.isNotEmpty ? _order.paymentReference : 'N/A';
+    final msg = Uri.encodeComponent(
+      '¡Hola ${_order.merchantName}! Soy ${_order.customerName}, cliente del pedido ${_order.orderNumber}. '
+      'Vi en la app que mi pago móvil (Ref: $ref) requiere validación. Aquí te adjunto el capture del comprobante bancario:',
+    );
+    final url = Uri.parse('https://wa.me/$cleanPhone?text=$msg');
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } else {
+        _showToast('No se pudo abrir WhatsApp');
+      }
+    } catch (_) {
+      _showToast('Abriendo WhatsApp...');
+    }
+  }
+
+  void _showEditPaymentRefDialog() {
+    final textCtrl = TextEditingController(text: _order.paymentReference);
+    bool isSaving = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: const Color(0xFF1E293B),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text(
+            'Corregir Referencia de Pago',
+            style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Ingresa los dígitos correctos del comprobante bancario emitido a ${_order.merchantName}:',
+                style: GoogleFonts.outfit(color: const Color(0xFF94A3B8), fontSize: 12),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: textCtrl,
+                keyboardType: TextInputType.number,
+                style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.w600),
+                decoration: InputDecoration(
+                  hintText: 'Ej: 987654',
+                  hintStyle: GoogleFonts.outfit(color: Colors.white38),
+                  filled: true,
+                  fillColor: const Color(0xFF0F172A),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.white24)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.white24)),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppTheme.primary)),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text('Cancelar', style: GoogleFonts.outfit(color: Colors.white54)),
+            ),
+            ElevatedButton(
+              onPressed: isSaving
+                  ? null
+                  : () async {
+                      final newRef = textCtrl.text.trim();
+                      if (newRef.isEmpty) return;
+                      setDialogState(() => isSaving = true);
+                      try {
+                        final cleanNum = _order.orderNumber.replaceAll('#', '').trim();
+                        await Supabase.instance.client
+                            .from('orders')
+                            .update({
+                              'payment_reference': newRef,
+                              'payment_status': 'pending',
+                            })
+                            .or('id.eq.${_order.id},order_number.eq.$cleanNum,order_number.eq.#$cleanNum');
+
+                        if (mounted) {
+                          setState(() {
+                            _order = DeliveryOrder(
+                              id: _order.id,
+                              orderNumber: _order.orderNumber,
+                              merchantName: _order.merchantName,
+                              merchantPhone: _order.merchantPhone,
+                              merchantAddress: _order.merchantAddress,
+                              merchantLat: _order.merchantLat,
+                              merchantLng: _order.merchantLng,
+                              customerName: _order.customerName,
+                              customerPhone: _order.customerPhone,
+                              customerAddress: _order.customerAddress,
+                              customerLat: _order.customerLat,
+                              customerLng: _order.customerLng,
+                              riderId: _order.riderId,
+                              riderName: _order.riderName,
+                              riderPhone: _order.riderPhone,
+                              riderVehicle: _order.riderVehicle,
+                              riderPlate: _order.riderPlate,
+                              pin: _order.pin,
+                              status: _order.status,
+                              items: _order.items,
+                              subtotal: _order.subtotal,
+                              deliveryFee: _order.deliveryFee,
+                              total: _order.total,
+                              paymentMethod: _order.paymentMethod,
+                              paymentStatus: 'pending',
+                              paymentReference: newRef,
+                              paymentOriginBank: _order.paymentOriginBank,
+                              createdAt: _order.createdAt,
+                              branchId: _order.branchId,
+                              companyId: _order.companyId,
+                            );
+                          });
+                          Navigator.pop(ctx);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('¡Referencia actualizada! El comercio la validará en breve.'),
+                              backgroundColor: Color(0xFF10B981),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        setDialogState(() => isSaving = false);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Error al actualizar: $e'), backgroundColor: Colors.red),
+                        );
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: isSaving
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : Text('Guardar y Notificar', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
 
@@ -894,33 +1055,37 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                               ),
                             ),
                             Text(
-                              _order.status == OrderDeliveryStatus.pending
-                                  ? 'Esperando confirmación del comercio'
-                                  : _order.status == OrderDeliveryStatus.confirmed
-                                      ? 'Comercio confirmó tu pedido'
-                                      : _order.status == OrderDeliveryStatus.preparing && !_hasRider
-                                          ? 'En preparación en cocina'
-                                          : _order.status == OrderDeliveryStatus.atMerchant
-                                              ? '¡El repartidor ${_order.riderName.isNotEmpty ? _order.riderName : ""} llegó al local!'
-                                              : _order.status == OrderDeliveryStatus.assigned
-                                                  ? 'Repartidor ${_order.riderName.isNotEmpty ? _order.riderName : ""} asignado • Yendo al local'
-                                                  : _order.status == OrderDeliveryStatus.onTheWay
-                                                      ? 'En camino a tu ubicación • ~$_estimatedMinutes min'
-                                                      : _order.status == OrderDeliveryStatus.delivered
-                                                          ? '¡Pedido entregado con éxito!'
-                                                          : _hasRider
-                                                              ? 'Repartidor asignado: ${_order.riderName}'
-                                                              : 'Buscando repartidor cercano...',
+                              _order.paymentStatus == 'rejected'
+                                  ? 'Comanda en pausa • Pago no verificado'
+                                  : _order.status == OrderDeliveryStatus.pending
+                                      ? 'Esperando confirmación del comercio'
+                                      : _order.status == OrderDeliveryStatus.confirmed
+                                          ? 'Comercio confirmó tu pedido'
+                                          : _order.status == OrderDeliveryStatus.preparing && !_hasRider
+                                              ? 'En preparación en cocina'
+                                              : _order.status == OrderDeliveryStatus.atMerchant
+                                                  ? '¡El repartidor ${_order.riderName.isNotEmpty ? _order.riderName : ""} llegó al local!'
+                                                  : _order.status == OrderDeliveryStatus.assigned
+                                                      ? 'Repartidor ${_order.riderName.isNotEmpty ? _order.riderName : ""} asignado • Yendo al local'
+                                                      : _order.status == OrderDeliveryStatus.onTheWay
+                                                          ? 'En camino a tu ubicación • ~$_estimatedMinutes min'
+                                                          : _order.status == OrderDeliveryStatus.delivered
+                                                              ? '¡Pedido entregado con éxito!'
+                                                              : _hasRider
+                                                                  ? 'Repartidor asignado: ${_order.riderName}'
+                                                                  : 'Buscando repartidor cercano...',
                               style: GoogleFonts.outfit(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
-                                color: _order.status == OrderDeliveryStatus.atMerchant
-                                    ? const Color(0xFF38BDF8)
-                                    : _order.status == OrderDeliveryStatus.onTheWay
-                                        ? AppTheme.primary
-                                        : _hasRider
+                                color: _order.paymentStatus == 'rejected'
+                                    ? const Color(0xFFF43F5E)
+                                    : _order.status == OrderDeliveryStatus.atMerchant
+                                        ? const Color(0xFF38BDF8)
+                                        : _order.status == OrderDeliveryStatus.onTheWay
                                             ? AppTheme.primary
-                                            : AppTheme.amberAccent,
+                                            : _hasRider
+                                                ? AppTheme.primary
+                                                : AppTheme.amberAccent,
                               ),
                             ),
                           ],
@@ -1042,6 +1207,87 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                     ),
                   ),
                   const SizedBox(height: 12),
+
+                  if (_order.paymentStatus == 'rejected') ...[
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 14),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF881337).withOpacity(0.92),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFF43F5E).withOpacity(0.4)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFE11D48),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 16),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Pago Móvil no verificado / En pausa',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'El comercio no pudo confirmar la transferencia bancaria (${_order.paymentReference.isNotEmpty ? "Ref: #" + _order.paymentReference : "sin referencia"}). Para iniciar la preparación en cocina, reenvía el comprobante.',
+                            style: GoogleFonts.outfit(
+                              fontSize: 11,
+                              color: const Color(0xFFFECDD3),
+                              height: 1.3,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: _launchWhatsAppPaymentIssue,
+                                  icon: const Icon(Icons.chat_rounded, size: 15),
+                                  label: const Text('Enviar Capture WhatsApp'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF22C55E),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 8),
+                                    textStyle: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.bold),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              OutlinedButton.icon(
+                                onPressed: _showEditPaymentRefDialog,
+                                icon: const Icon(Icons.edit, size: 14),
+                                label: const Text('Corregir Ref'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.white,
+                                  side: const BorderSide(color: Colors.white30),
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                  textStyle: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.bold),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
 
                   // Delivery Timeline Stepper
                   Builder(

@@ -3984,13 +3984,18 @@
           </div>
 
           <div>
-            <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-              Banco Emisor (Opcional):
+            <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+              <span>Banco Emisor:</span>
+              @if (vOrder.paymentOriginBank) {
+                <span class="text-[10px] text-brand-600 dark:text-brand-400 font-bold bg-brand-50 dark:bg-brand-950/60 px-2 py-0.5 rounded border border-brand-500/20">
+                  Reportado: {{ vOrder.paymentOriginBank }}
+                </span>
+              }
             </label>
             <input type="text"
                    [ngModel]="paymentOriginBankInput()"
                    (ngModelChange)="paymentOriginBankInput.set($event)"
-                   placeholder="Ej: Banesco, Mercantil, BDV, Bancamiga, Provincial"
+                   placeholder="Ej: 0134 - Banesco, BDV, Mercantil, Bancamiga, Provincial"
                    class="w-full text-xs font-medium rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 shadow-xs focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500" />
           </div>
 
@@ -4000,7 +4005,7 @@
 
       <!-- Footer con Acciones -->
       <div class="px-5 py-3.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-850 flex flex-wrap items-center justify-between gap-2">
-        <button (click)="rejectPayment()"
+        <button (click)="openRejectPaymentConfirm()"
                 [disabled]="isProcessingVerification()"
                 class="px-3 py-2 text-xs font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition cursor-pointer flex items-center gap-1">
           <app-icon name="alert-triangle" [size]="14"></app-icon>
@@ -4023,6 +4028,46 @@
         </div>
       </div>
 
+    </div>
+  </div>
+  }
+
+  <!-- DIALOG: CONFIRMAR RECHAZO DE PAGO MÓVIL (FASE 1) -->
+  @if (isRejectPaymentConfirmOpen()) {
+  <div class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs animate-fade-in">
+    <div class="bg-white dark:bg-slate-900 border-2 border-red-500/40 rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden p-5 space-y-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-red-500/20 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0">
+          <app-icon name="alert-triangle" [size]="22"></app-icon>
+        </div>
+        <div>
+          <h4 class="text-sm font-black text-slate-900 dark:text-white leading-tight">
+            ¿Rechazar Pago Móvil?
+          </h4>
+          <span class="font-mono text-xs text-red-600 dark:text-red-400 font-bold">
+            #{{ verifyingPaymentOrder()?.orderNumber }}
+          </span>
+        </div>
+      </div>
+
+      <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+        El pago será marcado como <strong>No Recibido / Inválido</strong>.
+        El cliente verá una alerta inmediata en su pantalla de seguimiento para que reenvíe su comprobante o te contacte por WhatsApp.
+      </p>
+
+      <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+        <button (click)="cancelRejectPaymentConfirm()"
+                [disabled]="isProcessingVerification()"
+                class="px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition cursor-pointer">
+          Cancelar
+        </button>
+        <button (click)="executeRejectPayment()"
+                [disabled]="isProcessingVerification()"
+                class="px-4 py-2 text-xs font-black text-white bg-red-600 hover:bg-red-500 shadow-md shadow-red-600/25 rounded-xl transition cursor-pointer flex items-center gap-1.5">
+          <app-icon name="x-circle" [size]="14"></app-icon>
+          <span>{{ isProcessingVerification() ? 'Rechazando...' : 'Sí, Rechazar Pago' }}</span>
+        </button>
+      </div>
     </div>
   </div>
   }

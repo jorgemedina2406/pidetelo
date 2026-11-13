@@ -52,10 +52,17 @@
                       <span class="text-[10px] text-slate-500 dark:text-slate-400">Repartidor Asignado • {{ r.phone || 'Sin tlf' }}</span>
                     </div>
                   </div>
-                  <button (click)="assignRider.emit(r.id)"
-                          class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 text-white text-[11px] font-bold cursor-pointer transition-all">
-                    Asignar
-                  </button>
+                  @if (order?.driverId === r.id) {
+                    <span class="px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-bold text-[11px] flex items-center gap-1">
+                      <span>✓</span>
+                      <span>Asignado</span>
+                    </span>
+                  } @else {
+                    <button (click)="assignRider.emit(r.id)"
+                            class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 text-white text-[11px] font-bold cursor-pointer transition-all">
+                      Asignar
+                    </button>
+                  }
                 </div>
               }
             }
@@ -88,10 +95,17 @@
                     </div>
                   </div>
                 </div>
-                <button (click)="assignRider.emit(r.id)"
-                        class="px-3 py-1.5 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-[11px] font-bold cursor-pointer shadow-xs transition-all">
-                  Asignar
-                </button>
+                @if (order?.driverId === r.id) {
+                  <span class="px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-bold text-[11px] flex items-center gap-1">
+                    <span>✓</span>
+                    <span>Asignado</span>
+                  </span>
+                } @else {
+                  <button (click)="assignRider.emit(r.id)"
+                          class="px-3 py-1.5 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-[11px] font-bold cursor-pointer shadow-xs transition-all">
+                    Asignar
+                  </button>
+                }
               </div>
             }
 
