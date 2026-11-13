@@ -16,7 +16,7 @@ class AppConfig {
     if (envUrl.isNotEmpty) return envUrl;
 
     if (kReleaseMode) {
-      return 'https://api.pidetelo.com/api';
+      return 'https://api.pidetelo.app/api';
     }
 
     if (kIsWeb) {

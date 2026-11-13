@@ -42,9 +42,10 @@ docker compose up -d --remove-orphans
 
 echo ""
 echo "✅ ¡PÍDETELO HA SIDO DESPLEGADO EXITOSAMENTE!"
-echo "🌐 API Backend: https://api.pidetelo.com/api/docs"
-echo "🌐 Web App: https://app.pidetelo.com"
-echo "🌐 Landing: https://pidetelo.com"
+echo "🌐 API Backend: https://api.pidetelo.app/api/docs"
+echo "🌐 Web App: https://app.pidetelo.app"
+echo "🌐 Landing: https://pidetelo.app"
 echo ""
 echo "Estado de los contenedores:"
 docker compose ps
+
