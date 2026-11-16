@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 450" width="1200" height="450">
+  <defs>
+    <linearGradient id="mcdBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8B0000"/>
+      <stop offset="40%" stop-color="#DA291C"/>
+      <stop offset="85%" stop-color="#B22222"/>
+      <stop offset="100%" stop-color="#4A0000"/>
+    </linearGradient>
+    <radialGradient id="goldGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFC72C" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#DA291C" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="450" fill="url(#mcdBg)"/>
+  <circle cx="950" cy="225" r="300" fill="url(#goldGlow)"/>
+  
+  <!-- Subtle food illustration shapes on right -->
+  <g transform="translate(850, 100) scale(0.65)" opacity="0.95">
+    <!-- Bun Top -->
+    <path d="M 50 160 Q 250 40 450 160 Z" fill="#E59838"/>
+    <!-- Sesame seeds -->
+    <ellipse cx="180" cy="110" rx="8" ry="4" fill="#FFE5B4" transform="rotate(-15 180 110)"/>
+    <ellipse cx="250" cy="90" rx="8" ry="4" fill="#FFE5B4"/>
+    <ellipse cx="320" cy="110" rx="8" ry="4" fill="#FFE5B4" transform="rotate(15 320 110)"/>
+    <ellipse cx="220" cy="130" rx="8" ry="4" fill="#FFE5B4" transform="rotate(-5 220 130)"/>
+    <ellipse cx="280" cy="130" rx="8" ry="4" fill="#FFE5B4" transform="rotate(10 280 130)"/>
+    <!-- Patty -->
+    <rect x="35" y="180" width="430" height="40" rx="20" fill="#5A2E14"/>
+    <!-- Cheese -->
+    <polygon points="40,175 460,175 430,225 360,185 250,235 120,185 70,220" fill="#FFA500"/>
+    <!-- Lettuce -->
+    <path d="M 30 170 Q 70 185 110 170 Q 150 185 190 170 Q 230 185 270 170 Q 310 185 350 170 Q 390 185 430 170 Q 470 185 480 170" stroke="#4CAF50" stroke-width="14" fill="none" stroke-linecap="round"/>
+    <!-- Bun Bottom -->
+    <path d="M 50 230 Q 250 240 450 230 L 440 270 Q 250 290 60 270 Z" fill="#D27D2D"/>
+  </g>
+
+  <!-- Typography Left -->
+  <text x="80" y="180" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="56" fill="#FFFFFF" letter-spacing="-1">
+    McDonald's
+  </text>
+  <text x="80" y="235" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="24" fill="#FFC72C" letter-spacing="2">
+    ME ENCANTA • DELIVERY EXPRESS
+  </text>
+  <text x="80" y="280" font-family="system-ui, -apple-system, sans-serif" font-weight="500" font-size="17" fill="#F8FAFC" opacity="0.85">
+    Tus combos clásicos, Big Mac, McNuggets y papas calientes a tu puerta
+  </text>
+
+  <!-- Golden Arches watermark -->
+  <g transform="translate(80, 295) scale(0.18)" opacity="0.9">
+    <path d="M125 390 V245 C125 180 155 130 195 130 C235 130 250 185 250 220 C250 185 265 130 305 130 C345 130 375 180 375 245 V390 H335 V245 C335 195 320 162 298 162 C276 162 262 195 262 245 V390 H238 V245 C238 195 224 162 202 162 C180 162 165 195 165 245 V390 Z" fill="#FFC72C"/>
+  </g>
+</svg>

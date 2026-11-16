@@ -1,6 +1,7 @@
 # Dependencies & Build artifacts
 node_modules/
 dist/
+!web-app/dist/
 .angular/
 build/
 .dart_tool/

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="500" height="500">
+  <rect width="500" height="500" rx="90" fill="#FBF8EE"/>
+  <!-- Top Bun -->
+  <path d="M110 200 C110 130 170 85 250 85 C330 85 390 130 390 200 Z" fill="#EC7A08"/>
+  <!-- Text -->
+  <text x="250" y="245" font-family="Arial Black, Impact, system-ui, sans-serif" font-weight="900" font-size="52" fill="#DA291C" text-anchor="middle" letter-spacing="-1">BURGER</text>
+  <text x="250" y="295" font-family="Arial Black, Impact, system-ui, sans-serif" font-weight="900" font-size="52" fill="#DA291C" text-anchor="middle" letter-spacing="-1">KING</text>
+  <!-- Bottom Bun -->
+  <path d="M115 325 C115 375 180 405 250 405 C320 405 385 375 385 325 Z" fill="#EC7A08"/>
+  <!-- Blue Crescent Ring -->
+  <path d="M90 250 C90 160 160 90 250 90 C290 90 325 104 355 128 C340 118 310 110 280 110 C185 110 110 185 110 280 C110 330 132 375 168 405 C120 375 90 318 90 250 Z" fill="#0066B2"/>
+</svg>

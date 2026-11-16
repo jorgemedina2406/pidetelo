@@ -10,8 +10,13 @@ cd "$(dirname "$0")"
 echo "📥 1. Bajando últimos cambios de GitHub..."
 git pull origin main
 
-echo "📦 2. Reconstruyendo Frontend Web-App (Angular)..."
-npm --prefix web-app run build
+# Si npm está instalado en el host, compila localmente; si no, usa el dist ya compilado en git
+if command -v npm &> /dev/null; then
+  echo "📦 2. Reconstruyendo Frontend Web-App con npm local..."
+  npm --prefix web-app run build
+else
+  echo "📦 2. Usando Frontend Web-App precompilado de Git..."
+fi
 
 echo "🔄 3. Reconstruyendo Backend NestJS en Docker..."
 docker compose build backend

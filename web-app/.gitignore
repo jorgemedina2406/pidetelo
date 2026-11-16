@@ -1,7 +1,7 @@
 # See https://docs.github.com/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
 
 # Compiled output
-/dist
+# /dist (tracked for instant zero-dependency deployment to VPS)
 /tmp
 /out-tsc
 /bazel-out
@@ -30,15 +30,13 @@ yarn-error.log
 .history/*
 
 # Miscellaneous
-/.angular/cache
+.angular/cache
 .sass-cache/
 /connect.lock
 /coverage
 /libpeerconnection.log
-testem.log
-/typings
-__screenshots__/
-
-# System files
-.DS_Store
+test.log
 Thumbs.db
+ehthumbs.db
+[Dd]esktop.ini
+$RECYCLE.BIN/
