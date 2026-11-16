@@ -1,7 +1,8 @@
-import { Injectable, NotFoundException, InternalServerErrorException, UnauthorizedException, ForbiddenException, BadRequestException, Optional } from '@nestjs/common';
+import { Injectable, NotFoundException, InternalServerErrorException, UnauthorizedException, ForbiddenException, BadRequestException, Optional, Inject, forwardRef } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service.js';
 import { BiometricVerificationService } from './biometric-verification.service.js';
 import { PlansService } from '../plans/plans.service.js';
+import { TenantsService } from '../tenants/tenants.service.js';
 
 import { randomUUID } from 'crypto';
 
@@ -29,6 +30,7 @@ export class RidersService {
     private supabase: SupabaseService,
     private biometricVerification: BiometricVerificationService,
     @Optional() private plansService?: PlansService,
+    @Optional() @Inject(forwardRef(() => TenantsService)) private tenantsService?: TenantsService,
   ) {
     this.loadFromDisk();
   }
@@ -1040,6 +1042,198 @@ export class RidersService {
     return {
       ownRiders,
       nearbyRiders
+    };
+  }
+
+  // ==============================================================================
+  // BILLETERA MULTI-COMERCIO: CONSULTA DE SALDOS Y POLÍTICAS POR COMERCIO
+  // ==============================================================================
+  async getMerchantBalances(riderId: string) {
+    const sb = this.supabase.getClient();
+
+    // 1. Obtener órdenes entregadas por este motorizado
+    const { data: deliveredOrders, error: ordErr } = await sb
+      .from('orders')
+      .select('id, order_number, tenant_id, delivery_fee, tip, created_at, status')
+      .eq('driver_id', riderId)
+      .eq('status', 'delivered');
+
+    if (ordErr) {
+      console.warn('[RidersService] Error consultando órdenes para balance multi-comercio:', ordErr);
+    }
+
+    // 2. Obtener retiros del motorizado
+    const { data: withdrawals, error: withErr } = await sb
+      .from('rider_withdrawals')
+      .select('*')
+      .eq('rider_id', riderId);
+
+    if (withErr) {
+      console.warn('[RidersService] Error consultando retiros para balance multi-comercio:', withErr);
+    }
+
+    const ordersList = deliveredOrders || [];
+    const withdrawalsList = withdrawals || [];
+
+    // 3. Agrupar ganancias por tenant_id
+    const tenantEarningsMap = new Map<string, { totalEarned: number; totalTips: number; count: number }>();
+    for (const o of ordersList) {
+      if (!o.tenant_id) continue;
+      const cur = tenantEarningsMap.get(o.tenant_id) || { totalEarned: 0, totalTips: 0, count: 0 };
+      const fee = Number(o.delivery_fee) || 0;
+      const tip = Number(o.tip) || 0;
+      cur.totalEarned += (fee + tip);
+      cur.totalTips += tip;
+      cur.count += 1;
+      tenantEarningsMap.set(o.tenant_id, cur);
+    }
+
+    // Sumar retiros completados y pendientes por tenant
+    const tenantWithdrawalsMap = new Map<string, { completed: number; pending: number }>();
+    for (const w of withdrawalsList) {
+      if (!w.tenant_id) continue;
+      const cur = tenantWithdrawalsMap.get(w.tenant_id) || { completed: 0, pending: 0 };
+      const amt = Number(w.amount) || 0;
+      if (w.status === 'completed') {
+        cur.completed += amt;
+      } else if (w.status === 'pending') {
+        cur.pending += amt;
+      }
+      tenantWithdrawalsMap.set(w.tenant_id, cur);
+    }
+
+    // Obtener datos de comercios involucrados (o comercio asignado si no tiene pedidos aún)
+    const rider = await this.findById(riderId);
+    const assignedTenantId = rider?.tenant_id || (rider as any)?.tenantId;
+
+    const tenantIds = new Set<string>([...tenantEarningsMap.keys(), ...tenantWithdrawalsMap.keys()]);
+    if (assignedTenantId) {
+      tenantIds.add(assignedTenantId);
+    }
+
+    const result: any[] = [];
+    const dayNames = ['', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+
+    for (const tId of tenantIds) {
+      let tenantInfo: any = null;
+      let policy: any = null;
+      if (this.tenantsService) {
+        try {
+          tenantInfo = await this.tenantsService.findById(tId);
+          policy = tenantInfo?.riderPayoutPolicy || tenantInfo?.rider_payout_policy;
+        } catch (_) {}
+      }
+
+      if (!policy) {
+        policy = {
+          mode: 'WEEKLY',
+          payoutDayOfWeek: 1,
+          payoutHour: '20:00',
+          minWithdrawalAmount: 5.0,
+          paymentMethod: 'PAGO_MOVIL',
+          emailNotifications: true,
+        };
+      }
+
+      const earnings = tenantEarningsMap.get(tId) || { totalEarned: 0, totalTips: 0, count: 0 };
+      const withs = tenantWithdrawalsMap.get(tId) || { completed: 0, pending: 0 };
+      const availableBalance = Math.max(0, Number((earnings.totalEarned - withs.completed - withs.pending).toFixed(2)));
+
+      let scheduleText = '';
+      if (policy.mode === 'ON_DEMAND') {
+        scheduleText = `Retiro a libre demanda (mínimo $${Number(policy.minWithdrawalAmount || 5).toFixed(2)})`;
+      } else if (policy.mode === 'WEEKLY') {
+        const dName = dayNames[policy.payoutDayOfWeek] || 'Lunes';
+        scheduleText = `Liquidación semanal automática cada ${dName} (${policy.payoutHour || '20:00'})`;
+      } else if (policy.mode === 'DAILY') {
+        scheduleText = `Liquidación diaria automática al cierre (${policy.payoutHour || '22:00'})`;
+      } else if (policy.mode === 'BIWEEKLY') {
+        scheduleText = `Liquidación quincenal automática los días 15 y fin de mes`;
+      }
+
+      const canWithdrawOnDemand = policy.mode === 'ON_DEMAND' && availableBalance >= (policy.minWithdrawalAmount || 5.0);
+
+      result.push({
+        tenantId: tId,
+        merchantName: tenantInfo?.name || 'Comercio Pídetelo',
+        merchantSlug: tenantInfo?.slug || '',
+        logoUrl: tenantInfo?.logo_url || tenantInfo?.logoUrl || '',
+        phone: tenantInfo?.phone || '',
+        totalEarned: Number(earnings.totalEarned.toFixed(2)),
+        totalDeliveredOrders: earnings.count,
+        completedWithdrawn: Number(withs.completed.toFixed(2)),
+        pendingWithdrawn: Number(withs.pending.toFixed(2)),
+        availableBalance,
+        policy,
+        canWithdrawOnDemand,
+        scheduleText,
+      });
+    }
+
+    return result;
+  }
+
+  // ==============================================================================
+  // CREACIÓN DE SOLICITUD DE RETIRO DE MOTORIZADO A UN COMERCIO (SOLO EN ON_DEMAND)
+  // ==============================================================================
+  async createWithdrawal(riderId: string, dto: {
+    tenantId: string;
+    amount: number;
+    paymentAccount?: any;
+    notes?: string;
+  }) {
+    const sb = this.supabase.getClient();
+    const rider = await this.findById(riderId);
+    if (!rider) throw new NotFoundException('Repartidor no encontrado');
+
+    const balances = await this.getMerchantBalances(riderId);
+    const merchantBalance = balances.find(b => b.tenantId === dto.tenantId);
+    if (!merchantBalance) {
+      throw new BadRequestException('No posees saldo acumulado con este comercio');
+    }
+
+    if (merchantBalance.policy.mode !== 'ON_DEMAND') {
+      throw new BadRequestException(`Este comercio opera bajo liquidación automática programada (${merchantBalance.scheduleText}). Los fondos se transfieren directamente a tu cuenta sin necesidad de solicitud.`);
+    }
+
+    if (dto.amount > merchantBalance.availableBalance) {
+      throw new BadRequestException(`El monto solicitado ($${dto.amount}) excede tu saldo disponible ($${merchantBalance.availableBalance}) con este comercio.`);
+    }
+
+    if (dto.amount < (merchantBalance.policy.minWithdrawalAmount || 5.0)) {
+      throw new BadRequestException(`El monto mínimo de retiro configurado por este comercio es de $${merchantBalance.policy.minWithdrawalAmount || 5.0}`);
+    }
+
+    const payload: any = {
+      rider_id: riderId,
+      rider_name: rider.name || 'Repartidor',
+      rider_phone: rider.phone || '',
+      tenant_id: dto.tenantId,
+      merchant_name: merchantBalance.merchantName,
+      amount: dto.amount,
+      currency: 'USD',
+      account_type: dto.paymentAccount?.type || 'pago_movil',
+      payment_account: dto.paymentAccount || (rider.payment_accounts && rider.payment_accounts[0]) || {},
+      status: 'pending',
+      notes: dto.notes || '',
+      requested_at: new Date().toISOString()
+    };
+
+    const { data, error } = await sb
+      .from('rider_withdrawals')
+      .insert(payload)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[RidersService] Error insertando rider_withdrawal:', error);
+      throw new InternalServerErrorException('Error registrando solicitud de retiro');
+    }
+
+    return {
+      success: true,
+      message: '¡Solicitud de retiro enviada exitosamente al comercio!',
+      withdrawal: data
     };
   }
 }

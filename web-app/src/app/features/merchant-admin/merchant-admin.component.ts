@@ -941,14 +941,23 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
   readonly ownFleetRiders = computed(() => {
     const branchId = this.activeBranchId();
     const isMain = this.isSelectedBranchMain();
-    return this.riders().filter(r => 
-      !r.isIndependent && 
-      (!branchId || branchId === 'all' || !r.branchId || r.branchId === branchId || isMain)
-    );
+    const currentTid = this.currentTenant()?.id || this.auth.currentUser()?.tenantId;
+    return this.riders().filter(r => {
+      const belongsToStore = (currentTid && (r.tenantId === currentTid || (r as any).tenant_id === currentTid));
+      if (belongsToStore) {
+        return !branchId || branchId === 'all' || !r.branchId || r.branchId === branchId || isMain;
+      }
+      return !r.isIndependent && (!branchId || branchId === 'all' || !r.branchId || r.branchId === branchId || isMain);
+    });
   });
 
   readonly networkRiders = computed(() => {
-    return this.riders().filter(r => r.isIndependent);
+    const currentTid = this.currentTenant()?.id || this.auth.currentUser()?.tenantId;
+    return this.riders().filter(r => {
+      const belongsToStore = (currentTid && (r.tenantId === currentTid || (r as any).tenant_id === currentTid));
+      if (belongsToStore) return false;
+      return r.isIndependent;
+    });
   });
 
   getOwnRidersForOrder(order: Order): Rider[] {
@@ -2652,6 +2661,41 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       this.isSavedNotificationVisible.set(true);
       setTimeout(() => this.isSavedNotificationVisible.set(false), 2500);
     }
+  }
+
+  handleUpdatePayoutPolicy(policy: any): void {
+    const tid = this.currentTenant().id || this.auth.currentUser()?.tenantId;
+    if (!tid) return;
+
+    this.api.updatePayoutPolicy(tid, policy).subscribe({
+      next: (res) => {
+        this.currentTenant.update(t => ({
+          ...t,
+          riderPayoutPolicy: res,
+          rider_payout_policy: res
+        }));
+        this.isSavedNotificationVisible.set(true);
+        setTimeout(() => this.isSavedNotificationVisible.set(false), 3000);
+      },
+      error: (err) => {
+        console.warn('[MerchantAdmin] Error guardando política de pagos:', err);
+      }
+    });
+  }
+
+  handleSendEmailReminder(summary: any): void {
+    const tid = this.currentTenant().id || this.auth.currentUser()?.tenantId;
+    if (!tid) return;
+
+    this.api.sendPayoutReminderEmail(tid, summary).subscribe({
+      next: () => {
+        this.isSavedNotificationVisible.set(true);
+        setTimeout(() => this.isSavedNotificationVisible.set(false), 3000);
+      },
+      error: (err) => {
+        console.warn('[MerchantAdmin] Error enviando recordatorio por correo:', err);
+      }
+    });
   }
 
   getPointAtProgress(pct: number): [number, number] {

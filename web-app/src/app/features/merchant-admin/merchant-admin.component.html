@@ -2111,10 +2111,14 @@
 
     <!-- ================= TAB 3: FLOTA DE REPARTIDORES ================= -->
     @if (activeTab() === 'riders') {
-    <app-merchant-riders-tab [riders]="ownFleetRiders()" [networkRiders]="networkRiders()" [orders]="orders()" [withdrawals]="riderWithdrawals()"
-      [bcvRate]="currentTenant().currencySettings?.exchangeRate || 45.50" [selectedBranchName]="selectedBranch()?.name"
-      (newRider)="openNewRiderModal()" (deleteRider)="deleteRider($event)"
+    <app-merchant-riders-tab [riders]="ownFleetRiders()" [networkRiders]="networkRiders()" [orders]="orders()"
+      [withdrawals]="riderWithdrawals()" [bcvRate]="currentTenant().currencySettings?.exchangeRate || 45.50"
+      [payoutPolicy]="currentTenant().riderPayoutPolicy || currentTenant().rider_payout_policy"
+      [tenantId]="currentTenant().id"
+      [selectedBranchName]="selectedBranch()?.name" (newRider)="openNewRiderModal()" (deleteRider)="deleteRider($event)"
       (locateRider)="activeTab.set('gps_map'); flyToRider($event)"
+      (updatePayoutPolicy)="handleUpdatePayoutPolicy($event)"
+      (sendEmailReminder)="handleSendEmailReminder($event)"
       (processWithdrawal)="handleProcessWithdrawal($event)">
     </app-merchant-riders-tab>
     }
@@ -2140,7 +2144,7 @@
           </div>
 
           <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Monitoreo satelital exclusivo de la ubicación de tus motorizados en tiempo real (0$ Costos de Google Maps).
+            Monitoreo satelital exclusivo de la ubicación de tus motorizados en tiempo real.
           </p>
         </div>
 

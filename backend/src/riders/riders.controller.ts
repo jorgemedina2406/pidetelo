@@ -140,6 +140,18 @@ export class RidersController {
     return this.ridersService.saveTelemetry(telemetry);
   }
 
+  @Get(':id/merchant-balances')
+  @ApiOperation({ summary: 'Obtener desglose de saldos acumulados por comercio y política de liquidación del motorizado' })
+  getMerchantBalances(@Param('id') id: string) {
+    return this.ridersService.getMerchantBalances(id);
+  }
+
+  @Post(':id/withdrawals')
+  @ApiOperation({ summary: 'Solicitar retiro a un comercio específico (disponible solo si el comercio opera a Libre Demanda)' })
+  createWithdrawal(@Param('id') id: string, @Body() dto: any) {
+    return this.ridersService.createWithdrawal(id, dto);
+  }
+
   @Get('orders/:orderId/telemetry')
   @ApiOperation({ summary: 'Consultar historial de telemetría de un pedido para la ruta en el mapa' })
   getOrderTelemetry(@Param('orderId') orderId: string) {

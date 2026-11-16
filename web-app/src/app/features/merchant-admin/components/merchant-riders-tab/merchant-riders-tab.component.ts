@@ -34,10 +34,22 @@ export class MerchantRidersTabComponent {
   @Input() withdrawals: RiderWithdrawal[] = [];
   @Input() selectedBranchName?: string;
   @Input() bcvRate: number = 45.50;
+  @Input() payoutPolicy: any = {
+    mode: 'WEEKLY',
+    payoutDayOfWeek: 1,
+    payoutHour: '20:00',
+    minWithdrawalAmount: 5.0,
+    paymentMethod: 'PAGO_MOVIL',
+    payoutNotes: 'Liquidación semanal directa por Pago Móvil todos los Lunes.',
+    emailNotifications: true
+  };
+  @Input() tenantId?: string;
 
   @Output() newRider = new EventEmitter<void>();
   @Output() deleteRider = new EventEmitter<Rider>();
   @Output() locateRider = new EventEmitter<Rider>();
+  @Output() updatePayoutPolicy = new EventEmitter<any>();
+  @Output() sendEmailReminder = new EventEmitter<any>();
   @Output() processWithdrawal = new EventEmitter<{
     withdrawal: RiderWithdrawal;
     status: 'completed' | 'rejected';
@@ -52,6 +64,20 @@ export class MerchantRidersTabComponent {
   readonly isRejectModalOpen = signal(false);
   readonly selectedWithdrawalForReject = signal<RiderWithdrawal | null>(null);
   readonly rejectionReasonInput = signal<string>('');
+
+  // --- POLÍTICA DE LIQUIDACIÓN ---
+  readonly isPolicyModalOpen = signal(false);
+  readonly isSendingEmailReminder = signal(false);
+  readonly emailReminderSuccess = signal(false);
+  policyForm: any = {
+    mode: 'WEEKLY',
+    payoutDayOfWeek: 1,
+    payoutHour: '20:00',
+    minWithdrawalAmount: 5.0,
+    paymentMethod: 'PAGO_MOVIL',
+    payoutNotes: '',
+    emailNotifications: true
+  };
 
   get pendingWithdrawalsCount(): number {
     return this.withdrawals.filter(w => w.status === 'pending').length;
@@ -184,5 +210,95 @@ export class MerchantRidersTabComponent {
       `Hola ${w.riderName}, te escribimos de ${w.merchantName} respecto a tu solicitud de retiro de $${w.amount.toFixed(2)}.`
     );
     return `https://wa.me/${cleanPhone}?text=${text}`;
+  }
+
+  // --- MÉTODOS DE POLÍTICA DE LIQUIDACIÓN ---
+  openPolicyModal(): void {
+    const cur = this.payoutPolicy || {};
+    this.policyForm = {
+      mode: cur.mode || 'WEEKLY',
+      payoutDayOfWeek: cur.payoutDayOfWeek != null ? cur.payoutDayOfWeek : 1,
+      payoutHour: cur.payoutHour || '20:00',
+      minWithdrawalAmount: cur.minWithdrawalAmount != null ? cur.minWithdrawalAmount : 5.0,
+      paymentMethod: cur.paymentMethod || 'PAGO_MOVIL',
+      payoutNotes: cur.payoutNotes || '',
+      emailNotifications: cur.emailNotifications !== false
+    };
+    this.isPolicyModalOpen.set(true);
+  }
+
+  closePolicyModal(): void {
+    this.isPolicyModalOpen.set(false);
+  }
+
+  savePolicy(): void {
+    this.updatePayoutPolicy.emit(this.policyForm);
+    this.closePolicyModal();
+  }
+
+  get policyModeLabel(): string {
+    const m = this.payoutPolicy?.mode || 'WEEKLY';
+    switch (m) {
+      case 'ON_DEMAND': return 'Libre Demanda (Cuando el Rider lo solicite)';
+      case 'DAILY': return `Diario al Cierre (${this.payoutPolicy?.payoutHour || '22:00'})`;
+      case 'WEEKLY': {
+        const days = ['', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+        const day = days[this.payoutPolicy?.payoutDayOfWeek] || 'Lunes';
+        return `Semanal los ${day}s (${this.payoutPolicy?.payoutHour || '20:00'})`;
+      }
+      case 'BIWEEKLY': return 'Quincenal (Días 15 y fin de mes)';
+      default: return 'Semanal (Lunes)';
+    }
+  }
+
+  get isTodayScheduledPayoutDay(): boolean {
+    const m = this.payoutPolicy?.mode || 'WEEKLY';
+    if (m === 'DAILY') return true;
+    if (m === 'ON_DEMAND') return false;
+    const now = new Date();
+    if (m === 'WEEKLY') {
+      const day = now.getDay(); // 0 = Domingo, 1 = Lunes, ..., 6 = Sabado
+      const isoDay = day === 0 ? 7 : day;
+      return isoDay === (this.payoutPolicy?.payoutDayOfWeek || 1);
+    }
+    if (m === 'BIWEEKLY') {
+      const d = now.getDate();
+      return d === 15 || d === 30 || d === 31 || d === 28;
+    }
+    return false;
+  }
+
+  get pendingScheduledPayouts(): RiderReportSummary[] {
+    return this.riderReportSummaries.filter(r => r.totalDeliveryFees > 0);
+  }
+
+  triggerSendEmailReminder(): void {
+    if (this.isSendingEmailReminder()) return;
+    this.isSendingEmailReminder.set(true);
+    this.emailReminderSuccess.set(false);
+
+    const summary = {
+      policy: this.payoutPolicy,
+      date: new Date().toISOString(),
+      ridersCount: this.pendingScheduledPayouts.length,
+      totalAmountUsd: this.totalDeliveryFeesSum,
+      totalAmountBs: Number((this.totalDeliveryFeesSum * this.bcvRate).toFixed(2)),
+      riders: this.pendingScheduledPayouts.map(r => ({
+        riderId: r.riderId,
+        riderName: r.riderName,
+        phone: r.riderPhone,
+        totalDeliveries: r.totalDeliveries,
+        amountUsd: r.totalDeliveryFees,
+        amountBs: Number((r.totalDeliveryFees * this.bcvRate).toFixed(2))
+      }))
+    };
+
+    this.sendEmailReminder.emit(summary);
+
+    setTimeout(() => {
+      this.isSendingEmailReminder.set(false);
+      this.emailReminderSuccess.set(true);
+      setTimeout(() => this.emailReminderSuccess.set(false), 5000);
+    }, 1200);
   }
 }

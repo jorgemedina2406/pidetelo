@@ -405,37 +405,138 @@
         <!-- ================= TAB 2: MI BILLETERA / BALANCE ================= -->
         @if (activeTab() === 'wallet') {
           <div class="space-y-4">
-            
+
+            <!-- Mensaje de Éxito en Retiro -->
+            @if (withdrawSuccessMessage()) {
+              <div class="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-bold flex items-center gap-2 shadow-xs animate-fade-in">
+                <app-icon name="check" [size]="16" className="text-emerald-600 flex-shrink-0"></app-icon>
+                <span>{{ withdrawSuccessMessage() }}</span>
+              </div>
+            }
+
             <!-- Balance Card (Clean SaaS Stripe style) -->
-            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-5 shadow-xs space-y-4">
-              <div class="flex items-center justify-between text-xs text-slate-500 font-semibold uppercase">
-                <span>Balance Disponible</span>
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-xs space-y-4">
+              <div class="flex items-center justify-between text-xs text-slate-500 font-semibold uppercase tracking-wider">
+                <span>Balance Disponible Total</span>
                 <span class="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
                   <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                   Activo
                 </span>
               </div>
 
-              <div class="text-3xl font-extrabold text-slate-900 dark:text-white">
+              <div class="text-3xl font-extrabold text-slate-900 dark:text-white font-mono">
                 ${{ (todayEarnings() + todayTips()).toFixed(2) }}
               </div>
 
               <div class="grid grid-cols-2 gap-3 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs">
                 <div>
                   <div class="text-slate-400 text-[10px] uppercase font-semibold">Tarifas Despacho</div>
-                  <div class="font-bold text-slate-900 dark:text-white text-sm mt-0.5">${{ todayEarnings().toFixed(2) }}</div>
+                  <div class="font-bold text-slate-900 dark:text-white text-sm mt-0.5 font-mono">${{ todayEarnings().toFixed(2) }}</div>
                 </div>
                 <div>
                   <div class="text-slate-400 text-[10px] uppercase font-semibold">Propinas 100%</div>
-                  <div class="font-bold text-slate-900 dark:text-white text-sm mt-0.5">${{ todayTips().toFixed(2) }}</div>
+                  <div class="font-bold text-slate-900 dark:text-white text-sm mt-0.5 font-mono">${{ todayTips().toFixed(2) }}</div>
                 </div>
               </div>
+            </div>
 
-              <button (click)="requestWithdrawal()" 
-                      class="w-full py-2.5 rounded-md bg-brand-500 hover:bg-brand-600 text-white font-semibold text-xs shadow-xs transition-colors flex items-center justify-center gap-1.5">
-                <app-icon name="wallet" [size]="14" className="text-white"></app-icon>
-                <span>Solicitar Retiro a Cuenta / Pago Móvil</span>
-              </button>
+            <!-- SECCIÓN: SALDOS Y POLÍTICAS POR COMERCIO -->
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <h3 class="text-xs font-extrabold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                  <app-icon name="credit-card" [size]="14" className="text-brand-500"></app-icon>
+                  <span>Saldos y Políticas por Comercio</span>
+                </h3>
+                <span class="text-[11px] font-bold text-slate-400">
+                  {{ merchantBalances().length }} comercios
+                </span>
+              </div>
+
+              @if (merchantBalances().length === 0) {
+                <div class="p-6 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-center text-xs text-slate-400 space-y-1">
+                  <p class="font-semibold">Sin comercios asignados o pedidos previos.</p>
+                  <p class="text-[11px]">Cuando completes entregas para comercios afiliados, aquí verás el acumulado exacto y la política de pago de cada uno.</p>
+                </div>
+              } @else {
+                <div class="space-y-3">
+                  @for (m of merchantBalances(); track m.tenantId) {
+                    <div class="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
+                      <div class="flex items-start justify-between gap-2">
+                        <div class="flex items-center gap-2.5">
+                          @if (m.logoUrl) {
+                            <img [src]="m.logoUrl" [alt]="m.merchantName" class="w-9 h-9 rounded-lg object-cover border border-slate-100 dark:border-slate-800 bg-white" />
+                          } @else {
+                            <div class="w-9 h-9 rounded-lg bg-brand-500/10 text-brand-600 font-bold flex items-center justify-center text-xs">
+                              {{ m.merchantName.slice(0, 2).toUpperCase() }}
+                            </div>
+                          }
+                          <div>
+                            <div class="font-bold text-xs text-slate-900 dark:text-white">{{ m.merchantName }}</div>
+                            <div class="text-[10px] text-slate-400 font-mono">{{ m.totalDeliveredOrders }} despachos completados</div>
+                          </div>
+                        </div>
+
+                        <!-- Badge de Modo -->
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-black"
+                              [class.bg-emerald-500/15]="m.policy?.mode === 'ON_DEMAND'"
+                              [class.text-emerald-700]="m.policy?.mode === 'ON_DEMAND'"
+                              [class.dark:text-emerald-400]="m.policy?.mode === 'ON_DEMAND'"
+                              [class.bg-blue-500/15]="m.policy?.mode !== 'ON_DEMAND'"
+                              [class.text-blue-700]="m.policy?.mode !== 'ON_DEMAND'"
+                              [class.dark:text-blue-400]="m.policy?.mode !== 'ON_DEMAND'">
+                          {{ m.policy?.mode === 'ON_DEMAND' ? 'Libre Demanda' : 'Liquidación Programada' }}
+                        </span>
+                      </div>
+
+                      <!-- Monto Acumulado con este Comercio -->
+                      <div class="p-3 rounded-lg bg-slate-50 dark:bg-slate-850 flex items-center justify-between text-xs">
+                        <div>
+                          <span class="text-[10px] text-slate-400 uppercase font-semibold block">Saldo Disponible</span>
+                          <span class="text-base font-black text-slate-900 dark:text-white font-mono">
+                            ${{ m.availableBalance.toFixed(2) }}
+                          </span>
+                        </div>
+                        <div class="text-right">
+                          <span class="text-[10px] text-slate-400 uppercase font-semibold block">Frecuencia de Pago</span>
+                          <span class="text-[11px] font-bold text-brand-600 dark:text-brand-400">
+                            {{ m.scheduleText }}
+                          </span>
+                        </div>
+                      </div>
+
+                      <!-- Explicación de la Política y Botón de Retiro Condicional -->
+                      @if (m.policy?.mode === 'ON_DEMAND') {
+                        <div class="space-y-2">
+                          <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                            Este comercio te permite solicitar tu retiro libremente cuando desees (Monto mínimo: ${{ (m.policy?.minWithdrawalAmount || 5).toFixed(2) }}).
+                          </p>
+                          <button (click)="openMerchantWithdrawModal(m)"
+                                  [disabled]="!m.canWithdrawOnDemand"
+                                  [class.bg-emerald-600]="m.canWithdrawOnDemand"
+                                  [class.hover:bg-emerald-700]="m.canWithdrawOnDemand"
+                                  [class.text-white]="m.canWithdrawOnDemand"
+                                  [class.bg-slate-200]="!m.canWithdrawOnDemand"
+                                  [class.dark:bg-slate-800]="!m.canWithdrawOnDemand"
+                                  [class.text-slate-400]="!m.canWithdrawOnDemand"
+                                  [class.cursor-pointer]="m.canWithdrawOnDemand"
+                                  [class.cursor-not-allowed]="!m.canWithdrawOnDemand"
+                                  class="w-full py-2 rounded-lg font-bold text-xs transition-all flex items-center justify-center gap-1.5 shadow-xs">
+                            <app-icon name="wallet" [size]="14"></app-icon>
+                            <span>{{ m.canWithdrawOnDemand ? ('Solicitar Retiro a ' + m.merchantName + ' ($' + m.availableBalance.toFixed(2) + ')') : ('Mínimo de retiro: $' + (m.policy?.minWithdrawalAmount || 5).toFixed(2)) }}</span>
+                          </button>
+                        </div>
+                      } @else {
+                        <div class="p-2.5 rounded-lg bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/50 dark:border-blue-900/40 text-[11px] text-blue-900 dark:text-blue-300 flex items-start gap-2">
+                          <app-icon name="info" [size]="14" className="text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5"></app-icon>
+                          <span>
+                            <strong>Liquidación Automática:</strong> El comercio transfiere directamente a tu Pago Móvil en la fecha programada. <strong>No necesitas solicitar retiro.</strong>
+                          </span>
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+              }
             </div>
 
             <!-- Stats -->
@@ -998,6 +1099,83 @@
 
         </nav>
       </div>
+
+    <!-- MODAL: SOLICITAR RETIRO A COMERCIO -->
+    @if (isWithdrawModalOpen() && selectedMerchantForWithdraw()) {
+      <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full p-5 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+          <div class="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
+                <app-icon name="wallet" [size]="16"></app-icon>
+              </div>
+              <h3 class="font-extrabold text-sm text-slate-900 dark:text-white">Solicitar Retiro</h3>
+            </div>
+            <button (click)="closeWithdrawModal()" class="text-slate-400 hover:text-slate-600 cursor-pointer">
+              <app-icon name="x" [size]="16"></app-icon>
+            </button>
+          </div>
+
+          <div class="space-y-3 text-xs">
+            <!-- Comercio y Saldo -->
+            <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-850 space-y-1">
+              <span class="text-[10px] text-slate-400 font-semibold uppercase">Comercio Emisor</span>
+              <div class="font-bold text-slate-900 dark:text-white">{{ selectedMerchantForWithdraw().merchantName }}</div>
+              <div class="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold font-mono">
+                Saldo Disponible: ${{ selectedMerchantForWithdraw().availableBalance.toFixed(2) }}
+              </div>
+            </div>
+
+            <!-- Monto -->
+            <div class="space-y-1">
+              <label class="font-bold text-slate-700 dark:text-slate-300">Monto a Retirar ($ USD)</label>
+              <input type="number" step="0.5" min="1" [max]="selectedMerchantForWithdraw().availableBalance"
+                     [ngModel]="withdrawAmountInput()"
+                     (ngModelChange)="withdrawAmountInput.set($event)"
+                     class="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-mono font-bold text-sm outline-none" />
+              <span class="text-[10px] text-slate-400">
+                Mínimo permitido: ${{ (selectedMerchantForWithdraw().policy?.minWithdrawalAmount || 5).toFixed(2) }}
+              </span>
+            </div>
+
+            <!-- Cuenta de Destino -->
+            <div class="p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-850 space-y-1 text-[11px]">
+              <span class="text-[10px] text-slate-400 font-semibold uppercase">Cuenta de Pago Móvil Registrada</span>
+              @let acc = riderProfile().paymentAccounts[0];
+              @if (acc) {
+                <div class="font-bold text-slate-800 dark:text-slate-200">{{ acc.bankOrPlatform }}</div>
+                <div class="font-mono text-slate-600 dark:text-slate-400">📱 {{ acc.accountIdentifier }} | C.I: {{ acc.holderId }}</div>
+                <div class="text-[10px] text-slate-400 truncate">{{ acc.holderName }}</div>
+              } @else {
+                <div class="text-rose-500 font-bold">Sin cuenta configurada en Perfil</div>
+              }
+            </div>
+
+            <!-- Notas -->
+            <div class="space-y-1">
+              <label class="font-bold text-slate-700 dark:text-slate-300">Nota para el Comercio (Opcional)</label>
+              <input type="text" [ngModel]="withdrawNotesInput()"
+                     (ngModelChange)="withdrawNotesInput.set($event)"
+                     placeholder="Ej: Pago móvil urgente turno mañana"
+                     class="w-full p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs outline-none" />
+            </div>
+          </div>
+
+          <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+            <button (click)="closeWithdrawModal()"
+                    class="px-3.5 py-2 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-xl cursor-pointer">
+              Cancelar
+            </button>
+            <button (click)="confirmMerchantWithdraw()"
+                    [disabled]="isSubmittingWithdraw()"
+                    class="px-4 py-2 text-xs font-black bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer">
+              <app-icon name="check" [size]="14"></app-icon>
+              <span>{{ isSubmittingWithdraw() ? 'Enviando...' : 'Confirmar Retiro' }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    }
 
     </div>
   </div>

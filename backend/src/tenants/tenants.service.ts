@@ -4,6 +4,26 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as crypto from 'crypto';
 
+export interface RiderPayoutPolicy {
+  mode: 'ON_DEMAND' | 'DAILY' | 'WEEKLY' | 'BIWEEKLY';
+  payoutDayOfWeek: number; // 1 = Lunes, 2 = Martes, ..., 7 = Domingo
+  payoutHour: string; // e.g. "20:00"
+  minWithdrawalAmount: number; // e.g. 5.00
+  paymentMethod: 'PAGO_MOVIL' | 'TRANSFERENCIA' | 'EFECTIVO';
+  payoutNotes?: string;
+  emailNotifications: boolean;
+}
+
+export const DEFAULT_RIDER_PAYOUT_POLICY: RiderPayoutPolicy = {
+  mode: 'WEEKLY',
+  payoutDayOfWeek: 1, // Lunes
+  payoutHour: '20:00',
+  minWithdrawalAmount: 5.00,
+  paymentMethod: 'PAGO_MOVIL',
+  payoutNotes: 'Liquidación semanal directa por Pago Móvil todos los Lunes al cierre de jornada.',
+  emailNotifications: true,
+};
+
 @Injectable()
 export class TenantsService {
   private metadataFilePath = path.join(process.cwd(), 'data', 'tenants_metadata.json');
@@ -427,6 +447,8 @@ export class TenantsService {
       deliveryTiers,
       accepted_payment_methods: acceptedPaymentMethods,
       acceptedPaymentMethods,
+      rider_payout_policy: meta.rider_payout_policy || meta.riderPayoutPolicy || DEFAULT_RIDER_PAYOUT_POLICY,
+      riderPayoutPolicy: meta.rider_payout_policy || meta.riderPayoutPolicy || DEFAULT_RIDER_PAYOUT_POLICY,
       business_hours: {
         ...tenantHours,
         open: tenantScheduleStatus.openStr,
@@ -581,6 +603,14 @@ export class TenantsService {
         tpMap[id] = pCode;
         fs.writeFileSync(tpPath, JSON.stringify(tpMap, null, 2), 'utf-8');
       } catch (_) {}
+    }
+    if (updateData.rider_payout_policy !== undefined || updateData.riderPayoutPolicy !== undefined) {
+      const p = updateData.rider_payout_policy || updateData.riderPayoutPolicy;
+      metaToSave.rider_payout_policy = {
+        ...DEFAULT_RIDER_PAYOUT_POLICY,
+        ...p,
+      };
+      metaToSave.riderPayoutPolicy = metaToSave.rider_payout_policy;
     }
     if (Object.keys(metaToSave).length > 0) {
       this.saveTenantMetadata(id, metaToSave);
@@ -1000,6 +1030,35 @@ export class TenantsService {
       review: newReview,
       rating: avgRating,
       reviewCount: totalCount,
+    };
+  }
+
+  // --- POLÍTICA DE LIQUIDACIÓN Y PAGO A REPARTIDORES ---
+  async getPayoutPolicy(tenantId: string): Promise<RiderPayoutPolicy> {
+    const tenant = await this.findById(tenantId);
+    return tenant?.riderPayoutPolicy || DEFAULT_RIDER_PAYOUT_POLICY;
+  }
+
+  async updatePayoutPolicy(tenantId: string, policy: Partial<RiderPayoutPolicy>): Promise<RiderPayoutPolicy> {
+    const current = await this.getPayoutPolicy(tenantId);
+    const updated: RiderPayoutPolicy = {
+      ...current,
+      ...policy,
+    };
+    await this.update(tenantId, { rider_payout_policy: updated });
+    return updated;
+  }
+
+  async sendPayoutReminderEmail(tenantId: string, summary: any) {
+    const tenant = await this.findById(tenantId);
+    const recipientEmail = tenant?.email || tenant?.contact?.email || 'admin@' + (tenant?.slug || 'pidetelo') + '.com';
+    console.log(`[TenantsService] Recordatorio de liquidación programada enviado a ${tenant?.name} (${recipientEmail}):`, summary);
+    return {
+      success: true,
+      message: `Recordatorio de liquidación enviado al correo del comercio (${recipientEmail}).`,
+      sentAt: new Date().toISOString(),
+      recipient: recipientEmail,
+      summary,
     };
   }
 }

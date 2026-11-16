@@ -49,4 +49,22 @@ export class TenantsController {
   createReview(@Param('id') id: string, @Body() body: any) {
     return this.tenantsService.createTenantReview(id, body);
   }
+
+  @Get(':id/payout-policy')
+  @ApiOperation({ summary: 'Consultar la política de liquidación y pago a motorizados del comercio' })
+  getPayoutPolicy(@Param('id') id: string) {
+    return this.tenantsService.getPayoutPolicy(id);
+  }
+
+  @Put(':id/payout-policy')
+  @ApiOperation({ summary: 'Actualizar la política de liquidación y pago a motorizados del comercio' })
+  updatePayoutPolicy(@Param('id') id: string, @Body() policy: any) {
+    return this.tenantsService.updatePayoutPolicy(id, policy);
+  }
+
+  @Post(':id/payout-reminder-email')
+  @ApiOperation({ summary: 'Enviar recordatorio por correo electrónico con el corte de liquidación de motorizados' })
+  sendPayoutReminderEmail(@Param('id') id: string, @Body() summary: any) {
+    return this.tenantsService.sendPayoutReminderEmail(id, summary);
+  }
 }

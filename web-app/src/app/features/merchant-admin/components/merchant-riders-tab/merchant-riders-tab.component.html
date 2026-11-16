@@ -76,13 +76,22 @@
       </button>
     </div>
 
-    @if (activeSubTab() === 'fleet') {
-      <button (click)="newRider.emit()"
-        class="bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm flex items-center gap-2 transition-all active:scale-95 cursor-pointer">
-        <app-icon name="plus" [size]="16" className="text-white"></app-icon>
-        <span>{{ i18n.t('ma.newRider') }}</span>
+    <div class="flex items-center gap-2">
+      <!-- Botón de Configuración de Política de Liquidación -->
+      <button (click)="openPolicyModal()"
+              class="bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-bold px-3.5 py-2.5 rounded-xl shadow-xs flex items-center gap-2 transition-all active:scale-95 cursor-pointer">
+        <app-icon name="settings" [size]="15" className="text-slate-500 dark:text-slate-400"></app-icon>
+        <span>Política de Liquidación</span>
       </button>
-    }
+
+      @if (activeSubTab() === 'fleet') {
+        <button (click)="newRider.emit()"
+          class="bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm flex items-center gap-2 transition-all active:scale-95 cursor-pointer">
+          <app-icon name="plus" [size]="16" className="text-white"></app-icon>
+          <span>{{ i18n.t('ma.newRider') }}</span>
+        </button>
+      }
+    </div>
   </div>
 
   <!-- ======================================================== -->
@@ -472,18 +481,122 @@
   <!-- VISTA 4: SOLICITUDES DE RETIRO / LIQUIDACIÓN A RIDERS -->
   <!-- ======================================================== -->
   @if (activeSubTab() === 'withdrawals') {
-    @if (withdrawals.length === 0) {
-      <div class="card-adaptive rounded-2xl p-12 text-center space-y-3 border border-dashed border-slate-300 dark:border-slate-800 animate-fade-in">
-        <div class="w-16 h-16 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 mx-auto flex items-center justify-center">
-          <app-icon name="dollar-sign" [size]="32"></app-icon>
+    <div class="space-y-4 animate-fade-in">
+      <!-- Banner Informativo de Política de Liquidación del Comercio -->
+      <div class="card-adaptive rounded-2xl p-5 border border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-4 bg-gradient-to-r from-slate-50 via-white to-brand-500/5 dark:from-slate-900 dark:via-slate-900 dark:to-brand-500/10">
+        <div class="flex items-center gap-3.5">
+          <div class="w-11 h-11 rounded-xl bg-brand-500/15 text-brand-600 dark:text-brand-400 flex items-center justify-center flex-shrink-0">
+            <app-icon name="credit-card" [size]="22"></app-icon>
+          </div>
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <h3 class="text-sm font-extrabold text-slate-900 dark:text-white">Política de Pagos a Repartidores</h3>
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider"
+                    [class.bg-blue-500/15]="payoutPolicy?.mode !== 'ON_DEMAND'"
+                    [class.text-blue-700]="payoutPolicy?.mode !== 'ON_DEMAND'"
+                    [class.dark:text-blue-400]="payoutPolicy?.mode !== 'ON_DEMAND'"
+                    [class.bg-emerald-500/15]="payoutPolicy?.mode === 'ON_DEMAND'"
+                    [class.text-emerald-700]="payoutPolicy?.mode === 'ON_DEMAND'"
+                    [class.dark:text-emerald-400]="payoutPolicy?.mode === 'ON_DEMAND'">
+                {{ policyModeLabel }}
+              </span>
+              @if (isTodayScheduledPayoutDay) {
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500 text-white animate-pulse">
+                  🔔 ¡Hoy es día de Liquidación!
+                </span>
+              }
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-2xl leading-relaxed">
+              @if (payoutPolicy?.mode === 'ON_DEMAND') {
+                Tus repartidores pueden solicitar el retiro de sus ganancias acumuladas en cualquier momento (Mínimo ${{ payoutPolicy?.minWithdrawalAmount || 5.0 }}).
+              } @else {
+                Tus repartidores tienen fecha programada de liquidación. No necesitan solicitar retiro individualmente; el sistema te genera el corte para que les transfieras a su Pago Móvil.
+              }
+            </p>
+          </div>
         </div>
-        <h3 class="text-base font-extrabold text-slate-900 dark:text-white">Sin Solicitudes de Retiro</h3>
-        <p class="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
-          Cuando los repartidores acumulen saldo por fletes de entrega y soliciten su retiro, aparecerán listados aquí para que audites sus datos bancarios y les transfieras vía Pago Móvil.
-        </p>
+
+        <div class="flex items-center gap-2">
+          @if (payoutPolicy?.mode !== 'ON_DEMAND') {
+            <button (click)="triggerSendEmailReminder()"
+                    [disabled]="isSendingEmailReminder()"
+                    class="px-3.5 py-2 rounded-xl text-xs font-bold border transition-all flex items-center gap-2 cursor-pointer"
+                    [class.bg-emerald-50]="emailReminderSuccess()"
+                    [class.border-emerald-300]="emailReminderSuccess()"
+                    [class.text-emerald-700]="emailReminderSuccess()"
+                    [class.bg-white]="!emailReminderSuccess()"
+                    [class.dark:bg-slate-800]="!emailReminderSuccess()"
+                    [class.border-slate-200]="!emailReminderSuccess()"
+                    [class.dark:border-slate-700]="!emailReminderSuccess()"
+                    [class.text-slate-700]="!emailReminderSuccess()"
+                    [class.dark:text-slate-200]="!emailReminderSuccess()">
+              <app-icon [name]="emailReminderSuccess() ? 'check' : 'mail'" [size]="14"></app-icon>
+              <span>{{ emailReminderSuccess() ? '¡Correo Enviado!' : (isSendingEmailReminder() ? 'Enviando...' : 'Recordatorio por Email') }}</span>
+            </button>
+          }
+          <button (click)="openPolicyModal()"
+                  class="px-3.5 py-2 rounded-xl text-xs font-bold bg-brand-500 hover:bg-brand-600 text-white shadow-xs transition-all flex items-center gap-1.5 cursor-pointer">
+            <app-icon name="settings" [size]="14" className="text-white"></app-icon>
+            <span>Ajustar Política</span>
+          </button>
+        </div>
       </div>
-    } @else {
-      <div class="space-y-4 animate-fade-in">
+
+      <!-- Resumen de Nómina Pendiente por Liquidar (Modos Programados) -->
+      @if (payoutPolicy?.mode !== 'ON_DEMAND' && pendingScheduledPayouts.length > 0) {
+        <div class="card-adaptive rounded-2xl p-5 border border-blue-500/30 bg-blue-50/50 dark:bg-blue-950/20 space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h4 class="text-sm font-extrabold text-blue-950 dark:text-blue-100 flex items-center gap-2">
+                <app-icon name="users" [size]="16" className="text-blue-600 dark:text-blue-400"></app-icon>
+                <span>Corte de Liquidación de Flota ({{ pendingScheduledPayouts.length }} repartidores con saldo)</span>
+              </h4>
+              <p class="text-xs text-blue-800/80 dark:text-blue-300/80 mt-0.5">
+                Total acumulado por entregas realizadas: <strong class="font-mono font-black">${{ totalDeliveryFeesSum.toFixed(2) }} (≈ Bs. {{ (totalDeliveryFeesSum * bcvRate).toFixed(2) }})</strong>
+              </p>
+            </div>
+            <span class="text-[11px] font-bold text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/40 px-3 py-1 rounded-lg">
+              {{ policyModeLabel }}
+            </span>
+          </div>
+
+          <!-- Mini Lista de Pago Móvil de cada Repartidor con Saldo -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
+            @for (r of pendingScheduledPayouts; track r.riderId) {
+              <div class="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-blue-100 dark:border-blue-900/40 shadow-xs space-y-2">
+                <div class="flex items-center justify-between">
+                  <div class="font-bold text-xs text-slate-900 dark:text-white truncate max-w-[160px]">{{ r.riderName }}</div>
+                  <span class="font-mono font-black text-xs text-emerald-600 dark:text-emerald-400">
+                    ${{ r.totalDeliveryFees.toFixed(2) }}
+                  </span>
+                </div>
+                <div class="text-[11px] text-slate-500 dark:text-slate-400 font-mono space-y-0.5">
+                  <div>📞 Tel: {{ r.riderPhone }}</div>
+                  <div>📦 Entregas: {{ r.totalDeliveries }} pedidos</div>
+                  <div>≈ Bs. {{ (r.totalDeliveryFees * bcvRate).toFixed(2) }}</div>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      @if (withdrawals.length === 0) {
+        <div class="card-adaptive rounded-2xl p-12 text-center space-y-3 border border-dashed border-slate-300 dark:border-slate-800 animate-fade-in">
+          <div class="w-16 h-16 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 mx-auto flex items-center justify-center">
+            <app-icon name="dollar-sign" [size]="32"></app-icon>
+          </div>
+          <h3 class="text-base font-extrabold text-slate-900 dark:text-white">Sin Solicitudes Individuales Pendientes</h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
+            @if (payoutPolicy?.mode === 'ON_DEMAND') {
+              Cuando los repartidores soliciten retiros a libre demanda, aparecerán aquí para que confirmes la transferencia vía Pago Móvil.
+            } @else {
+              Tu comercio opera en modo <strong>{{ policyModeLabel }}</strong>. Las liquidaciones se auditan con el corte consolidado de la parte superior.
+            }
+          </p>
+        </div>
+      } @else {
+        <div class="space-y-4 animate-fade-in">
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           @for (w of withdrawals; track w.id) {
             <div class="card-adaptive rounded-2xl p-5 shadow-sm space-y-3 border"
@@ -594,6 +707,7 @@
         </div>
       </div>
     }
+    </div>
   }
 
   <!-- MODAL PARA REGISTRAR PAGO DE RETIRO (REFERENCIA PAGO MÓVIL) -->
@@ -665,6 +779,165 @@
           <button (click)="confirmReject()"
                   class="px-4 py-2 text-xs font-black bg-rose-600 text-white rounded-xl cursor-pointer">
             Confirmar Rechazo
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- MODAL: CONFIGURACIÓN DE POLÍTICA DE LIQUIDACIÓN Y PAGO A REPARTIDORES -->
+  @if (isPolicyModalOpen()) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+      <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-5">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+          <div class="flex items-center gap-2.5">
+            <div class="w-9 h-9 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center">
+              <app-icon name="credit-card" [size]="18"></app-icon>
+            </div>
+            <div>
+              <h3 class="font-black text-base text-slate-900 dark:text-white">Política de Pago a Repartidores</h3>
+              <p class="text-[11px] text-slate-400">Configura la frecuencia y condiciones de liquidación para tus motorizados</p>
+            </div>
+          </div>
+          <button (click)="closePolicyModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer">
+            <app-icon name="x" [size]="18"></app-icon>
+          </button>
+        </div>
+
+        <div class="space-y-4 text-xs">
+          <!-- Modo de Liquidación -->
+          <div class="space-y-1.5">
+            <label class="font-bold text-slate-700 dark:text-slate-200">Frecuencia de Liquidación</label>
+            <div class="grid grid-cols-2 gap-2">
+              <button type="button"
+                      (click)="policyForm.mode = 'WEEKLY'"
+                      [class.bg-brand-500]="policyForm.mode === 'WEEKLY'"
+                      [class.text-white]="policyForm.mode === 'WEEKLY'"
+                      [class.border-brand-500]="policyForm.mode === 'WEEKLY'"
+                      [class.bg-slate-50]="policyForm.mode !== 'WEEKLY'"
+                      [class.dark:bg-slate-800]="policyForm.mode !== 'WEEKLY'"
+                      [class.border-slate-200]="policyForm.mode !== 'WEEKLY'"
+                      [class.dark:border-slate-700]="policyForm.mode !== 'WEEKLY'"
+                      class="p-3 rounded-xl border text-left transition-all cursor-pointer">
+                <div class="font-bold">📅 Semanal (Fijo)</div>
+                <div class="text-[10px] opacity-80 mt-0.5">Día fijo cada semana</div>
+              </button>
+
+              <button type="button"
+                      (click)="policyForm.mode = 'DAILY'"
+                      [class.bg-brand-500]="policyForm.mode === 'DAILY'"
+                      [class.text-white]="policyForm.mode === 'DAILY'"
+                      [class.border-brand-500]="policyForm.mode === 'DAILY'"
+                      [class.bg-slate-50]="policyForm.mode !== 'DAILY'"
+                      [class.dark:bg-slate-800]="policyForm.mode !== 'DAILY'"
+                      [class.border-slate-200]="policyForm.mode !== 'DAILY'"
+                      [class.dark:border-slate-700]="policyForm.mode !== 'DAILY'"
+                      class="p-3 rounded-xl border text-left transition-all cursor-pointer">
+                <div class="font-bold">🌙 Diario (Cierre)</div>
+                <div class="text-[10px] opacity-80 mt-0.5">Al final de la jornada</div>
+              </button>
+
+              <button type="button"
+                      (click)="policyForm.mode = 'BIWEEKLY'"
+                      [class.bg-brand-500]="policyForm.mode === 'BIWEEKLY'"
+                      [class.text-white]="policyForm.mode === 'BIWEEKLY'"
+                      [class.border-brand-500]="policyForm.mode === 'BIWEEKLY'"
+                      [class.bg-slate-50]="policyForm.mode !== 'BIWEEKLY'"
+                      [class.dark:bg-slate-800]="policyForm.mode !== 'BIWEEKLY'"
+                      [class.border-slate-200]="policyForm.mode !== 'BIWEEKLY'"
+                      [class.dark:border-slate-700]="policyForm.mode !== 'BIWEEKLY'"
+                      class="p-3 rounded-xl border text-left transition-all cursor-pointer">
+                <div class="font-bold">🗓️ Quincenal</div>
+                <div class="text-[10px] opacity-80 mt-0.5">Días 15 y fin de mes</div>
+              </button>
+
+              <button type="button"
+                      (click)="policyForm.mode = 'ON_DEMAND'"
+                      [class.bg-brand-500]="policyForm.mode === 'ON_DEMAND'"
+                      [class.text-white]="policyForm.mode === 'ON_DEMAND'"
+                      [class.border-brand-500]="policyForm.mode === 'ON_DEMAND'"
+                      [class.bg-slate-50]="policyForm.mode !== 'ON_DEMAND'"
+                      [class.dark:bg-slate-800]="policyForm.mode !== 'ON_DEMAND'"
+                      [class.border-slate-200]="policyForm.mode !== 'ON_DEMAND'"
+                      [class.dark:border-slate-700]="policyForm.mode !== 'ON_DEMAND'"
+                      class="p-3 rounded-xl border text-left transition-all cursor-pointer">
+                <div class="font-bold">🔄 Libre Demanda</div>
+                <div class="text-[10px] opacity-80 mt-0.5">El motorizado lo solicita</div>
+              </button>
+            </div>
+          </div>
+
+          <!-- Si es Semanal: Selección de día -->
+          @if (policyForm.mode === 'WEEKLY') {
+            <div class="space-y-1">
+              <label class="font-bold text-slate-700 dark:text-slate-200">Día de la Semana para Liquidación</label>
+              <select [(ngModel)]="policyForm.payoutDayOfWeek"
+                      class="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-bold outline-none cursor-pointer">
+                <option [value]="1">Lunes (Recomendado)</option>
+                <option [value]="2">Martes</option>
+                <option [value]="3">Miércoles</option>
+                <option [value]="4">Jueves</option>
+                <option [value]="5">Viernes</option>
+                <option [value]="6">Sábado</option>
+                <option [value]="7">Domingo</option>
+              </select>
+            </div>
+          }
+
+          <div class="grid grid-cols-2 gap-3">
+            <!-- Hora de Corte Habitual -->
+            <div class="space-y-1">
+              <label class="font-bold text-slate-700 dark:text-slate-200">Hora Habitual de Pago</label>
+              <input type="time" [(ngModel)]="policyForm.payoutHour"
+                     class="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-bold outline-none font-mono" />
+            </div>
+
+            <!-- Monto Mínimo para Retiro -->
+            <div class="space-y-1">
+              <label class="font-bold text-slate-700 dark:text-slate-200">Monto Mínimo ($ USD)</label>
+              <input type="number" step="0.5" min="1" [(ngModel)]="policyForm.minWithdrawalAmount"
+                     class="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-bold outline-none font-mono" />
+            </div>
+          </div>
+
+          <!-- Método de Pago Habitual -->
+          <div class="space-y-1">
+            <label class="font-bold text-slate-700 dark:text-slate-200">Método de Pago Preferido</label>
+            <select [(ngModel)]="policyForm.paymentMethod"
+                    class="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-bold outline-none cursor-pointer">
+              <option value="PAGO_MOVIL">Pago Móvil Interbancario (Venezuela)</option>
+              <option value="TRANSFERENCIA">Transferencia Bancaria Nacional</option>
+              <option value="EFECTIVO">Efectivo en Caja / Tienda</option>
+            </select>
+          </div>
+
+          <!-- Notificaciones por Email -->
+          <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+            <div>
+              <div class="font-bold text-slate-900 dark:text-white">Recordatorios por Correo Electrónico</div>
+              <div class="text-[10px] text-slate-400">Recibir email automático los días de liquidación con el corte de motorizados</div>
+            </div>
+            <input type="checkbox" [(ngModel)]="policyForm.emailNotifications"
+                   class="w-4 h-4 accent-brand-500 rounded cursor-pointer" />
+          </div>
+
+          <!-- Notas Informativas para los Motorizados -->
+          <div class="space-y-1">
+            <label class="font-bold text-slate-700 dark:text-slate-200">Nota visible para los Motorizados</label>
+            <input type="text" [(ngModel)]="policyForm.payoutNotes"
+                   placeholder="Ej: Las transferencias se realizan por Pago Móvil a partir de las 8:00 PM."
+                   class="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 outline-none" />
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+          <button (click)="closePolicyModal()"
+                  class="px-4 py-2.5 text-xs font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl cursor-pointer">
+            Cancelar
+          </button>
+          <button (click)="savePolicy()"
+                  class="px-5 py-2.5 text-xs font-black bg-brand-500 hover:bg-brand-600 text-white rounded-xl shadow-sm cursor-pointer">
+            Guardar Política
           </button>
         </div>
       </div>

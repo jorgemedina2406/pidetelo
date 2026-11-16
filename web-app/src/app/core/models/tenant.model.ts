@@ -94,5 +94,7 @@ export interface Tenant {
   subscriptionPlan?: any;
   commissionPercentage?: number;
   branches?: any[];
+  riderPayoutPolicy?: any;
+  rider_payout_policy?: any;
 }
 

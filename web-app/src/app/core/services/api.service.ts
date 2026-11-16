@@ -564,6 +564,60 @@ export class ApiService {
     );
   }
 
+  // --- POLÍTICA DE LIQUIDACIÓN Y PAGOS A MOTORIZADOS ---
+  getPayoutPolicy(tenantId: string): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/tenants/${tenantId}/payout-policy`).pipe(
+      catchError(err => {
+        console.warn('[ApiService] Error obteniendo política de liquidación:', err);
+        return of({
+          mode: 'WEEKLY',
+          payoutDayOfWeek: 1,
+          payoutHour: '20:00',
+          minWithdrawalAmount: 5.0,
+          paymentMethod: 'PAGO_MOVIL',
+          payoutNotes: 'Liquidación semanal directa por Pago Móvil todos los Lunes.',
+          emailNotifications: true
+        });
+      })
+    );
+  }
+
+  updatePayoutPolicy(tenantId: string, policy: any): Observable<any> {
+    return this.http.put<any>(`${this.baseUrl}/tenants/${tenantId}/payout-policy`, policy).pipe(
+      catchError(err => {
+        console.error('[ApiService] Error actualizando política de liquidación:', err);
+        throw err;
+      })
+    );
+  }
+
+  sendPayoutReminderEmail(tenantId: string, summary: any): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/tenants/${tenantId}/payout-reminder-email`, summary).pipe(
+      catchError(err => {
+        console.error('[ApiService] Error enviando recordatorio por email:', err);
+        throw err;
+      })
+    );
+  }
+
+  getRiderMerchantBalances(riderId: string): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/riders/${riderId}/merchant-balances`).pipe(
+      catchError(err => {
+        console.warn('[ApiService] Error obteniendo saldos por comercio:', err);
+        return of([]);
+      })
+    );
+  }
+
+  requestRiderWithdrawal(riderId: string, payload: { tenantId: string; amount: number; paymentAccount?: any; notes?: string }): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/riders/${riderId}/withdrawals`, payload).pipe(
+      catchError(err => {
+        console.error('[ApiService] Error solicitando retiro:', err);
+        throw err;
+      })
+    );
+  }
+
   submitTenantReview(tenantId: string, review: { rating: number; comment?: string; customerName: string; customerPhone?: string; orderId?: string }): Observable<any> {
     return this.http.post<any>(`${this.baseUrl}/tenants/${tenantId}/reviews`, review).pipe(
       catchError(err => {

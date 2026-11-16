@@ -97,6 +97,15 @@ export class RiderAppComponent implements OnInit, OnDestroy {
   readonly allRiders = signal<any[]>([]);
   readonly isSwitchModalOpen = signal(false);
 
+  // --- BILLETERA MULTI-COMERCIO & LIQUIDACIONES ---
+  readonly merchantBalances = signal<any[]>([]);
+  readonly isWithdrawModalOpen = signal(false);
+  readonly selectedMerchantForWithdraw = signal<any>(null);
+  readonly withdrawAmountInput = signal<number>(0);
+  readonly withdrawNotesInput = signal<string>('');
+  readonly isSubmittingWithdraw = signal(false);
+  readonly withdrawSuccessMessage = signal<string | null>(null);
+
   readonly riderProfile = signal({
     fullName: 'Repartidor',
     email: '',
@@ -424,7 +433,18 @@ export class RiderAppComponent implements OnInit, OnDestroy {
     });
   }
 
+  loadMerchantBalances(): void {
+    const user = this.auth.currentUser();
+    const riderId = user?.id || this.currentRiderId();
+    if (!riderId) return;
+
+    this.api.getRiderMerchantBalances(riderId).subscribe(balances => {
+      this.merchantBalances.set(balances || []);
+    });
+  }
+
   loadRiderOrders(): void {
+    this.loadMerchantBalances();
     const user = this.auth.currentUser();
     const riderId = user?.id || '91111111-1111-4111-8111-111111111111';
     const riderPhone = user?.phone;
@@ -687,19 +707,100 @@ export class RiderAppComponent implements OnInit, OnDestroy {
     window.open(`https://waze.com/ul?q=${query}&navigate=yes`, '_blank');
   }
 
-  requestWithdrawal(): void {
-    const totalBalance = this.todayEarnings() + this.todayTips();
-    if (totalBalance <= 0) {
-      alert('Actualmente no posees balance disponible para retirar.');
-      return;
-    }
-    const defaultAcc = this.riderProfile().paymentAccounts.find(a => a.isDefault) || this.riderProfile().paymentAccounts[0];
-    if (!defaultAcc) {
-      alert('Debes registrar al menos una Cuenta de Cobro (Pago Móvil, Zelle o Transferencia) en la pestaña Perfil para procesar tus retiros.');
+  // --- MÉTODOS DE RETIRO Y LIQUIDACIÓN A COMERCIOS ---
+  openMerchantWithdrawModal(m: any): void {
+    const accounts = this.riderProfile().paymentAccounts || [];
+    if (accounts.length === 0) {
+      alert('Debes registrar al menos una Cuenta de Cobro (Pago Móvil, Transferencia o Zelle) en la pestaña Perfil para poder solicitar retiros.');
       this.activeTab.set('profile');
       return;
     }
-    alert(`¡Solicitud de retiro procesada exitosamente por $${totalBalance.toFixed(2)}!\n\nCuenta Destino: ${defaultAcc.bankOrPlatform} (${defaultAcc.accountIdentifier})\nTitular: ${defaultAcc.holderName}\n\nLos fondos se liquidarán según el ciclo de pago.`);
+
+    if (m.policy?.mode !== 'ON_DEMAND') {
+      alert(`Este comercio opera bajo liquidación automática programada (${m.scheduleText}). No necesitas solicitar retiro; el comercio te transferirá a tu Pago Móvil registrado según su calendario.`);
+      return;
+    }
+
+    if (m.availableBalance < (m.policy?.minWithdrawalAmount || 5.0)) {
+      alert(`El monto mínimo de retiro configurado por ${m.merchantName} es de $${(m.policy?.minWithdrawalAmount || 5.0).toFixed(2)}. Tu saldo actual con ellos es de $${m.availableBalance.toFixed(2)}.`);
+      return;
+    }
+
+    this.selectedMerchantForWithdraw.set(m);
+    this.withdrawAmountInput.set(m.availableBalance);
+    this.withdrawNotesInput.set('');
+    this.isWithdrawModalOpen.set(true);
+  }
+
+  closeWithdrawModal(): void {
+    this.isWithdrawModalOpen.set(false);
+    this.selectedMerchantForWithdraw.set(null);
+  }
+
+  confirmMerchantWithdraw(): void {
+    const m = this.selectedMerchantForWithdraw();
+    const user = this.auth.currentUser();
+    const riderId = user?.id || this.currentRiderId();
+    const amount = Number(this.withdrawAmountInput());
+
+    if (!m || !riderId) return;
+
+    if (amount <= 0 || amount > m.availableBalance) {
+      alert(`Por favor ingresa un monto válido (máximo $${m.availableBalance.toFixed(2)}).`);
+      return;
+    }
+
+    const defaultAcc = this.riderProfile().paymentAccounts.find(a => a.isDefault) || this.riderProfile().paymentAccounts[0];
+    if (!defaultAcc) {
+      alert('Debes tener una cuenta de cobro activa.');
+      return;
+    }
+
+    this.isSubmittingWithdraw.set(true);
+
+    const payload = {
+      tenantId: m.tenantId,
+      amount,
+      notes: this.withdrawNotesInput().trim(),
+      paymentAccount: {
+        type: defaultAcc.type || 'pago_movil',
+        bank: defaultAcc.bankOrPlatform,
+        phone: defaultAcc.accountIdentifier,
+        nationalId: defaultAcc.holderId,
+        holderName: defaultAcc.holderName
+      }
+    };
+
+    this.api.requestRiderWithdrawal(riderId, payload).subscribe({
+      next: (res) => {
+        this.isSubmittingWithdraw.set(false);
+        this.closeWithdrawModal();
+        this.withdrawSuccessMessage.set(`¡Solicitud enviada a ${m.merchantName} por $${amount.toFixed(2)}! Te transferirán a tu Pago Móvil.`);
+        this.loadMerchantBalances();
+        setTimeout(() => this.withdrawSuccessMessage.set(null), 6000);
+      },
+      error: (err) => {
+        this.isSubmittingWithdraw.set(false);
+        const msg = err?.error?.message || 'Error procesando solicitud de retiro.';
+        alert(msg);
+      }
+    });
+  }
+
+  requestWithdrawal(): void {
+    const balances = this.merchantBalances();
+    const onDemandMerchant = balances.find(b => b.canWithdrawOnDemand);
+    if (onDemandMerchant) {
+      this.openMerchantWithdrawModal(onDemandMerchant);
+      return;
+    }
+
+    if (balances.length > 0) {
+      alert('Los comercios donde tienes saldo operan bajo liquidación automática programada (Semanal o Diaria). Te transferirán directamente a tu Pago Móvil registrado en la fecha programada.');
+      return;
+    }
+
+    alert('Actualmente no posees balance disponible con ningún comercio.');
   }
 
   async logout(): Promise<void> {
