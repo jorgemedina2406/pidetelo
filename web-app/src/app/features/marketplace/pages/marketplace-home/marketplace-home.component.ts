@@ -6,6 +6,7 @@ import { ApiService } from '../../../../core/services/api.service';
 import { ThemeService } from '../../../../core/services/theme.service';
 import { FavoritesService } from '../../../../core/services/favorites.service';
 import { I18nService } from '../../../../core/services/i18n.service';
+import { AuthStore } from '../../../../core/stores/auth.store';
 import { Tenant } from '../../../../core/models/tenant.model';
 import { Banner } from '../../../../core/models/banner.model';
 import { BusinessCategory } from '../../../../core/models/category.model';
@@ -47,6 +48,7 @@ export class MarketplaceHomeComponent implements OnInit {
   readonly theme = inject(ThemeService);
   readonly i18n = inject(I18nService);
   readonly favorites = inject(FavoritesService);
+  readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
 
   readonly searchQuery = signal<string>('');
