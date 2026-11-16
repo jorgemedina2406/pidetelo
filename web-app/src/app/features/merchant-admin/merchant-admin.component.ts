@@ -31,6 +31,7 @@ import { MerchantCouponModalComponent } from './components/coupon-form-modal/cou
 import { MerchantCouponNotifyModalComponent } from './components/coupon-notify-modal/coupon-notify-modal.component';
 import { NearbyRidersModalComponent } from './components/nearby-riders-modal/nearby-riders-modal.component';
 import { DispatchConfigModalComponent } from './components/dispatch-config-modal/dispatch-config-modal.component';
+import { PayoutPolicyModalComponent } from './components/payout-policy-modal/payout-policy-modal.component';
 import { MerchantCouponsTabComponent } from './components/merchant-coupons-tab/merchant-coupons-tab.component';
 import { MerchantRidersTabComponent } from './components/merchant-riders-tab/merchant-riders-tab.component';
 import { MerchantUsersTabComponent } from './components/merchant-users-tab/merchant-users-tab.component';
@@ -78,6 +79,7 @@ export interface Rider {
     MerchantCouponNotifyModalComponent,
     NearbyRidersModalComponent,
     DispatchConfigModalComponent,
+    PayoutPolicyModalComponent,
     MerchantCouponsTabComponent,
     MerchantRidersTabComponent,
     MerchantUsersTabComponent,
@@ -896,6 +898,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
   readonly nearbyRiders = signal<Rider[]>([]);
   readonly isNearbyRidersModalOpen = signal(false);
   readonly isDispatchConfigModalOpen = signal(false);
+  readonly isPayoutPolicyModalOpen = signal(false);
   readonly selectedOrderForNearbyDispatch = signal<Order | null>(null);
 
   readonly dispatchFilterConfig = signal<{

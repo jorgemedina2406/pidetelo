@@ -2117,6 +2117,7 @@
       [tenantId]="currentTenant().id"
       [selectedBranchName]="selectedBranch()?.name" (newRider)="openNewRiderModal()" (deleteRider)="deleteRider($event)"
       (locateRider)="activeTab.set('gps_map'); flyToRider($event)"
+      (openPolicyConfig)="isPayoutPolicyModalOpen.set(true)"
       (updatePayoutPolicy)="handleUpdatePayoutPolicy($event)"
       (sendEmailReminder)="handleSendEmailReminder($event)"
       (processWithdrawal)="handleProcessWithdrawal($event)">
@@ -4004,6 +4005,12 @@
 <app-dispatch-config-modal [isOpen]="isDispatchConfigModalOpen()" [config]="dispatchFilterConfig()"
   (close)="isDispatchConfigModalOpen.set(false)" (save)="saveDispatchFilterConfig($event)">
 </app-dispatch-config-modal>
+
+<!-- MODAL: POLÍTICA DE LIQUIDACIÓN Y PAGO A REPARTIDORES -->
+<app-payout-policy-modal [isOpen]="isPayoutPolicyModalOpen()"
+  [policy]="currentTenant().riderPayoutPolicy || currentTenant().rider_payout_policy"
+  (close)="isPayoutPolicyModalOpen.set(false)" (save)="handleUpdatePayoutPolicy($event)">
+</app-payout-policy-modal>
 
 <!-- MODAL: VERIFICACIÓN DE PAGO MÓVIL ANTES DE COMANDA DE COCINA (FASE 1) -->
 @if (verifyingPaymentOrder(); as vOrder) {

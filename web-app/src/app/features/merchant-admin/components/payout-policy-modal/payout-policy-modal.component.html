@@ -1,0 +1,175 @@
+@if (isOpen) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
+    <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full max-h-[88vh] shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden animate-slide-in">
+
+      <!-- Header Fijo Superior -->
+      <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between flex-shrink-0">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center flex-shrink-0">
+            <app-icon name="credit-card" [size]="18"></app-icon>
+          </div>
+          <div>
+            <h3 class="font-black text-base text-slate-900 dark:text-white">Política de Pago a Repartidores</h3>
+            <p class="text-[11px] text-slate-400">Configura la frecuencia y condiciones de liquidación para tus motorizados</p>
+          </div>
+        </div>
+        <button (click)="close.emit()"
+                class="text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer p-1 rounded-lg">
+          <app-icon name="x" [size]="18"></app-icon>
+        </button>
+      </div>
+
+      <!-- Cuerpo del Formulario con Scroll Interno -->
+      <div class="p-6 space-y-4 text-xs overflow-y-auto flex-1">
+        <!-- Modo de Liquidación -->
+        <div class="space-y-1.5">
+          <label class="font-bold text-slate-700 dark:text-slate-200">Frecuencia de Liquidación</label>
+          <div class="grid grid-cols-2 gap-2">
+            <button type="button"
+                    (click)="setMode('WEEKLY')"
+                    [class.bg-brand-500]="localPolicy.mode === 'WEEKLY'"
+                    [class.text-white]="localPolicy.mode === 'WEEKLY'"
+                    [class.border-brand-500]="localPolicy.mode === 'WEEKLY'"
+                    [class.bg-slate-50]="localPolicy.mode !== 'WEEKLY'"
+                    [class.dark:bg-slate-800]="localPolicy.mode !== 'WEEKLY'"
+                    [class.border-slate-200]="localPolicy.mode !== 'WEEKLY'"
+                    [class.dark:border-slate-700]="localPolicy.mode !== 'WEEKLY'"
+                    class="p-3 rounded-xl border text-left transition-all cursor-pointer">
+              <div class="font-bold">📅 Semanal (Fijo)</div>
+              <div class="text-[10px] opacity-80 mt-0.5">Día fijo cada semana</div>
+            </button>
+
+            <button type="button"
+                    (click)="setMode('DAILY')"
+                    [class.bg-brand-500]="localPolicy.mode === 'DAILY'"
+                    [class.text-white]="localPolicy.mode === 'DAILY'"
+                    [class.border-brand-500]="localPolicy.mode === 'DAILY'"
+                    [class.bg-slate-50]="localPolicy.mode !== 'DAILY'"
+                    [class.dark:bg-slate-800]="localPolicy.mode !== 'DAILY'"
+                    [class.border-slate-200]="localPolicy.mode !== 'DAILY'"
+                    [class.dark:border-slate-700]="localPolicy.mode !== 'DAILY'"
+                    class="p-3 rounded-xl border text-left transition-all cursor-pointer">
+              <div class="font-bold">🌙 Diario (Cierre)</div>
+              <div class="text-[10px] opacity-80 mt-0.5">Al final de la jornada</div>
+            </button>
+
+            <button type="button"
+                    (click)="setMode('BIWEEKLY')"
+                    [class.bg-brand-500]="localPolicy.mode === 'BIWEEKLY'"
+                    [class.text-white]="localPolicy.mode === 'BIWEEKLY'"
+                    [class.border-brand-500]="localPolicy.mode === 'BIWEEKLY'"
+                    [class.bg-slate-50]="localPolicy.mode !== 'BIWEEKLY'"
+                    [class.dark:bg-slate-800]="localPolicy.mode !== 'BIWEEKLY'"
+                    [class.border-slate-200]="localPolicy.mode !== 'BIWEEKLY'"
+                    [class.dark:border-slate-700]="localPolicy.mode !== 'BIWEEKLY'"
+                    class="p-3 rounded-xl border text-left transition-all cursor-pointer">
+              <div class="font-bold">🗓️ Quincenal</div>
+              <div class="text-[10px] opacity-80 mt-0.5">Días 15 y fin de mes</div>
+            </button>
+
+            <button type="button"
+                    (click)="setMode('ON_DEMAND')"
+                    [class.bg-brand-500]="localPolicy.mode === 'ON_DEMAND'"
+                    [class.text-white]="localPolicy.mode === 'ON_DEMAND'"
+                    [class.border-brand-500]="localPolicy.mode === 'ON_DEMAND'"
+                    [class.bg-slate-50]="localPolicy.mode !== 'ON_DEMAND'"
+                    [class.dark:bg-slate-800]="localPolicy.mode !== 'ON_DEMAND'"
+                    [class.border-slate-200]="localPolicy.mode !== 'ON_DEMAND'"
+                    [class.dark:border-slate-700]="localPolicy.mode !== 'ON_DEMAND'"
+                    class="p-3 rounded-xl border text-left transition-all cursor-pointer">
+              <div class="font-bold">🔄 Libre Demanda</div>
+              <div class="text-[10px] opacity-80 mt-0.5">El motorizado lo solicita</div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Si es Semanal: Selección de día -->
+        @if (localPolicy.mode === 'WEEKLY') {
+          <div class="space-y-1">
+            <label class="font-bold text-slate-700 dark:text-slate-200">Día de la Semana para Liquidación</label>
+            <select [(ngModel)]="localPolicy.payoutDayOfWeek"
+                    (ngModelChange)="onFieldChange()"
+                    class="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-bold outline-none cursor-pointer">
+              <option [value]="1">Lunes (Recomendado)</option>
+              <option [value]="2">Martes</option>
+              <option [value]="3">Miércoles</option>
+              <option [value]="4">Jueves</option>
+              <option [value]="5">Viernes</option>
+              <option [value]="6">Sábado</option>
+              <option [value]="7">Domingo</option>
+            </select>
+          </div>
+        }
+
+        <div class="grid grid-cols-2 gap-3">
+          <!-- Hora de Corte Habitual -->
+          <div class="space-y-1">
+            <label class="font-bold text-slate-700 dark:text-slate-200">Hora Habitual de Pago</label>
+            <input type="time" [(ngModel)]="localPolicy.payoutHour"
+                   (ngModelChange)="onFieldChange()"
+                   class="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-bold outline-none font-mono" />
+          </div>
+
+          <!-- Monto Mínimo para Retiro -->
+          <div class="space-y-1">
+            <label class="font-bold text-slate-700 dark:text-slate-200">Monto Mínimo ($ USD)</label>
+            <input type="number" step="0.5" min="1" [(ngModel)]="localPolicy.minWithdrawalAmount"
+                   (ngModelChange)="onFieldChange()"
+                   class="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-bold outline-none font-mono" />
+          </div>
+        </div>
+
+        <!-- Método de Pago Habitual -->
+        <div class="space-y-1">
+          <label class="font-bold text-slate-700 dark:text-slate-200">Método de Pago Preferido</label>
+          <select [(ngModel)]="localPolicy.paymentMethod"
+                  (ngModelChange)="onFieldChange()"
+                  class="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-bold outline-none cursor-pointer">
+            <option value="PAGO_MOVIL">Pago Móvil Interbancario (Venezuela)</option>
+            <option value="TRANSFERENCIA">Transferencia Bancaria Nacional</option>
+            <option value="EFECTIVO">Efectivo en Caja / Tienda</option>
+          </select>
+        </div>
+
+        <!-- Notificaciones por Email -->
+        <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+          <div>
+            <div class="font-bold text-slate-900 dark:text-white">Recordatorios por Correo Electrónico</div>
+            <div class="text-[10px] text-slate-400">Recibir email automático los días de liquidación con el corte de motorizados</div>
+          </div>
+          <input type="checkbox" [(ngModel)]="localPolicy.emailNotifications"
+                 class="w-4 h-4 accent-brand-500 rounded cursor-pointer" />
+        </div>
+
+        <!-- Notas Informativas para los Motorizados -->
+        <div class="space-y-1">
+          <div class="flex items-center justify-between">
+            <label class="font-bold text-slate-700 dark:text-slate-200">Nota visible para los Motorizados</label>
+            <button type="button"
+                    (click)="onFieldChange()"
+                    class="text-[11px] text-brand-600 dark:text-brand-400 font-bold hover:underline cursor-pointer flex items-center gap-1">
+              <span>↺ Actualizar nota sugerida</span>
+            </button>
+          </div>
+          <textarea [(ngModel)]="localPolicy.payoutNotes"
+                    rows="2"
+                    placeholder="Ej: Las transferencias se realizan por Pago Móvil a partir de las 8:00 PM."
+                    class="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 outline-none resize-none"></textarea>
+        </div>
+      </div>
+
+      <!-- Footer Fijo con Acciones -->
+      <div class="px-6 py-3.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 flex items-center justify-end gap-2 flex-shrink-0">
+        <button (click)="close.emit()"
+                class="px-4 py-2 text-xs font-bold text-slate-500 hover:bg-slate-200/60 dark:hover:bg-slate-800 rounded-xl cursor-pointer">
+          Cancelar
+        </button>
+        <button (click)="onSave()"
+                class="px-5 py-2 text-xs font-black bg-brand-500 hover:bg-brand-600 text-white rounded-xl shadow-sm cursor-pointer active:scale-95 transition-all">
+          Guardar Política
+        </button>
+      </div>
+
+    </div>
+  </div>
+}

@@ -48,6 +48,7 @@ export class MerchantRidersTabComponent {
   @Output() newRider = new EventEmitter<void>();
   @Output() deleteRider = new EventEmitter<Rider>();
   @Output() locateRider = new EventEmitter<Rider>();
+  @Output() openPolicyConfig = new EventEmitter<void>();
   @Output() updatePayoutPolicy = new EventEmitter<any>();
   @Output() sendEmailReminder = new EventEmitter<any>();
   @Output() processWithdrawal = new EventEmitter<{
@@ -254,23 +255,7 @@ export class MerchantRidersTabComponent {
   }
 
   openPolicyModal(): void {
-    const cur = this.payoutPolicy || {};
-    const mode = cur.mode || 'WEEKLY';
-    const payoutDayOfWeek = cur.payoutDayOfWeek != null ? cur.payoutDayOfWeek : 1;
-    const payoutHour = cur.payoutHour || '20:00';
-    const minWithdrawalAmount = cur.minWithdrawalAmount != null ? cur.minWithdrawalAmount : 5.0;
-    const paymentMethod = cur.paymentMethod || 'PAGO_MOVIL';
-
-    this.policyForm = {
-      mode,
-      payoutDayOfWeek,
-      payoutHour,
-      minWithdrawalAmount,
-      paymentMethod,
-      payoutNotes: cur.payoutNotes || this.generateSuggestedNote(mode, payoutDayOfWeek, payoutHour, minWithdrawalAmount, paymentMethod),
-      emailNotifications: cur.emailNotifications !== false
-    };
-    this.isPolicyModalOpen.set(true);
+    this.openPolicyConfig.emit();
   }
 
   setPolicyMode(mode: 'WEEKLY' | 'DAILY' | 'BIWEEKLY' | 'ON_DEMAND'): void {
