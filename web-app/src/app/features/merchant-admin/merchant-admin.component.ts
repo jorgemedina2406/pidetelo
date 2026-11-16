@@ -304,7 +304,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
             rawCode = cleanLocal;
           }
         }
-      } catch (_) {}
+      } catch (_) { }
     }
 
     const found = plans.find(p => p.code === rawCode || p.id === rawCode);
@@ -458,7 +458,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     try {
       const raw = localStorage.getItem('deliveryhub_branch_branding_' + branch.id);
       if (raw) cached = JSON.parse(raw);
-    } catch (_) {}
+    } catch (_) { }
 
     this.brandingForm.name = branch.name || cached?.name || tenant.name || '';
     this.brandingForm.tagline = branch.tagline || cached?.tagline || tenant.tagline || '';
@@ -709,7 +709,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
                 this.brandingForm.address = data.display_name;
               }
             }
-          } catch {}
+          } catch { }
 
           setTimeout(() => this.storeGpsMessage.set(null), 5000);
         },
@@ -762,14 +762,14 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     branchId: string;
     password?: string;
   } = {
-    id: '',
-    name: '',
-    email: '',
-    phone: '',
-    role: 'MERCHANT_MANAGER',
-    branchId: 'all',
-    password: ''
-  };
+      id: '',
+      name: '',
+      email: '',
+      phone: '',
+      role: 'MERCHANT_MANAGER',
+      branchId: 'all',
+      password: ''
+    };
 
   // Colaboradores filtrados estrictamente por Sucursal Activa y Rol
   readonly filteredStoreUsers = computed(() => {
@@ -914,7 +914,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     this.dispatchFilterConfig.set(config);
     try {
       localStorage.setItem(`pidetelo_dispatch_config_${this.activeBranchId()}`, JSON.stringify(config));
-    } catch (_) {}
+    } catch (_) { }
     this.refreshRidersLocation();
     this.isDispatchConfigModalOpen.set(false);
   }
@@ -940,9 +940,11 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
 
   readonly ownFleetRiders = computed(() => {
     const branchId = this.activeBranchId();
-    if (!branchId) return [];
     const isMain = this.isSelectedBranchMain();
-    return this.riders().filter(r => !r.isIndependent && (r.branchId === branchId || (isMain && !r.branchId)));
+    return this.riders().filter(r => 
+      !r.isIndependent && 
+      (!branchId || branchId === 'all' || r.branchId === branchId || (isMain && !r.branchId))
+    );
   });
 
   readonly networkRiders = computed(() => {
@@ -1058,7 +1060,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         if (this.fleetRadarMap) {
           try {
             this.fleetRadarMap.remove();
-          } catch (_) {}
+          } catch (_) { }
           this.fleetRadarMap = undefined;
           this.fleetRiderMarkers.clear();
         }
@@ -1070,7 +1072,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         if (this.branchesMap) {
           try {
             this.branchesMap.remove();
-          } catch (_) {}
+          } catch (_) { }
           this.branchesMap = undefined;
         }
       }
@@ -1081,7 +1083,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         if (this.settingsLocationMap) {
           try {
             this.settingsLocationMap.remove();
-          } catch (_) {}
+          } catch (_) { }
           this.settingsLocationMap = undefined;
           this.settingsLocationMarker = undefined;
         }
@@ -1120,7 +1122,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     if (typeof window !== 'undefined') {
       try {
         localStorage.removeItem('deliveryhub_riders_auth');
-      } catch (_) {}
+      } catch (_) { }
     }
     const user = this.auth.currentUser();
     const activeTenantId = user?.tenantId;
@@ -1218,7 +1220,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
           if (parsed.openTime) this.brandingForm.openTime = parsed.openTime;
           if (parsed.closeTime) this.brandingForm.closeTime = parsed.closeTime;
         }
-      } catch (_) {}
+      } catch (_) { }
 
       // 2. Cargar categorías de productos del comercio
       this.loadCategories(activeTenantId);
@@ -1258,7 +1260,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.45);
         osc.start();
         osc.stop(audioCtx.currentTime + 0.45);
-      } catch (_) {}
+      } catch (_) { }
     };
 
     const reloadOrders = () => {
@@ -1286,7 +1288,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
             gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
             osc.start();
             osc.stop(audioCtx.currentTime + 0.35);
-          } catch (_) {}
+          } catch (_) { }
         }
         this.orders.set(orderList);
         const currentRouteOrd = this.selectedRouteOrder();
@@ -1572,7 +1574,9 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       if (isValid) {
         currentLocation = { lat: Number(rawLat.toFixed(6)), lng: Number(rawLng.toFixed(6)) };
       }
-      const isIndependent = !!(r.is_independent || (r as any).isIndependent || (!r.tenant_id && !(r as any).tenantId && !r.branch_id && !(r as any).branchId));
+      const rTenant = r.tenant_id || (r as any).tenantId;
+      // Un motorizado solo es independiente si NO tiene comercio asignado
+      const isIndependent = !rTenant;
       const resolvedRiderBranchId = isIndependent ? undefined : (r.branch_id || (r as any).branchId);
       const branch = resolvedRiderBranchId ? this.branches().find(b => b.id === resolvedRiderBranchId) : undefined;
 
@@ -1584,8 +1588,8 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         vehicleType: (r.vehicle_type as any) || (r as any).vehicleType || 'moto',
         status: (r.status as any) || 'available',
         branchId: resolvedRiderBranchId,
-        branchName: isIndependent 
-          ? 'Red Libre Pídetelo (Independiente)' 
+        branchName: isIndependent
+          ? 'Red Libre Pídetelo (Independiente)'
           : (branch?.name || (resolvedRiderBranchId ? 'Sede Asignada' : 'Sede Principal')),
         currentLocation,
         distanceKm: r.distanceKm != null ? Number(r.distanceKm) : (r.distance_km != null ? Number(r.distance_km) : undefined),
@@ -1678,7 +1682,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     if (this.fleetRadarMap) {
       try {
         this.fleetRadarMap.remove();
-      } catch (_) {}
+      } catch (_) { }
       this.fleetRadarMap = undefined;
       this.fleetRiderMarkers.clear();
     }
@@ -1856,7 +1860,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     if (this.branchesMap) {
       try {
         this.branchesMap.remove();
-      } catch (_) {}
+      } catch (_) { }
       this.branchesMap = undefined;
     }
 
@@ -1973,7 +1977,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     }
 
     if (this.settingsLocationMap) {
-      try { this.settingsLocationMap.remove(); } catch (_) {}
+      try { this.settingsLocationMap.remove(); } catch (_) { }
       this.settingsLocationMap = undefined;
       this.settingsLocationMarker = undefined;
     }
@@ -2370,8 +2374,8 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         modifierGroups: prod.modifierGroups ? JSON.parse(JSON.stringify(prod.modifierGroups)) : []
       };
     } else {
-      const defaultCatId = this.selectedCategoryFilter() !== 'all' 
-        ? this.selectedCategoryFilter() 
+      const defaultCatId = this.selectedCategoryFilter() !== 'all'
+        ? this.selectedCategoryFilter()
         : (this.productCategories()[0]?.id || '');
 
       this.currentEditingProduct = {
@@ -2561,7 +2565,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     if (typeof window !== 'undefined') {
       try {
         localStorage.removeItem('deliveryhub_riders_auth');
-      } catch {}
+      } catch { }
     }
 
     const tempRider: Rider = {
@@ -2804,12 +2808,12 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     if (targetBranch) {
       try {
         localStorage.setItem('deliveryhub_branch_branding_' + targetBranch.id, JSON.stringify(this.brandingForm));
-      } catch (_) {}
+      } catch (_) { }
     }
     if (activeTenantId && typeof window !== 'undefined') {
       try {
         localStorage.setItem('deliveryhub_branding_' + activeTenantId, JSON.stringify(this.brandingForm));
-      } catch (_) {}
+      } catch (_) { }
     }
 
     const branchPayload: any = {
@@ -2973,7 +2977,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         openTime: this.brandingForm.openTime,
         closeTime: this.brandingForm.closeTime
       }));
-    } catch (_) {}
+    } catch (_) { }
 
     // Guardar específicamente la sucursal seleccionada en el backend
     if (targetBranch) {

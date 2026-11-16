@@ -299,6 +299,7 @@ export class RidersService {
           vehicle_plate: cleanPlate,
           vehicle_type: cleanType,
           status: 'available',
+          is_independent: resolvedTenantId ? false : true,
           updated_at: new Date().toISOString()
         }).eq('id', existingRider.id).select().single();
 
@@ -324,6 +325,7 @@ export class RidersService {
           phone: cleanPhone,
           national_id: cleanNationalId,
           status: 'available',
+          is_independent: resolvedTenantId ? false : true,
           current_lat: null,
           current_lng: null
         }).select().single();

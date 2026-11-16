@@ -133,3 +133,12 @@ UPDATE subscription_plans
 SET is_active = false, updated_at = NOW()
 WHERE code IN ('COMERCIO', 'CORPORATIVO');
 
+-- 5. Consistencia de Repartidores: Asignados a comercios vs Red Libre
+UPDATE public.riders
+SET is_independent = false
+WHERE tenant_id IS NOT NULL;
+
+UPDATE public.riders
+SET is_independent = true
+WHERE tenant_id IS NULL;
+
