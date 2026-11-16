@@ -74,7 +74,7 @@ export class PlanUpgradeModalComponent {
       case 'users':
         return `Tu ${this.currentSubscriptionPlan?.name || 'Plan Actual'} incluye ${this.currentSubscriptionPlan?.maxAdditionalUsers || 1} usuario adicional. Amplía tu equipo con un plan superior.`;
       case 'whatsapp':
-        return 'El Bot Automático de WhatsApp 24/7 y Live Chat con Inteligencia Artificial está disponible en el Plan Mediano y Plan Pro.';
+        return 'El Bot Automático de WhatsApp 24/7 y Live Chat está habilitado para todos los planes.';
       case 'excel':
         return 'La exportación de reportes avanzados de comandas y ventas en Excel (.xlsx) está disponible en los planes Mediano y Pro.';
       case 'banner':

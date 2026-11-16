@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException, InternalServerErrorException, UnauthorizedException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, InternalServerErrorException, UnauthorizedException, ForbiddenException, BadRequestException, Optional } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service.js';
 import { BiometricVerificationService } from './biometric-verification.service.js';
+import { PlansService } from '../plans/plans.service.js';
 
 import { randomUUID } from 'crypto';
 
@@ -27,6 +28,7 @@ export class RidersService {
   constructor(
     private supabase: SupabaseService,
     private biometricVerification: BiometricVerificationService,
+    @Optional() private plansService?: PlansService,
   ) {
     this.loadFromDisk();
   }
@@ -161,6 +163,11 @@ export class RidersService {
           resolvedTenantId = b.company_id;
         }
       } catch (_) {}
+    }
+
+    // Validar límite de motorizados propios según el plan del comercio
+    if (resolvedTenantId && this.plansService) {
+      await this.plansService.checkLimit(resolvedTenantId, 'rider');
     }
 
     // Si no tiene branch_id válido, dejar cleanBranchId en null

@@ -62,7 +62,7 @@ export const DEFAULT_SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     monthly_fee_usd: 20.00,
     max_branches: 0, // Solo sede principal (1 tienda)
     max_riders: 3, // Hasta 3 motorizados propios
-    has_whatsapp_bot: false,
+    has_whatsapp_bot: true, // Habilitado para todos los planes
     has_excel_reports: false,
     has_featured_banners: false,
     max_additional_users: 1,
@@ -76,6 +76,7 @@ export const DEFAULT_SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
       '1 tienda / sede incluida (sede principal)',
       'Hasta 150 productos en catálogo',
       'Hasta 3 motorizados propios registrados',
+      'Bot automático de WhatsApp 24/7 y Live Chat',
       'Pedidos mensuales ilimitados',
       '1 usuario de equipo adicional (+ dueño)',
       'Tienda web y menú digital QR para mesas',
@@ -292,7 +293,7 @@ export class PlansService {
 
     const fallback = DEFAULT_SUBSCRIPTION_PLANS.find(p => p.code === rawCode) || DEFAULT_SUBSCRIPTION_PLANS[0];
 
-    const hasBot = rawCode === 'FRANQUICIA' || rawCode === 'COMERCIO_PRO';
+    const hasBot = true; // Bot de WhatsApp incluido en todos los planes
     const hasExcel = rawCode === 'FRANQUICIA' || rawCode === 'COMERCIO_PRO';
     const hasBanners = rawCode === 'FRANQUICIA';
 
@@ -504,11 +505,7 @@ export class PlansService {
         break;
 
       case 'whatsapp':
-        if (!plan.has_whatsapp_bot) {
-          throw new ForbiddenException(
-            `El Bot Automático de WhatsApp está disponible a partir del Plan Mediano y Plan Pro. Actualiza tu plan para activar respuestas automáticas.`
-          );
-        }
+        // El Bot Automático de WhatsApp está habilitado para todos los planes
         break;
 
       case 'excel':
