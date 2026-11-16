@@ -12,7 +12,7 @@
         </span>
       </div>
       <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-        Supervisa las fechas de vencimiento de las suscripciones. Al expirar el plan, el comercio se pausa automáticamente en la plataforma hasta registrar el pago.
+        Supervisa las fechas de vencimiento de las suscripciones y configura el modelo de comisiones de repartidores independientes.
       </p>
     </div>
 
@@ -22,6 +22,172 @@
         <app-icon name="file-text" [size]="15"></app-icon>
         <span>Exportar Reporte CSV</span>
       </button>
+    </div>
+  </div>
+
+  <!-- ================= CONTROL GLOBAL DE COMISIÓN DE REPARTIDORES INDEPENDIENTES & ADD-ONS ================= -->
+  <div class="card-adaptive rounded-3xl p-6 border border-slate-200 dark:border-slate-800 bg-gradient-to-br from-white via-slate-50 to-orange-50/20 dark:from-slate-900 dark:via-slate-900 dark:to-slate-850 shadow-md space-y-6">
+    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 dark:border-slate-800 pb-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-2xl bg-brand-500 text-white flex items-center justify-center shadow-md shadow-brand-500/25">
+          <app-icon name="bike" [size]="20"></app-icon>
+        </div>
+        <div>
+          <h3 class="text-base font-black text-slate-900 dark:text-white">
+            Modelo de Cobro de Repartidores Independientes & Add-ons
+          </h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400">
+            Alterna entre el modelo Prepago (billetera del rider) o Postpago (factura a fin de mes al comercio).
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        @if (settingsSavedSuccess()) {
+          <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/40 px-3 py-1.5 rounded-xl border border-emerald-200 dark:border-emerald-800">
+            <app-icon name="check" [size]="14"></app-icon>
+            <span>¡Configuración Guardada!</span>
+          </span>
+        }
+        <button (click)="savePlatformSettings()"
+                [disabled]="isSavingSettings()"
+                class="px-5 py-2.5 bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white rounded-xl text-xs font-black transition-all shadow-md shadow-brand-500/20 flex items-center gap-2 cursor-pointer active:scale-95">
+          <app-icon name="sparkles" [size]="14"></app-icon>
+          <span>{{ isSavingSettings() ? 'Guardando...' : 'Guardar Parámetros' }}</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Toggle de los 2 Modelos (Opción A vs Opción B) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      
+      <!-- Opción A: Prepago / Billetera del Rider -->
+      <div (click)="setCommissionMode('RIDER_PREPAID')"
+           [class.border-brand-500]="platformSettings().riderCommissionMode === 'RIDER_PREPAID'"
+           [class.bg-brand-500/5]="platformSettings().riderCommissionMode === 'RIDER_PREPAID'"
+           [class.dark:bg-brand-500/10]="platformSettings().riderCommissionMode === 'RIDER_PREPAID'"
+           class="p-5 rounded-2xl border-2 border-slate-200 dark:border-slate-800 hover:border-brand-500/60 transition-all cursor-pointer relative flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-md"
+                  [ngClass]="platformSettings().riderCommissionMode === 'RIDER_PREPAID' ? 'bg-brand-500 text-white shadow-sm' : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'">
+              Opción A · Recomendada
+            </span>
+            <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all"
+                 [ngClass]="platformSettings().riderCommissionMode === 'RIDER_PREPAID' ? 'border-brand-500 bg-brand-500 text-white' : 'border-slate-300 dark:border-slate-700'">
+              @if (platformSettings().riderCommissionMode === 'RIDER_PREPAID') {
+                <div class="w-2 h-2 rounded-full bg-white"></div>
+              }
+            </div>
+          </div>
+          <h4 class="text-sm font-black text-slate-900 dark:text-white mb-1">
+            Prepago Automático (Billetera del Rider)
+          </h4>
+          <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+            El comercio entrega el <strong>100% de la tarifa de delivery</strong> ($3.00) cobrada al cliente directo al repartidor independiente. Pídetelo descuenta automáticamente su comisión (ej. <strong>${{ platformSettings().riderCommissionValue }}</strong>) del saldo prepagado de la billetera digital que el repartidor recarga en su app móvil.
+          </p>
+        </div>
+        <div class="mt-4 pt-3 border-t border-slate-200/60 dark:border-slate-800 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+          <span>✓ Cero fricción con el restaurante. Cobro 100% inmediato y garantizado.</span>
+        </div>
+      </div>
+
+      <!-- Opción B: Factura Mensual / Postpago al Comercio -->
+      <div (click)="setCommissionMode('MERCHANT_POSTPAID')"
+           [class.border-brand-500]="platformSettings().riderCommissionMode === 'MERCHANT_POSTPAID'"
+           [class.bg-brand-500/5]="platformSettings().riderCommissionMode === 'MERCHANT_POSTPAID'"
+           [class.dark:bg-brand-500/10]="platformSettings().riderCommissionMode === 'MERCHANT_POSTPAID'"
+           class="p-5 rounded-2xl border-2 border-slate-200 dark:border-slate-800 hover:border-brand-500/60 transition-all cursor-pointer relative flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-md"
+                  [ngClass]="platformSettings().riderCommissionMode === 'MERCHANT_POSTPAID' ? 'bg-brand-500 text-white shadow-sm' : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'">
+              Opción B · Postpago SaaS
+            </span>
+            <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all"
+                 [ngClass]="platformSettings().riderCommissionMode === 'MERCHANT_POSTPAID' ? 'border-brand-500 bg-brand-500 text-white' : 'border-slate-300 dark:border-slate-700'">
+              @if (platformSettings().riderCommissionMode === 'MERCHANT_POSTPAID') {
+                <div class="w-2 h-2 rounded-full bg-white"></div>
+              }
+            </div>
+          </div>
+          <h4 class="text-sm font-black text-slate-900 dark:text-white mb-1">
+            Factura Mensual al Comercio (Retención Directa)
+          </h4>
+          <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+            El restaurante retiene la comisión de la plataforma y le entrega al repartidor independiente únicamente la tarifa neta (ej. $2.50 de $3.00). Pídetelo acumula las comisiones de todas las carreras completadas y las suma a la factura mensual del comercio junto a su plan de suscripción.
+          </p>
+        </div>
+        <div class="mt-4 pt-3 border-t border-slate-200/60 dark:border-slate-800 text-[11px] font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
+          <span>✓ Ideal para cadenas que centralizan pagos y prefieren una sola factura al mes.</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Inputs de Ajuste de Valores de Comisión & Add-ons -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
+      
+      <!-- Comisión por Carrera -->
+      <div class="p-3.5 bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700">
+        <label class="block text-[11px] font-black uppercase text-slate-500 dark:text-slate-400 mb-1">
+          Comisión Repartidor Externo
+        </label>
+        <div class="flex items-center gap-2">
+          <span class="text-base font-bold text-slate-400">$</span>
+          <input type="number" step="0.10" min="0"
+                 [ngModel]="platformSettings().riderCommissionValue"
+                 (ngModelChange)="platformSettings().riderCommissionValue = $event"
+                 class="w-full text-base font-black bg-transparent border-b border-slate-300 dark:border-slate-600 focus:outline-none focus:border-brand-500 text-slate-900 dark:text-white" />
+          <span class="text-xs font-bold text-slate-400">USD/carrera</span>
+        </div>
+      </div>
+
+      <!-- Sucursal Extra -->
+      <div class="p-3.5 bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700">
+        <label class="block text-[11px] font-black uppercase text-slate-500 dark:text-slate-400 mb-1">
+          Sucursal Extra (≥ 6ta sede)
+        </label>
+        <div class="flex items-center gap-2">
+          <span class="text-base font-bold text-slate-400">$</span>
+          <input type="number" step="1.00" min="0"
+                 [ngModel]="platformSettings().extraBranchPrice"
+                 (ngModelChange)="platformSettings().extraBranchPrice = $event"
+                 class="w-full text-base font-black bg-transparent border-b border-slate-300 dark:border-slate-600 focus:outline-none focus:border-brand-500 text-slate-900 dark:text-white" />
+          <span class="text-xs font-bold text-slate-400">USD/mes</span>
+        </div>
+      </div>
+
+      <!-- Catálogo Masivo -->
+      <div class="p-3.5 bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700">
+        <label class="block text-[11px] font-black uppercase text-slate-500 dark:text-slate-400 mb-1">
+          Catálogo Masivo (>500 ítems)
+        </label>
+        <div class="flex items-center gap-2">
+          <span class="text-base font-bold text-slate-400">$</span>
+          <input type="number" step="1.00" min="0"
+                 [ngModel]="platformSettings().massCatalogPricePerBranch"
+                 (ngModelChange)="platformSettings().massCatalogPricePerBranch = $event"
+                 class="w-full text-base font-black bg-transparent border-b border-slate-300 dark:border-slate-600 focus:outline-none focus:border-brand-500 text-slate-900 dark:text-white" />
+          <span class="text-xs font-bold text-slate-400">USD/sede/m</span>
+        </div>
+      </div>
+
+      <!-- Onboarding & Migración -->
+      <div class="p-3.5 bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700">
+        <label class="block text-[11px] font-black uppercase text-slate-500 dark:text-slate-400 mb-1">
+          Fee Onboarding & Carga Masiva
+        </label>
+        <div class="flex items-center gap-2">
+          <span class="text-base font-bold text-slate-400">$</span>
+          <input type="number" step="10.00" min="0"
+                 [ngModel]="platformSettings().onboardingFee"
+                 (ngModelChange)="platformSettings().onboardingFee = $event"
+                 class="w-full text-base font-black bg-transparent border-b border-slate-300 dark:border-slate-600 focus:outline-none focus:border-brand-500 text-slate-900 dark:text-white" />
+          <span class="text-xs font-bold text-slate-400">USD único</span>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -95,9 +261,9 @@
               (ngModelChange)="filterPlan.set($event)"
               class="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-700 dark:text-slate-300 font-bold focus:outline-none focus:border-brand-500 cursor-pointer">
         <option value="ALL">Todos los Planes</option>
-        <option value="EMPRENDEDOR">Plan Emprendedor ($20)</option>
-        <option value="COMERCIO_PRO">Plan Comercio Pro ($35)</option>
-        <option value="FRANQUICIA">Plan Franquicia ($80)</option>
+        <option value="EMPRENDEDOR">Plan Básico ($20)</option>
+        <option value="COMERCIO_PRO">Plan Mediano ($50)</option>
+        <option value="FRANQUICIA">Plan Pro ($80)</option>
       </select>
 
       <!-- Filter Status -->
@@ -119,123 +285,103 @@
       <table class="w-full text-left text-xs">
         <thead class="bg-slate-50 dark:bg-slate-900/90 text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800 uppercase font-bold text-[10px] tracking-wider">
           <tr>
-            <th class="p-4">Comercio</th>
-            <th class="p-4">Plan Activo</th>
-            <th class="p-4">Tarifa Mensual</th>
-            <th class="p-4">Fecha de Vencimiento</th>
-            <th class="p-4">Tiempo Restante</th>
-            <th class="p-4">Estado Tienda</th>
-            <th class="p-4 text-right">Acciones Rápidas</th>
+            <th class="py-3 px-4">Comercio</th>
+            <th class="py-3 px-4">Plan Actual</th>
+            <th class="py-3 px-4 text-center">Cuota USD</th>
+            <th class="py-3 px-4">Vencimiento</th>
+            <th class="py-3 px-4 text-center">Días Restantes</th>
+            <th class="py-3 px-4 text-center">Estado</th>
+            <th class="py-3 px-4 text-right">Acciones Rápidas</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-          @for (r of filteredRows(); track r.tenant.id) {
-            <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors group">
+        <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60 text-slate-700 dark:text-slate-300">
+          @for (row of filteredRows(); track row.tenant.id) {
+            <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors"
+                [class.bg-rose-500/5]="row.status === 'expired'"
+                [class.bg-amber-500/5]="row.status === 'expiring_soon'">
               
               <!-- Comercio Info -->
-              <td class="p-4">
+              <td class="py-3.5 px-4">
                 <div class="flex items-center gap-3">
-                  <img [src]="r.tenant.logoUrl || '/assets/stores/mcdonalds-logo.svg'" 
-                       [alt]="r.tenant.name"
-                       class="w-10 h-10 rounded-xl object-cover border border-slate-200 dark:border-slate-700 bg-white shadow-xs flex-shrink-0" />
-                  <div class="min-w-0">
-                    <div class="font-bold text-sm text-slate-900 dark:text-white group-hover:text-brand-500 transition-colors truncate">
-                      {{ r.tenant.name }}
+                  <img [src]="row.tenant.logoUrl || '/assets/stores/mcdonalds-logo.svg'"
+                       class="w-9 h-9 rounded-xl object-cover border border-slate-200 dark:border-slate-700 bg-white" />
+                  <div>
+                    <div class="font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5">
+                      <span>{{ row.tenant.name }}</span>
+                      @if (row.isPaused) {
+                        <span class="text-[9px] font-black uppercase px-1.5 py-0.2 rounded bg-rose-500/10 text-rose-600 border border-rose-500/20">Pausado</span>
+                      }
                     </div>
-                    <div class="text-[11px] text-slate-400 font-mono">/t/{{ r.tenant.slug }}</div>
-                    @if (r.tenant.contact?.whatsappNumber) {
-                      <div class="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold mt-0.5">
-                        📱 {{ r.tenant.contact.whatsappNumber }}
-                      </div>
-                    }
+                    <div class="text-[11px] text-slate-400 flex items-center gap-2 mt-0.5">
+                      <span>/{{ row.tenant.slug }}</span>
+                      @if (row.tenant.contact?.whatsappNumber) {
+                        <span>· {{ row.tenant.contact?.whatsappNumber }}</span>
+                      }
+                    </div>
                   </div>
                 </div>
               </td>
 
-              <!-- Plan Badge -->
-              <td class="p-4">
-                <span class="px-2.5 py-1 rounded-lg text-[11px] font-black uppercase tracking-wider inline-flex items-center gap-1"
-                      [class.bg-purple-100]="r.planCode === 'FRANQUICIA'" [class.text-purple-700]="r.planCode === 'FRANQUICIA'" [class.dark:bg-purple-950/40]="r.planCode === 'FRANQUICIA'" [class.dark:text-purple-300]="r.planCode === 'FRANQUICIA'"
-                      [class.bg-blue-100]="r.planCode === 'COMERCIO_PRO'" [class.text-blue-700]="r.planCode === 'COMERCIO_PRO'" [class.dark:bg-blue-950/40]="r.planCode === 'COMERCIO_PRO'" [class.dark:text-blue-300]="r.planCode === 'COMERCIO_PRO'"
-                      [class.bg-amber-100]="r.planCode === 'EMPRENDEDOR'" [class.text-amber-700]="r.planCode === 'EMPRENDEDOR'" [class.dark:bg-amber-950/40]="r.planCode === 'EMPRENDEDOR'" [class.dark:text-amber-300]="r.planCode === 'EMPRENDEDOR'">
-                  <span>⭐</span>
-                  <span>{{ r.planName }}</span>
+              <!-- Plan Code -->
+              <td class="py-3.5 px-4">
+                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-black uppercase tracking-wider"
+                      [ngClass]="row.planCode === 'FRANQUICIA' ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20' :
+                                (row.planCode === 'COMERCIO_PRO' ? 'bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700')">
+                  {{ row.planName }}
                 </span>
               </td>
 
-              <!-- Tarifa -->
-              <td class="p-4">
-                <div class="text-sm font-extrabold text-slate-900 dark:text-white">
-                  ${{ r.monthlyFee }}.00 <span class="text-[10px] font-normal text-slate-400">/mes</span>
-                </div>
+              <!-- Cuota USD -->
+              <td class="py-3.5 px-4 text-center font-black font-mono text-slate-900 dark:text-white">
+                ${{ row.monthlyFee }}
               </td>
 
               <!-- Fecha Vencimiento -->
-              <td class="p-4">
-                <div class="text-xs font-bold text-slate-800 dark:text-slate-200">
-                  {{ formatDate(r.expiresAtDate) }}
-                </div>
+              <td class="py-3.5 px-4">
+                <div class="font-semibold text-slate-800 dark:text-slate-200">{{ formatDate(row.expiresAtDate) }}</div>
+                <div class="text-[10px] text-slate-400">Renovación mensual</div>
               </td>
 
               <!-- Días Restantes -->
-              <td class="p-4">
-                @if (r.status === 'expired') {
-                  <span class="px-2.5 py-1 rounded-full text-[11px] font-black bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-300 dark:border-rose-800 inline-flex items-center gap-1.5 shadow-xs">
-                    <span class="w-1.5 h-1.5 rounded-full bg-rose-600"></span>
-                    <span>Vencido hace {{ -r.daysRemaining }} días</span>
-                  </span>
-                } @else if (r.status === 'expiring_soon') {
-                  <span class="px-2.5 py-1 rounded-full text-[11px] font-black bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-800 inline-flex items-center gap-1.5 shadow-xs animate-pulse">
-                    <span class="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
-                    <span>⚠️ Vence en {{ r.daysRemaining }} días</span>
-                  </span>
+              <td class="py-3.5 px-4 text-center">
+                @if (row.status === 'expired') {
+                  <span class="text-xs font-black text-rose-600 dark:text-rose-400">Vencido</span>
+                } @else if (row.status === 'expiring_soon') {
+                  <span class="text-xs font-black text-amber-600 dark:text-amber-400 animate-pulse">{{ row.daysRemaining }} días</span>
                 } @else {
-                  <span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 inline-flex items-center gap-1.5">
-                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                    <span>{{ r.daysRemaining }} días restantes</span>
-                  </span>
+                  <span class="text-xs font-bold text-slate-600 dark:text-slate-400">{{ row.daysRemaining }} días</span>
                 }
               </td>
 
-              <!-- Estado Tienda (Pausada vs Recibiendo pedidos) -->
-              <td class="p-4">
-                @if (r.status === 'expired') {
-                  <span class="px-2.5 py-1 rounded-md text-[11px] font-black bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-900 inline-flex items-center gap-1">
-                    <span>⛔</span>
-                    <span>Pausado (Plan Vencido)</span>
+              <!-- Estado Badge -->
+              <td class="py-3.5 px-4 text-center">
+                @if (row.status === 'expired') {
+                  <span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-rose-500/10 text-rose-600 border border-rose-500/20">
+                    Vencido
                   </span>
-                } @else if (r.isPaused) {
-                  <span class="px-2.5 py-1 rounded-md text-[11px] font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 inline-flex items-center gap-1">
-                    <span>⏸️</span>
-                    <span>Pausado Manual</span>
+                } @else if (row.status === 'expiring_soon') {
+                  <span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                    Por Vencer
                   </span>
                 } @else {
-                  <span class="px-2.5 py-1 rounded-md text-[11px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900 inline-flex items-center gap-1">
-                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-                    <span>Operativo</span>
+                  <span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                    Al Día
                   </span>
                 }
               </td>
 
               <!-- Acciones Rápidas -->
-              <td class="p-4 text-right">
+              <td class="py-3.5 px-4 text-right">
                 <div class="flex items-center justify-end gap-1.5">
-                  <button (click)="quickExtend(r, 30)"
-                          title="Extender membresía 30 días adicionales"
-                          class="px-2.5 py-1.5 rounded-lg bg-brand-50 hover:bg-brand-500 text-brand-700 hover:text-white dark:bg-slate-800 dark:hover:bg-brand-500 dark:text-brand-400 dark:hover:text-white text-[11px] font-bold border border-brand-200 dark:border-slate-700 transition-all cursor-pointer">
-                    +30 Días
+                  <button (click)="quickExtend(row, 30)"
+                          title="Extender +30 días"
+                          class="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white text-[11px] font-bold transition-colors cursor-pointer">
+                    +30d
                   </button>
-
-                  <button (click)="quickExtend(r, 90)"
-                          title="Extender membresía 90 días adicionales (Trimestral)"
-                          class="px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white dark:bg-slate-800 dark:hover:bg-emerald-600 dark:text-emerald-400 dark:hover:text-white text-[11px] font-bold border border-emerald-200 dark:border-slate-700 transition-all cursor-pointer">
-                    +90 Días
-                  </button>
-
-                  <button (click)="openEditModal(r)"
-                          title="Modificar fecha exacta de vencimiento y plan"
-                          class="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer">
-                    <app-icon name="calendar" [size]="14"></app-icon>
+                  <button (click)="openEditModal(row)"
+                          title="Editar Plan y Add-ons"
+                          class="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer">
+                    <app-icon name="edit" [size]="14"></app-icon>
                   </button>
                 </div>
               </td>
@@ -255,17 +401,17 @@
 
 </div>
 
-<!-- ================= MODAL AJUSTAR PLAN & FECHA VENCIMIENTO ================= -->
+<!-- ================= MODAL AJUSTAR PLAN, ADD-ONS & FECHA VENCIMIENTO ================= -->
 @if (isModalOpen() && editingTenant(); as target) {
   <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-    <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-5">
+    <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-5 max-h-[90vh] overflow-y-auto">
       
       <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
         <div class="flex items-center gap-3">
           <img [src]="target.logoUrl || '/assets/stores/mcdonalds-logo.svg'" class="w-10 h-10 rounded-xl object-cover border border-slate-200 dark:border-slate-700 bg-white" />
           <div>
             <h3 class="font-extrabold text-base text-slate-900 dark:text-white leading-tight">{{ target.name }}</h3>
-            <p class="text-xs text-slate-400 font-mono">Ajustar vigencia de membresía</p>
+            <p class="text-xs text-slate-400 font-mono">Ajustar membresía & add-ons</p>
           </div>
         </div>
         <button (click)="closeModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg font-bold">✕</button>
@@ -274,13 +420,46 @@
       <div class="space-y-4 text-xs">
         <!-- Selector de Plan -->
         <div>
-          <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">Plan de Suscripción</label>
+          <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">Plan de Suscripción Base</label>
           <select [(ngModel)]="modalPlanCode"
                   class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-brand-500">
-            <option value="EMPRENDEDOR">Plan Emprendedor — $20.00 / mes (1 Sede, Catálogo ilimitado)</option>
-            <option value="COMERCIO_PRO">Plan Comercio Pro — $35.00 / mes (WhatsApp Bot, Multi-sede)</option>
-            <option value="FRANQUICIA">Plan Franquicia — $80.00 / mes (Dominio propio, API y Soporte VIP)</option>
+            <option value="EMPRENDEDOR">Plan Básico — $20.00 / mes (1 Sede, hasta 150 prod, 3 motorizados)</option>
+            <option value="COMERCIO_PRO">Plan Mediano — $50.00 / mes (Hasta 3 Sedes, 500 prod/sede, 6 motorizados)</option>
+            <option value="FRANQUICIA">Plan Pro — $80.00 / mes (Hasta 5 Sedes, 500 prod/sede, 10 motorizados)</option>
           </select>
+        </div>
+
+        <!-- Add-ons de Cadena & Escala -->
+        <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-3">
+          <span class="block text-[11px] font-black uppercase text-brand-600 dark:text-brand-400 tracking-wider">
+            Módulos & Add-ons de Cadenas
+          </span>
+
+          <!-- Sucursales extras -->
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <div class="font-bold text-slate-900 dark:text-white">Sucursales adicionales extras</div>
+              <div class="text-[11px] text-slate-400">+$12/mes por sucursal a partir de la 6ta</div>
+            </div>
+            <div class="flex items-center gap-2">
+              <input type="number" min="0" max="100"
+                     [(ngModel)]="modalExtraBranches"
+                     class="w-16 text-center font-black bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg py-1 px-2 text-xs" />
+              <span class="text-[11px] text-slate-400 font-bold">extras</span>
+            </div>
+          </div>
+
+          <!-- Catálogo masivo -->
+          <div class="flex items-center justify-between gap-3 pt-2 border-t border-slate-200/60 dark:border-slate-700">
+            <div>
+              <div class="font-bold text-slate-900 dark:text-white">Módulo Catálogo Masivo</div>
+              <div class="text-[11px] text-slate-400">Amplía a +5,000 productos con importador masivo Excel</div>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" [(ngModel)]="modalHasMassCatalog" class="sr-only peer">
+              <div class="w-10 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-500"></div>
+            </label>
+          </div>
         </div>
 
         <!-- Selector de Fecha de Vencimiento -->
@@ -319,4 +498,3 @@
     </div>
   </div>
 }
-

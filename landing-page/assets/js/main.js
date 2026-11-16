@@ -112,9 +112,9 @@ function initModuleTabs() {
 
 /* ===================================================================
    4. SELECTOR DE PRECIOS (Mensual vs Anual con 20% Desc.)
-   Plan Emprendedor: $20/mes ($16 anual)
-   Plan Pro: $35/mes ($28 anual)
-   Plan Franquicia: $80/mes ($64 anual)
+   Plan Básico (Emprendedor): $20/mes ($16 anual)
+   Plan Mediano (Comercio Pro): $50/mes ($40 anual)
+   Plan Pro (Franquicia): $80/mes ($64 anual)
 =================================================================== */
 function initPricingToggle() {
   const toggle = document.getElementById('pricing-toggle');
@@ -124,8 +124,8 @@ function initPricingToggle() {
   const periodElements = document.querySelectorAll('.plan-period');
 
   const prices = {
-    monthly: { starter: '20', pro: '35', enterprise: '80' },
-    annual: { starter: '16', pro: '28', enterprise: '64' }
+    monthly: { starter: '20', pro: '50', enterprise: '80' },
+    annual: { starter: '16', pro: '40', enterprise: '64' }
   };
 
   toggle.addEventListener('change', (e) => {

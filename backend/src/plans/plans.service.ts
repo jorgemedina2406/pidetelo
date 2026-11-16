@@ -10,44 +10,79 @@ export interface SubscriptionPlan {
   price_monthly: number;
   price_annual: number;
   monthly_fee_usd: number;
-  max_branches: number; // 0, 2, -1 (unlimited)
+  max_branches: number; // 0 (1 tienda), 2 (3 tiendas), 4 (5 tiendas)
+  max_riders: number; // 3, 6, 10
   has_whatsapp_bot: boolean;
   has_excel_reports: boolean;
   has_featured_banners: boolean;
-  max_additional_users: number; // 1, 3, -1
-  max_monthly_orders: number; // 20, 50, -1
-  max_products: number; // 20, 100, -1
+  max_additional_users: number; // 1, 3, 10
+  max_monthly_orders: number; // -1 (ilimitados)
+  max_products: number; // 150, 500, 500
+  extra_branch_price: number; // 12.00
+  mass_catalog_price: number; // 5.00
+  onboarding_fee: number; // 150.00
   description: string;
   features: string[];
   is_active: boolean;
 }
 
+export interface PlatformSettings {
+  riderCommissionMode: 'RIDER_PREPAID' | 'MERCHANT_POSTPAID';
+  riderCommissionType: 'FIXED' | 'PERCENTAGE';
+  riderCommissionValue: number;
+  extraBranchPrice: number;
+  massCatalogPricePerBranch: number;
+  onboardingFee: number;
+  updatedAt: string;
+}
+
+export interface TenantAddons {
+  extraBranches: number;
+  hasMassCatalog: boolean;
+  hasOnboardingAssistance?: boolean;
+}
+
+export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
+  riderCommissionMode: 'RIDER_PREPAID', // Opción A por defecto
+  riderCommissionType: 'FIXED',
+  riderCommissionValue: 0.50, // $0.50 por carrera de repartidor externo
+  extraBranchPrice: 12.00, // $12/mes por sucursal extra (a partir de la 6ta)
+  massCatalogPricePerBranch: 5.00, // $5/mes por sucursal para >500 productos
+  onboardingFee: 150.00, // $150 tarifa única de migración/onboarding
+  updatedAt: new Date().toISOString()
+};
+
 export const DEFAULT_SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
   {
     id: 'plan_emprendedor',
     code: 'EMPRENDEDOR',
-    name: 'Plan Emprendedor',
+    name: 'Plan Básico',
     price_monthly: 20.00,
     price_annual: 16.00,
     monthly_fee_usd: 20.00,
-    max_branches: 0,
+    max_branches: 0, // Solo sede principal (1 tienda)
+    max_riders: 3, // Hasta 3 motorizados propios
     has_whatsapp_bot: false,
     has_excel_reports: false,
     has_featured_banners: false,
     max_additional_users: 1,
-    max_monthly_orders: 20,
-    max_products: 20,
-    description: 'Para negocios y marcas que inician con su sede principal.',
+    max_monthly_orders: -1,
+    max_products: 150,
+    extra_branch_price: 12.00,
+    mass_catalog_price: 5.00,
+    onboarding_fee: 150.00,
+    description: 'Para restaurantes únicos, dark kitchens o comercios que inician con su sede principal.',
     features: [
-      '0 sucursales adicionales (solo sede principal)',
-      'Hasta 20 productos en catálogo',
-      'Hasta 20 pedidos al mes',
-      '1 usuario de equipo adicional',
-      'Tienda web y menú digital con código QR',
+      '1 tienda / sede incluida (sede principal)',
+      'Hasta 150 productos en catálogo',
+      'Hasta 3 motorizados propios registrados',
+      'Pedidos mensuales ilimitados',
+      '1 usuario de equipo adicional (+ dueño)',
+      'Tienda web y menú digital QR para mesas',
       'Acceso a la App Móvil de Clientes',
       'Acceso a la App de Repartidores con GPS',
-      'Pagos 100% directos (0% comisión sobre ventas)',
-      'Tracking de pedidos en tiempo real',
+      '0% comisión sobre ventas (pagos 100% directos)',
+      'Tracking de entregas en tiempo real',
       'Soporte estándar'
     ],
     is_active: true
@@ -55,26 +90,31 @@ export const DEFAULT_SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
   {
     id: 'plan_comercio_pro',
     code: 'COMERCIO_PRO',
-    name: 'Plan Comercio Pro',
-    price_monthly: 35.00,
-    price_annual: 28.00,
-    monthly_fee_usd: 35.00,
-    max_branches: 2,
+    name: 'Plan Mediano',
+    price_monthly: 50.00,
+    price_annual: 40.00,
+    monthly_fee_usd: 50.00,
+    max_branches: 2, // 1 principal + 2 sucursales = 3 sedes ($16.67/tienda)
+    max_riders: 6, // Hasta 6 motorizados propios
     has_whatsapp_bot: true,
     has_excel_reports: true,
     has_featured_banners: false,
     max_additional_users: 3,
-    max_monthly_orders: 50,
-    max_products: 100,
-    description: 'Para comercios establecidos que buscan automatización y expansión local.',
+    max_monthly_orders: -1,
+    max_products: 500,
+    extra_branch_price: 12.00,
+    mass_catalog_price: 5.00,
+    onboarding_fee: 150.00,
+    description: 'Para comercios consolidados que buscan expansión a 3 tiendas y automatización con bot.',
     features: [
-      'Todo lo incluido en el Plan Emprendedor',
-      'Hasta 2 sucursales adicionales (3 sedes en total)',
-      'Hasta 100 productos en catálogo',
-      'Hasta 50 pedidos al mes',
+      'Hasta 3 tiendas (1 principal + 2 sucursales a $16.67/sede)',
+      'Hasta 500 productos por tienda',
+      'Hasta 6 motorizados propios registrados',
+      'Pedidos mensuales ilimitados',
       'Hasta 3 usuarios de equipo adicionales',
-      'Bot automático de WhatsApp y Live Chat 24/7',
+      'Bot automático de WhatsApp 24/7 y Live Chat',
       'Reportes avanzados en Excel (.xlsx)',
+      'Pantalla interactiva de Cocina / KDS',
       'Soporte prioritario'
     ],
     is_active: true
@@ -82,27 +122,33 @@ export const DEFAULT_SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
   {
     id: 'plan_franquicia',
     code: 'FRANQUICIA',
-    name: 'Plan Franquicia',
+    name: 'Plan Pro',
     price_monthly: 80.00,
     price_annual: 64.00,
     monthly_fee_usd: 80.00,
-    max_branches: -1,
+    max_branches: 4, // 1 principal + 4 sucursales = 5 sedes ($16.00/tienda)
+    max_riders: 10, // Hasta 10 motorizados propios
     has_whatsapp_bot: true,
     has_excel_reports: true,
     has_featured_banners: true,
-    max_additional_users: -1,
+    max_additional_users: 10,
     max_monthly_orders: -1,
-    max_products: -1,
-    description: 'Para cadenas gastronómicas, franquicias y marcas líderes de alto volumen.',
+    max_products: 500,
+    extra_branch_price: 12.00,
+    mass_catalog_price: 5.00,
+    onboarding_fee: 150.00,
+    description: 'Para cadenas y marcas líderes: hasta 5 tiendas base y escalabilidad ilimitada con add-ons.',
     features: [
-      'Todo lo incluido en el Plan Comercio Pro',
-      'Sucursales físicas ilimitadas',
-      'Productos en catálogo ilimitados',
-      'Pedidos al mes ilimitados',
-      'Cuentas de usuarios de equipo ilimitadas',
+      'Hasta 5 tiendas base (1 principal + 4 sucursales a $16.00/sede)',
+      'Hasta 500 productos por tienda',
+      'Hasta 10 motorizados propios registrados',
+      'Pedidos mensuales ilimitados',
+      'Hasta 10 usuarios de equipo adicionales',
       'Banners destacados VIP en la App Móvil',
-      'Bot automático de WhatsApp ilimitado con IA',
+      'Bot WhatsApp con IA y Live Chat Multi-operador',
       'Auditoría de inicios de sesión y BI empresarial',
+      'Add-on de sucursales extra por solo +$12/mes a partir de la 6ta',
+      'Módulo de catálogo masivo disponible (+500 productos)',
       'Soporte VIP 24/7 con ejecutivo asignado'
     ],
     is_active: true
@@ -112,9 +158,91 @@ export const DEFAULT_SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
 @Injectable()
 export class PlansService {
   private localTenantPlansPath = path.join(process.cwd(), 'data', 'tenant_plans.json');
+  private platformSettingsPath = path.join(process.cwd(), 'data', 'platform_settings.json');
+  private tenantAddonsPath = path.join(process.cwd(), 'data', 'tenant_addons.json');
 
   constructor(private readonly supabase: SupabaseService) {}
 
+  // -------------------------------------------------------------
+  // PLATFORM SETTINGS (Comisión Motorizados y Precios de Add-ons)
+  // -------------------------------------------------------------
+  getPlatformSettings(): PlatformSettings {
+    try {
+      if (fs.existsSync(this.platformSettingsPath)) {
+        const raw = fs.readFileSync(this.platformSettingsPath, 'utf-8');
+        const parsed = JSON.parse(raw);
+        return {
+          ...DEFAULT_PLATFORM_SETTINGS,
+          ...parsed
+        };
+      }
+    } catch (e) {
+      console.warn('[PlansService] Error reading platform settings:', e);
+    }
+    return { ...DEFAULT_PLATFORM_SETTINGS };
+  }
+
+  updatePlatformSettings(newSettings: Partial<PlatformSettings>): PlatformSettings {
+    try {
+      const dir = path.dirname(this.platformSettingsPath);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+
+      const current = this.getPlatformSettings();
+      const updated: PlatformSettings = {
+        ...current,
+        ...newSettings,
+        updatedAt: new Date().toISOString()
+      };
+
+      fs.writeFileSync(this.platformSettingsPath, JSON.stringify(updated, null, 2), 'utf-8');
+      return updated;
+    } catch (e) {
+      console.error('[PlansService] Error saving platform settings:', e);
+      throw new InternalServerErrorException('No se pudieron guardar las configuraciones de la plataforma');
+    }
+  }
+
+  // -------------------------------------------------------------
+  // TENANT ADDONS (Sucursales extras & Catálogo Masivo)
+  // -------------------------------------------------------------
+  private loadAllTenantAddons(): Record<string, TenantAddons> {
+    try {
+      if (fs.existsSync(this.tenantAddonsPath)) {
+        return JSON.parse(fs.readFileSync(this.tenantAddonsPath, 'utf-8'));
+      }
+    } catch (_) {}
+    return {};
+  }
+
+  getTenantAddons(tenantId: string): TenantAddons {
+    const all = this.loadAllTenantAddons();
+    return all[tenantId] || { extraBranches: 0, hasMassCatalog: false, hasOnboardingAssistance: false };
+  }
+
+  updateTenantAddons(tenantId: string, addons: Partial<TenantAddons>): TenantAddons {
+    try {
+      const dir = path.dirname(this.tenantAddonsPath);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+
+      const all = this.loadAllTenantAddons();
+      const current = all[tenantId] || { extraBranches: 0, hasMassCatalog: false, hasOnboardingAssistance: false };
+      const updated: TenantAddons = {
+        ...current,
+        ...addons
+      };
+      all[tenantId] = updated;
+
+      fs.writeFileSync(this.tenantAddonsPath, JSON.stringify(all, null, 2), 'utf-8');
+      return updated;
+    } catch (e) {
+      console.error('[PlansService] Error saving tenant addons:', e);
+      throw new InternalServerErrorException('No se pudieron guardar los add-ons del comercio');
+    }
+  }
+
+  // -------------------------------------------------------------
+  // TENANT PLANS
+  // -------------------------------------------------------------
   private loadLocalTenantPlans(): Record<string, string> {
     try {
       if (fs.existsSync(this.localTenantPlansPath)) {
@@ -168,20 +296,30 @@ export class PlansService {
     const hasExcel = rawCode === 'FRANQUICIA' || rawCode === 'COMERCIO_PRO';
     const hasBanners = rawCode === 'FRANQUICIA';
 
+    const maxBranches = rawCode === 'FRANQUICIA' ? 4 : (rawCode === 'COMERCIO_PRO' ? 2 : 0);
+    const maxRiders = rawCode === 'FRANQUICIA' ? 10 : (rawCode === 'COMERCIO_PRO' ? 6 : 3);
+    const maxProducts = rawCode === 'EMPRENDEDOR' ? 150 : 500;
+    const priceMonthly = rawCode === 'FRANQUICIA' ? 80.00 : (rawCode === 'COMERCIO_PRO' ? 50.00 : 20.00);
+    const priceAnnual = rawCode === 'FRANQUICIA' ? 64.00 : (rawCode === 'COMERCIO_PRO' ? 40.00 : 16.00);
+
     return {
       id: row.id || fallback.id,
       code: rawCode as any,
-      name: rawCode === 'FRANQUICIA' ? 'Plan Franquicia' : (rawCode === 'COMERCIO_PRO' ? 'Plan Comercio Pro' : 'Plan Emprendedor'),
-      price_monthly: Number(row.price_monthly ?? row.monthly_fee_usd ?? fallback.price_monthly),
-      price_annual: Number(row.price_annual ?? fallback.price_annual),
-      monthly_fee_usd: Number(row.monthly_fee_usd ?? row.price_monthly ?? fallback.monthly_fee_usd),
-      max_branches: rawCode === 'FRANQUICIA' ? -1 : (rawCode === 'COMERCIO_PRO' ? 2 : 0),
+      name: rawCode === 'FRANQUICIA' ? 'Plan Pro' : (rawCode === 'COMERCIO_PRO' ? 'Plan Mediano' : 'Plan Básico'),
+      price_monthly: Number(row.price_monthly ?? row.monthly_fee_usd ?? priceMonthly),
+      price_annual: Number(row.price_annual ?? priceAnnual),
+      monthly_fee_usd: Number(row.monthly_fee_usd ?? row.price_monthly ?? priceMonthly),
+      max_branches: maxBranches,
+      max_riders: maxRiders,
       has_whatsapp_bot: hasBot,
       has_excel_reports: hasExcel,
       has_featured_banners: hasBanners,
-      max_additional_users: rawCode === 'FRANQUICIA' ? -1 : (rawCode === 'COMERCIO_PRO' ? 3 : 1),
-      max_monthly_orders: rawCode === 'FRANQUICIA' ? -1 : (rawCode === 'COMERCIO_PRO' ? 50 : 20),
-      max_products: rawCode === 'FRANQUICIA' ? -1 : (rawCode === 'COMERCIO_PRO' ? 100 : 20),
+      max_additional_users: rawCode === 'FRANQUICIA' ? 10 : (rawCode === 'COMERCIO_PRO' ? 3 : 1),
+      max_monthly_orders: -1,
+      max_products: maxProducts,
+      extra_branch_price: 12.00,
+      mass_catalog_price: 5.00,
+      onboarding_fee: 150.00,
       description: row.description || fallback.description,
       features: Array.isArray(row.features) && row.features.length > 0 ? row.features : fallback.features,
       is_active: row.is_active !== undefined ? Boolean(row.is_active) : true
@@ -224,18 +362,19 @@ export class PlansService {
       return this.getPlanByCode(planCode);
     }
 
-    // Default: Si es Burger Lab demo le asignamos COMERCIO_PRO; por defecto EMPRENDEDOR
     return this.getPlanByCode('COMERCIO_PRO');
   }
 
   async getTenantPlanAndUsage(tenantId: string) {
     const plan = await this.getTenantPlan(tenantId);
+    const addons = this.getTenantAddons(tenantId);
     const client = this.supabase.getClient();
 
     let branchesCount = 0;
     let productsCount = 0;
     let usersCount = 0;
     let monthlyOrdersCount = 0;
+    let ownRidersCount = 0;
 
     try {
       // 1. Contar sucursales adicionales (excluyendo sede principal)
@@ -274,20 +413,38 @@ export class PlansService {
         .eq('tenant_id', tenantId)
         .gte('created_at', startOfMonth);
       monthlyOrdersCount = ordersCount || 0;
+
+      // 5. Contar motorizados propios
+      const { count: ridersCount } = await client
+        .from('riders')
+        .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', tenantId);
+      ownRidersCount = ridersCount || 0;
     } catch (e) {
       console.warn('[PlansService] Error counting tenant usage:', e);
     }
 
+    // Límites efectivos considerando Add-ons adquiridos
+    const effectiveMaxBranches = plan.max_branches === -1 ? -1 : (plan.max_branches + (addons.extraBranches || 0));
+    const effectiveMaxProducts = addons.hasMassCatalog ? 5000 : plan.max_products;
+    const effectiveMaxRiders = plan.max_riders;
+
     return {
       plan,
+      addons,
       usage: {
         branchesCount,
         productsCount,
         usersCount,
         monthlyOrdersCount,
+        ownRidersCount,
         limits: {
-          maxBranches: plan.max_branches,
-          maxProducts: plan.max_products,
+          maxBranches: effectiveMaxBranches,
+          baseMaxBranches: plan.max_branches,
+          extraBranchesAdded: addons.extraBranches || 0,
+          maxProducts: effectiveMaxProducts,
+          hasMassCatalog: addons.hasMassCatalog,
+          maxRiders: effectiveMaxRiders,
           maxUsers: plan.max_additional_users,
           maxOrders: plan.max_monthly_orders,
           hasWhatsappBot: plan.has_whatsapp_bot,
@@ -298,22 +455,34 @@ export class PlansService {
     };
   }
 
-  async checkLimit(tenantId: string, resource: 'branch' | 'product' | 'user' | 'order' | 'whatsapp' | 'excel' | 'banner') {
-    const { plan, usage } = await this.getTenantPlanAndUsage(tenantId);
+  async checkLimit(tenantId: string, resource: 'branch' | 'product' | 'user' | 'order' | 'rider' | 'whatsapp' | 'excel' | 'banner') {
+    const { plan, addons, usage } = await this.getTenantPlanAndUsage(tenantId);
+    const settings = this.getPlatformSettings();
 
     switch (resource) {
       case 'branch':
-        if (plan.max_branches !== -1 && usage.branchesCount >= plan.max_branches) {
+        const maxBranches = usage.limits.maxBranches;
+        if (maxBranches !== -1 && usage.branchesCount >= maxBranches) {
           throw new ForbiddenException(
-            `Has alcanzado el límite de sucursales adicionales de tu ${plan.name} (${plan.max_branches} sucursales permitidas aparte de la sede principal). Actualiza tu plan a Franquicia para sucursales ilimitadas.`
+            `Has alcanzado el límite de sucursales adicionales de tu ${plan.name} (${maxBranches} sucursales permitidas). Puedes habilitar sucursales extras por $${settings.extraBranchPrice}/mes por sede contactando a soporte.`
           );
         }
         break;
 
       case 'product':
-        if (plan.max_products !== -1 && usage.productsCount >= plan.max_products) {
+        const maxProducts = usage.limits.maxProducts;
+        if (maxProducts !== -1 && usage.productsCount >= maxProducts) {
           throw new ForbiddenException(
-            `Has alcanzado el límite de ${plan.max_products} productos de tu ${plan.name}. Actualiza a un plan superior para publicar más artículos en tu catálogo.`
+            `Has alcanzado el límite de ${maxProducts} productos de tu catálogo. Activa el Módulo de Catálogo Masivo por solo $${settings.massCatalogPricePerBranch}/mes por sucursal para ampliar hasta 5,000 productos.`
+          );
+        }
+        break;
+
+      case 'rider':
+        const maxRiders = usage.limits.maxRiders;
+        if (maxRiders !== -1 && usage.ownRidersCount >= maxRiders) {
+          throw new ForbiddenException(
+            `Has alcanzado el límite de ${maxRiders} motorizados propios de tu ${plan.name}. Sube a un plan superior para registrar más repartidores dedicados.`
           );
         }
         break;
@@ -329,7 +498,7 @@ export class PlansService {
       case 'order':
         if (plan.max_monthly_orders !== -1 && usage.monthlyOrdersCount >= plan.max_monthly_orders) {
           throw new ForbiddenException(
-            `Este comercio ha completado su cupo mensual de ${plan.max_monthly_orders} pedidos permitidos en su ${plan.name}. Por favor contacta al comercio para más información.`
+            `Este comercio ha completado su cupo mensual de ${plan.max_monthly_orders} pedidos permitidos en su ${plan.name}.`
           );
         }
         break;
@@ -337,7 +506,7 @@ export class PlansService {
       case 'whatsapp':
         if (!plan.has_whatsapp_bot) {
           throw new ForbiddenException(
-            `El Bot Automático de WhatsApp está reservado para los planes Comercio Pro y Franquicia. Actualiza tu plan para activar respuestas automáticas y live chat.`
+            `El Bot Automático de WhatsApp está disponible a partir del Plan Mediano y Plan Pro. Actualiza tu plan para activar respuestas automáticas.`
           );
         }
         break;
@@ -345,7 +514,7 @@ export class PlansService {
       case 'excel':
         if (!plan.has_excel_reports) {
           throw new ForbiddenException(
-            `La exportación de reportes avanzados a Excel (.xlsx) está disponible únicamente en los planes Comercio Pro y Franquicia.`
+            `La exportación de reportes avanzados a Excel (.xlsx) está disponible a partir del Plan Mediano y Plan Pro.`
           );
         }
         break;
@@ -353,20 +522,19 @@ export class PlansService {
       case 'banner':
         if (!plan.has_featured_banners) {
           throw new ForbiddenException(
-            `Los banners destacados en la App Móvil son exclusivos para comercios en Plan Franquicia.`
+            `Los banners destacados en la App Móvil son exclusivos para comercios en el Plan Pro.`
           );
         }
         break;
     }
 
-    return { allowed: true, plan };
+    return { allowed: true, plan, addons };
   }
 
   async assignPlanToTenant(tenantId: string, planCode: string) {
     const plan = await this.getPlanByCode(planCode);
     this.saveLocalTenantPlan(tenantId, plan.code);
 
-    // Guardar también en tenant_metadata.json
     try {
       const metaPath = path.join(process.cwd(), 'data', 'tenant_metadata.json');
       let meta: Record<string, any> = {};
@@ -379,7 +547,6 @@ export class PlansService {
 
     try {
       const client = this.supabase.getClient();
-      // Intentar actualizar con plan_code y subscription_plan_id
       const { error: err1 } = await client
         .from('tenants')
         .update({
@@ -390,7 +557,6 @@ export class PlansService {
         .eq('id', tenantId);
 
       if (err1) {
-        // Fallback por si la columna plan_code no existe todavía en Supabase
         await client
           .from('tenants')
           .update({
@@ -411,4 +577,3 @@ export class PlansService {
     };
   }
 }
-

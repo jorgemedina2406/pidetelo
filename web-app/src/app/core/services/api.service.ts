@@ -5,7 +5,7 @@ import { environment } from '../../../environments/environment';
 import { Tenant } from '../models/tenant.model';
 import { Product, ProductCategory } from '../models/product.model';
 import { Order } from '../models/order.model';
-import { Branch, SubscriptionPlan } from '../models/branch.model';
+import { Branch, SubscriptionPlan, PlatformSettings, TenantAddons } from '../models/branch.model';
 import { AppUser } from '../models/user.model';
 import { Banner } from '../models/banner.model';
 import { BusinessCategory } from '../models/category.model';
@@ -1752,6 +1752,33 @@ export class ApiService {
     return this.http.put<any>(`${this.baseUrl}/plans/tenant/${tenantId}`, { planCode });
   }
 
+  getPlatformSettings(): Observable<PlatformSettings> {
+    return this.http.get<PlatformSettings>(`${this.baseUrl}/plans/platform-settings`).pipe(
+      catchError(() => of({
+        riderCommissionMode: 'RIDER_PREPAID' as const,
+        riderCommissionType: 'FIXED' as const,
+        riderCommissionValue: 0.50,
+        extraBranchPrice: 12.00,
+        massCatalogPricePerBranch: 5.00,
+        onboardingFee: 150.00
+      }))
+    );
+  }
+
+  updatePlatformSettings(settings: Partial<PlatformSettings>): Observable<PlatformSettings> {
+    return this.http.put<PlatformSettings>(`${this.baseUrl}/plans/platform-settings`, settings);
+  }
+
+  getTenantAddons(tenantId: string): Observable<TenantAddons> {
+    return this.http.get<TenantAddons>(`${this.baseUrl}/plans/tenant/${tenantId}/addons`).pipe(
+      catchError(() => of({ extraBranches: 0, hasMassCatalog: false, hasOnboardingAssistance: false }))
+    );
+  }
+
+  updateTenantAddons(tenantId: string, addons: Partial<TenantAddons>): Observable<TenantAddons> {
+    return this.http.put<TenantAddons>(`${this.baseUrl}/plans/tenant/${tenantId}/addons`, addons);
+  }
+
   exportOrdersReport(tenantId: string, branchId?: string): Observable<any> {
     const url = branchId ? `${this.baseUrl}/orders/export/${tenantId}?branchId=${branchId}` : `${this.baseUrl}/orders/export/${tenantId}`;
     return this.http.get<any>(url);
@@ -1762,23 +1789,28 @@ export class ApiService {
       {
         id: 'plan_emprendedor',
         code: 'EMPRENDEDOR',
-        name: 'Plan Emprendedor',
+        name: 'Plan Básico',
         priceMonthly: 20.00,
         priceAnnual: 16.00,
         monthlyPriceUsd: 20.00,
         maxBranches: 0,
+        maxRiders: 3,
         hasWhatsappBot: false,
         hasExcelReports: false,
         hasFeaturedBanners: false,
         maxAdditionalUsers: 1,
-        maxMonthlyOrders: 20,
-        maxProducts: 20,
-        description: 'Para negocios y marcas que inician con su sede principal.',
+        maxMonthlyOrders: -1,
+        maxProducts: 150,
+        extraBranchPrice: 12.00,
+        massCatalogAddonPrice: 5.00,
+        onboardingFee: 150.00,
+        description: 'Para restaurantes únicos, dark kitchens y comercios con su sede principal.',
         features: [
-          '0 sucursales adicionales (solo sede principal)',
-          'Hasta 20 productos en catálogo',
-          'Hasta 20 pedidos al mes',
-          '1 usuario de equipo adicional',
+          '1 tienda incluida (sede principal)',
+          'Hasta 150 productos en catálogo',
+          'Hasta 3 motorizados propios registrados',
+          'Pedidos al mes ilimitados',
+          '1 usuario de equipo adicional (+ dueño)',
           'Tienda web y menú digital con código QR',
           'Acceso a la App Móvil de Clientes',
           'Acceso a la App de Repartidores con GPS',
@@ -1791,26 +1823,31 @@ export class ApiService {
       {
         id: 'plan_comercio_pro',
         code: 'COMERCIO_PRO',
-        name: 'Plan Comercio Pro',
-        priceMonthly: 35.00,
-        priceAnnual: 28.00,
-        monthlyPriceUsd: 35.00,
+        name: 'Plan Mediano',
+        priceMonthly: 50.00,
+        priceAnnual: 40.00,
+        monthlyPriceUsd: 50.00,
         maxBranches: 2,
+        maxRiders: 6,
         hasWhatsappBot: true,
         hasExcelReports: true,
         hasFeaturedBanners: false,
         maxAdditionalUsers: 3,
-        maxMonthlyOrders: 50,
-        maxProducts: 100,
-        description: 'Para comercios establecidos que buscan automatización y expansión local.',
+        maxMonthlyOrders: -1,
+        maxProducts: 500,
+        extraBranchPrice: 12.00,
+        massCatalogAddonPrice: 5.00,
+        onboardingFee: 150.00,
+        description: 'Para comercios consolidados que buscan expansión a 3 tiendas y automatización.',
         features: [
-          'Todo lo incluido en el Plan Emprendedor',
-          'Hasta 2 sucursales adicionales (3 sedes en total)',
-          'Hasta 100 productos en catálogo',
-          'Hasta 50 pedidos al mes',
+          'Hasta 3 tiendas (1 principal + 2 sucursales a $16.67/tienda)',
+          'Hasta 500 productos por tienda',
+          'Hasta 6 motorizados propios registrados',
+          'Pedidos al mes ilimitados',
           'Hasta 3 usuarios de equipo adicionales',
           'Bot automático de WhatsApp y Live Chat 24/7',
           'Reportes avanzados en Excel (.xlsx)',
+          'Pantalla interactiva de Cocina / KDS',
           'Soporte prioritario'
         ],
         isActive: true
@@ -1818,27 +1855,33 @@ export class ApiService {
       {
         id: 'plan_franquicia',
         code: 'FRANQUICIA',
-        name: 'Plan Franquicia',
+        name: 'Plan Pro',
         priceMonthly: 80.00,
         priceAnnual: 64.00,
         monthlyPriceUsd: 80.00,
-        maxBranches: -1,
+        maxBranches: 4,
+        maxRiders: 10,
         hasWhatsappBot: true,
         hasExcelReports: true,
         hasFeaturedBanners: true,
-        maxAdditionalUsers: -1,
+        maxAdditionalUsers: 10,
         maxMonthlyOrders: -1,
-        maxProducts: -1,
-        description: 'Para cadenas gastronómicas, franquicias y marcas líderes de alto volumen.',
+        maxProducts: 500,
+        extraBranchPrice: 12.00,
+        massCatalogAddonPrice: 5.00,
+        onboardingFee: 150.00,
+        description: 'Para cadenas y marcas líderes: hasta 5 tiendas base y escalabilidad con add-ons.',
         features: [
-          'Todo lo incluido en el Plan Comercio Pro',
-          'Sucursales físicas ilimitadas',
-          'Productos en catálogo ilimitados',
+          'Hasta 5 tiendas base (1 principal + 4 sucursales a $16.00/tienda)',
+          'Hasta 500 productos por tienda',
+          'Hasta 10 motorizados propios registrados',
           'Pedidos al mes ilimitados',
-          'Cuentas de usuarios de equipo ilimitadas',
+          'Hasta 10 usuarios de equipo adicionales',
           'Banners destacados VIP en la App Móvil',
-          'Bot automático de WhatsApp ilimitado con IA',
+          'Bot automático de WhatsApp con IA y Live Chat',
           'Auditoría de inicios de sesión y BI empresarial',
+          'Add-on de sucursales extras (+$12/mes por sede desde la 6ta)',
+          'Módulo de catálogo masivo opcional (+500 productos)',
           'Soporte VIP 24/7 con ejecutivo asignado'
         ],
         isActive: true
@@ -2290,9 +2333,12 @@ export class ApiService {
     if (code === 'COMERCIO') code = 'COMERCIO_PRO';
     if (code === 'CORPORATIVO') code = 'FRANQUICIA';
 
-    const priceMonthly = code === 'FRANQUICIA' ? 79.00 : (code === 'COMERCIO_PRO' ? 29.00 : 9.00);
-    const priceAnnual = code === 'FRANQUICIA' ? 63.00 : (code === 'COMERCIO_PRO' ? 23.00 : 7.00);
-    const name = code === 'FRANQUICIA' ? 'Plan Franquicia' : (code === 'COMERCIO_PRO' ? 'Plan Comercio Pro' : 'Plan Emprendedor');
+    const priceMonthly = code === 'FRANQUICIA' ? 80.00 : (code === 'COMERCIO_PRO' ? 50.00 : 20.00);
+    const priceAnnual = code === 'FRANQUICIA' ? 64.00 : (code === 'COMERCIO_PRO' ? 40.00 : 16.00);
+    const name = code === 'FRANQUICIA' ? 'Plan Pro' : (code === 'COMERCIO_PRO' ? 'Plan Mediano' : 'Plan Básico');
+    const maxBranches = code === 'FRANQUICIA' ? 4 : (code === 'COMERCIO_PRO' ? 2 : 0);
+    const maxRiders = code === 'FRANQUICIA' ? 10 : (code === 'COMERCIO_PRO' ? 6 : 3);
+    const maxProducts = code === 'EMPRENDEDOR' ? 150 : 500;
 
     return {
       id: r.id || code,
@@ -2301,38 +2347,46 @@ export class ApiService {
       priceMonthly: Number(r.price_monthly ?? r.priceMonthly ?? priceMonthly),
       priceAnnual: Number(r.price_annual ?? r.priceAnnual ?? priceAnnual),
       monthlyPriceUsd: Number(r.price_monthly ?? r.monthly_fee_usd ?? priceMonthly),
-      maxBranches: code === 'FRANQUICIA' ? -1 : (code === 'COMERCIO_PRO' ? 2 : 0),
+      maxBranches: maxBranches,
+      maxRiders: maxRiders,
       hasWhatsappBot: code === 'FRANQUICIA' || code === 'COMERCIO_PRO',
       hasExcelReports: code === 'FRANQUICIA' || code === 'COMERCIO_PRO',
       hasFeaturedBanners: code === 'FRANQUICIA',
-      maxAdditionalUsers: code === 'FRANQUICIA' ? -1 : (code === 'COMERCIO_PRO' ? 3 : 1),
-      maxMonthlyOrders: code === 'FRANQUICIA' ? -1 : (code === 'COMERCIO_PRO' ? 50 : 20),
-      maxProducts: code === 'FRANQUICIA' ? -1 : (code === 'COMERCIO_PRO' ? 100 : 20),
+      maxAdditionalUsers: code === 'FRANQUICIA' ? 10 : (code === 'COMERCIO_PRO' ? 3 : 1),
+      maxMonthlyOrders: -1,
+      maxProducts: maxProducts,
+      extraBranchPrice: 12.00,
+      massCatalogAddonPrice: 5.00,
+      onboardingFee: 150.00,
       description: r.description || '',
       features: Array.isArray(r.features) && r.features.length > 0 ? r.features : (code === 'FRANQUICIA' ? [
-        'Todo lo incluido en el Plan Comercio Pro',
-        'Sucursales físicas ilimitadas',
-        'Productos en catálogo ilimitados',
-        'Pedidos al mes ilimitados',
-        'Cuentas de usuarios de equipo ilimitadas',
+        'Hasta 5 tiendas base (1 principal + 4 sucursales a $16.00/tienda)',
+        'Hasta 500 productos por tienda',
+        'Hasta 10 motorizados propios registrados',
+        'Pedidos mensuales ilimitados',
+        'Hasta 10 usuarios de equipo adicionales',
         'Banners destacados VIP en la App Móvil',
-        'Bot automático de WhatsApp ilimitado con IA',
+        'Bot automático de WhatsApp con IA y Live Chat',
         'Auditoría de inicios de sesión y BI empresarial',
+        'Add-on de sucursales extras (+$12/mes por sede desde la 6ta)',
+        'Módulo de catálogo masivo opcional (+500 productos)',
         'Soporte VIP 24/7 con ejecutivo asignado'
       ] : code === 'COMERCIO_PRO' ? [
-        'Todo lo incluido en el Plan Emprendedor',
-        'Hasta 2 sucursales adicionales (3 sedes en total)',
-        'Hasta 100 productos en catálogo',
-        'Hasta 50 pedidos al mes',
+        'Hasta 3 tiendas (1 principal + 2 sucursales a $16.67/tienda)',
+        'Hasta 500 productos por tienda',
+        'Hasta 6 motorizados propios registrados',
+        'Pedidos mensuales ilimitados',
         'Hasta 3 usuarios de equipo adicionales',
         'Bot automático de WhatsApp y Live Chat 24/7',
         'Reportes avanzados en Excel (.xlsx)',
+        'Pantalla interactiva de Cocina / KDS',
         'Soporte prioritario'
       ] : [
-        '0 sucursales adicionales (solo sede principal)',
-        'Hasta 20 productos en catálogo',
-        'Hasta 20 pedidos al mes',
-        '1 usuario de equipo adicional',
+        '1 tienda incluida (sede principal)',
+        'Hasta 150 productos en catálogo',
+        'Hasta 3 motorizados propios registrados',
+        'Pedidos al mes ilimitados',
+        '1 usuario de equipo adicional (+ dueño)',
         'Tienda web y menú digital con código QR',
         'Acceso a la App Móvil de Clientes',
         'Acceso a la App de Repartidores con GPS',

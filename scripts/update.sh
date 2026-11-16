@@ -32,3 +32,4 @@ echo "=========================================================="
 echo "✅ ¡PÍDETELO HA SIDO ACTUALIZADO EXITOSAMENTE! 🚀"
 echo "=========================================================="
 docker compose ps
+

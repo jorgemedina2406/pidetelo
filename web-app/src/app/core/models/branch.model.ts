@@ -72,14 +72,34 @@ export interface SubscriptionPlan {
   priceMonthly: number;
   priceAnnual: number;
   monthlyPriceUsd: number;
-  maxBranches: number; // 0, 2, -1 (ilimitado)
+  maxBranches: number; // 0, 2, 4 (5 sedes en total)
+  maxRiders?: number; // 3, 6, 10 motorizados propios
   hasWhatsappBot: boolean;
   hasExcelReports: boolean;
   hasFeaturedBanners: boolean;
-  maxAdditionalUsers: number; // 1, 3, -1
-  maxMonthlyOrders: number; // 20, 50, -1
-  maxProducts: number; // 20, 100, -1
+  maxAdditionalUsers: number; // 1, 3, 10
+  maxMonthlyOrders: number; // -1
+  maxProducts: number; // 150, 500, 500
+  extraBranchPrice?: number;
+  massCatalogAddonPrice?: number;
+  onboardingFee?: number;
   description: string;
   features: string[];
   isActive?: boolean;
+}
+
+export interface PlatformSettings {
+  riderCommissionMode: 'RIDER_PREPAID' | 'MERCHANT_POSTPAID';
+  riderCommissionType: 'FIXED' | 'PERCENTAGE';
+  riderCommissionValue: number;
+  extraBranchPrice: number;
+  massCatalogPricePerBranch: number;
+  onboardingFee: number;
+  updatedAt?: string;
+}
+
+export interface TenantAddons {
+  extraBranches: number;
+  hasMassCatalog: boolean;
+  hasOnboardingAssistance?: boolean;
 }

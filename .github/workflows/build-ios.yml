@@ -1,4 +1,5 @@
 name: Build iOS IPAs (Cliente & Rider)
+# Release build trigger: v1.1.0 Plans & Rider Commission Model
 
 on:
   workflow_dispatch:

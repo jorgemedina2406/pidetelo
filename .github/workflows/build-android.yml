@@ -1,4 +1,5 @@
 name: Build Android APKs
+# Release build trigger: v1.1.0 Plans & Rider Commission Model
 
 on:
   workflow_dispatch:

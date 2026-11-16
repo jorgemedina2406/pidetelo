@@ -2,7 +2,7 @@
 <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
   (click)="close.emit()">
   <div
-    class="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 w-full max-w-2xl rounded-3xl shadow-2xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 space-y-6 text-center max-h-[92vh] overflow-y-auto"
+    class="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 w-full max-w-3xl rounded-3xl shadow-2xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 space-y-6 text-center max-h-[92vh] overflow-y-auto"
     (click)="$event.stopPropagation()">
 
     <!-- Header Icon -->
@@ -26,49 +26,48 @@
     <!-- Plans Comparison Grid -->
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left pt-2">
 
-      <!-- Card: Plan Comercio Pro -->
+      <!-- Card: Plan Mediano ($50/mes) -->
       <div
         class="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 flex flex-col justify-between hover:border-brand-500/50 transition-all">
         <div class="space-y-3">
           <div class="flex items-center justify-between">
             <span
               class="text-[10px] font-extrabold text-brand-600 dark:text-brand-400 uppercase tracking-wider bg-brand-50 dark:bg-brand-950/40 px-2 py-0.5 rounded-md border border-brand-200 dark:border-brand-800">
-              Más Popular
+              Más Recomendado
             </span>
             <div class="text-right">
-              <span class="text-2xl font-black text-slate-900 dark:text-white font-mono">$35</span>
+              <span class="text-2xl font-black text-slate-900 dark:text-white font-mono">$50</span>
               <span class="text-[10px] text-slate-400">/mes</span>
             </div>
           </div>
-          <h4 class="text-lg font-black text-slate-900 dark:text-white">Plan Comercio Pro</h4>
-          <p class="text-[11px] text-slate-500 dark:text-slate-400">Para comercios establecidos que buscan
-            automatización y expansión local.</p>
+          <h4 class="text-lg font-black text-slate-900 dark:text-white">Plan Mediano</h4>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400">Para comercios establecidos que buscan automatización y hasta 3 locales.</p>
 
           <ul
             class="text-xs text-slate-700 dark:text-slate-300 space-y-2 pt-2 border-t border-slate-200 dark:border-slate-700">
             <li class="flex items-start gap-2">
               <span class="text-emerald-500 font-bold">✓</span>
-              <span><strong>Hasta 2 sucursales</strong> adicionales (3 sedes en total)</span>
+              <span><strong>Hasta 3 tiendas</strong> (1 principal + 2 sucursales)</span>
             </li>
             <li class="flex items-start gap-2">
               <span class="text-emerald-500 font-bold">✓</span>
-              <span><strong>Hasta 100 productos</strong> en tu catálogo</span>
+              <span><strong>Hasta 500 productos</strong> por tienda</span>
             </li>
             <li class="flex items-start gap-2">
               <span class="text-emerald-500 font-bold">✓</span>
-              <span><strong>Hasta 50 pedidos</strong> al mes</span>
+              <span><strong>Hasta 6 motorizados</strong> propios registrados</span>
             </li>
             <li class="flex items-start gap-2">
               <span class="text-emerald-500 font-bold">✓</span>
-              <span><strong>Hasta 3 usuarios</strong> de equipo adicionales</span>
+              <span><strong>Pedidos mensuales ilimitados</strong></span>
             </li>
             <li class="flex items-start gap-2">
               <span class="text-emerald-500 font-bold">✓</span>
-              <span><strong>Bot Automático WhatsApp</strong> 24/7 y Live Chat</span>
+              <span><strong>Bot WhatsApp 24/7</strong> y Live Chat</span>
             </li>
             <li class="flex items-start gap-2">
               <span class="text-emerald-500 font-bold">✓</span>
-              <span><strong>Reportes Avanzados en Excel</strong> (.xlsx)</span>
+              <span><strong>Reportes en Excel</strong> (.xlsx) + KDS Cocina</span>
             </li>
           </ul>
         </div>
@@ -77,47 +76,42 @@
           <a [href]="getWhatsAppUpgradeUrl('COMERCIO_PRO')" target="_blank"
             class="w-full py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs shadow-md shadow-brand-500/20 flex items-center justify-center gap-2 transition-all cursor-pointer">
             <app-icon name="sparkles" [size]="14"></app-icon>
-            <span>Elegir Comercio Pro</span>
+            <span>Elegir Plan Mediano</span>
           </a>
         </div>
       </div>
 
-      <!-- Card: Plan Franquicia -->
+      <!-- Card: Plan Pro ($80/mes) -->
       <div
         class="p-5 rounded-2xl bg-gradient-to-br from-slate-900 to-navy-950 text-white border-2 border-brand-500 shadow-xl shadow-brand-500/10 flex flex-col justify-between relative overflow-hidden">
         <div
           class="absolute top-0 right-0 bg-brand-500 text-white text-[9px] font-black uppercase px-3 py-1 rounded-bl-xl tracking-wider">
-          Todo Ilimitado
+          Hasta 5 Tiendas
         </div>
 
         <div class="space-y-3">
           <div class="flex items-center justify-between pt-1">
-            <span class="text-[10px] font-extrabold text-amber-400 uppercase tracking-wider">Empresarial VIP</span>
+            <span class="text-[10px] font-extrabold text-amber-400 uppercase tracking-wider">Líderes & Cadenas</span>
             <div class="text-right">
               <span class="text-2xl font-black text-brand-400 font-mono">$80</span>
               <span class="text-[10px] text-slate-400">/mes</span>
             </div>
           </div>
-          <h4 class="text-lg font-black text-white">Plan Franquicia</h4>
-          <p class="text-[11px] text-slate-300">Para cadenas gastronómicas, franquicias y marcas líderes de alto
-            volumen.</p>
+          <h4 class="text-lg font-black text-white">Plan Pro</h4>
+          <p class="text-[11px] text-slate-300">Para cadenas gastronómicas, marcas con hasta 5 sedes y alta demanda.</p>
 
           <ul class="text-xs text-slate-300 space-y-2 pt-2 border-t border-slate-800">
             <li class="flex items-start gap-2">
               <span class="text-emerald-400 font-bold">✓</span>
-              <span><strong>Sucursales Físicas ILIMITADAS</strong></span>
+              <span><strong>Hasta 5 tiendas base</strong> ($16.00/sede)</span>
             </li>
             <li class="flex items-start gap-2">
               <span class="text-emerald-400 font-bold">✓</span>
-              <span><strong>Productos en catálogo ILIMITADOS</strong></span>
+              <span><strong>Hasta 500 productos</strong> por tienda</span>
             </li>
             <li class="flex items-start gap-2">
               <span class="text-emerald-400 font-bold">✓</span>
-              <span><strong>Pedidos al mes ILIMITADOS</strong></span>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-emerald-400 font-bold">✓</span>
-              <span><strong>Cuentas de colaboradores ILIMITADAS</strong></span>
+              <span><strong>Hasta 10 motorizados</strong> propios registrados</span>
             </li>
             <li class="flex items-start gap-2">
               <span class="text-emerald-400 font-bold">✓</span>
@@ -129,7 +123,7 @@
             </li>
             <li class="flex items-start gap-2">
               <span class="text-emerald-400 font-bold">✓</span>
-              <span><strong>Excel Avanzado</strong> + Auditoría y BI</span>
+              <span><strong>BI & Auditoría</strong> + Soporte 24/7</span>
             </li>
           </ul>
         </div>
@@ -138,20 +132,80 @@
           <a [href]="getWhatsAppUpgradeUrl('FRANQUICIA')" target="_blank"
             class="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-brand-500 hover:from-amber-600 hover:to-brand-600 text-white font-black text-xs shadow-lg shadow-brand-500/30 flex items-center justify-center gap-2 transition-all cursor-pointer">
             <app-icon name="sparkles" [size]="14"></app-icon>
-            <span>Activar Franquicia VIP</span>
+            <span>Activar Plan Pro ($80/mes)</span>
           </a>
         </div>
       </div>
 
     </div>
 
-    <!-- Close Button & Footnote -->
-    <div
-      class="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-400">
-      <span>Cero comisiones sobre ventas en todos los planes.</span>
+    <!-- Add-ons Calculator para Grandes Cadenas (>5 sedes) -->
+    <div class="p-5 rounded-2xl bg-amber-50/50 dark:bg-slate-800/40 border border-amber-200/80 dark:border-slate-700 text-left space-y-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-brand-500"></span>
+          <h5 class="text-xs font-black uppercase text-slate-900 dark:text-white tracking-wider">
+            ¿Tienes más de 5 sedes o retail con más de 500 productos?
+          </h5>
+        </div>
+        <span class="text-[10px] font-bold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/40 px-2 py-0.5 rounded-md">
+          Calculadora de Escala
+        </span>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+        <!-- Sucursales adicionales -->
+        <div class="space-y-1.5">
+          <label class="block font-bold text-slate-700 dark:text-slate-300">
+            Sucursales adicionales extras (+$12/mes por sede a partir de la 6ta):
+          </label>
+          <div class="flex items-center gap-3">
+            <input type="number" min="1" max="50" [(ngModel)]="calcExtraBranches"
+                   class="w-20 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl px-3 py-1.5 font-black text-center text-sm" />
+            <span class="text-slate-500 text-[11px]">
+              Total tiendas: <strong>{{ 5 + calcExtraBranches }}</strong> sedes
+            </span>
+          </div>
+        </div>
+
+        <!-- Módulo Catálogo Masivo -->
+        <div class="space-y-1.5">
+          <label class="block font-bold text-slate-700 dark:text-slate-300">
+            Catálogo Masivo (+$5/mes por sede para +500 productos):
+          </label>
+          <div class="flex items-center gap-2 pt-1">
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" [(ngModel)]="calcHasMassCatalog" class="sr-only peer">
+              <div class="w-10 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-500"></div>
+            </label>
+            <span class="text-slate-600 dark:text-slate-400 text-[11px] font-medium">
+              {{ calcHasMassCatalog ? 'Activado (+5,000 SKUs con Excel)' : 'Desactivado (500 SKUs)' }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Total Estimado & Botón Cotizar -->
+      <div class="pt-3 border-t border-amber-200/60 dark:border-slate-700 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <span class="text-[11px] text-slate-500 dark:text-slate-400 block">Presupuesto mensual estimado:</span>
+          <div class="text-xl font-black text-brand-600 dark:text-brand-400 font-mono">
+            ${{ calculatedChainMonthlyTotal }} <span class="text-xs font-normal text-slate-400">/mes</span>
+          </div>
+        </div>
+        <a [href]="getWhatsAppChainAddonUrl()" target="_blank"
+           class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 font-black text-xs transition-all shadow-sm flex items-center gap-2 cursor-pointer">
+          <app-icon name="send" [size]="13"></app-icon>
+          <span>Cotizar Cadena por WhatsApp</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Dismiss Button -->
+    <div class="pt-2 border-t border-slate-100 dark:border-slate-800">
       <button (click)="close.emit()"
-        class="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer text-slate-700 dark:text-slate-300">
-        Entendido, cerrar
+        class="text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 font-bold transition-colors cursor-pointer">
+        Volver a mi panel de administración
       </button>
     </div>
 

@@ -1,8 +1,10 @@
-import { Component, Input, Output, EventEmitter, signal, computed } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { Tenant } from '../../../../core/models/tenant.model';
+import { PlatformSettings } from '../../../../core/models/branch.model';
+import { ApiService } from '../../../../core/services/api.service';
 import { IconComponent } from '../../../../shared/components/icon.component';
 
 export interface PlanRow {
@@ -15,6 +17,8 @@ export interface PlanRow {
   daysRemaining: number;
   status: 'active' | 'expiring_soon' | 'expired';
   isPaused: boolean;
+  extraBranches?: number;
+  hasMassCatalog?: boolean;
 }
 
 @Component({
@@ -23,7 +27,9 @@ export interface PlanRow {
   imports: [CommonModule, FormsModule, RouterModule, IconComponent],
   templateUrl: './super-admin-plan-report.component.html'
 })
-export class SuperAdminPlanReportComponent {
+export class SuperAdminPlanReportComponent implements OnInit {
+  private readonly apiService = inject(ApiService);
+
   @Input() set merchants(val: Tenant[]) {
     this._merchants.set(val || []);
   }
@@ -36,23 +42,72 @@ export class SuperAdminPlanReportComponent {
   readonly filterPlan = signal<string>('ALL');
   readonly filterStatus = signal<string>('ALL');
 
+  // Configuración de comisiones y add-ons de plataforma
+  readonly platformSettings = signal<PlatformSettings>({
+    riderCommissionMode: 'RIDER_PREPAID',
+    riderCommissionType: 'FIXED',
+    riderCommissionValue: 0.50,
+    extraBranchPrice: 12.00,
+    massCatalogPricePerBranch: 5.00,
+    onboardingFee: 150.00
+  });
+  readonly isSavingSettings = signal(false);
+  readonly settingsSavedSuccess = signal(false);
+
   // Modal para edición manual
   readonly isModalOpen = signal(false);
   readonly editingTenant = signal<Tenant | null>(null);
   modalPlanCode = 'COMERCIO_PRO';
   modalExpiresDate = '';
+  modalExtraBranches = 0;
+  modalHasMassCatalog = false;
+
+  ngOnInit(): void {
+    this.loadPlatformSettings();
+  }
+
+  loadPlatformSettings(): void {
+    this.apiService.getPlatformSettings().subscribe({
+      next: (settings) => {
+        if (settings) {
+          this.platformSettings.set(settings);
+        }
+      }
+    });
+  }
+
+  savePlatformSettings(): void {
+    this.isSavingSettings.set(true);
+    this.apiService.updatePlatformSettings(this.platformSettings()).subscribe({
+      next: (updated) => {
+        this.platformSettings.set(updated);
+        this.isSavingSettings.set(false);
+        this.settingsSavedSuccess.set(true);
+        setTimeout(() => this.settingsSavedSuccess.set(false), 3500);
+      },
+      error: (err) => {
+        console.error('Error guardando configuración de plataforma:', err);
+        this.isSavingSettings.set(false);
+      }
+    });
+  }
+
+  setCommissionMode(mode: 'RIDER_PREPAID' | 'MERCHANT_POSTPAID'): void {
+    this.platformSettings.update(s => ({ ...s, riderCommissionMode: mode }));
+  }
 
   readonly planRows = computed<PlanRow[]>(() => {
     const list = this._merchants();
     const now = Date.now();
+    const settings = this.platformSettings();
 
     return list.map(t => {
       let planCode = (t.planCode || t.subscriptionPlanId || 'COMERCIO_PRO').toUpperCase();
       if (planCode === 'COMERCIO') planCode = 'COMERCIO_PRO';
       if (planCode === 'CORPORATIVO') planCode = 'FRANQUICIA';
 
-      const monthlyFee = planCode === 'FRANQUICIA' ? 80 : (planCode === 'COMERCIO_PRO' ? 35 : 20);
-      const planName = planCode === 'FRANQUICIA' ? 'Franquicia ($80/m)' : (planCode === 'COMERCIO_PRO' ? 'Comercio Pro ($35/m)' : 'Emprendedor ($20/m)');
+      const baseFee = planCode === 'FRANQUICIA' ? 80 : (planCode === 'COMERCIO_PRO' ? 50 : 20);
+      const planName = planCode === 'FRANQUICIA' ? 'Plan Pro ($80/m)' : (planCode === 'COMERCIO_PRO' ? 'Plan Mediano ($50/m)' : 'Plan Básico ($20/m)');
 
       let expStr = t.planExpiresAt;
       if (!expStr && typeof localStorage !== 'undefined') {
@@ -84,7 +139,7 @@ export class SuperAdminPlanReportComponent {
         tenant: t,
         planCode,
         planName,
-        monthlyFee,
+        monthlyFee: baseFee,
         expiresAt: expStr,
         expiresAtDate: new Date(expTime),
         daysRemaining,
@@ -136,6 +191,19 @@ export class SuperAdminPlanReportComponent {
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const dd = String(d.getDate()).padStart(2, '0');
     this.modalExpiresDate = `${yyyy}-${mm}-${dd}`;
+    this.modalExtraBranches = 0;
+    this.modalHasMassCatalog = false;
+
+    // Cargar add-ons actuales del comercio
+    this.apiService.getTenantAddons(row.tenant.id).subscribe({
+      next: (addons) => {
+        if (addons) {
+          this.modalExtraBranches = addons.extraBranches || 0;
+          this.modalHasMassCatalog = Boolean(addons.hasMassCatalog);
+        }
+      }
+    });
+
     this.isModalOpen.set(true);
   }
 
@@ -150,6 +218,15 @@ export class SuperAdminPlanReportComponent {
 
     const isoExp = new Date(this.modalExpiresDate + 'T23:59:59.000Z').toISOString();
     this.applyPlanUpdate(t.id, this.modalPlanCode, isoExp);
+
+    // Guardar add-ons del comercio
+    this.apiService.updateTenantAddons(t.id, {
+      extraBranches: Number(this.modalExtraBranches || 0),
+      hasMassCatalog: Boolean(this.modalHasMassCatalog)
+    }).subscribe({
+      error: (e) => console.warn('Error guardando add-ons de comercio:', e)
+    });
+
     this.closeModal();
   }
 
@@ -185,7 +262,6 @@ export class SuperAdminPlanReportComponent {
       }
     } catch (_) {}
 
-    // Actualizar estado local
     this._merchants.update(list => list.map(t => {
       if (t.id === tenantId) {
         const isExp = new Date(expiresAt).getTime() < Date.now();
@@ -256,4 +332,3 @@ export class SuperAdminPlanReportComponent {
     URL.revokeObjectURL(url);
   }
 }
-
