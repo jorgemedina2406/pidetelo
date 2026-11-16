@@ -6,6 +6,19 @@ import { I18nService } from '../../../../core/services/i18n.service';
 import { IconComponent } from '../../../../shared/components/icon.component';
 import { RiderWithdrawal } from '../../../../core/models/rider-withdrawal.model';
 
+export interface RiderReportSummary {
+  riderId: string;
+  riderName: string;
+  riderPhone: string;
+  vehiclePlate: string;
+  vehicleType: string;
+  isIndependent: boolean;
+  totalDeliveries: number;
+  totalDeliveryFees: number;
+  walletBalance: number;
+  deliveredOrders: any[];
+}
+
 @Component({
   selector: 'app-merchant-riders-tab',
   standalone: true,
@@ -15,7 +28,9 @@ import { RiderWithdrawal } from '../../../../core/models/rider-withdrawal.model'
 export class MerchantRidersTabComponent {
   readonly i18n = inject(I18nService);
 
-  @Input() riders: Rider[] = [];
+  @Input() riders: Rider[] = []; // Flota Propia de la Sede
+  @Input() networkRiders: Rider[] = []; // Red Libre / Repartidores Independientes de Pídetelo
+  @Input() orders: any[] = []; // Historial de órdenes para auditoría
   @Input() withdrawals: RiderWithdrawal[] = [];
   @Input() selectedBranchName?: string;
   @Input() bcvRate: number = 45.50;
@@ -30,7 +45,8 @@ export class MerchantRidersTabComponent {
     rejectionReason?: string;
   }>();
 
-  readonly activeSubTab = signal<'fleet' | 'withdrawals'>('fleet');
+  readonly activeSubTab = signal<'fleet' | 'network' | 'deliveries_report' | 'withdrawals'>('fleet');
+  readonly selectedRiderFilter = signal<string>('all');
   readonly selectedWithdrawalForPay = signal<RiderWithdrawal | null>(null);
   readonly paymentRefCodeInput = signal<string>('');
   readonly isRejectModalOpen = signal(false);
@@ -39,6 +55,79 @@ export class MerchantRidersTabComponent {
 
   get pendingWithdrawalsCount(): number {
     return this.withdrawals.filter(w => w.status === 'pending').length;
+  }
+
+  // --- REPORTE DE ENTREGAS Y AUDITORÍA ---
+  get deliveredOrders(): any[] {
+    return (this.orders || []).filter(o => o.status === 'delivered' && o.driverId);
+  }
+
+  get riderReportSummaries(): RiderReportSummary[] {
+    const map = new Map<string, RiderReportSummary>();
+
+    // 1. Registrar primero todos los riders conocidos (propios y de red)
+    const allKnownRiders = [...(this.riders || []), ...(this.networkRiders || [])];
+    allKnownRiders.forEach(r => {
+      if (!map.has(r.id)) {
+        map.set(r.id, {
+          riderId: r.id,
+          riderName: r.name,
+          riderPhone: r.phone,
+          vehiclePlate: r.vehiclePlate || 'S/P',
+          vehicleType: r.vehicleType || 'moto',
+          isIndependent: !!r.isIndependent,
+          totalDeliveries: 0,
+          totalDeliveryFees: 0,
+          walletBalance: r.walletBalance || 0,
+          deliveredOrders: []
+        });
+      }
+    });
+
+    // 2. Asociar órdenes entregadas
+    this.deliveredOrders.forEach(o => {
+      const dId = o.driverId;
+      if (!dId) return;
+
+      let entry = map.get(dId);
+      if (!entry) {
+        entry = {
+          riderId: dId,
+          riderName: o.driverName || 'Repartidor',
+          riderPhone: o.driverPhone || 'N/D',
+          vehiclePlate: o.driverPlate || 'S/P',
+          vehicleType: o.driverVehicle || 'moto',
+          isIndependent: true,
+          totalDeliveries: 0,
+          totalDeliveryFees: 0,
+          walletBalance: 0,
+          deliveredOrders: []
+        };
+        map.set(dId, entry);
+      }
+
+      entry.totalDeliveries += 1;
+      entry.totalDeliveryFees += Number(o.deliveryFee || 0);
+      entry.deliveredOrders.push(o);
+    });
+
+    return Array.from(map.values()).sort((a, b) => b.totalDeliveries - a.totalDeliveries);
+  }
+
+  get filteredDeliveredOrders(): any[] {
+    const filterId = this.selectedRiderFilter();
+    if (filterId === 'all') {
+      return this.deliveredOrders;
+    }
+    return this.deliveredOrders.filter(o => o.driverId === filterId);
+  }
+
+  get totalDeliveryFeesSum(): number {
+    return this.deliveredOrders.reduce((acc, o) => acc + (Number(o.deliveryFee) || 0), 0);
+  }
+
+  get totalWalletBalancesSum(): number {
+    return this.riderReportSummaries.reduce((acc, r) => acc + (r.walletBalance || 0), 0);
   }
 
   openPayModal(w: RiderWithdrawal): void {
@@ -97,5 +186,3 @@ export class MerchantRidersTabComponent {
     return `https://wa.me/${cleanPhone}?text=${text}`;
   }
 }
-
-

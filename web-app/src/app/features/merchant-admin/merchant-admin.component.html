@@ -1687,7 +1687,7 @@
             </div>
             <span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1.5">
               <app-icon name="check" [size]="12"></app-icon>
-              <span>Sedes ilimitadas (Plan Franquicia)</span>
+              <span>Hasta 5 sedes base (Plan Pro)</span>
             </span>
             } @else {
             <div class="flex items-center justify-between text-xs font-bold">
@@ -2111,7 +2111,7 @@
 
     <!-- ================= TAB 3: FLOTA DE REPARTIDORES ================= -->
     @if (activeTab() === 'riders') {
-    <app-merchant-riders-tab [riders]="filteredRiders()" [withdrawals]="riderWithdrawals()"
+    <app-merchant-riders-tab [riders]="ownFleetRiders()" [networkRiders]="networkRiders()" [orders]="orders()" [withdrawals]="riderWithdrawals()"
       [bcvRate]="currentTenant().currencySettings?.exchangeRate || 45.50" [selectedBranchName]="selectedBranch()?.name"
       (newRider)="openNewRiderModal()" (deleteRider)="deleteRider($event)"
       (locateRider)="activeTab.set('gps_map'); flyToRider($event)"

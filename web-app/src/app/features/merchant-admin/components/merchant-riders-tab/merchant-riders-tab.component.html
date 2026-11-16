@@ -11,30 +11,61 @@
         }
       </div>
       <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-        Gestiona tu flota asignada y audita las solicitudes de liquidación y retiro de los repartidores.
+        Gestiona tu flota propia, consulta la red de motorizados libres, audita entregas y liquida saldos de retiro.
       </p>
     </div>
 
-    <!-- Sub-tab Switcher -->
-    <div class="flex items-center gap-2 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+    <!-- Sub-tab Switcher con 4 Pestañas -->
+    <div class="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl border border-slate-200 dark:border-slate-700 flex-wrap">
+      <!-- 1. Flota Propia de la Sede -->
       <button (click)="activeSubTab.set('fleet')"
               [class.bg-white]="activeSubTab() === 'fleet'"
               [class.dark:bg-slate-900]="activeSubTab() === 'fleet'"
               [class.text-brand-600]="activeSubTab() === 'fleet'"
               [class.dark:text-brand-400]="activeSubTab() === 'fleet'"
               [class.shadow-xs]="activeSubTab() === 'fleet'"
-              class="px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer">
+              class="px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer">
         <app-icon name="bike" [size]="14"></app-icon>
         <span>Flota de la Sede ({{ riders.length }})</span>
       </button>
 
+      <!-- 2. Red Libre Pídetelo -->
+      <button (click)="activeSubTab.set('network')"
+              [class.bg-white]="activeSubTab() === 'network'"
+              [class.dark:bg-slate-900]="activeSubTab() === 'network'"
+              [class.text-brand-600]="activeSubTab() === 'network'"
+              [class.dark:text-brand-400]="activeSubTab() === 'network'"
+              [class.shadow-xs]="activeSubTab() === 'network'"
+              class="px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer">
+        <app-icon name="globe" [size]="14"></app-icon>
+        <span>Red Libre Pídetelo ({{ networkRiders.length }})</span>
+      </button>
+
+      <!-- 3. Reporte de Entregas & Liquidación -->
+      <button (click)="activeSubTab.set('deliveries_report')"
+              [class.bg-white]="activeSubTab() === 'deliveries_report'"
+              [class.dark:bg-slate-900]="activeSubTab() === 'deliveries_report'"
+              [class.text-brand-600]="activeSubTab() === 'deliveries_report'"
+              [class.dark:text-brand-400]="activeSubTab() === 'deliveries_report'"
+              [class.shadow-xs]="activeSubTab() === 'deliveries_report'"
+              class="px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer relative">
+        <app-icon name="file-text" [size]="14"></app-icon>
+        <span>Reporte de Entregas</span>
+        @if (deliveredOrders.length > 0) {
+          <span class="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-black bg-blue-500 text-white">
+            {{ deliveredOrders.length }}
+          </span>
+        }
+      </button>
+
+      <!-- 4. Solicitudes de Retiro -->
       <button (click)="activeSubTab.set('withdrawals')"
               [class.bg-white]="activeSubTab() === 'withdrawals'"
               [class.dark:bg-slate-900]="activeSubTab() === 'withdrawals'"
               [class.text-brand-600]="activeSubTab() === 'withdrawals'"
               [class.dark:text-brand-400]="activeSubTab() === 'withdrawals'"
               [class.shadow-xs]="activeSubTab() === 'withdrawals'"
-              class="px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer relative">
+              class="px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer relative">
         <app-icon name="dollar-sign" [size]="14"></app-icon>
         <span>Solicitudes de Retiro</span>
         @if (pendingWithdrawalsCount > 0) {
@@ -54,7 +85,9 @@
     }
   </div>
 
-  <!-- VISTA 1: FLOTA DE REPARTIDORES -->
+  <!-- ======================================================== -->
+  <!-- VISTA 1: FLOTA PROPIA DE LA SEDE (SOLO RIDERS DEL COMERCIO) -->
+  <!-- ======================================================== -->
   @if (activeSubTab() === 'fleet') {
     @if (riders.length === 0) {
       <div class="card-adaptive rounded-2xl p-12 text-center space-y-4 border border-dashed border-slate-300 dark:border-slate-800 animate-fade-in">
@@ -62,25 +95,24 @@
           <app-icon name="bike" [size]="32"></app-icon>
         </div>
         <div class="space-y-1">
-          <h3 class="text-base font-extrabold text-slate-900 dark:text-white">Sin Repartidores Registrados</h3>
+          <h3 class="text-base font-extrabold text-slate-900 dark:text-white">Sin Motorizados Propios Registrados</h3>
           <p class="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
-            No hay repartidores registrados para esta sede. Agrega repartidores a tu flota para asignar y monitorear pedidos en tiempo real.
+            Registra los motorizados exclusivos de tu comercio. Los pedidos asignados a tu flota propia no generan comisiones de plataforma.
           </p>
         </div>
         <button (click)="newRider.emit()"
           class="px-4 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs shadow-sm inline-flex items-center gap-2 cursor-pointer transition-all active:scale-95">
           <app-icon name="plus" [size]="15" className="text-white"></app-icon>
-          <span>Registrar Primer Repartidor</span>
+          <span>Registrar Repartidor Propio</span>
         </button>
       </div>
     } @else {
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         @for (r of riders; track r.id) {
-          <div class="card-adaptive rounded-2xl p-5 shadow-sm space-y-4">
+          <div class="card-adaptive rounded-2xl p-5 shadow-sm space-y-4 border border-slate-200/80 dark:border-slate-800">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-3">
-                <div
-                  class="w-11 h-11 rounded-xl bg-brand-500/10 text-brand-500 flex items-center justify-center font-bold">
+                <div class="w-11 h-11 rounded-xl bg-brand-500/10 text-brand-500 flex items-center justify-center font-bold">
                   <app-icon name="bike" [size]="22"></app-icon>
                 </div>
                 <div>
@@ -89,29 +121,46 @@
                 </div>
               </div>
 
-              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold border"
-                [class.bg-emerald-50]="r.status === 'available'" [class.text-emerald-700]="r.status === 'available'"
-                [class.border-emerald-200]="r.status === 'available'"
-                [class.dark:bg-emerald-950/40]="r.status === 'available'"
-                [class.dark:text-emerald-400]="r.status === 'available'"
-                [class.bg-blue-50]="r.status === 'delivering'" [class.text-blue-700]="r.status === 'delivering'"
-                [class.border-blue-200]="r.status === 'delivering'">
-                {{ r.status === 'available' ? 'Disponible' : 'En Reparto' }}
-              </span>
+              <div class="flex flex-col items-end gap-1">
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold border"
+                  [class.bg-emerald-50]="r.status === 'available'" [class.text-emerald-700]="r.status === 'available'"
+                  [class.border-emerald-200]="r.status === 'available'"
+                  [class.dark:bg-emerald-950/40]="r.status === 'available'"
+                  [class.dark:text-emerald-400]="r.status === 'available'"
+                  [class.bg-blue-50]="r.status === 'delivering'" [class.text-blue-700]="r.status === 'delivering'"
+                  [class.border-blue-200]="r.status === 'delivering'">
+                  {{ r.status === 'available' ? 'Disponible' : 'En Reparto' }}
+                </span>
+                <span class="text-[9px] font-extrabold px-1.5 py-0.2 rounded bg-brand-50 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300">
+                  Flota Propia
+                </span>
+              </div>
             </div>
 
-            <div
-              class="text-xs text-slate-500 dark:text-slate-400 space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+            <div class="text-xs text-slate-500 dark:text-slate-400 space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
               <div class="flex items-center justify-between">
                 <span>Sede Asignada:</span>
                 <span class="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1">
                   <span>📍</span>
-                  <span>{{ r.branchName || 'Sede Asignada' }}</span>
+                  <span>{{ r.branchName || 'Sede Principal' }}</span>
                 </span>
               </div>
               <div class="flex items-center justify-between">
                 <span>Teléfono:</span>
                 <span class="font-mono text-slate-900 dark:text-white font-semibold">{{ r.phone }}</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span>Entregas Realizadas:</span>
+                <span class="font-bold font-mono text-brand-600 dark:text-brand-400">
+                  {{ r.totalDeliveries || 0 }} pedidos
+                </span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span>Saldo en Billetera:</span>
+                <span class="font-bold font-mono text-emerald-600 dark:text-emerald-400">
+                  ${{ (r.walletBalance || 0).toFixed(2) }}
+                  <span class="text-[10px] opacity-75 font-normal">(≈ Bs. {{ ((r.walletBalance || 0) * bcvRate).toFixed(2) }})</span>
+                </span>
               </div>
               <div class="flex items-center justify-between">
                 <span>Ubicación GPS:</span>
@@ -141,7 +190,287 @@
     }
   }
 
-  <!-- VISTA 2: SOLICITUDES DE RETIRO / LIQUIDACIÓN A RIDERS -->
+  <!-- ======================================================== -->
+  <!-- VISTA 2: RED LIBRE PÍDETELO (REPARTIDORES INDEPENDIENTES) -->
+  <!-- ======================================================== -->
+  @if (activeSubTab() === 'network') {
+    <div class="p-4 rounded-2xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/40 text-blue-900 dark:text-blue-200 flex items-start gap-3">
+      <div class="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0 mt-0.5">
+        <app-icon name="globe" [size]="18"></app-icon>
+      </div>
+      <div class="space-y-1">
+        <h4 class="text-sm font-extrabold">Red de Motorizados Independientes de Pídetelo</h4>
+        <p class="text-xs leading-relaxed opacity-90">
+          Estos repartidores <strong>no pertenecen a la nómina de tu comercio</strong>. Son motorizados independientes certificados por la plataforma que están listos para recibir pedidos de tu sede cuando tu flota propia esté ocupada o en horas pico.
+        </p>
+      </div>
+    </div>
+
+    @if (networkRiders.length === 0) {
+      <div class="card-adaptive rounded-2xl p-12 text-center space-y-3 border border-dashed border-slate-300 dark:border-slate-800">
+        <div class="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 mx-auto flex items-center justify-center">
+          <app-icon name="globe" [size]="32"></app-icon>
+        </div>
+        <h3 class="text-base font-extrabold text-slate-900 dark:text-white">Sin Motorizados Libres en este momento</h3>
+        <p class="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+          No hay repartidores independientes con GPS activo cerca de tu sede en este instante.
+        </p>
+      </div>
+    } @else {
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        @for (r of networkRiders; track r.id) {
+          <div class="card-adaptive rounded-2xl p-5 shadow-sm space-y-4 border border-blue-100 dark:border-blue-900/30">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
+                  <app-icon name="globe" [size]="22"></app-icon>
+                </div>
+                <div>
+                  <div class="font-bold text-sm">{{ r.name }}</div>
+                  <div class="text-[11px] font-mono text-slate-400 uppercase">{{ r.vehiclePlate }} • {{ r.vehicleType }}</div>
+                </div>
+              </div>
+
+              <div class="flex flex-col items-end gap-1">
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                  Red Libre
+                </span>
+                <span class="text-[10px] font-bold text-amber-600 dark:text-amber-400 flex items-center gap-0.5">
+                  ⭐ {{ (r.rating || 5.0).toFixed(1) }}
+                </span>
+              </div>
+            </div>
+
+            <div class="text-xs text-slate-500 dark:text-slate-400 space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <div class="flex items-center justify-between">
+                <span>Afiliación:</span>
+                <span class="font-bold text-blue-600 dark:text-blue-400">Repartidor Independiente</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span>Teléfono:</span>
+                <span class="font-mono text-slate-900 dark:text-white font-semibold">{{ r.phone }}</span>
+              </div>
+              @if (r.distanceKm != null) {
+                <div class="flex items-center justify-between">
+                  <span>Distancia a la Sede:</span>
+                  <span class="font-bold font-mono text-brand-600 dark:text-brand-400">{{ r.distanceKm }} km</span>
+                </div>
+              }
+              <div class="flex items-center justify-between">
+                <span>Estado:</span>
+                <span class="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  Disponible en Red
+                </span>
+              </div>
+            </div>
+
+            <div class="pt-2 flex items-center justify-end border-t border-slate-100 dark:border-slate-800">
+              <button (click)="locateRider.emit(r)"
+                class="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer">
+                <app-icon name="map-pin" [size]="13"></app-icon>
+                <span>Localizar en Radar</span>
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  }
+
+  <!-- ======================================================== -->
+  <!-- VISTA 3: REPORTE DE ENTREGAS Y AUDITORÍA POR RIDER -->
+  <!-- ======================================================== -->
+  @if (activeSubTab() === 'deliveries_report') {
+    <!-- KPI SUMMARY CARDS -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="card-adaptive rounded-2xl p-4 border border-slate-200 dark:border-slate-800 space-y-1">
+        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Entregas Realizadas</span>
+        <div class="text-2xl font-black text-slate-900 dark:text-white font-mono">
+          {{ deliveredOrders.length }}
+        </div>
+        <span class="text-[10px] text-slate-500">Pedidos finalizados con éxito</span>
+      </div>
+
+      <div class="card-adaptive rounded-2xl p-4 border border-slate-200 dark:border-slate-800 space-y-1">
+        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Fletes Totales Generados</span>
+        <div class="text-2xl font-black text-brand-600 dark:text-brand-400 font-mono">
+          ${{ totalDeliveryFeesSum.toFixed(2) }}
+        </div>
+        <span class="text-[10px] text-emerald-600 font-mono font-semibold">
+          ≈ Bs. {{ (totalDeliveryFeesSum * bcvRate).toFixed(2) }}
+        </span>
+      </div>
+
+      <div class="card-adaptive rounded-2xl p-4 border border-slate-200 dark:border-slate-800 space-y-1">
+        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Saldo Disponible en Billeteras</span>
+        <div class="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
+          ${{ totalWalletBalancesSum.toFixed(2) }}
+        </div>
+        <span class="text-[10px] text-slate-500">Acumulado pendiente de liquidar a riders</span>
+      </div>
+
+      <div class="card-adaptive rounded-2xl p-4 border border-slate-200 dark:border-slate-800 space-y-1">
+        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Solicitudes de Retiro</span>
+        <div class="text-2xl font-black text-amber-500 font-mono">
+          {{ pendingWithdrawalsCount }}
+        </div>
+        <span class="text-[10px] text-slate-500">Pendientes de Pago Móvil</span>
+      </div>
+    </div>
+
+    <!-- TABLA DE BALANCE Y ENTREGAS POR MOTORIZADO -->
+    <div class="card-adaptive rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs">
+      <div class="p-4 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-900/50">
+        <div>
+          <h3 class="text-sm font-extrabold text-slate-900 dark:text-white">Balance y Desempeño por Repartidor</h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Auditoría consolidada de pedidos entregados y billetera disponible para retiro.</p>
+        </div>
+
+        <!-- Filtro por repartidor -->
+        <div class="flex items-center gap-2">
+          <label class="text-xs font-bold text-slate-500">Filtrar Pedidos:</label>
+          <select [ngModel]="selectedRiderFilter()" (ngModelChange)="selectedRiderFilter.set($event)"
+                  class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold rounded-xl px-3 py-1.5 text-slate-800 dark:text-slate-200 cursor-pointer">
+            <option value="all">Todos los repartidores</option>
+            @for (r of riderReportSummaries; track r.riderId) {
+              <option [value]="r.riderId">{{ r.riderName }} ({{ r.totalDeliveries }} entregas)</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr class="border-b border-slate-200 dark:border-slate-800 bg-slate-100/50 dark:bg-slate-800/50 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase">
+              <th class="p-3.5">Repartidor</th>
+              <th class="p-3.5">Tipo de Flota</th>
+              <th class="p-3.5 text-center">Entregas</th>
+              <th class="p-3.5 text-right">Fletes Generados</th>
+              <th class="p-3.5 text-right">Saldo en Billetera (Retiro)</th>
+              <th class="p-3.5 text-center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+            @if (riderReportSummaries.length === 0) {
+              <tr>
+                <td colspan="6" class="p-8 text-center text-slate-400">
+                  No hay actividad de entregas registrada para este comercio aún.
+                </td>
+              </tr>
+            }
+            @for (r of riderReportSummaries; track r.riderId) {
+              <tr class="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                <td class="p-3.5">
+                  <div class="font-extrabold text-slate-900 dark:text-white">{{ r.riderName }}</div>
+                  <div class="text-[11px] font-mono text-slate-400">{{ r.riderPhone }} • {{ r.vehiclePlate }}</div>
+                </td>
+                <td class="p-3.5">
+                  @if (r.isIndependent) {
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                      Red Libre Pídetelo
+                    </span>
+                  } @else {
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-brand-50 text-brand-700 dark:bg-brand-950/60 dark:text-brand-300 border border-brand-200 dark:border-brand-800">
+                      Flota Propia
+                    </span>
+                  }
+                </td>
+                <td class="p-3.5 text-center font-bold font-mono text-slate-800 dark:text-slate-200">
+                  {{ r.totalDeliveries }}
+                </td>
+                <td class="p-3.5 text-right font-black font-mono text-brand-600 dark:text-brand-400">
+                  ${{ r.totalDeliveryFees.toFixed(2) }}
+                  <span class="text-[10px] block opacity-75 font-normal">≈ Bs. {{ (r.totalDeliveryFees * bcvRate).toFixed(2) }}</span>
+                </td>
+                <td class="p-3.5 text-right font-black font-mono text-emerald-600 dark:text-emerald-400">
+                  ${{ r.walletBalance.toFixed(2) }}
+                  <span class="text-[10px] block opacity-75 font-normal">≈ Bs. {{ (r.walletBalance * bcvRate).toFixed(2) }}</span>
+                </td>
+                <td class="p-3.5 text-center">
+                  <button (click)="selectedRiderFilter.set(r.riderId)"
+                          class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-[11px] transition-colors cursor-pointer">
+                    Ver Entregas
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- AUDITORÍA DETALLADA DE PEDIDOS ENTREGADOS -->
+    <div class="card-adaptive rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs">
+      <div class="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">
+        <h3 class="text-sm font-extrabold text-slate-900 dark:text-white">
+          Historial Cronológico de Pedidos Entregados ({{ filteredDeliveredOrders.length }})
+        </h3>
+        @if (selectedRiderFilter() !== 'all') {
+          <button (click)="selectedRiderFilter.set('all')"
+                  class="text-xs font-bold text-brand-600 hover:underline cursor-pointer">
+            ✕ Quitar filtro
+          </button>
+        }
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr class="border-b border-slate-200 dark:border-slate-800 bg-slate-100/50 dark:bg-slate-800/50 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase">
+              <th class="p-3.5"># Pedido</th>
+              <th class="p-3.5">Fecha / Hora</th>
+              <th class="p-3.5">Repartidor</th>
+              <th class="p-3.5">Cliente / Destino</th>
+              <th class="p-3.5 text-right">Flete de Delivery</th>
+              <th class="p-3.5 text-center">Estado</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+            @if (filteredDeliveredOrders.length === 0) {
+              <tr>
+                <td colspan="6" class="p-8 text-center text-slate-400">
+                  No hay pedidos entregados que coincidan con el filtro seleccionado.
+                </td>
+              </tr>
+            }
+            @for (o of filteredDeliveredOrders; track o.id) {
+              <tr class="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                <td class="p-3.5 font-mono font-black text-brand-600 dark:text-brand-400">
+                  {{ o.orderNumber }}
+                </td>
+                <td class="p-3.5 text-slate-600 dark:text-slate-400">
+                  {{ o.createdAt | date:'dd/MM/yyyy, h:mm a' }}
+                </td>
+                <td class="p-3.5">
+                  <div class="font-bold text-slate-900 dark:text-white">{{ o.driverName || 'Repartidor' }}</div>
+                  <div class="text-[10px] font-mono text-slate-400">{{ o.driverPhone || 'N/D' }}</div>
+                </td>
+                <td class="p-3.5 text-slate-700 dark:text-slate-300">
+                  <div class="font-bold">{{ o.customer?.name || 'Cliente' }}</div>
+                  <div class="text-[10px] text-slate-400 truncate max-w-[200px]">{{ o.customer?.address || 'Dirección de entrega' }}</div>
+                </td>
+                <td class="p-3.5 text-right font-black font-mono text-emerald-600 dark:text-emerald-400">
+                  ${{ (o.deliveryFee || 0).toFixed(2) }}
+                  <span class="text-[10px] block opacity-75 font-normal">≈ Bs. {{ ((o.deliveryFee || 0) * bcvRate).toFixed(2) }}</span>
+                </td>
+                <td class="p-3.5 text-center">
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200">
+                    Entregado ✓
+                  </span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <!-- ======================================================== -->
+  <!-- VISTA 4: SOLICITUDES DE RETIRO / LIQUIDACIÓN A RIDERS -->
+  <!-- ======================================================== -->
   @if (activeSubTab() === 'withdrawals') {
     @if (withdrawals.length === 0) {
       <div class="card-adaptive rounded-2xl p-12 text-center space-y-3 border border-dashed border-slate-300 dark:border-slate-800 animate-fade-in">
@@ -150,7 +479,7 @@
         </div>
         <h3 class="text-base font-extrabold text-slate-900 dark:text-white">Sin Solicitudes de Retiro</h3>
         <p class="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
-          Cuando los repartidores que presten servicio a tu comercio acumulen saldo por fletes de entrega y soliciten su liquidación, aparecerán listados aquí para que audites sus datos y les transfieras vía Pago Móvil.
+          Cuando los repartidores acumulen saldo por fletes de entrega y soliciten su retiro, aparecerán listados aquí para que audites sus datos bancarios y les transfieras vía Pago Móvil.
         </p>
       </div>
     } @else {
@@ -161,7 +490,6 @@
                  [class.border-amber-500/40]="w.status === 'pending'"
                  [class.border-emerald-500/30]="w.status === 'completed'"
                  [class.border-red-500/30]="w.status === 'rejected'">
-              <!-- Header Tarjeta -->
               <div class="flex items-start justify-between gap-2">
                 <div>
                   <h4 class="font-extrabold text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
@@ -173,7 +501,6 @@
                   </p>
                 </div>
 
-                <!-- Status Badge -->
                 @if (w.status === 'pending') {
                   <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 flex items-center gap-1">
                     <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
@@ -228,7 +555,6 @@
                 }
               </div>
 
-              <!-- Datos de Procesamiento (Si ya se pagó o rechazó) -->
               @if (w.status === 'completed') {
                 <div class="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-[11px] text-emerald-800 dark:text-emerald-300 font-mono">
                   <div class="font-bold">Comprobante / Ref: #{{ w.referenceCode || 'Liquidado' }}</div>
@@ -252,13 +578,13 @@
                 @if (w.status === 'pending') {
                   <div class="flex items-center gap-1.5">
                     <button (click)="openRejectModal(w)"
-                            class="px-2.5 py-1.5 text-[11px] font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition cursor-pointer">
+                            class="px-2.5 py-1 rounded-lg border border-red-200 dark:border-red-800 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 text-[11px] font-bold cursor-pointer transition-colors">
                       Rechazar
                     </button>
                     <button (click)="openPayModal(w)"
-                            class="px-3 py-1.5 text-[11px] font-black text-white bg-emerald-600 hover:bg-emerald-500 shadow-sm rounded-lg transition cursor-pointer flex items-center gap-1">
-                      <app-icon name="check" [size]="12"></app-icon>
-                      <span>Pagar</span>
+                            class="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold shadow-xs cursor-pointer transition-colors flex items-center gap-1">
+                      <app-icon name="check" [size]="12" className="text-white"></app-icon>
+                      <span>Registrar Pago</span>
                     </button>
                   </div>
                 }
@@ -270,110 +596,78 @@
     }
   }
 
-  <!-- MODAL: REGISTRAR PAGO DE RETIRO AL REPARTIDOR -->
-  @if (selectedWithdrawalForPay(); as w) {
-    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-fade-in">
-      <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
-        <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-          <div class="flex items-center gap-2">
-            <div class="w-8 h-8 rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-              <app-icon name="check-circle" [size]="18"></app-icon>
-            </div>
-            <h3 class="text-base font-black text-slate-900 dark:text-white">Registrar Pago a Repartidor</h3>
-          </div>
-          <button (click)="closePayModal()" class="text-slate-400 hover:text-slate-600 cursor-pointer">
-            <app-icon name="x" [size]="18"></app-icon>
-          </button>
+  <!-- MODAL PARA REGISTRAR PAGO DE RETIRO (REFERENCIA PAGO MÓVIL) -->
+  @if (selectedWithdrawalForPay()) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+      <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+            <app-icon name="dollar-sign" [size]="18" className="text-emerald-500"></app-icon>
+            <span>Confirmar Pago a Repartidor</span>
+          </h3>
+          <button (click)="closePayModal()" class="text-slate-400 hover:text-slate-600 cursor-pointer">✕</button>
         </div>
 
-        <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2 text-xs">
-          <div class="flex justify-between items-center">
-            <span class="text-slate-500 dark:text-slate-400">Repartidor:</span>
-            <span class="font-bold text-slate-900 dark:text-white">{{ w.riderName }}</span>
-          </div>
-          <div class="flex justify-between items-center">
-            <span class="text-slate-500 dark:text-slate-400">Monto en Dólares:</span>
-            <span class="font-mono font-black text-sm text-slate-900 dark:text-white">${{ w.amount.toFixed(2) }}</span>
-          </div>
-          <div class="flex justify-between items-center">
-            <span class="text-slate-500 dark:text-slate-400">Equivalente en Bolívares:</span>
-            <span class="font-mono font-bold text-emerald-600 dark:text-emerald-400">Bs. {{ (w.amountBs || (w.amount * bcvRate)).toFixed(2) }}</span>
-          </div>
-          <div class="pt-2 border-t border-slate-200 dark:border-slate-700/60 text-[11px] space-y-1">
-            <div class="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Datos de Pago Móvil:</div>
-            <div><strong>Banco:</strong> {{ w.paymentAccount?.bank }}</div>
-            <div><strong>Teléfono:</strong> <span class="font-mono">{{ w.paymentAccount?.phone || w.riderPhone }}</span></div>
-            <div><strong>Cédula:</strong> <span class="font-mono">{{ w.paymentAccount?.nationalId }}</span></div>
-          </div>
+        <div class="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-slate-700 dark:text-slate-300 space-y-1">
+          <div class="font-extrabold text-sm text-slate-900 dark:text-white">{{ selectedWithdrawalForPay()?.riderName }}</div>
+          <div>Monto: <strong class="font-mono text-emerald-600 text-sm">${{ selectedWithdrawalForPay()?.amount?.toFixed(2) }}</strong> (≈ Bs. {{ ((selectedWithdrawalForPay()?.amount || 0) * bcvRate).toFixed(2) }})</div>
+          <div>Banco: <strong>{{ selectedWithdrawalForPay()?.paymentAccount?.bank || 'Pago Móvil' }}</strong></div>
+          <div>Teléfono: <strong class="font-mono">{{ selectedWithdrawalForPay()?.paymentAccount?.phone || selectedWithdrawalForPay()?.riderPhone }}</strong></div>
+          <div>Cédula: <strong class="font-mono">{{ selectedWithdrawalForPay()?.paymentAccount?.nationalId }}</strong></div>
         </div>
 
         <div class="space-y-1.5">
-          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300">
-            Número de Referencia Bancaria *
+          <label class="text-xs font-bold text-slate-700 dark:text-slate-300">
+            Número de Referencia Bancaria / Pago Móvil:
           </label>
           <input type="text"
                  [ngModel]="paymentRefCodeInput()"
                  (ngModelChange)="paymentRefCodeInput.set($event)"
-                 placeholder="Ej: 894123 (Últimos 6 dígitos)"
-                 class="w-full text-sm font-mono font-bold rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white p-3 focus:ring-2 focus:ring-emerald-500" />
-          <p class="text-[10px] text-slate-500">
-            Ingresa la referencia del Pago Móvil realizado desde la cuenta del comercio hacia el motorizado.
-          </p>
+                 placeholder="Ej: PM-94810239 o últimos 6 dígitos"
+                 class="w-full px-3.5 py-2 text-xs font-mono rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none" />
         </div>
 
-        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
           <button (click)="closePayModal()"
-                  class="px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 rounded-xl transition cursor-pointer">
+                  class="px-4 py-2 text-xs font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl cursor-pointer">
             Cancelar
           </button>
           <button (click)="confirmPay()"
                   [disabled]="!paymentRefCodeInput().trim()"
-                  class="px-4 py-2 text-xs font-black text-white bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 shadow-md shadow-emerald-600/20 rounded-xl transition cursor-pointer flex items-center gap-1.5">
-            <app-icon name="check" [size]="14"></app-icon>
-            <span>Confirmar Pago</span>
+                  class="px-4 py-2 text-xs font-black bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-xs disabled:opacity-50 cursor-pointer">
+            Confirmar y Marcar Pagado ✓
           </button>
         </div>
       </div>
     </div>
   }
 
-  <!-- MODAL: RECHAZAR SOLICITUD DE RETIRO -->
-  @if (isRejectModalOpen();) {
-    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-fade-in">
-      <div class="bg-white dark:bg-slate-900 border border-red-500/30 rounded-2xl shadow-2xl max-w-sm w-full p-5 space-y-4">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl bg-red-500/20 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0">
-            <app-icon name="alert-triangle" [size]="20"></app-icon>
-          </div>
-          <div>
-            <h4 class="text-sm font-black text-slate-900 dark:text-white">¿Rechazar Solicitud de Retiro?</h4>
-            <span class="text-xs text-slate-500">{{ selectedWithdrawalForReject()?.riderName }}</span>
-          </div>
-        </div>
-
-        <div class="space-y-1.5">
-          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300">
-            Motivo del Rechazo (Opcional)
-          </label>
-          <textarea [ngModel]="rejectionReasonInput()"
-                    (ngModelChange)="rejectionReasonInput.set($event)"
-                    rows="3"
-                    placeholder="Ej: Datos de Pago Móvil inválidos o se pagó en efectivo..."
-                    class="w-full text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 focus:ring-2 focus:ring-red-500"></textarea>
-        </div>
-
-        <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+  <!-- MODAL DE RECHAZO -->
+  @if (isRejectModalOpen()) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+      <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+        <h3 class="text-base font-black text-rose-600 flex items-center gap-2">
+          <span>Rechazar Solicitud de Retiro</span>
+        </h3>
+        <p class="text-xs text-slate-500 dark:text-slate-400">
+          Indica el motivo por el cual no se pudo procesar la transferencia (datos erróneos, teléfono inválido, etc.):
+        </p>
+        <textarea [ngModel]="rejectionReasonInput()"
+                  (ngModelChange)="rejectionReasonInput.set($event)"
+                  rows="3"
+                  placeholder="Motivo del rechazo..."
+                  class="w-full p-3 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 outline-none"></textarea>
+        <div class="flex items-center justify-end gap-2">
           <button (click)="closeRejectModal()"
-                  class="px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 rounded-xl transition cursor-pointer">
+                  class="px-4 py-2 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-xl cursor-pointer">
             Cancelar
           </button>
           <button (click)="confirmReject()"
-                  class="px-4 py-2 text-xs font-black text-white bg-red-600 hover:bg-red-500 shadow-md shadow-red-600/25 rounded-xl transition cursor-pointer">
-            Rechazar Retiro
+                  class="px-4 py-2 text-xs font-black bg-rose-600 text-white rounded-xl cursor-pointer">
+            Confirmar Rechazo
           </button>
         </div>
       </div>
     </div>
   }
 </div>
-

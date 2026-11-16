@@ -52,6 +52,9 @@ export interface Rider {
   isIndependent?: boolean;
   isCertified?: boolean;
   rating?: number;
+  totalDeliveries?: number;
+  walletBalance?: number;
+  tenantId?: string;
 }
 
 @Component({
@@ -308,14 +311,15 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     if (found) {
       return {
         ...found,
-        name: rawCode === 'FRANQUICIA' ? 'Plan Franquicia' : (rawCode === 'COMERCIO_PRO' ? 'Plan Comercio Pro' : 'Plan Emprendedor'),
-        hasWhatsappBot: rawCode === 'FRANQUICIA' || rawCode === 'COMERCIO_PRO' || found.hasWhatsappBot,
+        name: rawCode === 'FRANQUICIA' ? 'Plan Pro' : (rawCode === 'COMERCIO_PRO' ? 'Plan Mediano' : 'Plan Básico'),
+        hasWhatsappBot: true,
         hasExcelReports: rawCode === 'FRANQUICIA' || rawCode === 'COMERCIO_PRO' || found.hasExcelReports,
         hasFeaturedBanners: rawCode === 'FRANQUICIA' || found.hasFeaturedBanners,
-        maxBranches: rawCode === 'FRANQUICIA' ? -1 : (rawCode === 'COMERCIO_PRO' ? 2 : 0),
-        maxProducts: rawCode === 'FRANQUICIA' ? -1 : (rawCode === 'COMERCIO_PRO' ? 100 : 20),
-        maxMonthlyOrders: rawCode === 'FRANQUICIA' ? -1 : (rawCode === 'COMERCIO_PRO' ? 50 : 20),
-        maxAdditionalUsers: rawCode === 'FRANQUICIA' ? -1 : (rawCode === 'COMERCIO_PRO' ? 3 : 1)
+        maxBranches: rawCode === 'FRANQUICIA' ? 4 : (rawCode === 'COMERCIO_PRO' ? 2 : 0),
+        maxProducts: rawCode === 'FRANQUICIA' ? 500 : (rawCode === 'COMERCIO_PRO' ? 150 : 50),
+        maxMonthlyOrders: -1,
+        maxAdditionalUsers: rawCode === 'FRANQUICIA' ? 10 : (rawCode === 'COMERCIO_PRO' ? 3 : 1),
+        maxRiders: rawCode === 'FRANQUICIA' ? 10 : (rawCode === 'COMERCIO_PRO' ? 6 : 3)
       };
     }
 
@@ -933,6 +937,17 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     return this.riders().filter(r => (r.branchId === branchId || (isMain && !r.branchId) || r.isIndependent) && r.status === 'available' && !busy.has(r.id));
   });
   readonly availableRiders = computed(() => this.filteredRiders());
+
+  readonly ownFleetRiders = computed(() => {
+    const branchId = this.activeBranchId();
+    if (!branchId) return [];
+    const isMain = this.isSelectedBranchMain();
+    return this.riders().filter(r => !r.isIndependent && (r.branchId === branchId || (isMain && !r.branchId)));
+  });
+
+  readonly networkRiders = computed(() => {
+    return this.riders().filter(r => r.isIndependent);
+  });
 
   getOwnRidersForOrder(order: Order): Rider[] {
     const busy = this.getBusyRiderIds(order.id);
@@ -1557,8 +1572,9 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       if (isValid) {
         currentLocation = { lat: Number(rawLat.toFixed(6)), lng: Number(rawLng.toFixed(6)) };
       }
-      const resolvedRiderBranchId = r.branch_id || (r as any).branchId || branchFilter;
-      const branch = this.branches().find(b => b.id === resolvedRiderBranchId);
+      const isIndependent = !!(r.is_independent || (r as any).isIndependent || (!r.tenant_id && !(r as any).tenantId && !r.branch_id && !(r as any).branchId));
+      const resolvedRiderBranchId = isIndependent ? undefined : (r.branch_id || (r as any).branchId);
+      const branch = resolvedRiderBranchId ? this.branches().find(b => b.id === resolvedRiderBranchId) : undefined;
 
       return {
         id: r.id,
@@ -1568,12 +1584,17 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         vehicleType: (r.vehicle_type as any) || (r as any).vehicleType || 'moto',
         status: (r.status as any) || 'available',
         branchId: resolvedRiderBranchId,
-        branchName: branch?.name || r.branch_name || (r.is_independent ? 'Flota Libre Pídetelo' : 'Sede Asignada'),
+        branchName: isIndependent 
+          ? 'Red Libre Pídetelo (Independiente)' 
+          : (branch?.name || (resolvedRiderBranchId ? 'Sede Asignada' : 'Sede Principal')),
         currentLocation,
         distanceKm: r.distanceKm != null ? Number(r.distanceKm) : (r.distance_km != null ? Number(r.distance_km) : undefined),
-        isIndependent: !!(r.is_independent || (r as any).isIndependent),
+        isIndependent,
         isCertified: !!(r.is_certified || (r as any).isCertified),
         rating: r.rating != null ? Number(r.rating) : 5.0,
+        totalDeliveries: Number(r.total_deliveries || (r as any).totalDeliveries || 0),
+        walletBalance: Number(r.wallet_balance !== undefined ? r.wallet_balance : ((r as any).walletBalance || 0)),
+        tenantId: r.tenant_id || (r as any).tenantId
       };
     };
 

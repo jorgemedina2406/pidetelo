@@ -132,3 +132,4 @@ WHERE code = 'FRANQUICIA';
 UPDATE subscription_plans
 SET is_active = false, updated_at = NOW()
 WHERE code IN ('COMERCIO', 'CORPORATIVO');
+
