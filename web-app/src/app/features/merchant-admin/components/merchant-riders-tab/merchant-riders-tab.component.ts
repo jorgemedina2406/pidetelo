@@ -213,18 +213,79 @@ export class MerchantRidersTabComponent {
   }
 
   // --- MÉTODOS DE POLÍTICA DE LIQUIDACIÓN ---
+  formatHour12(hourStr: string): string {
+    if (!hourStr) return '8:00 PM';
+    const parts = hourStr.split(':');
+    let h = parseInt(parts[0], 10);
+    const m = parts[1] || '00';
+    if (isNaN(h)) return hourStr;
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12;
+    if (h === 0) h = 12;
+    return `${h}:${m} ${ampm}`;
+  }
+
+  generateSuggestedNote(
+    mode: string = this.policyForm.mode,
+    dayOfWeek: number = this.policyForm.payoutDayOfWeek,
+    hour: string = this.policyForm.payoutHour,
+    minAmount: number = this.policyForm.minWithdrawalAmount,
+    method: string = this.policyForm.paymentMethod
+  ): string {
+    const days = ['', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+    const dayName = days[dayOfWeek] || 'Lunes';
+    const formattedHour = this.formatHour12(hour);
+    const methodLabel = method === 'PAGO_MOVIL' ? 'Pago Móvil' :
+                        method === 'TRANSFERENCIA' ? 'Transferencia Bancaria' :
+                        method === 'EFECTIVO' ? 'Efectivo en Tienda' : 'Pago Móvil';
+
+    switch (mode) {
+      case 'WEEKLY':
+        return `Liquidación semanal directa por ${methodLabel} todos los ${dayName} al cierre de jornada (${formattedHour}).`;
+      case 'DAILY':
+        return `Liquidación diaria al cierre de jornada a las ${formattedHour} por ${methodLabel}.`;
+      case 'BIWEEKLY':
+        return `Liquidación quincenal los días 15 y fin de mes a las ${formattedHour} por ${methodLabel}.`;
+      case 'ON_DEMAND':
+        return `Retiros bajo demanda disponibles a partir de $${(minAmount || 5).toFixed(2)} USD vía ${methodLabel}.`;
+      default:
+        return `Liquidación directa por ${methodLabel}.`;
+    }
+  }
+
   openPolicyModal(): void {
     const cur = this.payoutPolicy || {};
+    const mode = cur.mode || 'WEEKLY';
+    const payoutDayOfWeek = cur.payoutDayOfWeek != null ? cur.payoutDayOfWeek : 1;
+    const payoutHour = cur.payoutHour || '20:00';
+    const minWithdrawalAmount = cur.minWithdrawalAmount != null ? cur.minWithdrawalAmount : 5.0;
+    const paymentMethod = cur.paymentMethod || 'PAGO_MOVIL';
+
     this.policyForm = {
-      mode: cur.mode || 'WEEKLY',
-      payoutDayOfWeek: cur.payoutDayOfWeek != null ? cur.payoutDayOfWeek : 1,
-      payoutHour: cur.payoutHour || '20:00',
-      minWithdrawalAmount: cur.minWithdrawalAmount != null ? cur.minWithdrawalAmount : 5.0,
-      paymentMethod: cur.paymentMethod || 'PAGO_MOVIL',
-      payoutNotes: cur.payoutNotes || '',
+      mode,
+      payoutDayOfWeek,
+      payoutHour,
+      minWithdrawalAmount,
+      paymentMethod,
+      payoutNotes: cur.payoutNotes || this.generateSuggestedNote(mode, payoutDayOfWeek, payoutHour, minWithdrawalAmount, paymentMethod),
       emailNotifications: cur.emailNotifications !== false
     };
     this.isPolicyModalOpen.set(true);
+  }
+
+  setPolicyMode(mode: 'WEEKLY' | 'DAILY' | 'BIWEEKLY' | 'ON_DEMAND'): void {
+    this.policyForm.mode = mode;
+    this.onPolicyFieldChange();
+  }
+
+  onPolicyFieldChange(): void {
+    this.policyForm.payoutNotes = this.generateSuggestedNote(
+      this.policyForm.mode,
+      this.policyForm.payoutDayOfWeek,
+      this.policyForm.payoutHour,
+      this.policyForm.minWithdrawalAmount,
+      this.policyForm.paymentMethod
+    );
   }
 
   closePolicyModal(): void {

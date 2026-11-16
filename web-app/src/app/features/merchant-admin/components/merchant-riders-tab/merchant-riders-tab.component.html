@@ -712,7 +712,7 @@
 
   <!-- MODAL PARA REGISTRAR PAGO DE RETIRO (REFERENCIA PAGO MÓVIL) -->
   @if (selectedWithdrawalForPay()) {
-    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+    <div class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
       <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
         <div class="flex items-center justify-between">
           <h3 class="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
@@ -758,7 +758,7 @@
 
   <!-- MODAL DE RECHAZO -->
   @if (isRejectModalOpen()) {
-    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+    <div class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
       <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
         <h3 class="text-base font-black text-rose-600 flex items-center gap-2">
           <span>Rechazar Solicitud de Retiro</span>
@@ -787,7 +787,7 @@
 
   <!-- MODAL: CONFIGURACIÓN DE POLÍTICA DE LIQUIDACIÓN Y PAGO A REPARTIDORES -->
   @if (isPolicyModalOpen()) {
-    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+    <div class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
       <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-5">
         <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
           <div class="flex items-center gap-2.5">
@@ -810,7 +810,7 @@
             <label class="font-bold text-slate-700 dark:text-slate-200">Frecuencia de Liquidación</label>
             <div class="grid grid-cols-2 gap-2">
               <button type="button"
-                      (click)="policyForm.mode = 'WEEKLY'"
+                      (click)="setPolicyMode('WEEKLY')"
                       [class.bg-brand-500]="policyForm.mode === 'WEEKLY'"
                       [class.text-white]="policyForm.mode === 'WEEKLY'"
                       [class.border-brand-500]="policyForm.mode === 'WEEKLY'"
@@ -824,7 +824,7 @@
               </button>
 
               <button type="button"
-                      (click)="policyForm.mode = 'DAILY'"
+                      (click)="setPolicyMode('DAILY')"
                       [class.bg-brand-500]="policyForm.mode === 'DAILY'"
                       [class.text-white]="policyForm.mode === 'DAILY'"
                       [class.border-brand-500]="policyForm.mode === 'DAILY'"
@@ -838,7 +838,7 @@
               </button>
 
               <button type="button"
-                      (click)="policyForm.mode = 'BIWEEKLY'"
+                      (click)="setPolicyMode('BIWEEKLY')"
                       [class.bg-brand-500]="policyForm.mode === 'BIWEEKLY'"
                       [class.text-white]="policyForm.mode === 'BIWEEKLY'"
                       [class.border-brand-500]="policyForm.mode === 'BIWEEKLY'"
@@ -852,7 +852,7 @@
               </button>
 
               <button type="button"
-                      (click)="policyForm.mode = 'ON_DEMAND'"
+                      (click)="setPolicyMode('ON_DEMAND')"
                       [class.bg-brand-500]="policyForm.mode === 'ON_DEMAND'"
                       [class.text-white]="policyForm.mode === 'ON_DEMAND'"
                       [class.border-brand-500]="policyForm.mode === 'ON_DEMAND'"
@@ -872,6 +872,7 @@
             <div class="space-y-1">
               <label class="font-bold text-slate-700 dark:text-slate-200">Día de la Semana para Liquidación</label>
               <select [(ngModel)]="policyForm.payoutDayOfWeek"
+                      (ngModelChange)="onPolicyFieldChange()"
                       class="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-bold outline-none cursor-pointer">
                 <option [value]="1">Lunes (Recomendado)</option>
                 <option [value]="2">Martes</option>
@@ -889,6 +890,7 @@
             <div class="space-y-1">
               <label class="font-bold text-slate-700 dark:text-slate-200">Hora Habitual de Pago</label>
               <input type="time" [(ngModel)]="policyForm.payoutHour"
+                     (ngModelChange)="onPolicyFieldChange()"
                      class="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-bold outline-none font-mono" />
             </div>
 
@@ -896,6 +898,7 @@
             <div class="space-y-1">
               <label class="font-bold text-slate-700 dark:text-slate-200">Monto Mínimo ($ USD)</label>
               <input type="number" step="0.5" min="1" [(ngModel)]="policyForm.minWithdrawalAmount"
+                     (ngModelChange)="onPolicyFieldChange()"
                      class="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-bold outline-none font-mono" />
             </div>
           </div>
@@ -904,6 +907,7 @@
           <div class="space-y-1">
             <label class="font-bold text-slate-700 dark:text-slate-200">Método de Pago Preferido</label>
             <select [(ngModel)]="policyForm.paymentMethod"
+                    (ngModelChange)="onPolicyFieldChange()"
                     class="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-bold outline-none cursor-pointer">
               <option value="PAGO_MOVIL">Pago Móvil Interbancario (Venezuela)</option>
               <option value="TRANSFERENCIA">Transferencia Bancaria Nacional</option>
@@ -923,10 +927,18 @@
 
           <!-- Notas Informativas para los Motorizados -->
           <div class="space-y-1">
-            <label class="font-bold text-slate-700 dark:text-slate-200">Nota visible para los Motorizados</label>
-            <input type="text" [(ngModel)]="policyForm.payoutNotes"
-                   placeholder="Ej: Las transferencias se realizan por Pago Móvil a partir de las 8:00 PM."
-                   class="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 outline-none" />
+            <div class="flex items-center justify-between">
+              <label class="font-bold text-slate-700 dark:text-slate-200">Nota visible para los Motorizados</label>
+              <button type="button"
+                      (click)="onPolicyFieldChange()"
+                      class="text-[11px] text-brand-600 dark:text-brand-400 font-bold hover:underline cursor-pointer flex items-center gap-1">
+                <span>↺ Actualizar nota sugerida</span>
+              </button>
+            </div>
+            <textarea [(ngModel)]="policyForm.payoutNotes"
+                      rows="2"
+                      placeholder="Ej: Las transferencias se realizan por Pago Móvil a partir de las 8:00 PM."
+                      class="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 outline-none resize-none"></textarea>
           </div>
         </div>
 
