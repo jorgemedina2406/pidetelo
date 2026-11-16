@@ -75,6 +75,14 @@ export const routes: Routes = [
     redirectTo: 'merchant-admin'
   },
   {
+    path: 'panel',
+    redirectTo: 'merchant-admin'
+  },
+  {
+    path: 'superadmin',
+    redirectTo: 'super-admin'
+  },
+  {
     path: '**',
     redirectTo: 'explorar'
   }
