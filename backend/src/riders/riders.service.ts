@@ -982,6 +982,10 @@ export class RidersService {
         id: r.id,
         name: r.name,
         phone: r.phone,
+        tenant_id: rTenant,
+        tenantId: rTenant,
+        branch_id: rBranch,
+        branchId: rBranch,
         vehiclePlate: r.vehicle_plate || (r as any).vehiclePlate || 'S/P',
         vehicleType: r.vehicle_type || (r as any).vehicleType || 'moto',
         vehicleModel: r.vehicle_model || (r as any).vehicleModel || 'Motocicleta',
@@ -989,9 +993,9 @@ export class RidersService {
         status: 'available',
         rating: rRating.toFixed(1),
         totalDeliveries: rDeliveries,
+        walletBalance: Number(r.wallet_balance !== undefined ? r.wallet_balance : ((r as any).walletBalance || 0)),
         isCertified: r.is_certified ?? true,
         verificationStatus: r.verification_status || 'verified',
-        isIndependent: r.is_independent ?? (!rTenant || rTenant === 'global'),
         distanceKm: dist,
         distanceText,
         currentLat: hasGps ? Number(r.current_lat) : null,
@@ -1002,7 +1006,7 @@ export class RidersService {
       const isMatchingTenant = (isUuid(tenantId) && rTenant === tenantId) || (!isUuid(tenantId) && rTenant === resolvedTenantId);
       if (isMatchingTenant) {
         if (!branchId || branchId === 'all' || !rBranch || rBranch === branchId) {
-          ownRiders.push({ ...riderItem, isOwn: true });
+          ownRiders.push({ ...riderItem, isOwn: true, isIndependent: false });
           return;
         }
         // Si pertenece a otra sede del mismo comercio, no se muestra
@@ -1016,9 +1020,9 @@ export class RidersService {
 
       // Flota Libre / Red de motorizados independientes de la plataforma Pídetelo
       // Regla estricta: Solo motorizados 100% independientes que NO pertenezcan a ningún comercio
-      const isIndependentRider = !rTenant && !rBranch && r.is_independent !== false;
+      const isIndependentRider = !rTenant && !rBranch;
       if (isIndependentRider) {
-        nearbyRiders.push({ ...riderItem, isOwn: false });
+        nearbyRiders.push({ ...riderItem, isOwn: false, isIndependent: true });
       }
     });
 

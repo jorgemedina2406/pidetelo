@@ -943,7 +943,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     const isMain = this.isSelectedBranchMain();
     return this.riders().filter(r => 
       !r.isIndependent && 
-      (!branchId || branchId === 'all' || r.branchId === branchId || (isMain && !r.branchId))
+      (!branchId || branchId === 'all' || !r.branchId || r.branchId === branchId || isMain)
     );
   });
 
@@ -1575,9 +1575,9 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         currentLocation = { lat: Number(rawLat.toFixed(6)), lng: Number(rawLng.toFixed(6)) };
       }
       const rTenant = r.tenant_id || (r as any).tenantId;
-      // Un motorizado solo es independiente si NO tiene comercio asignado
-      const isIndependent = !rTenant;
-      const resolvedRiderBranchId = isIndependent ? undefined : (r.branch_id || (r as any).branchId);
+      // Si el repartidor viene en la lista propia (isOwn === true) o pertenece a este comercio
+      const isIndependent = r.isOwn === true ? false : (r.isOwn === false ? true : (!rTenant || r.isIndependent === true));
+      const resolvedRiderBranchId = isIndependent ? undefined : (r.branch_id || (r as any).branchId || branchFilter);
       const branch = resolvedRiderBranchId ? this.branches().find(b => b.id === resolvedRiderBranchId) : undefined;
 
       return {
@@ -1590,7 +1590,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         branchId: resolvedRiderBranchId,
         branchName: isIndependent
           ? 'Red Libre Pídetelo (Independiente)'
-          : (branch?.name || (resolvedRiderBranchId ? 'Sede Asignada' : 'Sede Principal')),
+          : (branch?.name || this.activeBranch()?.name || 'Sede Principal'),
         currentLocation,
         distanceKm: r.distanceKm != null ? Number(r.distanceKm) : (r.distance_km != null ? Number(r.distance_km) : undefined),
         isIndependent,
@@ -1598,7 +1598,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         rating: r.rating != null ? Number(r.rating) : 5.0,
         totalDeliveries: Number(r.total_deliveries || (r as any).totalDeliveries || 0),
         walletBalance: Number(r.wallet_balance !== undefined ? r.wallet_balance : ((r as any).walletBalance || 0)),
-        tenantId: r.tenant_id || (r as any).tenantId
+        tenantId: rTenant
       };
     };
 
@@ -1614,8 +1614,8 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     ).subscribe({
       next: (pool) => {
         if (pool && ((pool.ownRiders && pool.ownRiders.length > 0) || (pool.nearbyRiders && pool.nearbyRiders.length > 0))) {
-          const mappedOwn = (pool.ownRiders || []).map(mapRawToRider);
-          const mappedNearby = (pool.nearbyRiders || []).map(mapRawToRider);
+          const mappedOwn = (pool.ownRiders || []).map((r: any) => mapRawToRider({ ...r, isOwn: true, isIndependent: false }));
+          const mappedNearby = (pool.nearbyRiders || []).map((r: any) => mapRawToRider({ ...r, isOwn: false, isIndependent: true }));
 
           this.ownRiders.set(mappedOwn);
           this.nearbyRiders.set(mappedNearby);
@@ -1630,12 +1630,10 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         // Fallback standard fetch if pool returned empty
         this.api.getRiders(activeTenantId, branchFilter).subscribe(riders => {
           if (riders && riders.length > 0) {
-            const isMain = this.isSelectedBranchMain();
-            const branchRiders = riders.filter(r => {
-              const rBId = r.branch_id || (r as any).branchId;
-              return rBId === branchFilter || (isMain && !rBId) || r.is_independent;
+            const mapped = riders.map((r: any) => {
+              const belongsToThisTenant = r.tenant_id === activeTenantId || (r as any).tenantId === activeTenantId || r.tenant_id === this.currentTenant().id;
+              return mapRawToRider({ ...r, isOwn: belongsToThisTenant, isIndependent: !belongsToThisTenant });
             });
-            const mapped = branchRiders.map(mapRawToRider);
             this.riders.set(mapped);
             this.ownRiders.set(mapped.filter(r => !r.isIndependent));
             this.nearbyRiders.set(mapped.filter(r => r.isIndependent));
