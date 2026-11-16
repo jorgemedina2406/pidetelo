@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Param, Body } from '@nestjs/common';
+import { Controller, Get, Post, Put, Param, Body, Query } from '@nestjs/common';
 import { PlansService, PlatformSettings, TenantAddons } from './plans.service.js';
 
 @Controller('api/plans')
@@ -8,6 +8,12 @@ export class PlansController {
   @Get()
   async getAllPlans() {
     return this.plansService.getAllPlans();
+  }
+
+  // --- Transparencia & Auditoría de Comisiones ---
+  @Get('commissions/ledger')
+  async getCommissionLedger(@Query('tenantId') tenantId?: string) {
+    return this.plansService.getCommissionLedger(tenantId);
   }
 
   // --- Platform Settings (Rider Commission Mode & Add-on Prices) ---

@@ -1779,6 +1779,13 @@ export class ApiService {
     return this.http.put<TenantAddons>(`${this.baseUrl}/plans/tenant/${tenantId}/addons`, addons);
   }
 
+  getCommissionLedger(tenantId?: string): Observable<any> {
+    const url = tenantId ? `${this.baseUrl}/plans/commissions/ledger?tenantId=${tenantId}` : `${this.baseUrl}/plans/commissions/ledger`;
+    return this.http.get<any>(url).pipe(
+      catchError(() => of({ totalDeliveryFees: 0, totalPlatformCommissions: 0, totalRiderEarnings: 0, count: 0, transactions: [] }))
+    );
+  }
+
   exportOrdersReport(tenantId: string, branchId?: string): Observable<any> {
     const url = branchId ? `${this.baseUrl}/orders/export/${tenantId}?branchId=${branchId}` : `${this.baseUrl}/orders/export/${tenantId}`;
     return this.http.get<any>(url);
@@ -1800,14 +1807,14 @@ export class ApiService {
         hasFeaturedBanners: false,
         maxAdditionalUsers: 1,
         maxMonthlyOrders: -1,
-        maxProducts: 150,
+        maxProducts: 50,
         extraBranchPrice: 12.00,
         massCatalogAddonPrice: 5.00,
         onboardingFee: 150.00,
         description: 'Para restaurantes únicos, dark kitchens y comercios con su sede principal.',
         features: [
           '1 tienda incluida (sede principal)',
-          'Hasta 150 productos en catálogo',
+          'Hasta 50 productos en catálogo',
           'Hasta 3 motorizados propios registrados',
           'Bot automático de WhatsApp 24/7 y Live Chat',
           'Pedidos al mes ilimitados',
@@ -1835,14 +1842,14 @@ export class ApiService {
         hasFeaturedBanners: false,
         maxAdditionalUsers: 3,
         maxMonthlyOrders: -1,
-        maxProducts: 500,
+        maxProducts: 150,
         extraBranchPrice: 12.00,
         massCatalogAddonPrice: 5.00,
         onboardingFee: 150.00,
         description: 'Para comercios consolidados que buscan expansión a 3 tiendas y automatización.',
         features: [
           'Hasta 3 tiendas (1 principal + 2 sucursales a $16.67/tienda)',
-          'Hasta 500 productos por tienda',
+          'Hasta 150 productos por tienda',
           'Hasta 6 motorizados propios registrados',
           'Pedidos al mes ilimitados',
           'Hasta 3 usuarios de equipo adicionales',
@@ -2339,7 +2346,7 @@ export class ApiService {
     const name = code === 'FRANQUICIA' ? 'Plan Pro' : (code === 'COMERCIO_PRO' ? 'Plan Mediano' : 'Plan Básico');
     const maxBranches = code === 'FRANQUICIA' ? 4 : (code === 'COMERCIO_PRO' ? 2 : 0);
     const maxRiders = code === 'FRANQUICIA' ? 10 : (code === 'COMERCIO_PRO' ? 6 : 3);
-    const maxProducts = code === 'EMPRENDEDOR' ? 150 : 500;
+    const maxProducts = code === 'EMPRENDEDOR' ? 50 : (code === 'COMERCIO_PRO' ? 150 : 500);
 
     return {
       id: r.id || code,
@@ -2374,7 +2381,7 @@ export class ApiService {
         'Soporte VIP 24/7 con ejecutivo asignado'
       ] : code === 'COMERCIO_PRO' ? [
         'Hasta 3 tiendas (1 principal + 2 sucursales a $16.67/tienda)',
-        'Hasta 500 productos por tienda',
+        'Hasta 150 productos por tienda',
         'Hasta 6 motorizados propios registrados',
         'Pedidos mensuales ilimitados',
         'Hasta 3 usuarios de equipo adicionales',
@@ -2384,7 +2391,7 @@ export class ApiService {
         'Soporte prioritario'
       ] : [
         '1 tienda incluida (sede principal)',
-        'Hasta 150 productos en catálogo',
+        'Hasta 50 productos en catálogo',
         'Hasta 3 motorizados propios registrados',
         'Bot automático de WhatsApp 24/7 y Live Chat',
         'Pedidos al mes ilimitados',

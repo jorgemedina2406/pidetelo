@@ -66,9 +66,15 @@ export class PlanUpgradeModalComponent {
     if (this.customMessage) return this.customMessage;
     switch (this.limitType) {
       case 'branches':
-        return `Tu ${this.currentSubscriptionPlan?.name || 'Plan Actual'} incluye hasta ${(this.currentSubscriptionPlan?.maxBranches || 0) + 1} tienda(s) en total. Sube de plan o añade sucursales extras por solo $12/mes por sede.`;
+        if (this.currentSubscriptionPlan?.code === 'EMPRENDEDOR') {
+          return 'Tu Plan Básico incluye únicamente 1 tienda (sede principal). Actualiza al Plan Mediano ($50/mes) para tener hasta 3 tiendas, o al Plan Pro ($80/mes) para hasta 5 tiendas.';
+        }
+        if (this.currentSubscriptionPlan?.code === 'COMERCIO_PRO') {
+          return 'Tu Plan Mediano incluye hasta 3 tiendas. Actualiza al Plan Pro ($80/mes) para gestionar hasta 5 tiendas.';
+        }
+        return 'Has alcanzado las 5 tiendas base de tu Plan Pro. Puedes sumar sucursales adicionales por $12/mes por cada sede extra.';
       case 'products':
-        return `Tu ${this.currentSubscriptionPlan?.name || 'Plan Actual'} tiene un tope de ${this.currentSubscriptionPlan?.maxProducts || 150} productos. Activa un plan superior o el módulo de Catálogo Masivo (+500 productos por $5/mes).`;
+        return `Tu ${this.currentSubscriptionPlan?.name || 'Plan Actual'} tiene un tope de ${this.currentSubscriptionPlan?.maxProducts || 50} productos. Sube de plan o activa el módulo de Catálogo Masivo para ampliar tu menú.`;
       case 'riders':
         return `Tu ${this.currentSubscriptionPlan?.name || 'Plan Actual'} permite registrar hasta ${this.currentSubscriptionPlan?.maxRiders || 3} motorizados propios. Sube de plan para incorporar más repartidores.`;
       case 'users':

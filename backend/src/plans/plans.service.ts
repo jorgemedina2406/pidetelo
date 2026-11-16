@@ -42,6 +42,20 @@ export interface TenantAddons {
   hasOnboardingAssistance?: boolean;
 }
 
+export interface CommissionTransaction {
+  id: string;
+  order_id: string;
+  order_number: string;
+  tenant_id: string;
+  branch_id?: string;
+  rider_id?: string;
+  delivery_fee: number;
+  platform_commission: number;
+  rider_payout: number;
+  commission_mode: 'RIDER_PREPAID' | 'MERCHANT_POSTPAID';
+  timestamp: string;
+}
+
 export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   riderCommissionMode: 'RIDER_PREPAID', // Opción A por defecto
   riderCommissionType: 'FIXED',
@@ -67,14 +81,14 @@ export const DEFAULT_SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     has_featured_banners: false,
     max_additional_users: 1,
     max_monthly_orders: -1,
-    max_products: 150,
+    max_products: 50,
     extra_branch_price: 12.00,
     mass_catalog_price: 5.00,
     onboarding_fee: 150.00,
     description: 'Para restaurantes únicos, dark kitchens o comercios que inician con su sede principal.',
     features: [
       '1 tienda / sede incluida (sede principal)',
-      'Hasta 150 productos en catálogo',
+      'Hasta 50 productos en catálogo',
       'Hasta 3 motorizados propios registrados',
       'Bot automático de WhatsApp 24/7 y Live Chat',
       'Pedidos mensuales ilimitados',
@@ -102,14 +116,14 @@ export const DEFAULT_SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     has_featured_banners: false,
     max_additional_users: 3,
     max_monthly_orders: -1,
-    max_products: 500,
+    max_products: 150,
     extra_branch_price: 12.00,
     mass_catalog_price: 5.00,
     onboarding_fee: 150.00,
     description: 'Para comercios consolidados que buscan expansión a 3 tiendas y automatización con bot.',
     features: [
       'Hasta 3 tiendas (1 principal + 2 sucursales a $16.67/sede)',
-      'Hasta 500 productos por tienda',
+      'Hasta 150 productos por tienda',
       'Hasta 6 motorizados propios registrados',
       'Pedidos mensuales ilimitados',
       'Hasta 3 usuarios de equipo adicionales',
@@ -161,8 +175,93 @@ export class PlansService {
   private localTenantPlansPath = path.join(process.cwd(), 'data', 'tenant_plans.json');
   private platformSettingsPath = path.join(process.cwd(), 'data', 'platform_settings.json');
   private tenantAddonsPath = path.join(process.cwd(), 'data', 'tenant_addons.json');
+  private commissionLedgerPath = path.join(process.cwd(), 'data', 'commission_ledger.json');
 
   constructor(private readonly supabase: SupabaseService) {}
+
+  // -------------------------------------------------------------
+  // AUDITORÍA & TRANSPARENCIA: LIBRO DE COMISIONES Y REPARTO
+  // -------------------------------------------------------------
+  getCommissionLedger(tenantId?: string) {
+    try {
+      let list: CommissionTransaction[] = [];
+      if (fs.existsSync(this.commissionLedgerPath)) {
+        list = JSON.parse(fs.readFileSync(this.commissionLedgerPath, 'utf-8'));
+      }
+      if (tenantId) {
+        list = list.filter(t => t.tenant_id === tenantId);
+      }
+      const totalDeliveryFees = Number(list.reduce((acc, t) => acc + (t.delivery_fee || 0), 0).toFixed(2));
+      const totalPlatformCommissions = Number(list.reduce((acc, t) => acc + (t.platform_commission || 0), 0).toFixed(2));
+      const totalRiderEarnings = Number(list.reduce((acc, t) => acc + (t.rider_payout || 0), 0).toFixed(2));
+
+      return {
+        totalDeliveryFees,
+        totalPlatformCommissions,
+        totalRiderEarnings,
+        count: list.length,
+        transactions: list
+      };
+    } catch (_) {
+      return { totalDeliveryFees: 0, totalPlatformCommissions: 0, totalRiderEarnings: 0, count: 0, transactions: [] };
+    }
+  }
+
+  recordDeliveryCommission(entry: {
+    order_id: string;
+    order_number: string;
+    tenant_id: string;
+    branch_id?: string;
+    rider_id?: string;
+    delivery_fee: number;
+  }) {
+    try {
+      const dir = path.dirname(this.commissionLedgerPath);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+
+      let list: CommissionTransaction[] = [];
+      if (fs.existsSync(this.commissionLedgerPath)) {
+        try {
+          list = JSON.parse(fs.readFileSync(this.commissionLedgerPath, 'utf-8'));
+        } catch (_) {
+          list = [];
+        }
+      }
+
+      // Evitar duplicados por order_id
+      if (list.some(t => t.order_id === entry.order_id)) {
+        return;
+      }
+
+      const settings = this.getPlatformSettings();
+      const deliveryFee = Number(entry.delivery_fee) || 0;
+      let commission = settings.riderCommissionValue;
+      if (settings.riderCommissionType === 'PERCENTAGE') {
+        commission = Number(((deliveryFee * settings.riderCommissionValue) / 100).toFixed(2));
+      }
+      const riderPayout = Math.max(0, Number((deliveryFee - commission).toFixed(2)));
+
+      const tx: CommissionTransaction = {
+        id: `tx_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+        order_id: entry.order_id,
+        order_number: entry.order_number,
+        tenant_id: entry.tenant_id,
+        branch_id: entry.branch_id,
+        rider_id: entry.rider_id,
+        delivery_fee: deliveryFee,
+        platform_commission: commission,
+        rider_payout: riderPayout,
+        commission_mode: settings.riderCommissionMode,
+        timestamp: new Date().toISOString()
+      };
+
+      list.unshift(tx);
+      fs.writeFileSync(this.commissionLedgerPath, JSON.stringify(list, null, 2), 'utf-8');
+      return tx;
+    } catch (e) {
+      console.warn('[PlansService] Error recording commission transaction:', e);
+    }
+  }
 
   // -------------------------------------------------------------
   // PLATFORM SETTINGS (Comisión Motorizados y Precios de Add-ons)
@@ -299,7 +398,7 @@ export class PlansService {
 
     const maxBranches = rawCode === 'FRANQUICIA' ? 4 : (rawCode === 'COMERCIO_PRO' ? 2 : 0);
     const maxRiders = rawCode === 'FRANQUICIA' ? 10 : (rawCode === 'COMERCIO_PRO' ? 6 : 3);
-    const maxProducts = rawCode === 'EMPRENDEDOR' ? 150 : 500;
+    const maxProducts = rawCode === 'EMPRENDEDOR' ? 50 : (rawCode === 'COMERCIO_PRO' ? 150 : 500);
     const priceMonthly = rawCode === 'FRANQUICIA' ? 80.00 : (rawCode === 'COMERCIO_PRO' ? 50.00 : 20.00);
     const priceAnnual = rawCode === 'FRANQUICIA' ? 64.00 : (rawCode === 'COMERCIO_PRO' ? 40.00 : 16.00);
 
@@ -464,9 +563,19 @@ export class PlansService {
       case 'branch':
         const maxBranches = usage.limits.maxBranches;
         if (maxBranches !== -1 && usage.branchesCount >= maxBranches) {
-          throw new ForbiddenException(
-            `Has alcanzado el límite de sucursales adicionales de tu ${plan.name} (${maxBranches} sucursales permitidas). Puedes habilitar sucursales extras por $${settings.extraBranchPrice}/mes por sede contactando a soporte.`
-          );
+          if (plan.code === 'EMPRENDEDOR') {
+            throw new ForbiddenException(
+              `Tu Plan Básico incluye únicamente 1 tienda (sede principal). Actualiza al Plan Mediano ($50/mes) para habilitar hasta 3 sedes, o al Plan Pro ($80/mes) para hasta 5 sedes.`
+            );
+          } else if (plan.code === 'COMERCIO_PRO') {
+            throw new ForbiddenException(
+              `Tu Plan Mediano incluye hasta 3 tiendas (1 principal y 2 sucursales). Actualiza al Plan Pro ($80/mes) para habilitar hasta 5 tiendas.`
+            );
+          } else {
+            throw new ForbiddenException(
+              `Has alcanzado el cupo base de tiendas de tu Plan Pro (${maxBranches + 1} sedes permitidas). Puedes habilitar sucursales adicionales por solo $${settings.extraBranchPrice}/mes por sede contactando a soporte.`
+            );
+          }
         }
         break;
 

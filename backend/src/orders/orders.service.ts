@@ -303,6 +303,22 @@ export class OrdersService {
     if (error) {
       throw new InternalServerErrorException(`Error updating order status: ${error.message}`);
     }
+
+    // Registro automático y transparente en el Libro de Comisiones y Reparto al entregarse el pedido
+    if (dbStatus === 'delivered' && data) {
+      const deliveryFee = Number(data.delivery_fee) || 0;
+      if (deliveryFee > 0 || data.driver_id) {
+        this.plansService.recordDeliveryCommission({
+          order_id: data.id,
+          order_number: data.order_number || `#ORD-${data.id.slice(0, 5)}`,
+          tenant_id: data.tenant_id,
+          branch_id: data.branch_id,
+          rider_id: data.driver_id,
+          delivery_fee: deliveryFee
+        });
+      }
+    }
+
     return data;
   }
 
