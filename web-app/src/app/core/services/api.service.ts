@@ -567,7 +567,6 @@ export class ApiService {
             verification_status: isApproved ? 'verified' : 'rejected',
             certified_at: isApproved ? new Date().toISOString() : null,
             status: isApproved ? 'available' : 'offline',
-            is_active: isApproved ? true : false
           }).eq('id', riderId);
           if (error) {
             console.error('[ApiService] Error actualizando certificación en Supabase:', error);

@@ -614,8 +614,8 @@ export class UsersService {
       if (cleanEmail) await client.from('store_collaborators').update({ is_active: isActive }).eq('email', cleanEmail);
     } catch (_) {}
     try {
-      if (id) await client.from('riders').update({ is_active: isActive }).eq('id', id);
-      if (cleanEmail) await client.from('riders').update({ is_active: isActive }).eq('email', cleanEmail);
+      if (id) await client.from('riders').update({ status: isActive ? 'available' : 'offline' }).eq('id', id);
+      if (cleanEmail) await client.from('riders').update({ status: isActive ? 'available' : 'offline' }).eq('email', cleanEmail);
     } catch (_) {}
 
     return { success: true, isActive, message: isActive ? 'Usuario reactivado correctamente' : 'Usuario desactivado' };

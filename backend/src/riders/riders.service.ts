@@ -721,7 +721,6 @@ export class RidersService {
       verification_status: verificationStatus,
       certified_at: certifiedAt,
       status: isApproved ? 'available' : 'offline',
-      is_active: isApproved ? true : false,
     }).eq('id', id).select().maybeSingle();
 
     if (error) {
