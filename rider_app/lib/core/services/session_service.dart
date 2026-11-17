@@ -326,8 +326,6 @@ class SessionService extends ChangeNotifier {
         }),
       ).timeout(const Duration(seconds: 12));
 
-      backendAttempted = true;
-
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final decoded = jsonDecode(response.body);
         if (decoded is Map && decoded['rider'] != null) {
