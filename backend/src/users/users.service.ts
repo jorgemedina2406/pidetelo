@@ -236,34 +236,43 @@ export class UsersService {
 
     // 4. Motorizados / Riders
     try {
-      const { data: riders } = await client
+      const { data: riders, error: riderErr } = await client
         .from('riders')
-        .select('id, name, email, phone, is_active, vehicle_type, vehicle_plate, plate_number, created_at, tenants(name), branches(name)')
+        .select('id, user_id, name, email, phone, status, vehicle_type, vehicle_plate, vehicle_model, created_at, is_certified, verification_status, id_document_url, selfie_url, tenants(name), branches(name)')
         .order('created_at', { ascending: false });
 
-      if (riders && riders.length > 0) {
+      if (riderErr) {
+        console.error('[UsersService] Error consultando riders:', riderErr.message);
+      } else if (riders && riders.length > 0) {
         riders.forEach((r: any) => {
           const email = (r.email || '').toLowerCase().trim();
           const emailKey = email || r.id;
           const existing = usersMap.get(emailKey);
-          const vehicle = r.vehicle_type ? `${r.vehicle_type} (${r.plate_number || r.vehicle_plate || 'S/P'})` : 'Flota Motorizados';
+          const vehicle = r.vehicle_plate ? `${r.vehicle_type || 'Moto'} (${r.vehicle_plate})` : (r.vehicle_type || 'Flota Motorizados');
           const tName = Array.isArray(r.tenants) ? r.tenants[0]?.name : r.tenants?.name;
 
           usersMap.set(emailKey, {
-            id: r.id || existing?.id,
+            id: r.id,
+            userId: r.user_id || existing?.id,
             name: r.name || existing?.name,
             email: r.email || existing?.email,
             phone: r.phone || existing?.phone || 'N/A',
             role: 'RIDER',
             roleLabel: 'Motorizado / Repartidor',
-            tenantName: tName || 'Flota Global Pídetelo',
+            tenantName: tName || (r.is_independent ? 'Rider Independiente' : 'Flota Global Pídetelo'),
             branchName: vehicle,
-            isActive: r.is_active ?? true,
+            isActive: r.status !== 'inactive' && r.status !== 'disabled',
+            isCertified: r.is_certified ?? false,
+            verificationStatus: r.verification_status || 'pending',
+            idDocumentUrl: r.id_document_url || null,
+            selfieUrl: r.selfie_url || null,
             createdAt: r.created_at || existing?.createdAt || new Date().toISOString()
           });
         });
       }
-    } catch (_) {}
+    } catch (e) {
+      console.error('[UsersService] Excepción en query riders:', e);
+    }
 
     const allUsers = Array.from(usersMap.values());
     allUsers.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
