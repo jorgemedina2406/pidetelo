@@ -4,7 +4,7 @@ import { BiometricVerificationService } from './biometric-verification.service.j
 import { PlansService } from '../plans/plans.service.js';
 import { TenantsService } from '../tenants/tenants.service.js';
 
-import { randomUUID } from 'crypto';
+import { randomUUID, randomBytes } from 'crypto';
 
 import * as fs from 'fs';
 import * as path from 'path';
@@ -751,13 +751,19 @@ export class RidersService {
       cleanNationalId,
     );
 
-    const verificationScore = verification.score || 96;
-    const certifiedAt = new Date().toISOString();
+    const isAiVerified = verification.isAiVerified === true;
+    const verificationScore = verification.score || (isAiVerified ? 96 : 70);
+    const verificationStatus = isAiVerified ? 'verified' : 'pending';
+    const isCertified = isAiVerified;
+    const certifiedAt = isAiVerified ? new Date().toISOString() : null;
 
-    // Guardar o generar identificadores de documento
+    // Subir fotos reales a Supabase Storage (bucket merchant-assets/riders)
+    const uploadedDocUrl = await this.uploadRiderAsset(docImg, `doc-${cleanNationalId}`);
+    const uploadedSelfieUrl = await this.uploadRiderAsset(selfieImg, `selfie-${cleanNationalId}`);
+    const finalDocUrl = uploadedDocUrl || (docImg.startsWith('http') ? docImg : null);
+    const finalSelfieUrl = uploadedSelfieUrl || (selfieImg.startsWith('http') ? selfieImg : null);
+
     const sb = this.supabase.getClient();
-    let docUrl = docImg.startsWith('http') ? docImg : `https://pidetelo.app/storage/docs/${cleanNationalId}_doc.jpg`;
-    let selfieUrl = selfieImg.startsWith('http') ? selfieImg : `https://pidetelo.app/storage/selfies/${cleanNationalId}_selfie.jpg`;
 
     // 5. Registrar usando el flujo centralizado de creación de riders
     const created = await this.create({
@@ -772,19 +778,19 @@ export class RidersService {
       branch_id: payload.branch_id
     } as any);
 
-    // 6. Actualizar certificación en Supabase
+    // 6. Actualizar certificación y fotos en Supabase
     const riderId = created.id;
     const isIndependent = !payload.tenant_id;
 
     const { error: updateErr } = await sb.from('riders').update({
-      is_certified: true,
-      verification_status: 'verified',
+      is_certified: isCertified,
+      verification_status: verificationStatus,
       verification_score: verificationScore,
-      id_document_url: docUrl,
-      selfie_url: selfieUrl,
+      id_document_url: finalDocUrl,
+      selfie_url: finalSelfieUrl,
       is_independent: isIndependent,
       certified_at: certifiedAt,
-      status: 'available',
+      status: isCertified ? 'available' : 'offline',
       rating: 5.0,
       total_deliveries: 0,
       vehicle_model: cleanModel
@@ -806,14 +812,61 @@ export class RidersService {
         vehiclePlate: cleanPlate,
         vehicleType: cleanType,
         vehicleModel: cleanModel,
-        isCertified: true,
-        verificationStatus: 'verified',
+        isCertified,
+        verificationStatus,
         verificationScore,
+        idDocumentUrl: finalDocUrl,
+        selfieUrl: finalSelfieUrl,
         isIndependent,
         certifiedAt
       },
-      message: 'Motorizado verificado y certificado exitosamente por Pídetelo.'
+      message: isCertified
+        ? 'Motorizado verificado y certificado exitosamente con Inteligencia Artificial.'
+        : 'Documentos recibidos y almacenados con éxito en la nube. Tu cuenta se encuentra en revisión de seguridad antes de su activación final.'
     };
+  }
+
+  private async uploadRiderAsset(dataUri: string, prefix: string): Promise<string | null> {
+    if (!dataUri) return null;
+    if (dataUri.startsWith('http://') || dataUri.startsWith('https://')) {
+      return dataUri;
+    }
+    try {
+      const match = dataUri.match(/^data:([A-Za-z-+/]+);base64,(.+)$/);
+      let buffer: Buffer;
+      let ext = 'jpg';
+      let contentType = 'image/jpeg';
+
+      if (match && match.length === 3) {
+        contentType = match[1];
+        if (contentType.includes('png')) ext = 'png';
+        else if (contentType.includes('webp')) ext = 'webp';
+        buffer = Buffer.from(match[2], 'base64');
+      } else {
+        buffer = Buffer.from(dataUri, 'base64');
+      }
+
+      const sb = this.supabase.getClient();
+      const fileName = `riders/${prefix}-${Date.now()}-${randomBytes(4).toString('hex')}.${ext}`;
+      const bucketName = 'merchant-assets';
+
+      const { error: uploadError } = await sb.storage
+        .from(bucketName)
+        .upload(fileName, buffer, {
+          contentType,
+          upsert: true,
+        });
+
+      if (!uploadError) {
+        const { data: pubData } = sb.storage.from(bucketName).getPublicUrl(fileName);
+        return pubData?.publicUrl || null;
+      } else {
+        console.warn(`[RidersService] Error subiendo ${prefix} a Supabase storage:`, uploadError.message);
+      }
+    } catch (err: any) {
+      console.warn(`[RidersService] Error en uploadRiderAsset (${prefix}):`, err.message);
+    }
+    return null;
   }
 
   // ==============================================================================
@@ -894,18 +947,22 @@ export class RidersService {
       } catch (_) {}
     }
 
-    // 1. Obtener IDs de motorizados que se encuentran actualmente ocupados en un despacho
+    // 1. Obtener IDs y órdenes activas de motorizados que se encuentran actualmente ocupados en un despacho
     let busyDriverIds = new Set<string>();
+    let busyDriverOrders = new Map<string, any>();
     try {
       const { data: busyOrders } = await sb
         .from('orders')
-        .select('driver_id')
+        .select('id, driver_id, tenant_id, branch_id, status, order_number')
         .not('driver_id', 'is', null)
         .in('status', ['assigned_driver', 'at_merchant', 'picked_up', 'on_the_way']);
 
       if (busyOrders) {
         busyOrders.forEach((o: any) => {
-          if (o.driver_id) busyDriverIds.add(o.driver_id);
+          if (o.driver_id) {
+            busyDriverIds.add(o.driver_id);
+            busyDriverOrders.set(o.driver_id, o);
+          }
         });
       }
     } catch (e) {
@@ -936,28 +993,17 @@ export class RidersService {
     const nearbyRiders: any[] = [];
 
     allRiders.forEach((r: any) => {
-      // Regla 9: Motorizados que estén realizando un envío en ese momento NO deben aparecer
-      if (busyDriverIds.has(r.id)) {
-        return;
-      }
-
-      // Regla: Solo motorizados disponibles
-      const status = (r.status || 'available').toLowerCase();
-      if (status !== 'available') {
-        return;
-      }
-
       const rTenant = r.tenant_id || (r as any).tenantId;
       const rBranch = r.branch_id || (r as any).branchId;
       const rRating = Number(r.rating != null ? r.rating : 5.0);
       const rDeliveries = Number(r.total_deliveries || 0);
 
-      // Filtro 8: Mínima calificación solicitada por el comercio
+      // Filtro: Mínima calificación solicitada por el comercio
       if (minRating != null && rRating < minRating) {
         return;
       }
 
-      // Filtro 8: Mínimo de pedidos completados solicitado por el comercio
+      // Filtro: Mínimo de pedidos completados solicitado por el comercio
       if (minDeliveries != null && rDeliveries < minDeliveries) {
         return;
       }
@@ -975,10 +1021,15 @@ export class RidersService {
         distanceText = dist < 1 ? `${Math.round(dist * 1000)} m` : `${dist} km`;
       }
 
-      // Filtro 8: Lejanía máxima (radio en km) configurada por el comercio
+      // Filtro: Lejanía máxima (radio en km) configurada por el comercio
       if (maxDistanceKm != null && dist != null && dist > maxDistanceKm) {
         return;
       }
+
+      const isBusy = busyDriverIds.has(r.id);
+      const busyOrder = busyDriverOrders.get(r.id);
+      const rawStatus = (r.status || 'available').toLowerCase();
+      const effectiveStatus = isBusy ? 'delivering' : rawStatus;
 
       const riderItem = {
         id: r.id,
@@ -992,7 +1043,7 @@ export class RidersService {
         vehicleType: r.vehicle_type || (r as any).vehicleType || 'moto',
         vehicleModel: r.vehicle_model || (r as any).vehicleModel || 'Motocicleta',
         avatarUrl: r.avatar_url || (r as any).avatarUrl || '',
-        status: 'available',
+        status: effectiveStatus,
         rating: rRating.toFixed(1),
         totalDeliveries: rDeliveries,
         walletBalance: Number(r.wallet_balance !== undefined ? r.wallet_balance : ((r as any).walletBalance || 0)),
@@ -1002,9 +1053,14 @@ export class RidersService {
         distanceText,
         currentLat: hasGps ? Number(r.current_lat) : null,
         currentLng: hasGps ? Number(r.current_lng) : null,
+        current_lat: hasGps ? Number(r.current_lat) : null,
+        current_lng: hasGps ? Number(r.current_lng) : null,
+        currentLocation: hasGps ? { lat: Number(r.current_lat), lng: Number(r.current_lng) } : null,
+        currentOrderId: busyOrder?.id,
+        activeOrderNumber: busyOrder?.order_number,
       };
 
-      // Si pertenece a la sede del comercio actual
+      // Si pertenece a la sede del comercio actual (Flota Propia)
       const isMatchingTenant = (isUuid(tenantId) && rTenant === tenantId) || (!isUuid(tenantId) && rTenant === resolvedTenantId);
       if (isMatchingTenant) {
         if (!branchId || branchId === 'all' || !rBranch || rBranch === branchId) {
@@ -1015,16 +1071,27 @@ export class RidersService {
         return;
       }
 
-      // Si pertenece a cualquier otro comercio o sede, NO es flota libre
+      // Si pertenece a cualquier otro comercio o sede ajena, NO es flota libre
       if (rTenant || rBranch) {
         return;
       }
 
       // Flota Libre / Red de motorizados independientes de la plataforma Pídetelo
-      // Regla estricta: Solo motorizados 100% independientes que NO pertenezcan a ningún comercio
       const isIndependentRider = !rTenant && !rBranch;
       if (isIndependentRider) {
-        nearbyRiders.push({ ...riderItem, isOwn: false, isIndependent: true });
+        // Si está ocupado en una orden: incluirlo si está entregando un pedido de ESTE comercio
+        if (isBusy) {
+          const isOurOrder = busyOrder && ((isUuid(tenantId) && busyOrder.tenant_id === tenantId) || busyOrder.tenant_id === resolvedTenantId);
+          if (isOurOrder) {
+            nearbyRiders.push({ ...riderItem, isOwn: false, isIndependent: true });
+          }
+          return;
+        }
+
+        // Si está libre: solo mostrar si está disponible
+        if (rawStatus === 'available') {
+          nearbyRiders.push({ ...riderItem, isOwn: false, isIndependent: true });
+        }
       }
     });
 

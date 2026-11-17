@@ -4,6 +4,7 @@ export interface VerificationResult {
   isValid: boolean;
   score: number;
   reason?: string;
+  isAiVerified?: boolean;
 }
 
 @Injectable()
@@ -76,7 +77,9 @@ export class BiometricVerificationService {
 
     return {
       isValid: true,
-      score: 96
+      score: 75,
+      isAiVerified: false,
+      reason: 'Fotos recibidas y almacenadas para auditoría y revisión (sin clave de IA Gemini configurada).'
     };
   }
 
@@ -208,8 +211,15 @@ export class BiometricVerificationService {
     return { width: 0, height: 0 };
   }
 
+  private detectMimeType(base64: string): string {
+    if (base64.startsWith('/9j/')) return 'image/jpeg';
+    if (base64.startsWith('iVBORw0KGgo')) return 'image/png';
+    if (base64.startsWith('UklGR')) return 'image/webp';
+    return 'image/jpeg';
+  }
+
   /**
-   * Validación avanzada con Gemini Vision API (Google Gemini 1.5 Flash)
+   * Validación avanzada con Gemini Vision API (Google Gemini 1.5 / 2.0 Flash)
    */
   private async verifyWithGeminiVision(
     docBase64: string,
@@ -218,32 +228,38 @@ export class BiometricVerificationService {
     nationalId: string,
     apiKey: string
   ): Promise<VerificationResult> {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    const models = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash-latest'];
+    let lastError = '';
 
-    const prompt = `Analiza estas dos imágenes enviadas para certificar a un nuevo repartidor en la plataforma de delivery Pídetelo:
-Imagen 1: Debe ser una Cédula de Identidad o Documento de Identificación oficial.
-Imagen 2: Debe ser una foto selfie real y en vivo de la persona de frente.
-Nombre esperado: "${name}".
-Número de Cédula esperado: "${nationalId}".
+    const prompt = `Analiza con estricto rigor estas dos imágenes enviadas para certificar a un nuevo repartidor motorizado en la plataforma de delivery Pídetelo:
+- Imagen 1 (Documento): Debe ser una Cédula de Identidad o Documento de Identificación oficial (ej. Cédula venezolana, DNI, Licencia de Conducir con foto).
+  -> RECHAZA INMEDIATAMENTE si es un teclado, comida, pantalla de celular/PC, mascota, paisaje, pared, objeto cualquiera, selfie, foto de internet, o si es totalmente ilegible/borrosa.
+- Imagen 2 (Selfie): Debe ser una fotografía selfie real y en vivo de un rostro humano visible de frente.
+  -> RECHAZA INMEDIATAMENTE si no hay un rostro humano claro, o si es una pared, techo, teclado, meme, objeto o captura de un documento.
+- Concordancia: ¿El rostro de la selfie corresponde a una persona real y coincide razonablemente con la foto del documento?
 
-Evalúa:
-1. ¿La Imagen 1 es realmente una cédula o documento de identidad oficial? (Rechaza teclados, techos, mascotas, pantallas u objetos).
-2. ¿La Imagen 2 es realmente un rostro humano visible de frente? (Rechaza techos, paredes, teclados, fotos borrosas sin cara).
-3. ¿El rostro en la selfie concuerda con la foto del documento si es visible?
+Datos esperados:
+Nombre del repartidor: "${name}"
+Cédula de Identidad: "${nationalId}"
 
-Responde ÚNICAMENTE un objeto JSON válido con este formato:
+Responde ÚNICAMENTE un objeto JSON válido con este formato exacto:
 {
-  "isValid": true/false,
-  "score": número entre 0 y 100,
-  "reason": "Explicación clara en español si es rechazada, o vacía si es válida"
+  "isValid": true o false,
+  "score": número entero entre 0 y 100,
+  "isDocumentValid": true o false,
+  "isSelfieValid": true o false,
+  "reason": "Explicación clara y concisa en español si alguna imagen es rechazada (ej: 'La foto adjunta como cédula no es un documento oficial sino un teclado/objeto'), o vacía si ambas fotos son legítimas"
 }`;
+
+    const docMime = this.detectMimeType(docBase64);
+    const selfieMime = this.detectMimeType(selfieBase64);
 
     const payload = {
       contents: [{
         parts: [
           { text: prompt },
-          { inlineData: { mimeType: 'image/jpeg', data: docBase64 } },
-          { inlineData: { mimeType: 'image/jpeg', data: selfieBase64 } }
+          { inlineData: { mimeType: docMime, data: docBase64 } },
+          { inlineData: { mimeType: selfieMime, data: selfieBase64 } }
         ]
       }],
       generationConfig: {
@@ -251,26 +267,52 @@ Responde ÚNICAMENTE un objeto JSON válido con este formato:
       }
     };
 
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
+    for (const model of models) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
 
-    if (!res.ok) {
-      throw new Error(`Gemini API respondió con status ${res.status}`);
+        if (!res.ok) {
+          const errBody = await res.text();
+          lastError = `Status ${res.status}: ${errBody}`;
+          continue;
+        }
+
+        const json = await res.json();
+        const rawText = json.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!rawText) {
+          lastError = 'Respuesta vacía de Gemini';
+          continue;
+        }
+
+        let cleanJson = rawText.trim();
+        if (cleanJson.startsWith('```json')) {
+          cleanJson = cleanJson.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
+        } else if (cleanJson.startsWith('```')) {
+          cleanJson = cleanJson.replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
+        }
+
+        const parsed = JSON.parse(cleanJson);
+        const isValid = Boolean(parsed.isValid);
+        const reason = parsed.reason ? String(parsed.reason).trim() : undefined;
+        const score = Number(parsed.score || (isValid ? 96 : 30));
+
+        return {
+          isValid,
+          score,
+          reason: !isValid ? (reason || 'Las fotografías no superaron la verificación biométrica y documental de seguridad.') : undefined,
+          isAiVerified: true,
+        };
+      } catch (err: any) {
+        lastError = err.message;
+      }
     }
 
-    const json = await res.json();
-    const rawText = json.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!rawText) throw new Error('Respuesta vacía de Gemini');
-
-    const parsed = JSON.parse(rawText);
-    return {
-      isValid: Boolean(parsed.isValid),
-      score: Number(parsed.score || 95),
-      reason: parsed.reason || undefined
-    };
+    throw new Error(`No se pudo verificar con Gemini Vision API: ${lastError}`);
   }
 }
 

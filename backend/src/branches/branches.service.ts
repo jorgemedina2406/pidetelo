@@ -497,6 +497,35 @@ export class BranchesService {
     return data;
   }
 
+  private async uploadBase64IfPresent(dataUri: string, prefix: string): Promise<string> {
+    if (!dataUri || typeof dataUri !== 'string' || !dataUri.startsWith('data:image/')) {
+      return dataUri;
+    }
+    try {
+      const matches = dataUri.match(/^data:([A-Za-z-+/]+);base64,(.+)$/);
+      if (!matches || matches.length !== 3) return dataUri;
+      const mime = matches[1];
+      let ext = 'webp';
+      if (mime.includes('png')) ext = 'png';
+      else if (mime.includes('gif')) ext = 'gif';
+      else if (mime.includes('svg')) ext = 'svg';
+      else if (mime.includes('jpeg') || mime.includes('jpg')) ext = 'jpg';
+      const buffer = Buffer.from(matches[2], 'base64');
+      const fileId = `${prefix}-${Date.now()}.${ext}`;
+
+      const client = this.supabase.getClient();
+      const bucket = 'merchant-assets';
+      const { data, error } = await client.storage.from(bucket).upload(fileId, buffer, { contentType: mime, upsert: true });
+      if (!error && data) {
+        const pub = client.storage.from(bucket).getPublicUrl(fileId);
+        if (pub.data?.publicUrl) return pub.data.publicUrl;
+      }
+    } catch (err: any) {
+      console.warn(`[BranchesService] Error subiendo imagen a Supabase Storage: ${err.message}`);
+    }
+    return dataUri;
+  }
+
   async update(id: string, branchPayload: any) {
     const client = this.supabase.getClient();
 
@@ -507,10 +536,18 @@ export class BranchesService {
       metaToSave.accent_color = branchPayload.accentColor || branchPayload.accent_color;
     }
     if (branchPayload.logoUrl !== undefined || branchPayload.logo_url !== undefined) {
-      metaToSave.logo_url = branchPayload.logoUrl || branchPayload.logo_url;
+      let lUrl = branchPayload.logoUrl || branchPayload.logo_url;
+      if (lUrl && lUrl.startsWith('data:image/')) {
+        lUrl = await this.uploadBase64IfPresent(lUrl, `branch-logo-${id.slice(0, 8)}`);
+      }
+      metaToSave.logo_url = lUrl;
     }
     if (branchPayload.bannerUrl !== undefined || branchPayload.banner_url !== undefined) {
-      metaToSave.banner_url = branchPayload.bannerUrl || branchPayload.banner_url;
+      let bUrl = branchPayload.bannerUrl || branchPayload.banner_url;
+      if (bUrl && bUrl.startsWith('data:image/')) {
+        bUrl = await this.uploadBase64IfPresent(bUrl, `branch-banner-${id.slice(0, 8)}`);
+      }
+      metaToSave.banner_url = bUrl;
     }
     if (branchPayload.exchangeRate !== undefined || branchPayload.exchange_rate !== undefined) {
       metaToSave.exchange_rate = Number(branchPayload.exchangeRate ?? branchPayload.exchange_rate);

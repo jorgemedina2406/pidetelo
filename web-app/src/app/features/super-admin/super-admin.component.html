@@ -58,9 +58,13 @@
                [class.justify-center]="!isSidebarExpanded()">
             
             <div class="flex items-center gap-3 min-w-0">
-              <!-- Striking Gradient Logo Badge (Always centered and unclipped) -->
-              <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-500 via-orange-500 to-amber-500 text-white flex items-center justify-center shadow-md shadow-brand-500/25 flex-shrink-0 transition-transform hover:scale-105">
-                <app-icon name="bike" [size]="20" className="text-white"></app-icon>
+              <!-- Striking Gradient Logo Badge with Pídetelo Isotipo -->
+              <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 via-orange-500 to-amber-500 p-0.5 shadow-md shadow-brand-500/25 flex items-center justify-center flex-shrink-0 transition-transform hover:scale-105">
+                <div class="w-full h-full bg-white dark:bg-slate-900 rounded-[10px] p-1 flex items-center justify-center overflow-hidden">
+                  <img [src]="theme.isDark() ? '/assets/logo-isotipo-dark.png' : '/assets/logo-isotipo.png'" 
+                       alt="Pídetelo Isotipo" 
+                       class="w-full h-full object-contain filter drop-shadow-xs" />
+                </div>
               </div>
 
               @if (isSidebarExpanded()) {

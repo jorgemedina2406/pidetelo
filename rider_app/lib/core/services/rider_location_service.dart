@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -70,7 +71,16 @@ class RiderLocationService extends ChangeNotifier {
 
       _permissionDenied = false;
 
-      // 3. Obtener fijación inicial del sensor GPS con precisión de navegación
+      // 3. En Android, solicitar exclusión de optimización de batería si aplica
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        try {
+          if (!await FlutterForegroundTask.isIgnoringBatteryOptimizations) {
+            await FlutterForegroundTask.requestIgnoreBatteryOptimization();
+          }
+        } catch (_) {}
+      }
+
+      // 4. Obtener fijación inicial del sensor GPS con precisión de navegación
       try {
         final initialPos = await Geolocator.getCurrentPosition(
           locationSettings: const LocationSettings(
@@ -83,18 +93,42 @@ class RiderLocationService extends ChangeNotifier {
         debugPrint('[RiderLocationService] Error obteniendo posición inicial: $e');
       }
 
-      // 4. Suscribirse al flujo continuo de GPS con filtro de movimiento inteligente (ahorro de batería y datos)
+      // 5. Suscribirse al flujo continuo de GPS con soporte de segundo plano (Android Foreground Service / iOS Background Mode)
       _positionStreamSubscription?.cancel();
-      final LocationSettings locationSettings = defaultTargetPlatform == TargetPlatform.android
-          ? AndroidSettings(
-              accuracy: LocationAccuracy.bestForNavigation,
-              distanceFilter: 4, // Reporta cada vez que se desplaza al menos 4 metros
-              intervalDuration: const Duration(milliseconds: 3000), // Intervalo óptimo de 3 segundos
-            )
-          : const LocationSettings(
-              accuracy: LocationAccuracy.bestForNavigation,
-              distanceFilter: 4,
-            );
+      late final LocationSettings locationSettings;
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        locationSettings = AndroidSettings(
+          accuracy: LocationAccuracy.bestForNavigation,
+          distanceFilter: 4, // Reporta cada vez que se desplaza al menos 4 metros
+          intervalDuration: const Duration(milliseconds: 3000), // Intervalo óptimo de 3 segundos
+          foregroundNotificationConfig: const ForegroundNotificationConfig(
+            notificationTitle: '🛵 Pídetelo Repartidor en Ruta',
+            notificationText: 'Transmitiendo ubicación del recorrido en tiempo real',
+            notificationChannelName: 'Servicio de Navegación GPS',
+            enableWakeLock: true,
+            enableWifiLock: true,
+            setOngoing: true,
+            notificationIcon: AndroidResource(
+              name: 'ic_launcher',
+              defType: 'mipmap',
+            ),
+          ),
+        );
+      } else if (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.macOS) {
+        locationSettings = AppleSettings(
+          accuracy: LocationAccuracy.bestForNavigation,
+          activityType: ActivityType.automotiveNavigation,
+          distanceFilter: 4,
+          pauseLocationUpdatesAutomatically: false,
+          showBackgroundLocationIndicator: true,
+          allowBackgroundLocationUpdates: true,
+        );
+      } else {
+        locationSettings = const LocationSettings(
+          accuracy: LocationAccuracy.bestForNavigation,
+          distanceFilter: 4,
+        );
+      }
 
       _positionStreamSubscription = Geolocator.getPositionStream(
         locationSettings: locationSettings,

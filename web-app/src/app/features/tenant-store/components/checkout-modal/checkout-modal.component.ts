@@ -174,6 +174,12 @@ export class CheckoutModalComponent {
         delivery_fee: order.deliveryFee,
         discount: order.discount,
         total: order.total,
+        exchange_rate: order.exchangeRate,
+        currency: order.currency || 'USD',
+        subtotal_bs: order.subtotalBs,
+        delivery_fee_bs: order.deliveryFeeBs,
+        discount_bs: order.discountBs,
+        total_bs: order.totalBs,
         notes: [
           order.paymentOriginBank ? `[PAGO_ORIGEN:${order.paymentOriginBank}]` : '',
           order.customer.notes || ''

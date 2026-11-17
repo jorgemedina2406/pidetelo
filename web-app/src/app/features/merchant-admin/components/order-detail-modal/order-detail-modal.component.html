@@ -95,28 +95,47 @@
             </div>
           </div>
 
-          <!-- Resumen Financiero -->
-          <div class="p-4 bg-slate-50 dark:bg-slate-850 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-1.5 font-mono">
-            <div class="flex justify-between text-slate-500">
-              <span>Subtotal</span>
-              <span>${{ order.subtotal.toFixed(2) }}</span>
+          <!-- Resumen Financiero con Registro Histórico de Divisas -->
+          <div class="p-4 bg-slate-50 dark:bg-slate-850 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-2 font-mono">
+            <div class="flex justify-between items-center pb-2 border-b border-slate-200/60 dark:border-slate-750">
+              <span class="text-[10px] font-sans font-bold uppercase tracking-wider text-slate-400">Tasa congelada al crear pedido:</span>
+              <span class="text-xs font-black text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/40 px-2 py-0.5 rounded-full border border-brand-200 dark:border-brand-800">
+                Bs. {{ effectiveRate.toFixed(2) }} / USD
+              </span>
             </div>
-            <div class="flex justify-between text-slate-500">
-              <span>Tarifa de Envío</span>
-              <span>${{ order.deliveryFee.toFixed(2) }}</span>
+
+            <div class="flex justify-between text-xs text-slate-500">
+              <span>Subtotal Productos</span>
+              <div class="text-right">
+                <span class="font-bold">${{ order.subtotal.toFixed(2) }}</span>
+                <span class="text-[10px] text-slate-400 ml-1.5">(Bs. {{ subtotalBs.toFixed(2) }})</span>
+              </div>
             </div>
+
+            <div class="flex justify-between text-xs text-slate-500">
+              <span>Tarifa de Envío (Delivery)</span>
+              <div class="text-right">
+                <span class="font-bold">${{ order.deliveryFee.toFixed(2) }}</span>
+                <span class="text-[10px] text-slate-400 ml-1.5">(Bs. {{ deliveryFeeBs.toFixed(2) }})</span>
+              </div>
+            </div>
+
             @if (order.discount > 0) {
-            <div class="flex justify-between text-emerald-600">
+            <div class="flex justify-between text-xs text-emerald-600">
               <span>Descuento Promoción</span>
-              <span>-${{ order.discount.toFixed(2) }}</span>
+              <div class="text-right">
+                <span class="font-bold">-${{ order.discount.toFixed(2) }}</span>
+                <span class="text-[10px] text-emerald-500/80 ml-1.5">(-Bs. {{ discountBs.toFixed(2) }})</span>
+              </div>
             </div>
             }
+
             <div class="pt-2 border-t border-slate-200 dark:border-slate-700 flex justify-between items-center font-black text-sm text-slate-900 dark:text-white">
-              <span class="font-sans">Total Cobrado</span>
+              <span class="font-sans">Total Histórico</span>
               <div class="text-right">
                 <div>${{ order.total.toFixed(2) }} USD</div>
-                <div class="text-[11px] font-medium text-slate-400">
-                  Bs. {{ (order.total * activeExchangeRate).toFixed(2) }} (Tasa: {{ activeExchangeRate.toFixed(2) }})
+                <div class="text-[11px] font-bold text-amber-600 dark:text-amber-400">
+                  Bs. {{ totalBs.toFixed(2) }}
                 </div>
               </div>
             </div>

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Put, Body, Query } from '@nestjs/common';
+import { Controller, Get, Post, Param, Put, Patch, Body, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { TenantsService } from './tenants.service.js';
 
@@ -33,6 +33,7 @@ export class TenantsController {
   }
 
   @Put(':id')
+  @Patch(':id')
   @ApiOperation({ summary: 'Actualizar configuración o perfil del comercio' })
   update(@Param('id') id: string, @Body() updateData: any) {
     return this.tenantsService.update(id, updateData);

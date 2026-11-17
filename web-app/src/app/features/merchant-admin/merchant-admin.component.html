@@ -53,10 +53,18 @@
         [class.justify-start]="isSidebarExpanded()" [class.justify-center]="!isSidebarExpanded()">
 
         <div class="flex items-center gap-3 min-w-0">
-          <!-- Striking Gradient Logo Badge (Always centered and unclipped) -->
+          <!-- Striking Gradient Logo Badge / Custom Merchant Logo -->
           <div
-            class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-500 via-orange-500 to-amber-500 text-white flex items-center justify-center shadow-md shadow-brand-500/25 flex-shrink-0 transition-transform hover:scale-105">
-            <app-icon name="store" [size]="20" className="text-white"></app-icon>
+            class="w-10 h-10 rounded-xl flex items-center justify-center shadow-md flex-shrink-0 transition-transform hover:scale-105 overflow-hidden"
+            [ngClass]="merchantLogoUrl ? 'bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-750 p-1 shadow-slate-200/50 dark:shadow-none' : 'bg-gradient-to-tr from-brand-500 via-orange-500 to-amber-500 text-white shadow-brand-500/25'">
+            @if (merchantLogoUrl) {
+              <img [src]="merchantLogoUrl"
+                   [alt]="currentTenant()?.name || 'Logo del Comercio'"
+                   (error)="merchantLogoFailed = true"
+                   class="w-full h-full object-contain rounded-lg" />
+            } @else {
+              <app-icon name="store" [size]="20" className="text-white"></app-icon>
+            }
           </div>
 
           @if (isSidebarExpanded()) {
@@ -1235,8 +1243,8 @@
                   </td>
                   <td class="py-3.5 px-4">
                     <div class="font-mono font-black text-slate-900 dark:text-white">${{ o.total.toFixed(2) }}</div>
-                    <div class="text-[10px] text-slate-400 font-mono">
-                      Bs. {{ (o.total * activeExchangeRate()).toFixed(2) }}
+                    <div class="text-[10px] text-slate-400 font-mono" [title]="o.exchangeRate ? 'Tasa fijada del pedido: Bs. ' + o.exchangeRate + '/$' : ''">
+                      Bs. {{ (o.totalBs || (o.total * (o.exchangeRate || activeExchangeRate()))).toFixed(2) }}
                     </div>
                   </td>
                   <td class="py-3.5 px-4">
@@ -2151,20 +2159,46 @@
 
         <!-- Radar Controls & Filter Pills -->
         <div class="flex items-center gap-2 flex-wrap">
+          <!-- Filtro por Tipo de Flota: Propios vs Independientes -->
+          <div
+            class="bg-slate-100 dark:bg-slate-900 p-1 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center gap-1">
+            <button (click)="radarFleetType.set('all'); updateFleetRiderMarkers()"
+              [class.bg-white]="radarFleetType() === 'all'" [class.dark:bg-slate-800]="radarFleetType() === 'all'"
+              [class.text-brand-600]="radarFleetType() === 'all'" [class.shadow-xs]="radarFleetType() === 'all'"
+              class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer">
+              Toda la Flota ({{ radarCountAll() }})
+            </button>
+            <button (click)="radarFleetType.set('own'); updateFleetRiderMarkers()"
+              [class.bg-white]="radarFleetType() === 'own'" [class.dark:bg-slate-800]="radarFleetType() === 'own'"
+              [class.text-amber-600]="radarFleetType() === 'own'" [class.shadow-xs]="radarFleetType() === 'own'"
+              class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1">
+              <span>🏢 Propios</span>
+              <span class="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-500/10 text-amber-600 font-extrabold">{{ radarCountOwn() }}</span>
+            </button>
+            <button (click)="radarFleetType.set('independent'); updateFleetRiderMarkers()"
+              [class.bg-white]="radarFleetType() === 'independent'" [class.dark:bg-slate-800]="radarFleetType() === 'independent'"
+              [class.text-purple-600]="radarFleetType() === 'independent'" [class.shadow-xs]="radarFleetType() === 'independent'"
+              class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1">
+              <span>🌐 Independientes</span>
+              <span class="text-[10px] px-1.5 py-0.2 rounded-full bg-purple-500/10 text-purple-600 font-extrabold">{{ radarCountIndependent() }}</span>
+            </button>
+          </div>
+
+          <!-- Filtro por Estado: Disponibles vs En Reparto -->
           <div
             class="bg-slate-100 dark:bg-slate-900 p-1 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center gap-1">
             <button (click)="radarFilter.set('all'); updateFleetRiderMarkers()"
               [class.bg-white]="radarFilter() === 'all'" [class.dark:bg-slate-800]="radarFilter() === 'all'"
               [class.text-brand-600]="radarFilter() === 'all'" [class.shadow-xs]="radarFilter() === 'all'"
               class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer">
-              Todos ({{ filteredRiders().length }})
+              Todos
             </button>
             <button (click)="radarFilter.set('available'); updateFleetRiderMarkers()"
               [class.bg-white]="radarFilter() === 'available'" [class.dark:bg-slate-800]="radarFilter() === 'available'"
               [class.text-emerald-600]="radarFilter() === 'available'" [class.shadow-xs]="radarFilter() === 'available'"
               class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1">
               <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-              <span>Disponibles</span>
+              <span>Disponibles ({{ radarCountAvailable() }})</span>
             </button>
             <button (click)="radarFilter.set('delivering'); updateFleetRiderMarkers()"
               [class.bg-white]="radarFilter() === 'delivering'"
@@ -2172,7 +2206,7 @@
               [class.text-blue-600]="radarFilter() === 'delivering'" [class.shadow-xs]="radarFilter() === 'delivering'"
               class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1">
               <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-              <span>En Reparto</span>
+              <span>En Reparto ({{ radarCountDelivering() }})</span>
             </button>
           </div>
 
@@ -2189,11 +2223,15 @@
 
         <!-- Left Sidebar: Riders Card List (4 cols) -->
         <div class="lg:col-span-4 space-y-3 max-h-[580px] overflow-y-auto pr-1">
-          <div class="text-[11px] font-black uppercase text-slate-400 tracking-wider px-1">
-            Motorizados en Flota ({{ filteredRiders().length }})
+          <div class="flex items-center justify-between text-[11px] font-black uppercase text-slate-400 tracking-wider px-1">
+            <span>Motorizados en Radar ({{ radarRiders().length }})</span>
+            @if (radarFleetType() !== 'all') {
+            <span class="text-[10px] text-brand-500 lowercase font-bold">filtrado por tipo</span>
+            }
           </div>
 
-          @for (r of filteredRiders(); track r.id) {
+          @for (r of radarRiders(); track r.id) {
+          @let activeOrder = getRiderActiveOrder(r.id);
           <div (click)="flyToRider(r)" [class.border-brand-500]="selectedRadarRider()?.id === r.id"
             [class.bg-brand-500/[0.04]]="selectedRadarRider()?.id === r.id"
             [class.dark:bg-brand-500/[0.08]]="selectedRadarRider()?.id === r.id"
@@ -2218,7 +2256,18 @@
                 </div>
 
                 <div>
-                  <div class="font-extrabold text-xs text-slate-900 dark:text-white">{{ r.name }}</div>
+                  <div class="font-extrabold text-xs text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <span>{{ r.name }}</span>
+                    @if (!r.isIndependent) {
+                    <span class="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/20">
+                      🏢 Propio
+                    </span>
+                    } @else {
+                    <span class="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-purple-500/15 text-purple-700 dark:text-purple-400 border border-purple-500/20">
+                      🌐 Red Libre
+                    </span>
+                    }
+                  </div>
                   <div class="text-[10px] font-mono text-slate-400 uppercase">{{ r.vehiclePlate }} • {{ r.vehicleType }}
                   </div>
                 </div>
@@ -2239,6 +2288,19 @@
             <div class="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
               <span>🏢</span>
               <span>Sede: <strong>{{ r.branchName || getBranchName(r.branchId) }}</strong></span>
+            </div>
+            }
+
+            <!-- Indicador destacado de orden activa en entrega -->
+            @if (activeOrder) {
+            <div class="px-2.5 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/50 text-[10px] space-y-0.5">
+              <div class="text-blue-700 dark:text-blue-300 font-extrabold flex items-center justify-between">
+                <span>🛵 Entregando: {{ activeOrder.orderNumber }}</span>
+                <span class="text-[9px] bg-blue-500 text-white px-1.5 py-0.2 rounded-full font-bold animate-pulse">En Ruta</span>
+              </div>
+              <div class="text-slate-600 dark:text-slate-400 truncate">
+                Destino: {{ activeOrder.customer?.deliveryAddress || 'En camino al cliente' }}
+              </div>
             </div>
             }
 
@@ -2284,10 +2346,10 @@
           </div>
           }
 
-          @if (filteredRiders().length === 0) {
+          @if (radarRiders().length === 0) {
           <div
             class="p-8 text-center text-xs text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl">
-            No hay motorizados registrados para esta sede.
+            No hay motorizados que coincidan con los filtros seleccionados.
           </div>
           }
         </div>
@@ -2924,10 +2986,15 @@
                   <div class="sm:self-center">
                     <input type="file" #logoFileInput accept="image/png,image/jpeg,image/webp"
                       (change)="onImageFileSelected($event, 'logo')" class="hidden" />
-                    <button type="button" (click)="logoFileInput.click()"
-                      class="px-3.5 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-extrabold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer flex-shrink-0 active:scale-95">
-                      <app-icon name="upload" [size]="14" className="text-white"></app-icon>
-                      <span>{{ brandingForm.logoUrl ? 'Cambiar Logo' : 'Subir desde dispositivo' }}</span>
+                    <button type="button" (click)="logoFileInput.click()" [disabled]="isUploadingLogo()"
+                      class="px-3.5 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white text-xs font-extrabold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer flex-shrink-0 active:scale-95">
+                      @if (isUploadingLogo()) {
+                        <span class="animate-spin text-sm">⏳</span>
+                        <span>Subiendo a Storage...</span>
+                      } @else {
+                        <app-icon name="upload" [size]="14" className="text-white"></app-icon>
+                        <span>{{ brandingForm.logoUrl ? 'Cambiar Logo' : 'Subir desde dispositivo' }}</span>
+                      }
                     </button>
                   </div>
                 </div>
@@ -2982,10 +3049,15 @@
                   <div class="sm:self-center">
                     <input type="file" #bannerFileInput accept="image/png,image/jpeg,image/webp"
                       (change)="onImageFileSelected($event, 'banner')" class="hidden" />
-                    <button type="button" (click)="bannerFileInput.click()"
-                      class="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer flex-shrink-0 active:scale-95">
-                      <app-icon name="upload" [size]="14" className="text-white"></app-icon>
-                      <span>{{ brandingForm.bannerUrl ? 'Cambiar Portada' : 'Subir desde dispositivo' }}</span>
+                    <button type="button" (click)="bannerFileInput.click()" [disabled]="isUploadingBanner()"
+                      class="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-extrabold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer flex-shrink-0 active:scale-95">
+                      @if (isUploadingBanner()) {
+                        <span class="animate-spin text-sm">⏳</span>
+                        <span>Subiendo a Storage...</span>
+                      } @else {
+                        <app-icon name="upload" [size]="14" className="text-white"></app-icon>
+                        <span>{{ brandingForm.bannerUrl ? 'Cambiar Portada' : 'Subir desde dispositivo' }}</span>
+                      }
                     </button>
                   </div>
                 </div>
@@ -3013,12 +3085,22 @@
                 Web</span>
               <div
                 class="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-sm relative h-32 flex items-end p-3 bg-slate-900">
-                <img [src]="brandingForm.bannerUrl" class="absolute inset-0 w-full h-full object-cover opacity-60" />
-                <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent"></div>
+                @if (brandingForm.bannerUrl) {
+                  <img [src]="brandingForm.bannerUrl" class="absolute inset-0 w-full h-full object-cover opacity-85" />
+                } @else {
+                  <div class="absolute inset-0 bg-gradient-to-r from-slate-900 to-slate-800"></div>
+                }
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent"></div>
 
                 <div class="relative z-10 flex items-center gap-3">
-                  <img [src]="brandingForm.logoUrl"
-                    class="w-12 h-12 rounded-xl object-cover border-2 border-white shadow-md bg-white flex-shrink-0" />
+                  @if (brandingForm.logoUrl) {
+                    <img [src]="brandingForm.logoUrl"
+                      class="w-12 h-12 rounded-xl object-contain p-0.5 border-2 border-white shadow-md bg-white flex-shrink-0" />
+                  } @else {
+                    <div class="w-12 h-12 rounded-xl bg-brand-500 flex items-center justify-center text-white border-2 border-white shadow-md flex-shrink-0">
+                      <app-icon name="store" [size]="20"></app-icon>
+                    </div>
+                  }
                   <div>
                     <div class="font-extrabold text-sm text-white leading-tight">{{ brandingForm.name }}</div>
                     <div class="text-[10px] text-slate-200 line-clamp-1">{{ brandingForm.tagline }}</div>
@@ -4055,9 +4137,9 @@
         <div class="text-right">
           <span class="text-[10px] uppercase font-bold text-amber-600 dark:text-amber-400 block mb-0.5">Monto a
             Verificar (Bs.)</span>
-          <span class="text-lg font-black text-amber-600 dark:text-amber-400">Bs. {{ getOrderBsTotal(vOrder.total)
+          <span class="text-lg font-black text-amber-600 dark:text-amber-400">Bs. {{ getOrderBsTotal(vOrder.total, vOrder)
             }}</span>
-          <span class="text-[9px] text-slate-400 block">Tasa: {{ activeExchangeRate() }} Bs/$</span>
+          <span class="text-[9px] text-slate-400 block">Tasa fijada: {{ (vOrder.exchangeRate || activeExchangeRate()).toFixed(2) }} Bs/$</span>
         </div>
       </div>
 

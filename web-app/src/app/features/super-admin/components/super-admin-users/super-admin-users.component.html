@@ -127,20 +127,50 @@
                     {{ u.createdAt ? (u.createdAt | date:'shortDate') : 'Reciente' }}
                   </td>
                   <td class="p-3.5 text-center">
-                    @if (u.isActive !== false) {
-                      <span class="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                        <span>Activo</span>
-                      </span>
-                    } @else {
-                      <span class="inline-flex items-center gap-1 text-[11px] font-bold text-rose-600 dark:text-rose-400">
-                        <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
-                        <span>Desactivado</span>
-                      </span>
-                    }
+                    <div class="flex flex-col items-center gap-1">
+                      @if (u.isActive !== false) {
+                        <span class="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                          <span>Activo</span>
+                        </span>
+                      } @else {
+                        <span class="inline-flex items-center gap-1 text-[11px] font-bold text-rose-600 dark:text-rose-400">
+                          <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                          <span>Desactivado</span>
+                        </span>
+                      }
+
+                      @if (u.role === 'RIDER') {
+                        @if (u.isCertified || u.verificationStatus === 'verified') {
+                          <span class="inline-flex items-center gap-0.5 text-[9px] font-extrabold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-900/60">
+                            ✓ Certificado IA
+                          </span>
+                        } @else {
+                          <span class="inline-flex items-center gap-0.5 text-[9px] font-extrabold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-900/60">
+                            ⏳ En Revisión
+                          </span>
+                        }
+                      }
+                    </div>
                   </td>
                   <td class="p-3.5 text-center">
                     <div class="flex items-center justify-center gap-1.5">
+                      @if (u.idDocumentUrl || u.selfieUrl) {
+                        @if (u.idDocumentUrl) {
+                          <a [href]="u.idDocumentUrl" target="_blank" rel="noopener noreferrer"
+                             title="Ver Cédula de Identidad en Storage"
+                             class="p-1.5 rounded-lg text-blue-600 dark:text-blue-400 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 text-xs font-bold transition-all cursor-pointer">
+                            <app-icon name="file-text" [size]="13"></app-icon>
+                          </a>
+                        }
+                        @if (u.selfieUrl) {
+                          <a [href]="u.selfieUrl" target="_blank" rel="noopener noreferrer"
+                             title="Ver Fotografía Selfie en Storage"
+                             class="p-1.5 rounded-lg text-purple-600 dark:text-purple-400 bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-900/60 text-xs font-bold transition-all cursor-pointer">
+                            <app-icon name="camera" [size]="13"></app-icon>
+                          </a>
+                        }
+                      }
                       <button type="button"
                               (click)="toggleActive.emit(u)"
                               [title]="u.isActive !== false ? 'Desactivar acceso' : 'Reactivar acceso'"

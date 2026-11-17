@@ -71,32 +71,86 @@ export class OrdersService {
       finalNotes = `[PIN:${pinDigits}] ${finalNotes}`.trim();
     }
 
+    // Resolver tasa de cambio oficial/referencial del momento del pedido
+    let exchangeRate = Number(orderHeader.exchange_rate) || 0;
+    if (!exchangeRate && resolvedBranchId) {
+      try {
+        const { data: bData } = await client.from('branches').select('exchange_rate').eq('id', resolvedBranchId).maybeSingle();
+        if (bData?.exchange_rate) {
+          exchangeRate = Number(bData.exchange_rate);
+        }
+      } catch (_) {}
+    }
+    if (!exchangeRate && resolvedTenantId) {
+      try {
+        const { data: tData } = await client.from('tenants').select('exchange_rate').eq('id', resolvedTenantId).maybeSingle();
+        if (tData?.exchange_rate) {
+          exchangeRate = Number(tData.exchange_rate);
+        }
+      } catch (_) {}
+    }
+    if (!exchangeRate) {
+      exchangeRate = 45.50; // Fallback predeterminado
+    }
+
+    const subtotalBs = Number(orderHeader.subtotal_bs) || Number((subtotal * exchangeRate).toFixed(2));
+    const deliveryFeeBs = Number(orderHeader.delivery_fee_bs) || Number((deliveryFee * exchangeRate).toFixed(2));
+    const discountBs = Number(orderHeader.discount_bs) || Number((discount * exchangeRate).toFixed(2));
+    const totalBs = Number(orderHeader.total_bs) || Number((total * exchangeRate).toFixed(2));
+    const currency = orderHeader.currency || 'USD';
+
+    // Inmutable histórico: dejamos una huella [FX:...] en las notas como salvaguarda
+    if (!finalNotes.includes('[FX:')) {
+      finalNotes = `[FX:rate=${exchangeRate.toFixed(2)}|total_bs=${totalBs.toFixed(2)}|delivery_bs=${deliveryFeeBs.toFixed(2)}|subtotal_bs=${subtotalBs.toFixed(2)}] ${finalNotes}`.trim();
+    }
+
     // 1. Insert order header
-    const { data: newOrder, error: orderErr } = await client
+    const insertPayload: any = {
+      tenant_id: resolvedTenantId,
+      branch_id: resolvedBranchId,
+      order_number: orderNumber,
+      source: orderHeader.source || 'whatsapp_link',
+      status: orderHeader.status || 'received',
+      fulfillment_type: orderHeader.fulfillment_type || 'delivery',
+      payment_method: paymentMethod,
+      payment_status: paymentStatus,
+      payment_reference: paymentReference,
+      customer_name: orderHeader.customer_name || 'Cliente',
+      customer_phone: orderHeader.customer_phone || '04120000000',
+      delivery_address: orderHeader.delivery_address || null,
+      delivery_lat: orderHeader.delivery_lat !== undefined && orderHeader.delivery_lat !== null ? Number(orderHeader.delivery_lat) : null,
+      delivery_lng: orderHeader.delivery_lng !== undefined && orderHeader.delivery_lng !== null ? Number(orderHeader.delivery_lng) : null,
+      notes: finalNotes.length > 0 ? finalNotes : null,
+      subtotal: subtotal,
+      delivery_fee: deliveryFee,
+      discount: discount,
+      total: total,
+      exchange_rate: exchangeRate,
+      currency: currency,
+      subtotal_bs: subtotalBs,
+      delivery_fee_bs: deliveryFeeBs,
+      discount_bs: discountBs,
+      total_bs: totalBs,
+    };
+
+    let { data: newOrder, error: orderErr } = await client
       .from('orders')
-      .insert({
-        tenant_id: resolvedTenantId,
-        branch_id: resolvedBranchId,
-        order_number: orderNumber,
-        source: orderHeader.source || 'whatsapp_link',
-        status: orderHeader.status || 'received',
-        fulfillment_type: orderHeader.fulfillment_type || 'delivery',
-        payment_method: paymentMethod,
-        payment_status: paymentStatus,
-        payment_reference: paymentReference,
-        customer_name: orderHeader.customer_name || 'Cliente',
-        customer_phone: orderHeader.customer_phone || '04120000000',
-        delivery_address: orderHeader.delivery_address || null,
-        delivery_lat: orderHeader.delivery_lat !== undefined && orderHeader.delivery_lat !== null ? Number(orderHeader.delivery_lat) : null,
-        delivery_lng: orderHeader.delivery_lng !== undefined && orderHeader.delivery_lng !== null ? Number(orderHeader.delivery_lng) : null,
-        notes: finalNotes.length > 0 ? finalNotes : null,
-        subtotal: subtotal,
-        delivery_fee: deliveryFee,
-        discount: discount,
-        total: total,
-      })
+      .insert(insertPayload)
       .select()
       .single();
+
+    if (orderErr && (orderErr.code === '42703' || orderErr.message?.includes('exchange_rate') || orderErr.message?.includes('total_bs'))) {
+      console.warn(`[OrdersService] orders table missing currency columns, inserting base columns: ${orderErr.message}`);
+      delete insertPayload.exchange_rate;
+      delete insertPayload.currency;
+      delete insertPayload.subtotal_bs;
+      delete insertPayload.delivery_fee_bs;
+      delete insertPayload.discount_bs;
+      delete insertPayload.total_bs;
+      const retry = await client.from('orders').insert(insertPayload).select().single();
+      newOrder = retry.data;
+      orderErr = retry.error;
+    }
 
     if (orderErr) {
       throw new InternalServerErrorException(`Error creating order: ${orderErr.message}`);
@@ -217,7 +271,7 @@ export class OrdersService {
     if (error) {
       throw new InternalServerErrorException(`Error fetching orders: ${error.message}`);
     }
-    return data;
+    return (data || []).map((order: any) => this.enrichOrderCurrency(order));
   }
 
   async findByDriver(driverId: string) {
@@ -231,7 +285,7 @@ export class OrdersService {
     if (error) {
       throw new InternalServerErrorException(`Error fetching driver orders: ${error.message}`);
     }
-    return data || [];
+    return (data || []).map((order: any) => this.enrichOrderCurrency(order));
   }
 
   async findById(id: string) {
@@ -254,7 +308,29 @@ export class OrdersService {
     if (error || !data) {
       throw new NotFoundException(`Pedido '${id}' no encontrado`);
     }
-    return data;
+    return this.enrichOrderCurrency(data);
+  }
+
+  private enrichOrderCurrency(order: any): any {
+    if (!order) return order;
+    const rawNotes = (order.notes || '').toString();
+    const fxMatch = rawNotes.match(/\[FX:rate=([0-9.]+)\|total_bs=([0-9.]+)(?:\|delivery_bs=([0-9.]+))?(?:\|subtotal_bs=([0-9.]+))?\]/);
+
+    const exchangeRate = Number(order.exchange_rate ?? fxMatch?.[1]) || null;
+    const totalBs = Number(order.total_bs ?? fxMatch?.[2]) || (exchangeRate && Number(order.total) ? Number((Number(order.total) * exchangeRate).toFixed(2)) : null);
+    const deliveryFeeBs = Number(order.delivery_fee_bs ?? fxMatch?.[3]) || (exchangeRate && order.delivery_fee !== undefined ? Number((Number(order.delivery_fee) * exchangeRate).toFixed(2)) : null);
+    const subtotalBs = Number(order.subtotal_bs ?? fxMatch?.[4]) || (exchangeRate && order.subtotal !== undefined ? Number((Number(order.subtotal) * exchangeRate).toFixed(2)) : null);
+    const discountBs = Number(order.discount_bs) || (exchangeRate && order.discount ? Number((Number(order.discount) * exchangeRate).toFixed(2)) : null);
+
+    return {
+      ...order,
+      exchange_rate: exchangeRate,
+      currency: order.currency || 'USD',
+      total_bs: totalBs,
+      delivery_fee_bs: deliveryFeeBs,
+      subtotal_bs: subtotalBs,
+      discount_bs: discountBs,
+    };
   }
 
   async updateStatus(id: string, status: string) {
@@ -323,6 +399,29 @@ export class OrdersService {
   }
 
   async assignRider(orderId: string, riderId: string) {
+    if (riderId) {
+      const sb = this.supabase.getClient();
+      // 1. Validar que el motorizado no esté desconectado (offline)
+      const { data: rider } = await sb.from('riders').select('id, name, status').eq('id', riderId).maybeSingle();
+      if (rider && rider.status === 'offline') {
+        throw new BadRequestException(`El motorizado ${rider.name || ''} está desconectado (offline) y no puede recibir pedidos.`);
+      }
+
+      // 2. Validar que el motorizado no tenga ya una orden en reparto activo
+      const { data: busyOrder } = await sb
+        .from('orders')
+        .select('id, order_number')
+        .eq('driver_id', riderId)
+        .neq('id', orderId)
+        .in('status', ['assigned_driver', 'at_merchant', 'picked_up', 'on_the_way'])
+        .limit(1)
+        .maybeSingle();
+
+      if (busyOrder) {
+        throw new BadRequestException(`El motorizado ${rider?.name || ''} ya tiene una orden en reparto activo (${busyOrder.order_number}). Debe completarla antes de ser reasignado.`);
+      }
+    }
+
     const { data, error } = await this.supabase
       .getClient()
       .from('orders')

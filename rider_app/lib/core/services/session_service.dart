@@ -308,7 +308,6 @@ class SessionService extends ChangeNotifier {
     }
 
     // 1. Intentar registrar a través del endpoint oficial de verificación en el Backend
-    bool backendAttempted = false;
     try {
       final response = await http.post(
         Uri.parse('${AppConfig.backendBaseUrl}/riders/register-with-verification'),
@@ -333,6 +332,8 @@ class SessionService extends ChangeNotifier {
         final decoded = jsonDecode(response.body);
         if (decoded is Map && decoded['rider'] != null) {
           final rData = decoded['rider'];
+          final isCert = rData['isCertified'] == true || rData['is_certified'] == true;
+          final vStatus = rData['verificationStatus']?.toString() ?? rData['verification_status']?.toString() ?? (isCert ? 'verified' : 'pending');
           final rider = RiderUser(
             id: rData['id']?.toString() ?? '',
             name: rData['name'] ?? name.trim(),
@@ -342,9 +343,9 @@ class SessionService extends ChangeNotifier {
             vehicleType: vehicleType,
             vehicleModel: vehicleModel.trim(),
             vehiclePlate: vehiclePlate.trim().toUpperCase(),
-            isOnline: true,
-            isCertified: true,
-            verificationStatus: 'verified',
+            isOnline: isCert,
+            isCertified: isCert,
+            verificationStatus: vStatus,
             rating: 5.0,
             paymentAccounts: const [],
           );
@@ -361,23 +362,9 @@ class SessionService extends ChangeNotifier {
         return false;
       }
     } catch (e) {
-      debugPrint('[SessionService] Backend offline o inaccesible, aplicando verificación directa: $e');
-    }
-
-    // 2. Si el backend estaba offline, registrar directamente en Supabase
-    if (!backendAttempted) {
-      final fallbackOk = await register(
-        name: name,
-        email: email,
-        password: password,
-        phone: phone,
-        nationalId: nationalId,
-        vehicleType: vehicleType,
-        vehicleModel: vehicleModel,
-        vehiclePlate: vehiclePlate,
-      );
-
-      return fallbackOk;
+      debugPrint('[SessionService] Error al conectar con el backend de verificación: $e');
+      _lastErrorMessage = 'No se pudo conectar con el servidor de verificación para validar y alojar tus documentos ($e).';
+      return false;
     }
 
     return false;

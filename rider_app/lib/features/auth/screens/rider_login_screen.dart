@@ -447,6 +447,7 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
       }
 
       if (mounted) {
+        final isVerified = widget.sessionService.currentRider?.isCertified == true;
         await showDialog(
           context: context,
           barrierDismissible: false,
@@ -456,11 +457,15 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
             title: Row(
               children: [
-                const Icon(Icons.verified_rounded, color: Color(0xFF16A34A), size: 28),
+                Icon(
+                  isVerified ? Icons.verified_rounded : Icons.pending_actions_rounded,
+                  color: isVerified ? const Color(0xFF16A34A) : const Color(0xFFD97706),
+                  size: 28,
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    '¡Identidad Certificada!',
+                    isVerified ? '¡Identidad Certificada!' : 'Documentos en Revisión',
                     style: GoogleFonts.outfit(
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
@@ -471,7 +476,9 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
               ],
             ),
             content: Text(
-              'Tus datos, cédula de identidad y selfie en vivo han sido verificados con éxito en Pídetelo.\n\nTu cuenta ha sido activada y ya puedes recibir órdenes de comercios y despachos independientes.',
+              isVerified
+                  ? 'Tus datos, cédula de identidad y selfie en vivo han sido verificados con éxito mediante Inteligencia Artificial.\n\nTu cuenta ha sido activada y ya puedes recibir órdenes de comercios y despachos independientes.'
+                  : 'Tus documentos y fotografía selfie han sido recibidos y almacenados con éxito en la nube de Pídetelo.\n\nTu cuenta se encuentra en revisión de seguridad por parte del equipo de administración. Una vez aprobada tu cuenta, podrás comenzar a realizar repartos.',
               style: GoogleFonts.outfit(fontSize: 14, height: 1.45, color: const Color(0xFF334155), fontWeight: FontWeight.w500),
             ),
             actions: [
@@ -482,7 +489,7 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                 ),
-                child: Text('Comenzar a Trabajar', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+                child: Text(isVerified ? 'Comenzar a Trabajar' : 'Entendido', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
               ),
             ],
           ),
@@ -676,7 +683,7 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
                             const SizedBox(height: 12),
                             _buildVerificationTile(
                               title: 'Cédula de Identidad',
-                              subtitle: _idDocumentBase64 != null ? 'Cédula capturada y validada' : 'Toca para tomar foto o adjuntar',
+                              subtitle: _idDocumentBase64 != null ? 'Cédula adjuntada (lista para validar)' : 'Toca para tomar foto o adjuntar',
                               icon: Icons.badge_outlined,
                               isUploaded: _idDocumentBase64 != null,
                               onTap: () => _showImageSourceDialog(isSelfie: false),
@@ -684,7 +691,7 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
                             const SizedBox(height: 8),
                             _buildVerificationTile(
                               title: 'Foto Selfie en Vivo',
-                              subtitle: _selfieBase64 != null ? 'Biometría facial registrada' : 'Toca para tomar selfie de tu rostro',
+                              subtitle: _selfieBase64 != null ? 'Selfie adjuntada (lista para validar)' : 'Toca para tomar selfie de tu rostro',
                               icon: Icons.face_rounded,
                               isUploaded: _selfieBase64 != null,
                               onTap: () => _showImageSourceDialog(isSelfie: true),

@@ -2,8 +2,8 @@
   "921a3d74-585a-488c-a6db-c727a387d885": {
     "tagline": "",
     "accent_color": "#e11d48",
-    "logo_url": "/assets/stores/mcdonalds-logo.svg",
-    "banner_url": "/assets/stores/mcdonalds-banner.svg",
+    "logo_url": "https://rivssielrsjarjwmoycp.supabase.co/storage/v1/object/public/merchant-assets/logo-burger_logo-1794921104234-0e0b902b.webp",
+    "banner_url": "https://rivssielrsjarjwmoycp.supabase.co/storage/v1/object/public/merchant-assets/banner-portada_burger-1794921136290-85e3836b.webp",
     "exchange_rate": 896.12,
     "base_currency": "USD",
     "display_mode": "usd_and_bs",
@@ -11,7 +11,7 @@
       "baseCurrency": "USD",
       "displayMode": "usd_and_bs",
       "exchangeRate": 896.12,
-      "lastRateUpdate": "2026-11-12T14:16:45.305Z"
+      "lastRateUpdate": "2026-11-17T13:12:19.472Z"
     },
     "delivery_tiers": [
       {
@@ -102,8 +102,8 @@
   "4bd0999b-48f6-4abb-bb40-a1a051903d80": {
     "tagline": "La mejor pizza",
     "accent_color": "#10b981",
-    "logo_url": "/assets/stores/burgerking-logo.svg",
-    "banner_url": "/assets/stores/burgerking-banner.svg",
+    "logo_url": "https://rivssielrsjarjwmoycp.supabase.co/storage/v1/object/public/merchant-assets/logo-pizza_logo-1794921202314-b6a190ce.webp",
+    "banner_url": "https://rivssielrsjarjwmoycp.supabase.co/storage/v1/object/public/merchant-assets/banner-portada_pizza-1794921213808-98396ac7.webp",
     "exchange_rate": 896.12,
     "base_currency": "USD",
     "display_mode": "usd_and_bs",
@@ -111,7 +111,7 @@
       "baseCurrency": "USD",
       "displayMode": "usd_and_bs",
       "exchangeRate": 896.12,
-      "lastRateUpdate": "2026-11-12T14:19:18.404Z"
+      "lastRateUpdate": "2026-11-17T13:13:36.437Z"
     },
     "delivery_tiers": [
       {

@@ -544,7 +544,51 @@ export class TenantsService {
     return this.mergeTenantWithMetadata(data);
   }
 
+  private async uploadBase64IfPresent(dataUri: string, prefix: string): Promise<string> {
+    if (!dataUri || typeof dataUri !== 'string' || !dataUri.startsWith('data:image/')) {
+      return dataUri;
+    }
+    try {
+      const matches = dataUri.match(/^data:([A-Za-z-+/]+);base64,(.+)$/);
+      if (!matches || matches.length !== 3) return dataUri;
+      const mime = matches[1];
+      let ext = 'webp';
+      if (mime.includes('png')) ext = 'png';
+      else if (mime.includes('gif')) ext = 'gif';
+      else if (mime.includes('svg')) ext = 'svg';
+      else if (mime.includes('jpeg') || mime.includes('jpg')) ext = 'jpg';
+      const buffer = Buffer.from(matches[2], 'base64');
+      const fileId = `${prefix}-${Date.now()}.${ext}`;
+
+      const client = this.supabase.getClient();
+      const bucket = 'merchant-assets';
+      const { data, error } = await client.storage.from(bucket).upload(fileId, buffer, { contentType: mime, upsert: true });
+      if (!error && data) {
+        const pub = client.storage.from(bucket).getPublicUrl(fileId);
+        if (pub.data?.publicUrl) return pub.data.publicUrl;
+      }
+    } catch (err: any) {
+      console.warn(`[TenantsService] Error subiendo imagen a Supabase Storage: ${err.message}`);
+    }
+    return dataUri;
+  }
+
   async update(id: string, updateData: any) {
+    if (updateData.logo_url && typeof updateData.logo_url === 'string' && updateData.logo_url.startsWith('data:image/')) {
+      updateData.logo_url = await this.uploadBase64IfPresent(updateData.logo_url, `tenant-logo-${id.slice(0, 8)}`);
+    }
+    if (updateData.logoUrl && typeof updateData.logoUrl === 'string' && updateData.logoUrl.startsWith('data:image/')) {
+      updateData.logoUrl = await this.uploadBase64IfPresent(updateData.logoUrl, `tenant-logo-${id.slice(0, 8)}`);
+      updateData.logo_url = updateData.logoUrl;
+    }
+    if (updateData.banner_url && typeof updateData.banner_url === 'string' && updateData.banner_url.startsWith('data:image/')) {
+      updateData.banner_url = await this.uploadBase64IfPresent(updateData.banner_url, `tenant-banner-${id.slice(0, 8)}`);
+    }
+    if (updateData.bannerUrl && typeof updateData.bannerUrl === 'string' && updateData.bannerUrl.startsWith('data:image/')) {
+      updateData.bannerUrl = await this.uploadBase64IfPresent(updateData.bannerUrl, `tenant-banner-${id.slice(0, 8)}`);
+      updateData.banner_url = updateData.bannerUrl;
+    }
+
     // 1. Guardar metadata local (tagline, moneda, tasa, modo, etc.)
     const metaToSave: Record<string, any> = {};
     if (updateData.tagline !== undefined) metaToSave.tagline = updateData.tagline;

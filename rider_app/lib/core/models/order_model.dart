@@ -244,6 +244,11 @@ class DeliveryOrder {
   final double subtotal;
   final double deliveryFee;
   final double total;
+  final double? exchangeRate;
+  final String currency;
+  final double? totalBs;
+  final double? deliveryFeeBs;
+  final double? subtotalBs;
   final String paymentMethod;
   final DateTime createdAt;
   final String? branchId;
@@ -274,6 +279,11 @@ class DeliveryOrder {
     required this.subtotal,
     required this.deliveryFee,
     required this.total,
+    this.exchangeRate,
+    this.currency = 'USD',
+    this.totalBs,
+    this.deliveryFeeBs,
+    this.subtotalBs,
     required this.paymentMethod,
     required this.createdAt,
     this.branchId,
@@ -304,6 +314,11 @@ class DeliveryOrder {
         'subtotal': subtotal,
         'deliveryFee': deliveryFee,
         'total': total,
+        'exchangeRate': exchangeRate,
+        'currency': currency,
+        'totalBs': totalBs,
+        'deliveryFeeBs': deliveryFeeBs,
+        'subtotalBs': subtotalBs,
         'paymentMethod': paymentMethod,
         'createdAt': createdAt.toIso8601String(),
         'branchId': branchId,
@@ -347,6 +362,11 @@ class DeliveryOrder {
         subtotal: (json['subtotal'] as num?)?.toDouble() ?? 0.0,
         deliveryFee: (json['deliveryFee'] as num?)?.toDouble() ?? 0.0,
         total: (json['total'] as num?)?.toDouble() ?? 0.0,
+        exchangeRate: (json['exchangeRate'] ?? json['exchange_rate'] as num?)?.toDouble(),
+        currency: json['currency'] ?? 'USD',
+        totalBs: (json['totalBs'] ?? json['total_bs'] as num?)?.toDouble(),
+        deliveryFeeBs: (json['deliveryFeeBs'] ?? json['delivery_fee_bs'] as num?)?.toDouble(),
+        subtotalBs: (json['subtotalBs'] ?? json['subtotal_bs'] as num?)?.toDouble(),
         paymentMethod: json['paymentMethod'] ?? '',
         createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
         branchId: json['branchId'] ?? json['branch_id'],

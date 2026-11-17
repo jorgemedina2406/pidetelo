@@ -443,6 +443,31 @@ class RiderService extends ChangeNotifier {
       subtotal: (row['subtotal'] as num?)?.toDouble() ?? 0.0,
       deliveryFee: (row['delivery_fee'] as num?)?.toDouble() ?? 2.50,
       total: (row['total'] as num?)?.toDouble() ?? 0.0,
+      exchangeRate: (row['exchange_rate'] as num?)?.toDouble() ??
+          (() {
+            final notes = (row['notes'] ?? '').toString();
+            final match = RegExp(r'\[FX:rate=([0-9.]+)').firstMatch(notes);
+            return match != null ? double.tryParse(match.group(1)!) : null;
+          })(),
+      currency: row['currency'] ?? 'USD',
+      totalBs: (row['total_bs'] as num?)?.toDouble() ??
+          (() {
+            final notes = (row['notes'] ?? '').toString();
+            final match = RegExp(r'total_bs=([0-9.]+)').firstMatch(notes);
+            return match != null ? double.tryParse(match.group(1)!) : null;
+          })(),
+      deliveryFeeBs: (row['delivery_fee_bs'] as num?)?.toDouble() ??
+          (() {
+            final notes = (row['notes'] ?? '').toString();
+            final match = RegExp(r'delivery_bs=([0-9.]+)').firstMatch(notes);
+            return match != null ? double.tryParse(match.group(1)!) : null;
+          })(),
+      subtotalBs: (row['subtotal_bs'] as num?)?.toDouble() ??
+          (() {
+            final notes = (row['notes'] ?? '').toString();
+            final match = RegExp(r'subtotal_bs=([0-9.]+)').firstMatch(notes);
+            return match != null ? double.tryParse(match.group(1)!) : null;
+          })(),
       paymentMethod: row['payment_method'] ?? 'Pago Móvil',
       createdAt: DateTime.tryParse(row['created_at'] ?? '') ?? DateTime.now(),
       branchId: row['branch_id']?.toString(),

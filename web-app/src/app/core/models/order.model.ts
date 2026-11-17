@@ -82,6 +82,12 @@ export interface Order {
   discount: number;
   couponCode?: string;
   total: number;
+  exchangeRate?: number;
+  currency?: string;
+  subtotalBs?: number;
+  deliveryFeeBs?: number;
+  discountBs?: number;
+  totalBs?: number;
   deliveryLat?: number;
   deliveryLng?: number;
   tenantAddress?: string;

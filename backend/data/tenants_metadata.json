@@ -134,7 +134,7 @@
       "baseCurrency": "USD",
       "displayMode": "usd_and_bs",
       "exchangeRate": 896.12,
-      "lastRateUpdate": "2026-11-12T14:16:45.305Z",
+      "lastRateUpdate": "2026-11-17T13:12:19.473Z",
       "acceptedPaymentMethods": [
         "cash_usd",
         "mobile_transfer",
@@ -260,7 +260,7 @@
       "baseCurrency": "USD",
       "displayMode": "usd_and_bs",
       "exchangeRate": 896.12,
-      "lastRateUpdate": "2026-11-12T14:19:18.404Z",
+      "lastRateUpdate": "2026-11-17T13:13:36.437Z",
       "acceptedPaymentMethods": [
         "cash_usd",
         "mobile_transfer",

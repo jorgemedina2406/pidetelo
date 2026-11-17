@@ -3,6 +3,7 @@ import { Component, inject, signal, computed, OnInit, OnDestroy, effect } from '
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import * as L from 'leaflet';
 import { AuthStore } from '../../core/stores/auth.store';
 import { ThemeService } from '../../core/services/theme.service';
@@ -423,6 +424,19 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     ]
   };
 
+  merchantLogoFailed = false;
+
+  get merchantLogoUrl(): string | null {
+    if (this.merchantLogoFailed) return null;
+    const raw = this.brandingForm.logoUrl ||
+                this.activeBranch()?.logoUrl ||
+                (this.activeBranch() as any)?.logo_url ||
+                this.currentTenant()?.branding?.logoUrl ||
+                this.currentTenant()?.logoUrl ||
+                (this.currentTenant() as any)?.logo_url;
+    return (raw && typeof raw === 'string' && raw.trim().length > 0) ? raw.trim() : null;
+  }
+
   addDeliveryTier(): void {
     const tiers = this.brandingForm.deliveryTiers;
     const lastTier = tiers.length > 0 ? tiers[tiers.length - 1] : null;
@@ -466,6 +480,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     this.brandingForm.tagline = branch.tagline || cached?.tagline || tenant.tagline || '';
     this.brandingForm.accentColor = branch.accentColor || cached?.accentColor || tenant.branding?.accentColor || '#f97316';
     this.brandingForm.logoUrl = branch.logoUrl || cached?.logoUrl || tenant.branding?.logoUrl || '';
+    this.merchantLogoFailed = false;
     this.brandingForm.bannerUrl = branch.bannerUrl || cached?.bannerUrl || tenant.branding?.bannerUrl || '';
     this.brandingForm.whatsappNumber = branch.whatsapp || cached?.whatsappNumber || branch.phone || tenant.contact?.whatsappNumber || '';
     this.brandingForm.phone = branch.phone || cached?.phone || tenant.contact?.phone || '';
@@ -609,6 +624,8 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
   readonly isDetectingStoreGps = signal(false);
   readonly storeGpsMessage = signal<string | null>(null);
   readonly isSavingBranding = signal(false);
+  readonly isUploadingLogo = signal(false);
+  readonly isUploadingBanner = signal(false);
   readonly showLogoUrlInput = signal(false);
   readonly showBannerUrlInput = signal(false);
 
@@ -637,8 +654,12 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         if (!ctx) {
-          if (type === 'logo') this.brandingForm.logoUrl = dataUrl;
-          else this.brandingForm.bannerUrl = dataUrl;
+          if (type === 'logo') {
+            this.brandingForm.logoUrl = dataUrl;
+            this.merchantLogoFailed = false;
+          } else {
+            this.brandingForm.bannerUrl = dataUrl;
+          }
           return;
         }
 
@@ -663,6 +684,23 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
           ctx.drawImage(img, 0, 0, w, h);
           const optimized = canvas.toDataURL('image/webp', 0.92);
           this.brandingForm.logoUrl = optimized;
+          this.merchantLogoFailed = false;
+
+          // Subir directamente a Storage de Supabase / Backend
+          this.isUploadingLogo.set(true);
+          this.api.uploadImage(optimized, `logo-${file.name}`).subscribe({
+            next: (res) => {
+              if (res?.url) {
+                this.brandingForm.logoUrl = res.url;
+                this.showToast('success', '¡Logo Almacenado!', 'El logo se subió exitosamente a Storage.');
+              }
+              this.isUploadingLogo.set(false);
+            },
+            error: (err) => {
+              console.warn('[MerchantAdmin] Aviso subiendo logo a storage:', err);
+              this.isUploadingLogo.set(false);
+            }
+          });
         } else {
           // Portada recomendada: panorámica 1400x550 máx
           const maxWidth = 1400;
@@ -682,6 +720,22 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
           ctx.drawImage(img, 0, 0, w, h);
           const optimized = canvas.toDataURL('image/webp', 0.88);
           this.brandingForm.bannerUrl = optimized;
+
+          // Subir directamente a Storage de Supabase / Backend
+          this.isUploadingBanner.set(true);
+          this.api.uploadImage(optimized, `banner-${file.name}`).subscribe({
+            next: (res) => {
+              if (res?.url) {
+                this.brandingForm.bannerUrl = res.url;
+                this.showToast('success', '¡Portada Almacenada!', 'La portada se subió exitosamente a Storage.');
+              }
+              this.isUploadingBanner.set(false);
+            },
+            error: (err) => {
+              console.warn('[MerchantAdmin] Aviso subiendo portada a storage:', err);
+              this.isUploadingBanner.set(false);
+            }
+          });
         }
       };
       img.src = dataUrl;
@@ -857,6 +911,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
   private fleetRiderMarkers = new Map<string, L.Marker>();
   readonly selectedRadarRider = signal<Rider | null>(null);
   readonly radarFilter = signal<'all' | 'available' | 'delivering' | 'offline'>('all');
+  readonly radarFleetType = signal<'all' | 'own' | 'independent'>('all');
 
   // Categorías de productos del menú / comercio
   readonly productCategories = signal<ProductCategory[]>([]);
@@ -940,6 +995,70 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     return this.riders().filter(r => (r.branchId === branchId || (isMain && !r.branchId) || r.isIndependent) && r.status === 'available' && !busy.has(r.id));
   });
   readonly availableRiders = computed(() => this.filteredRiders());
+
+  // --- RADAR GPS EN VIVO (GESTIÓN DE FLOTA Y ASIGNACIÓN) ---
+  readonly allRadarRiders = computed(() => {
+    const branchId = this.activeBranchId();
+    if (!branchId) return [];
+    const isMain = this.isSelectedBranchMain();
+    const busy = this.getBusyRiderIds();
+
+    return this.riders()
+      .filter(r => (r.branchId === branchId || (isMain && !r.branchId) || r.isIndependent))
+      .map(r => {
+        const isBusy = busy.has(r.id) || this.orders().some(o => o.driverId === r.id && ['assigned_driver', 'at_merchant', 'picked_up', 'on_the_way'].includes(o.status));
+        const status: 'available' | 'delivering' | 'offline' = isBusy ? 'delivering' : (r.status || 'available');
+        const lat = r.currentLocation?.lat != null ? r.currentLocation.lat : ((r as any).current_lat != null ? Number((r as any).current_lat) : ((r as any).currentLat != null ? Number((r as any).currentLat) : undefined));
+        const lng = r.currentLocation?.lng != null ? r.currentLocation.lng : ((r as any).current_lng != null ? Number((r as any).current_lng) : ((r as any).currentLng != null ? Number((r as any).currentLng) : undefined));
+        const currentLocation = (lat != null && lng != null && !isNaN(lat) && !isNaN(lng)) ? { lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)) } : r.currentLocation;
+        return {
+          ...r,
+          status,
+          currentLocation
+        };
+      });
+  });
+
+  readonly radarCountAll = computed(() => this.allRadarRiders().length);
+  readonly radarCountOwn = computed(() => this.allRadarRiders().filter(r => !r.isIndependent).length);
+  readonly radarCountIndependent = computed(() => this.allRadarRiders().filter(r => r.isIndependent).length);
+  readonly radarCountAvailable = computed(() => {
+    const fleet = this.radarFleetType();
+    let list = this.allRadarRiders();
+    if (fleet === 'own') list = list.filter(r => !r.isIndependent);
+    if (fleet === 'independent') list = list.filter(r => r.isIndependent);
+    return list.filter(r => r.status === 'available').length;
+  });
+  readonly radarCountDelivering = computed(() => {
+    const fleet = this.radarFleetType();
+    let list = this.allRadarRiders();
+    if (fleet === 'own') list = list.filter(r => !r.isIndependent);
+    if (fleet === 'independent') list = list.filter(r => r.isIndependent);
+    return list.filter(r => r.status === 'delivering').length;
+  });
+
+  readonly radarRiders = computed(() => {
+    const fleetType = this.radarFleetType();
+    const statusFilter = this.radarFilter();
+
+    let list = this.allRadarRiders();
+
+    if (fleetType === 'own') {
+      list = list.filter(r => !r.isIndependent);
+    } else if (fleetType === 'independent') {
+      list = list.filter(r => r.isIndependent);
+    }
+
+    if (statusFilter !== 'all') {
+      list = list.filter(r => r.status === statusFilter);
+    }
+
+    return list;
+  });
+
+  getRiderActiveOrder(riderId: string): Order | undefined {
+    return this.orders().find(o => o.driverId === riderId && ['assigned_driver', 'at_merchant', 'picked_up', 'on_the_way'].includes(o.status));
+  }
 
   readonly ownFleetRiders = computed(() => {
     const branchId = this.activeBranchId();
@@ -1579,8 +1698,22 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     const targetLng = targetBranch?.longitude || this.brandingForm.longitude || -69.266;
 
     const mapRawToRider = (r: any): Rider => {
-      const rawLat = (r.current_lat !== undefined && r.current_lat !== null) ? Number(r.current_lat) : (r.currentLocation?.lat);
-      const rawLng = (r.current_lng !== undefined && r.current_lng !== null) ? Number(r.current_lng) : (r.currentLocation?.lng);
+      const rawLat = r.current_lat != null
+        ? Number(r.current_lat)
+        : (r.currentLat != null
+          ? Number(r.currentLat)
+          : (r.latitude != null
+            ? Number(r.latitude)
+            : (r.currentLocation?.lat != null ? Number(r.currentLocation.lat) : undefined)));
+
+      const rawLng = r.current_lng != null
+        ? Number(r.current_lng)
+        : (r.currentLng != null
+          ? Number(r.currentLng)
+          : (r.longitude != null
+            ? Number(r.longitude)
+            : (r.currentLocation?.lng != null ? Number(r.currentLocation.lng) : undefined)));
+
       const isValid = typeof rawLat === 'number' && !isNaN(rawLat) && typeof rawLng === 'number' && !isNaN(rawLng);
       let currentLocation: { lat: number; lng: number } | undefined = undefined;
       if (isValid) {
@@ -1726,9 +1859,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     this.fleetRiderMarkers.forEach(m => m.remove());
     this.fleetRiderMarkers.clear();
 
-    const riders = this.filteredRiders();
-    const filter = this.radarFilter();
-    const visibleRiders = filter === 'all' ? riders : riders.filter(r => r.status === filter);
+    const visibleRiders = this.radarRiders();
 
     const bounds: [number, number][] = [];
     const branch = this.selectedBranch();
@@ -1746,33 +1877,38 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
 
       const statusColor = r.status === 'available' ? '#10b981' : r.status === 'delivering' ? '#3b82f6' : '#64748b';
       const statusLabel = r.status === 'available' ? 'Disponible' : r.status === 'delivering' ? 'En Reparto Activo' : 'Desconectado';
+      const fleetLabel = r.isIndependent ? 'Red Libre Pídetelo' : 'Flota Propia';
+      const fleetColor = r.isIndependent ? '#a855f7' : '#f59e0b';
 
       const riderIcon = L.divIcon({
         className: 'leaflet-rider-marker',
         html: `
-          <div style="position:relative;width:44px;height:44px;display:flex;align-items:center;justify-content:center;">
-            <div style="position:absolute;width:40px;height:40px;border-radius:9999px;background:${statusColor};opacity:0.25;animation:ping 2s cubic-bezier(0,0,0.2,1) infinite;"></div>
+          <div style="position:relative;width:48px;height:48px;display:flex;align-items:center;justify-content:center;">
+            <div style="position:absolute;width:44px;height:44px;border-radius:9999px;background:${statusColor};opacity:0.25;${r.status === 'delivering' ? 'animation:ping 1.5s cubic-bezier(0,0,0.2,1) infinite;' : ''}"></div>
             <div style="background:${statusColor};color:white;width:34px;height:34px;border-radius:9999px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,0.3);border:2.5px solid white;z-index:2;cursor:pointer;">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg>
             </div>
-            <div style="position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);background:rgba(15,23,42,0.85);backdrop-filter:blur(4px);color:white;font-size:10px;font-weight:bold;padding:1px 6px;border-radius:6px;white-space:nowrap;border:1px solid rgba(255,255,255,0.2);">
-              ${r.name.split(' ')[0]}
+            <div style="position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);background:rgba(15,23,42,0.9);backdrop-filter:blur(4px);color:white;font-size:10px;font-weight:bold;padding:1px 6px;border-radius:6px;white-space:nowrap;border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;gap:3px;">
+              <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${fleetColor};"></span>
+              <span>${r.name.split(' ')[0]}</span>
             </div>
           </div>
         `,
-        iconSize: [44, 44],
-        iconAnchor: [22, 22]
+        iconSize: [48, 48],
+        iconAnchor: [24, 24]
       });
 
       const marker = L.marker([lat, lng], { icon: riderIcon }).addTo(this.fleetRadarMap!);
 
-      const activeOrder = this.orders().find(o => o.driverId === r.id && o.status === 'on_the_way');
+      const activeOrder = this.getRiderActiveOrder(r.id);
 
       marker.bindPopup(`
-        <div style="font-family:sans-serif;padding:4px;min-width:180px;">
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
-            <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${statusColor};"></span>
+        <div style="font-family:sans-serif;padding:4px;min-width:200px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:6px;">
             <b style="font-size:13px;color:#0f172a;">${r.name}</b>
+            <span style="font-size:9px;font-weight:800;padding:2px 6px;border-radius:6px;background:${r.isIndependent ? '#f3e8ff' : '#fef3c7'};color:${r.isIndependent ? '#7e22ce' : '#b45309'};border:1px solid ${r.isIndependent ? '#d8b4fe' : '#fde68a'};">
+              ${fleetLabel}
+            </span>
           </div>
           <div style="font-size:11px;color:#64748b;margin-bottom:4px;">
             Placa: <b>${r.vehiclePlate}</b> • ${r.vehicleType.toUpperCase()}
@@ -1784,9 +1920,9 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
             📍 GPS Real: ${lat.toFixed(5)}, ${lng.toFixed(5)}
           </div>
           ${activeOrder ? `
-            <div style="background:#f1f5f9;padding:6px 8px;border-radius:8px;font-size:10px;color:#334155;margin-bottom:8px;">
-              🛵 Entregando: <b>${activeOrder.orderNumber}</b><br>
-              Destino: ${activeOrder.customer.deliveryAddress || 'En ruta'}
+            <div style="background:#eff6ff;padding:6px 8px;border-radius:8px;font-size:10px;color:#1e40af;margin-bottom:8px;border:1px solid #bfdbfe;">
+              🛵 <b>En Entrega: ${activeOrder.orderNumber}</b><br>
+              Destino: ${activeOrder.customer?.deliveryAddress || 'En ruta de entrega'}
             </div>
           ` : ''}
           <div style="display:flex;gap:6px;">
@@ -1818,7 +1954,10 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     this.selectedRadarRider.set(rider);
     if (!this.fleetRadarMap) return;
 
-    if (!rider.currentLocation?.lat || !rider.currentLocation?.lng) {
+    const rawLat = rider.currentLocation?.lat != null ? rider.currentLocation.lat : ((rider as any).current_lat != null ? Number((rider as any).current_lat) : (rider as any).currentLat);
+    const rawLng = rider.currentLocation?.lng != null ? rider.currentLocation.lng : ((rider as any).current_lng != null ? Number((rider as any).current_lng) : (rider as any).currentLng);
+
+    if (!rawLat || !rawLng || isNaN(Number(rawLat)) || isNaN(Number(rawLng))) {
       await this.confirmModal.confirm({
         title: 'Ubicación Satelital No Reportada',
         message: `El motorizado ${rider.name} aún no ha reportado su ubicación GPS satelital desde su teléfono móvil.\n\nIndícale que inicie turno en la App de Repartidores para activar la señal GPS en vivo.`,
@@ -1829,8 +1968,8 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const lat = rider.currentLocation.lat;
-    const lng = rider.currentLocation.lng;
+    const lat = Number(rawLat);
+    const lng = Number(rawLng);
 
     this.fleetRadarMap.flyTo([lat, lng], 16, { duration: 1.2 });
     const marker = this.fleetRiderMarkers.get(rider.id);
@@ -2114,8 +2253,11 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
   }
 
   // --- VERIFICACIÓN DE PAGO MÓVIL ANTES DE COMANDA DE COCINA (FASE 1) ---
-  getOrderBsTotal(usd: number): string {
-    const rate = this.activeExchangeRate() || 54.50;
+  getOrderBsTotal(usd: number, order?: Order | null): string {
+    if (order?.totalBs !== undefined && order?.totalBs !== null) {
+      return order.totalBs.toFixed(2);
+    }
+    const rate = order?.exchangeRate || this.activeExchangeRate() || 54.50;
     return ((usd || 0) * rate).toFixed(2);
   }
 
@@ -2268,6 +2410,18 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     }
 
     const rider = this.riders().find(r => r.id === targetRiderId);
+    const busy = this.getBusyRiderIds(orderId);
+    if (rider && (rider.status === 'offline' || rider.status === 'delivering' || busy.has(rider.id))) {
+      const isDelivering = rider.status === 'delivering' || busy.has(rider.id);
+      this.confirmModal.confirm({
+        title: isDelivering ? 'Motorizado en Reparto' : 'Motorizado Desconectado',
+        message: `El motorizado ${rider.name} se encuentra actualmente ${isDelivering ? 'en una entrega en curso' : 'desconectado (offline)'} y no puede recibir nuevos pedidos hasta quedar disponible.`,
+        confirmText: 'Entendido',
+        cancelText: '',
+        isDanger: false
+      });
+      return;
+    }
     this.orders.update(list =>
       list.map(o => o.id === orderId ? {
         ...o,
@@ -2768,6 +2922,11 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       deliveryFee: targetBranch?.baseDeliveryFee || 2.50,
       discount: 0,
       total: 9.99 + (targetBranch?.baseDeliveryFee || 2.50),
+      exchangeRate: this.activeExchangeRate() || 54.50,
+      currency: 'USD',
+      subtotalBs: Number((9.99 * (this.activeExchangeRate() || 54.50)).toFixed(2)),
+      deliveryFeeBs: Number(((targetBranch?.baseDeliveryFee || 2.50) * (this.activeExchangeRate() || 54.50)).toFixed(2)),
+      totalBs: Number(((9.99 + (targetBranch?.baseDeliveryFee || 2.50)) * (this.activeExchangeRate() || 54.50)).toFixed(2)),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -2787,8 +2946,13 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       customer_phone: '+584128889900',
       delivery_address: 'Av. Libertador, Edif. Centro',
       subtotal: 9.99,
-      delivery_fee: 2.50,
-      total: 12.49,
+      delivery_fee: targetBranch?.baseDeliveryFee || 2.50,
+      total: 9.99 + (targetBranch?.baseDeliveryFee || 2.50),
+      exchange_rate: this.activeExchangeRate() || 54.50,
+      currency: 'USD',
+      subtotal_bs: Number((9.99 * (this.activeExchangeRate() || 54.50)).toFixed(2)),
+      delivery_fee_bs: Number(((targetBranch?.baseDeliveryFee || 2.50) * (this.activeExchangeRate() || 54.50)).toFixed(2)),
+      total_bs: Number(((9.99 + (targetBranch?.baseDeliveryFee || 2.50)) * (this.activeExchangeRate() || 54.50)).toFixed(2)),
       items: [
         {
           product_name: 'Combo Doble Bacon Smash',
@@ -2843,12 +3007,35 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     }
   }
 
-  saveSettings(e?: Event): void {
+  async saveSettings(e?: Event): Promise<void> {
     if (e) e.preventDefault();
     this.isSavingBranding.set(true);
 
     const targetBranch = this.currentConfigBranch();
-    const activeTenantId = this.currentTenant().id || this.auth.currentUser()?.tenantId || '';
+    const activeTenantId = this.currentTenant().id || this.auth.currentUser()?.tenantId || targetBranch?.companyId || '';
+
+    // Si aún hay una imagen en base64 sin subir, subirla a Storage primero
+    if (this.brandingForm.logoUrl && this.brandingForm.logoUrl.startsWith('data:image/')) {
+      try {
+        const res = await firstValueFrom(this.api.uploadImage(this.brandingForm.logoUrl, `logo-${this.brandingForm.name || 'comercio'}.webp`));
+        if (res?.url) {
+          this.brandingForm.logoUrl = res.url;
+        }
+      } catch (uErr) {
+        console.warn('[MerchantAdmin] Error subiendo logo a storage en saveSettings:', uErr);
+      }
+    }
+
+    if (this.brandingForm.bannerUrl && this.brandingForm.bannerUrl.startsWith('data:image/')) {
+      try {
+        const res = await firstValueFrom(this.api.uploadImage(this.brandingForm.bannerUrl, `banner-${this.brandingForm.name || 'comercio'}.webp`));
+        if (res?.url) {
+          this.brandingForm.bannerUrl = res.url;
+        }
+      } catch (uErr) {
+        console.warn('[MerchantAdmin] Error subiendo portada a storage en saveSettings:', uErr);
+      }
+    }
 
     if (targetBranch) {
       try {
@@ -2946,12 +3133,14 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       }));
     }
 
-    // Si es la sede principal o no hay sucursal específica, actualizar también el tenant global
-    if (!targetBranch || targetBranch.isMain || targetBranch.name.toLowerCase().includes('principal')) {
+    // Actualizar también el tenant global
+    if (activeTenantId && (!targetBranch || targetBranch.isMain || targetBranch.name.toLowerCase().includes('principal'))) {
       this.currentTenant.update(prev => ({
         ...prev,
         name: this.brandingForm.name,
         tagline: this.brandingForm.tagline,
+        logoUrl: this.brandingForm.logoUrl,
+        bannerUrl: this.brandingForm.bannerUrl,
         branding: {
           accentColor: this.brandingForm.accentColor,
           logoUrl: this.brandingForm.logoUrl,
@@ -2980,7 +3169,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         }
       }));
 
-      this.api.updateTenant(this.currentTenant().id, {
+      this.api.updateTenant(activeTenantId, {
         name: this.brandingForm.name,
         tagline: this.brandingForm.tagline,
         accent_color: this.brandingForm.accentColor,
@@ -3016,7 +3205,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     }
 
     try {
-      const storageKey = 'deliveryhub_branding_' + (targetBranch?.id || this.currentTenant().id);
+      const storageKey = 'deliveryhub_branding_' + (targetBranch?.id || activeTenantId);
       localStorage.setItem(storageKey, JSON.stringify({
         ...branchPayload,
         openTime: this.brandingForm.openTime,
@@ -3030,6 +3219,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         next: (updatedBranch) => {
           this.isSavingBranding.set(false);
           this.isSavedNotificationVisible.set(true);
+          this.showToast('success', '¡Configuración Guardada!', 'Logotipo, portada y datos guardados exitosamente en la base de datos y Storage.');
           setTimeout(() => this.isSavedNotificationVisible.set(false), 3000);
           console.log('[MerchantAdmin] Configuración guardada para sucursal:', updatedBranch?.name || targetBranch.name);
           if (updatedBranch) {
@@ -3049,6 +3239,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     } else {
       this.isSavingBranding.set(false);
       this.isSavedNotificationVisible.set(true);
+      this.showToast('success', '¡Configuración Guardada!', 'Datos guardados exitosamente en la base de datos y Storage.');
       setTimeout(() => this.isSavedNotificationVisible.set(false), 3000);
     }
   }

@@ -1124,7 +1124,7 @@ export class ApiService {
     try {
       const { data: riders } = await client
         .from('riders')
-        .select('id, name, email, phone, is_active, vehicle_type, vehicle_plate, plate_number, created_at, tenants(name), branches(name)')
+        .select('id, name, email, phone, is_active, vehicle_type, vehicle_plate, plate_number, created_at, is_certified, verification_status, id_document_url, selfie_url, tenants(name), branches(name)')
         .order('created_at', { ascending: false });
 
       if (riders && riders.length > 0) {
@@ -1145,6 +1145,10 @@ export class ApiService {
             tenantName: tName || 'Flota Global Pídetelo',
             branchName: vehicle,
             isActive: r.is_active ?? true,
+            isCertified: r.is_certified ?? false,
+            verificationStatus: r.verification_status || 'pending',
+            idDocumentUrl: r.id_document_url || null,
+            selfieUrl: r.selfie_url || null,
             createdAt: r.created_at || existing?.createdAt || new Date().toISOString()
           });
         });
@@ -1708,6 +1712,17 @@ export class ApiService {
       cleanNotes = cleanNotes.replace(/\[RIDER_REJECTED(?::[^\]]+)?\]/, '').trim();
     }
 
+    const fxMatch = rawNotes.match(/\[FX:rate=([0-9.]+)\|total_bs=([0-9.]+)(?:\|delivery_bs=([0-9.]+))?(?:\|subtotal_bs=([0-9.]+))?\]/);
+    if (fxMatch) {
+      cleanNotes = cleanNotes.replace(/\[FX:rate=[0-9.]+\|total_bs=[0-9.]+(?:\|delivery_bs=[0-9.]+)?(?:\|subtotal_bs=[0-9.]+)?\]\s*/g, '').trim();
+    }
+    const exchangeRate = Number(row.exchange_rate ?? row.exchangeRate ?? fxMatch?.[1]) || undefined;
+    const totalBs = Number(row.total_bs ?? row.totalBs ?? fxMatch?.[2]) || (exchangeRate && Number(row.total) ? Number((Number(row.total) * exchangeRate).toFixed(2)) : undefined);
+    const deliveryFeeBs = Number(row.delivery_fee_bs ?? row.deliveryFeeBs ?? fxMatch?.[3]) || (exchangeRate && row.delivery_fee !== undefined ? Number((Number(row.delivery_fee) * exchangeRate).toFixed(2)) : undefined);
+    const subtotalBs = Number(row.subtotal_bs ?? row.subtotalBs ?? fxMatch?.[4]) || (exchangeRate && row.subtotal !== undefined ? Number((Number(row.subtotal) * exchangeRate).toFixed(2)) : undefined);
+    const discountBs = Number(row.discount_bs ?? row.discountBs) || (exchangeRate && row.discount ? Number((Number(row.discount) * exchangeRate).toFixed(2)) : undefined);
+    const currency = row.currency || 'USD';
+
     let mappedStatus = (row.status as any) || 'received';
     if (row.status === 'in_kitchen') {
       if (row.driver_id) {
@@ -1768,6 +1783,12 @@ export class ApiService {
       deliveryFee: Number(row.delivery_fee) || 0,
       discount: Number(row.discount) || 0,
       total: Number(row.total),
+      exchangeRate,
+      currency,
+      subtotalBs,
+      deliveryFeeBs,
+      discountBs,
+      totalBs,
       createdAt: row.created_at || new Date().toISOString(),
       updatedAt: row.updated_at || new Date().toISOString(),
       notes: rawNotes,

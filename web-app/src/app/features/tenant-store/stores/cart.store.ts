@@ -782,6 +782,12 @@ export const CartStore = signalStore(
         discount: store.couponDiscount(),
         couponCode: store.appliedCoupon()?.code,
         total: store.total(),
+        exchangeRate: rate,
+        currency: 'USD',
+        subtotalBs: store.subtotalVes(),
+        deliveryFeeBs: store.deliveryFeeVes(),
+        discountBs: store.couponDiscountVes(),
+        totalBs: store.totalVes(),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
