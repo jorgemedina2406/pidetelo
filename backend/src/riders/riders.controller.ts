@@ -59,6 +59,15 @@ export class RidersController {
     return this.ridersService.registerWithVerification(body);
   }
 
+  @Post(':id/verify-certification')
+  @ApiOperation({ summary: 'Aprobar o rechazar certificación de documentos de un motorizado por parte del Super Admin' })
+  verifyCertification(
+    @Param('id') id: string,
+    @Body() body: { isApproved: boolean; notes?: string },
+  ) {
+    return this.ridersService.verifyCertification(id, body.isApproved, body.notes);
+  }
+
   @Post()
   @ApiOperation({ summary: 'Registrar nuevo repartidor con credenciales' })
   create(

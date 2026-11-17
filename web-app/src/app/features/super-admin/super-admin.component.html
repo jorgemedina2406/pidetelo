@@ -400,12 +400,18 @@
                 </span>
                 @if (isSidebarExpanded()) {
                   <span class="truncate flex-1 text-left font-semibold">Usuarios Registrados</span>
-                  <span class="px-2 py-0.5 rounded-full text-[10px] font-black"
-                        [class.bg-white/30]="activeTab() === 'users'"
-                        [class.bg-slate-200]="activeTab() !== 'users'"
-                        [class.dark:bg-slate-800]="activeTab() !== 'users'">
-                    {{ platformUsers().length }}
-                  </span>
+                  @if (pendingRidersCount() > 0) {
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500 text-white animate-pulse" title="Riders esperando validación de documentos">
+                      {{ pendingRidersCount() }} por validar
+                    </span>
+                  } @else {
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-black"
+                          [class.bg-white/30]="activeTab() === 'users'"
+                          [class.bg-slate-200]="activeTab() !== 'users'"
+                          [class.dark:bg-slate-800]="activeTab() !== 'users'">
+                      {{ platformUsers().length }}
+                    </span>
+                  }
                 }
               </button>
               @if (!isSidebarExpanded()) {
@@ -742,7 +748,8 @@
               [loading]="loadingUsers()"
               (refresh)="loadPlatformUsers()"
               (deleteUser)="onDeletePlatformUser($event)"
-              (toggleActive)="onTogglePlatformUserActive($event)">
+              (toggleActive)="onTogglePlatformUserActive($event)"
+              (verifyRider)="onVerifyRiderCertification($event)">
             </app-super-admin-users>
           }
 

@@ -214,6 +214,11 @@ export class SuperAdminComponent implements OnInit {
   readonly platformUsersCount = computed(() => this.platformUsers().length);
   readonly customerUsersCount = computed(() => this.platformUsers().filter(u => (u.role || '').toUpperCase().includes('CUSTOMER') || (u.role || '').toUpperCase().includes('CLIENT')).length);
   readonly riderUsersCount = computed(() => this.platformUsers().filter(u => (u.role || '').toUpperCase().includes('RIDER') || (u.role || '').toUpperCase().includes('MOTOR')).length);
+  readonly pendingRidersCount = computed(() => this.platformUsers().filter(u => {
+    const r = (u.role || '').toUpperCase();
+    const isRider = r.includes('RIDER') || r.includes('MOTOR');
+    return isRider && (!u.isCertified || u.verificationStatus === 'pending');
+  }).length);
   readonly merchantUsersCount = computed(() => this.platformUsers().filter(u => {
     const r = (u.role || '').toUpperCase();
     return r.includes('MERCHANT') || r.includes('OWNER') || r.includes('MANAGER') || r.includes('KITCHEN') || r.includes('ADMIN');
@@ -751,6 +756,19 @@ detectMerchantGps(): void {
       },
       error: (err) => {
         this.showToast('error', 'Error', err?.error?.message || 'No se pudo actualizar el estado.');
+      }
+    });
+  }
+
+  onVerifyRiderCertification(event: { riderId: string; isApproved: boolean }): void {
+    const action = event.isApproved ? 'Aprobado y Certificado' : 'Rechazado';
+    this.api.verifyRiderCertification(event.riderId, event.isApproved).subscribe({
+      next: () => {
+        this.showToast('success', `Repartidor ${action}`, `El estado del repartidor ha sido actualizado exitosamente.`);
+        this.loadPlatformUsers();
+      },
+      error: (err) => {
+        this.showToast('error', 'Error de Verificación', err?.message || 'No se pudo actualizar la certificación.');
       }
     });
   }

@@ -17,7 +17,7 @@
       </div>
 
       <!-- KPI Metrics Strip for Users -->
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <div (click)="userRoleFilter.set('all')" class="card-adaptive p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-brand-500 transition-all">
           <div class="text-[11px] font-bold text-slate-500 dark:text-slate-400">Total Registrados</div>
           <div class="text-xl font-black text-slate-900 dark:text-white mt-1">{{ platformUsersCount() }}</div>
@@ -30,8 +30,22 @@
           <div class="text-[11px] font-bold text-blue-600 dark:text-blue-400">Motorizados / Riders</div>
           <div class="text-xl font-black text-slate-900 dark:text-white mt-1">{{ riderUsersCount() }}</div>
         </div>
-        <div (click)="userRoleFilter.set('MERCHANT_OWNER')" class="card-adaptive p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-amber-500 transition-all">
-          <div class="text-[11px] font-bold text-amber-600 dark:text-amber-400">Personal Comercios</div>
+        <div (click)="userRoleFilter.set('RIDER')" class="card-adaptive p-3.5 rounded-2xl border cursor-pointer transition-all hover:scale-[1.02]"
+             [class.border-amber-400]="pendingRidersCount() > 0"
+             [class.bg-amber-50/50]="pendingRidersCount() > 0"
+             [class.dark:bg-amber-950/20]="pendingRidersCount() > 0"
+             [class.border-slate-200]="pendingRidersCount() === 0"
+             [class.dark:border-slate-800]="pendingRidersCount() === 0">
+          <div class="text-[11px] font-bold text-amber-600 dark:text-amber-400 flex items-center justify-between">
+            <span>Riders por Validar</span>
+            @if (pendingRidersCount() > 0) {
+              <span class="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
+            }
+          </div>
+          <div class="text-xl font-black text-amber-600 dark:text-amber-400 mt-1">{{ pendingRidersCount() }}</div>
+        </div>
+        <div (click)="userRoleFilter.set('MERCHANT_OWNER')" class="card-adaptive p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-purple-500 transition-all">
+          <div class="text-[11px] font-bold text-purple-600 dark:text-purple-400">Personal Comercios</div>
           <div class="text-xl font-black text-slate-900 dark:text-white mt-1">{{ merchantUsersCount() }}</div>
         </div>
       </div>
@@ -155,20 +169,39 @@
                   </td>
                   <td class="p-3.5 text-center">
                     <div class="flex items-center justify-center gap-1.5">
-                      @if (u.idDocumentUrl || u.selfieUrl) {
-                        @if (u.idDocumentUrl) {
-                          <a [href]="u.idDocumentUrl" target="_blank" rel="noopener noreferrer"
-                             title="Ver Cédula de Identidad en Storage"
-                             class="p-1.5 rounded-lg text-blue-600 dark:text-blue-400 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 text-xs font-bold transition-all cursor-pointer">
-                            <app-icon name="file-text" [size]="13"></app-icon>
-                          </a>
+                      @if (u.role === 'RIDER') {
+                        @if (!u.isCertified || u.verificationStatus === 'pending') {
+                          <button type="button"
+                                  (click)="openReviewModal(u)"
+                                  title="Revisar y Validar Cédula y Selfie de este motorizado"
+                                  class="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-extrabold flex items-center gap-1 shadow-sm transition-all cursor-pointer hover:scale-105 active:scale-95 animate-pulse">
+                            <app-icon name="shield-check" [size]="13"></app-icon>
+                            <span>Validar Docs</span>
+                          </button>
+                        } @else {
+                          <button type="button"
+                                  (click)="openReviewModal(u)"
+                                  title="Ver expediente y fotos de documentos del motorizado"
+                                  class="p-1.5 rounded-lg text-blue-600 dark:text-blue-400 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 text-xs font-bold transition-all cursor-pointer">
+                            <app-icon name="eye" [size]="13"></app-icon>
+                          </button>
                         }
-                        @if (u.selfieUrl) {
-                          <a [href]="u.selfieUrl" target="_blank" rel="noopener noreferrer"
-                             title="Ver Fotografía Selfie en Storage"
-                             class="p-1.5 rounded-lg text-purple-600 dark:text-purple-400 bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-900/60 text-xs font-bold transition-all cursor-pointer">
-                            <app-icon name="camera" [size]="13"></app-icon>
-                          </a>
+                      } @else {
+                        @if (u.idDocumentUrl || u.selfieUrl) {
+                          @if (u.idDocumentUrl) {
+                            <a [href]="u.idDocumentUrl" target="_blank" rel="noopener noreferrer"
+                               title="Ver Documento en Storage"
+                               class="p-1.5 rounded-lg text-blue-600 dark:text-blue-400 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 text-xs font-bold transition-all cursor-pointer">
+                              <app-icon name="file-text" [size]="13"></app-icon>
+                            </a>
+                          }
+                          @if (u.selfieUrl) {
+                            <a [href]="u.selfieUrl" target="_blank" rel="noopener noreferrer"
+                               title="Ver Fotografía en Storage"
+                               class="p-1.5 rounded-lg text-purple-600 dark:text-purple-400 bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-900/60 text-xs font-bold transition-all cursor-pointer">
+                              <app-icon name="camera" [size]="13"></app-icon>
+                            </a>
+                          }
                         }
                       }
                       <button type="button"
@@ -210,4 +243,167 @@
           </table>
         </div>
       </div>
+
+  <!-- MODAL DE REVISIÓN Y VALIDACIÓN DE DOCUMENTOS DE REPARTIDOR -->
+  @if (selectedRiderForReview()) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-fade-in"
+         (click)="closeReviewModal()">
+      <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-2xl max-h-[92vh] overflow-hidden shadow-2xl flex flex-col animate-scale-up"
+           (click)="$event.stopPropagation()">
+
+        <!-- Modal Header -->
+        <div class="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-850/50">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+              <app-icon name="shield-check" [size]="20"></app-icon>
+            </div>
+            <div>
+              <h3 class="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                <span>Validación de Expediente del Repartidor</span>
+                @if (selectedRiderForReview().isCertified || selectedRiderForReview().verificationStatus === 'verified') {
+                  <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                    ✓ Certificado
+                  </span>
+                } @else {
+                  <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 animate-pulse">
+                    ⏳ En Revisión
+                  </span>
+                }
+              </h3>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Revisa la cédula de identidad y fotografía selfie para aprobar el acceso a despacho.</p>
+            </div>
+          </div>
+          <button (click)="closeReviewModal()" class="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+            <app-icon name="x" [size]="18"></app-icon>
+          </button>
+        </div>
+
+        <!-- Modal Body (Scrollable) -->
+        <div class="p-5 overflow-y-auto space-y-5">
+          <!-- Info del Repartidor -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 dark:bg-slate-800/50 p-3.5 rounded-2xl border border-slate-200/60 dark:border-slate-800">
+            <div>
+              <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Nombre Completo</div>
+              <div class="text-xs font-black text-slate-900 dark:text-white mt-0.5 truncate">{{ selectedRiderForReview().name }}</div>
+            </div>
+            <div>
+              <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Teléfono Móvil</div>
+              <div class="text-xs font-black text-slate-900 dark:text-white mt-0.5">{{ selectedRiderForReview().phone || 'N/A' }}</div>
+            </div>
+            <div>
+              <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Correo Electrónico</div>
+              <div class="text-xs font-black text-slate-900 dark:text-white mt-0.5 truncate">{{ selectedRiderForReview().email || 'N/A' }}</div>
+            </div>
+            <div>
+              <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Vehículo / Placa</div>
+              <div class="text-xs font-black text-slate-900 dark:text-white mt-0.5">{{ selectedRiderForReview().branchName || 'Moto Estándar' }}</div>
+            </div>
+          </div>
+
+          <!-- Documentos Visuales: Cédula y Selfie -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <!-- Cédula de Identidad -->
+            <div class="border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 flex flex-col bg-white dark:bg-slate-900 shadow-sm">
+              <div class="flex items-center justify-between mb-2.5">
+                <span class="text-xs font-black text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                  <app-icon name="file-text" [size]="14" className="text-blue-500"></app-icon>
+                  <span>Cédula de Identidad</span>
+                </span>
+                @if (selectedRiderForReview().idDocumentUrl) {
+                  <a [href]="selectedRiderForReview().idDocumentUrl" target="_blank" rel="noopener noreferrer"
+                     class="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
+                    <span>Pantalla Completa</span>
+                    <app-icon name="external-link" [size]="11"></app-icon>
+                  </a>
+                }
+              </div>
+              <div class="w-full h-52 rounded-xl bg-slate-100 dark:bg-slate-800 overflow-hidden flex items-center justify-center border border-slate-200/60 dark:border-slate-700/60 relative group">
+                @if (selectedRiderForReview().idDocumentUrl) {
+                  <img [src]="selectedRiderForReview().idDocumentUrl" alt="Cédula de Identidad"
+                       class="w-full h-full object-contain cursor-zoom-in"
+                       (click)="openLink(selectedRiderForReview().idDocumentUrl)" />
+                } @else {
+                  <div class="text-center p-4 text-slate-400">
+                    <app-icon name="file-text" [size]="32" className="mx-auto mb-1 opacity-50"></app-icon>
+                    <p class="text-[11px] font-bold">No se cargó foto de la cédula</p>
+                  </div>
+                }
+              </div>
+            </div>
+
+            <!-- Selfie Frontal en Vivo -->
+            <div class="border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 flex flex-col bg-white dark:bg-slate-900 shadow-sm">
+              <div class="flex items-center justify-between mb-2.5">
+                <span class="text-xs font-black text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                  <app-icon name="camera" [size]="14" className="text-purple-500"></app-icon>
+                  <span>Selfie Frontal (Biometría)</span>
+                </span>
+                @if (selectedRiderForReview().selfieUrl) {
+                  <a [href]="selectedRiderForReview().selfieUrl" target="_blank" rel="noopener noreferrer"
+                     class="text-[10px] font-bold text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1">
+                    <span>Pantalla Completa</span>
+                    <app-icon name="external-link" [size]="11"></app-icon>
+                  </a>
+                }
+              </div>
+              <div class="w-full h-52 rounded-xl bg-slate-100 dark:bg-slate-800 overflow-hidden flex items-center justify-center border border-slate-200/60 dark:border-slate-700/60 relative group">
+                @if (selectedRiderForReview().selfieUrl) {
+                  <img [src]="selectedRiderForReview().selfieUrl" alt="Selfie Frontal"
+                       class="w-full h-full object-contain cursor-zoom-in"
+                       (click)="openLink(selectedRiderForReview().selfieUrl)" />
+                } @else {
+                  <div class="text-center p-4 text-slate-400">
+                    <app-icon name="user" [size]="32" className="mx-auto mb-1 opacity-50"></app-icon>
+                    <p class="text-[11px] font-bold">No se cargó fotografía selfie</p>
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+
+          <!-- Mensaje Explicativo -->
+          <div class="p-3.5 rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 flex items-start gap-2.5">
+            <app-icon name="info" [size]="16" className="text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5"></app-icon>
+            <p class="text-xs text-blue-800 dark:text-blue-300 leading-relaxed">
+              Al presionar <strong>"Aprobar y Certificar Repartidor"</strong>, el motorizado quedará inmediatamente activo y validado en la plataforma. Podrá conectarse a su App móvil, reportar telemetría GPS y recibir órdenes tanto de comercios aliados como despachos independientes.
+            </p>
+          </div>
+        </div>
+
+        <!-- Modal Footer (Actions) -->
+        <div class="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-850/50 gap-3">
+          <button type="button"
+                  (click)="closeReviewModal()"
+                  class="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer">
+            Cerrar
+          </button>
+
+          <div class="flex items-center gap-2">
+            @if (selectedRiderForReview().isCertified || selectedRiderForReview().verificationStatus === 'verified') {
+              <button type="button"
+                      (click)="onRejectRider(selectedRiderForReview())"
+                      class="px-4 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-900/60 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer">
+                <app-icon name="x-circle" [size]="14"></app-icon>
+                <span>Revocar Certificación</span>
+              </button>
+            } @else {
+              <button type="button"
+                      (click)="onRejectRider(selectedRiderForReview())"
+                      class="px-4 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-900/60 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer">
+                <app-icon name="x-circle" [size]="14"></app-icon>
+                <span>Rechazar Documentos</span>
+              </button>
+              <button type="button"
+                      (click)="onApproveRider(selectedRiderForReview())"
+                      class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black flex items-center gap-2 shadow-md shadow-emerald-600/20 transition-all cursor-pointer hover:scale-[1.02] active:scale-95">
+                <app-icon name="check-circle" [size]="15"></app-icon>
+                <span>✓ Aprobar y Certificar Repartidor</span>
+              </button>
+            }
+          </div>
+        </div>
+
+      </div>
     </div>
+  }
+</div>

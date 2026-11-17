@@ -707,6 +707,51 @@ export class RidersService {
   }
 
   // ==============================================================================
+  // VALIDACIÓN MANUAL / SUPER ADMIN DE DOCUMENTOS DE REPARTIDORES
+  // ==============================================================================
+  async verifyCertification(id: string, isApproved: boolean, notes?: string) {
+    const sb = this.supabase.getClient();
+    const verificationStatus = isApproved ? 'verified' : 'rejected';
+    const isCertified = isApproved;
+    const certifiedAt = isApproved ? new Date().toISOString() : null;
+
+    // Actualizar en base de datos Supabase
+    const { data, error } = await sb.from('riders').update({
+      is_certified: isCertified,
+      verification_status: verificationStatus,
+      certified_at: certifiedAt,
+      status: isApproved ? 'available' : 'offline',
+      is_active: isApproved ? true : false,
+    }).eq('id', id).select().maybeSingle();
+
+    if (error) {
+      console.error('[RidersService] Error actualizando verificación:', error.message);
+      throw new InternalServerErrorException(`Error al actualizar estado en base de datos: ${error.message}`);
+    }
+
+    // Actualizar en memoria local si existe
+    const local = this.localRiders.get(id);
+    if (local) {
+      local.is_certified = isCertified;
+      local.verification_status = verificationStatus;
+      local.certified_at = certifiedAt;
+      if (isApproved) {
+        local.status = 'available';
+        local.is_active = true;
+      }
+      this.saveToDisk();
+    }
+
+    return {
+      success: true,
+      isCertified,
+      verificationStatus,
+      message: isApproved ? 'Motorizado verificado y certificado exitosamente.' : 'Documentación rechazada.',
+      rider: data || local,
+    };
+  }
+
+  // ==============================================================================
   // REGISTRO DE RIDERS CON CERTIFICACIÓN Y VALIDACIÓN AUTOMÁTICA DE IDENTIDAD
   // ==============================================================================
   async registerWithVerification(payload: {

@@ -555,6 +555,30 @@ export class ApiService {
     );
   }
 
+  verifyRiderCertification(riderId: string, isApproved: boolean, notes?: string): Observable<any> {
+    const url = `${this.baseUrl}/riders/${riderId}/verify-certification`;
+    return this.http.post<any>(url, { isApproved, notes }).pipe(
+      catchError(async (err) => {
+        console.warn('[ApiService] Error en backend verify-certification, persistiendo directamente en Supabase:', err);
+        const client = this.supabase.rawClient;
+        if (client) {
+          const { error } = await client.from('riders').update({
+            is_certified: isApproved,
+            verification_status: isApproved ? 'verified' : 'rejected',
+            certified_at: isApproved ? new Date().toISOString() : null,
+            status: isApproved ? 'available' : 'offline',
+            is_active: isApproved ? true : false
+          }).eq('id', riderId);
+          if (error) {
+            console.error('[ApiService] Error actualizando certificación en Supabase:', error);
+            throw error;
+          }
+        }
+        return { success: true, isCertified: isApproved };
+      })
+    );
+  }
+
   getTenantReviews(tenantId: string): Observable<any[]> {
     return this.http.get<any[]>(`${this.baseUrl}/tenants/${tenantId}/reviews`).pipe(
       catchError(err => {
