@@ -5,6 +5,7 @@ import 'core/config/app_config.dart';
 import 'core/services/session_service.dart';
 import 'core/services/cart_service.dart';
 import 'core/services/dolar_api_service.dart';
+import 'core/services/notification_service.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/screens/customer_login_screen.dart';
 import 'features/auth/screens/splash_screen.dart';
@@ -53,6 +54,14 @@ void main() async {
     DolarApiService().init();
   } catch (e) {
     debugPrint('[Main] DolarApiService init error: $e');
+  }
+
+  // Initialize Remote Firebase Push Notifications
+  try {
+    final customerId = sessionService.currentUser?.id;
+    NotificationService().init(customerId: customerId);
+  } catch (e) {
+    debugPrint('[Main] NotificationService init error: $e');
   }
 
   runApp(DeliveryApp(sessionService: sessionService));

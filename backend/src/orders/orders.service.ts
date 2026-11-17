@@ -1,12 +1,14 @@
 import { Injectable, NotFoundException, InternalServerErrorException, BadRequestException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service.js';
 import { PlansService } from '../plans/plans.service.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 
 @Injectable()
 export class OrdersService {
   constructor(
     private supabase: SupabaseService,
     private plansService: PlansService,
+    private notificationsService: NotificationsService,
   ) {}
 
   async create(orderPayload: any) {
@@ -380,6 +382,11 @@ export class OrdersService {
       throw new InternalServerErrorException(`Error updating order status: ${error.message}`);
     }
 
+    // Disparar Push Notification al cliente si cambia el estado
+    try {
+      this.notificationsService.notifyOrderStatus(data || { id, status: dbStatus }, dbStatus);
+    } catch (_) {}
+
     // Registro automático y transparente en el Libro de Comisiones y Reparto al entregarse el pedido
     if (dbStatus === 'delivered' && data) {
       const deliveryFee = Number(data.delivery_fee) || 0;
@@ -447,13 +454,22 @@ export class OrdersService {
         .single();
 
       if (!fallback.error && fallback.data) {
-        return {
+        const resObj = {
           ...fallback.data,
           driver_id: riderId
         };
+        try {
+          this.notificationsService.notifyRiderAssigned(resObj, riderId);
+        } catch (_) {}
+        return resObj;
       }
       throw new InternalServerErrorException(`Error assigning rider: ${error.message}`);
     }
+
+    try {
+      this.notificationsService.notifyRiderAssigned(data, riderId);
+    } catch (_) {}
+
     return data;
   }
 

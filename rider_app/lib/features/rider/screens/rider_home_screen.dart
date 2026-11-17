@@ -9,6 +9,7 @@ import '../../../core/services/dolar_api_service.dart';
 import '../../../core/services/rider_service.dart';
 import '../../../core/services/rider_location_service.dart';
 import '../../../core/services/background_order_service.dart';
+import '../../../core/services/notification_service.dart';
 import '../../../core/services/session_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../auth/screens/rider_login_screen.dart';
@@ -36,6 +37,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
     _riderService.init(riderId);
     _dolarApi.init();
     if (riderId != null && riderId.isNotEmpty) {
+      NotificationService().init(riderId: riderId);
       BackgroundOrderService().startService(riderId);
       _locationService.startTracking(riderId);
       _locationService.addListener(_onLocationUpdate);

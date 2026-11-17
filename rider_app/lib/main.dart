@@ -47,7 +47,8 @@ void main() async {
     debugPrint('[RiderApp] DolarApiService error: $e');
   });
 
-  NotificationService().init().catchError((e) {
+  final currentRiderId = sessionService.currentRider?.id;
+  NotificationService().init(riderId: currentRiderId).catchError((e) {
     debugPrint('[RiderApp] NotificationService error: $e');
   });
 

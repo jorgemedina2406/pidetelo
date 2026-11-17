@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/models/user_model.dart';
 import '../../../core/services/session_service.dart';
+import '../../../core/services/notification_service.dart';
 import '../widgets/animated_delivery_mascot.dart';
 import '../../customer/screens/customer_home_screen.dart';
 
@@ -336,6 +337,9 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
     );
 
     await widget.sessionService.saveUser(customer);
+    try {
+      NotificationService().init(customerId: customer.id);
+    } catch (_) {}
 
     if (!mounted) return;
     setState(() => _isLoading = false);

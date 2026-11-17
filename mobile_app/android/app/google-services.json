@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "502163175277",
+    "project_id": "pidetelo-30079",
+    "storage_bucket": "pidetelo-30079.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:502163175277:android:d92fdd201034d0522c8c64",
+        "android_client_info": {
+          "package_name": "com.deliveryhub.mobile_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCWo5VbKn45R9qFrbcavbRdcrPVbpkRwdw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:502163175277:android:3a7671ad7a2263f72c8c64",
+        "android_client_info": {
+          "package_name": "com.pidetelo.rider"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCWo5VbKn45R9qFrbcavbRdcrPVbpkRwdw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -29,6 +29,9 @@ ios/Podfile.lock
 .env
 .env.*
 !.env.example
+*firebase-service-account*.json
+*firebase-admin*.json
+*serviceAccountKey*.json
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
