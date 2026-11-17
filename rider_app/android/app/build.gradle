@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.deliveryhub.rider_app"
+    namespace = "com.pidetelo.rider"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -21,7 +21,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.deliveryhub.rider_app"
+        applicationId = "com.pidetelo.rider"
         minSdk = 23
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

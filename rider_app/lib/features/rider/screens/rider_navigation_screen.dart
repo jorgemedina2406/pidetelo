@@ -676,7 +676,7 @@ class _RiderNavigationScreenState extends State<RiderNavigationScreen>
             children: [
               TileLayer(
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'com.deliveryhub.rider_app',
+                userAgentPackageName: 'com.pidetelo.rider',
                 maxZoom: 19,
               ),
 

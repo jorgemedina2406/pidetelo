@@ -1,4 +1,4 @@
-package com.deliveryhub.rider_app
+package com.pidetelo.rider
 
 import io.flutter.embedding.android.FlutterActivity
 
