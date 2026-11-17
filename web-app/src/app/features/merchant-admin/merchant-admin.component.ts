@@ -860,6 +860,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
   readonly receivedOrders = computed(() => this.filteredOrders().filter(o => o.status === 'received'));
   readonly kitchenOrders = computed(() => this.filteredOrders().filter(o => ['in_kitchen', 'assigned_driver', 'at_merchant', 'picked_up'].includes(o.status)));
   readonly transitOrders = computed(() => this.filteredOrders().filter(o => o.status === 'on_the_way'));
+  readonly activeOrdersCount = computed(() => this.receivedOrders().length + this.kitchenOrders().length + this.transitOrders().length);
 
   // Pedidos Completados (delivered / cancelled) para el Historial
   readonly completedOrders = computed(() => {

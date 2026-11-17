@@ -117,7 +117,7 @@
             <span class="truncate flex-1 text-left font-semibold">{{ i18n.t('ma.orders') }}</span>
             <span class="px-2 py-0.5 rounded-full text-[10px] font-black" [class.bg-white/30]="activeTab() === 'orders'"
               [class.bg-slate-200]="activeTab() !== 'orders'" [class.dark:bg-slate-800]="activeTab() !== 'orders'">
-              {{ orders().length }}
+              {{ activeOrdersCount() }}
             </span>
             }
           </button>
@@ -126,7 +126,7 @@
           <div
             class="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 flex items-center gap-2">
             <span>{{ i18n.t('ma.orders') }}</span>
-            <span class="px-1.5 py-0.2 rounded-full bg-brand-500 text-white text-[10px]">{{ orders().length }}</span>
+            <span class="px-1.5 py-0.2 rounded-full bg-brand-500 text-white text-[10px]">{{ activeOrdersCount() }}</span>
           </div>
           }
         </div>
