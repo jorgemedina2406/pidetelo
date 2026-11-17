@@ -15,6 +15,36 @@ class MerchantEarningSummary {
   final double totalEarned;
   final double totalWithdrawn;
   final int ordersCount;
+  final String payoutMode; // 'ON_DEMAND', 'WEEKLY', 'DAILY', 'BIWEEKLY'
+  final int payoutDayOfWeek; // 1 = Lunes, etc.
+  final String payoutHour;
+  final double minWithdrawalAmount;
+  final String payoutNotes;
+
+  bool get isOnDemand => payoutMode.toUpperCase() == 'ON_DEMAND';
+
+  bool get canWithdrawOnDemand =>
+      isOnDemand && availableBalance >= minWithdrawalAmount;
+
+  String get scheduleDescription {
+    if (isOnDemand) {
+      return 'Retiro a libre demanda (Mín. \$${minWithdrawalAmount.toStringAsFixed(2)})';
+    }
+    const days = ['', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+    if (payoutMode.toUpperCase() == 'WEEKLY') {
+      final dayName = (payoutDayOfWeek >= 1 && payoutDayOfWeek <= 7)
+          ? days[payoutDayOfWeek]
+          : 'Lunes';
+      return 'Liquidación semanal: cada $dayName ($payoutHour)';
+    }
+    if (payoutMode.toUpperCase() == 'DAILY') {
+      return 'Liquidación diaria: al cierre de jornada ($payoutHour)';
+    }
+    if (payoutMode.toUpperCase() == 'BIWEEKLY') {
+      return 'Liquidación quincenal: días 15 y fin de mes';
+    }
+    return 'Liquidación automática programada por el comercio';
+  }
 
   double get availableBalance =>
       (totalEarned - totalWithdrawn).clamp(0.0, double.infinity);
@@ -25,6 +55,11 @@ class MerchantEarningSummary {
     required this.totalEarned,
     required this.totalWithdrawn,
     required this.ordersCount,
+    this.payoutMode = 'WEEKLY',
+    this.payoutDayOfWeek = 1,
+    this.payoutHour = '20:00',
+    this.minWithdrawalAmount = 5.0,
+    this.payoutNotes = '',
   });
 }
 
@@ -34,6 +69,11 @@ class _MerchantAcc {
   double totalEarned = 0.0;
   double totalWithdrawn = 0.0;
   int ordersCount = 0;
+  String payoutMode = 'WEEKLY';
+  int payoutDayOfWeek = 1;
+  String payoutHour = '20:00';
+  double minWithdrawalAmount = 5.0;
+  String payoutNotes = '';
   _MerchantAcc(this.tenantId, this.merchantName);
 }
 
@@ -163,6 +203,72 @@ class RiderService extends ChangeNotifier {
     return bal < 0.0 ? 0.0 : bal;
   }
 
+  // Mapa en memoria de políticas de liquidación por comercio (tenantId -> Map)
+  final Map<String, Map<String, dynamic>> _merchantPolicies = {};
+
+  void _extractPoliciesFromOrders(List<dynamic> rows) {
+    for (final row in rows) {
+      if (row is! Map<String, dynamic>) continue;
+      final tId = (row['tenant_id'] ?? '').toString();
+      if (tId.isEmpty) continue;
+
+      Map<String, dynamic>? policy;
+
+      // 1. Check branches.currency_settings.riderPayoutPolicy
+      final branch = row['branches'] as Map<String, dynamic>?;
+      if (branch != null) {
+        final cur = branch['currency_settings'] as Map<String, dynamic>?;
+        if (cur != null && (cur['riderPayoutPolicy'] != null || cur['rider_payout_policy'] != null)) {
+          final rawPol = cur['riderPayoutPolicy'] ?? cur['rider_payout_policy'];
+          if (rawPol is Map<String, dynamic>) {
+            policy = rawPol;
+          }
+        }
+      }
+
+      // 2. Check tenants.rider_payout_policy
+      if (policy == null) {
+        final tenant = row['tenants'] as Map<String, dynamic>?;
+        if (tenant != null && (tenant['rider_payout_policy'] != null || tenant['riderPayoutPolicy'] != null)) {
+          final rawPol = tenant['rider_payout_policy'] ?? tenant['riderPayoutPolicy'];
+          if (rawPol is Map<String, dynamic>) {
+            policy = rawPol;
+          }
+        }
+      }
+
+      if (policy != null) {
+        _merchantPolicies[tId] = policy;
+      }
+    }
+  }
+
+  /// Consulta la política de liquidación directamente si no está en caché
+  Future<void> syncMerchantPolicies(List<String> tenantIds) async {
+    final supabase = Supabase.instance.client;
+    for (final tId in tenantIds) {
+      if (tId.isEmpty || tId == 'general' || _merchantPolicies.containsKey(tId)) continue;
+      try {
+        final res = await supabase
+            .from('branches')
+            .select('currency_settings')
+            .eq('company_id', tId)
+            .limit(1)
+            .maybeSingle();
+
+        if (res != null) {
+          final cur = res['currency_settings'] as Map<String, dynamic>?;
+          if (cur != null) {
+            final rawPol = cur['riderPayoutPolicy'] ?? cur['rider_payout_policy'];
+            if (rawPol is Map<String, dynamic>) {
+              _merchantPolicies[tId] = rawPol;
+            }
+          }
+        }
+      } catch (_) {}
+    }
+  }
+
   List<MerchantEarningSummary> get merchantBalances {
     if (_currentRiderId == null || _currentRiderId!.isEmpty) return [];
 
@@ -177,6 +283,16 @@ class RiderService extends ChangeNotifier {
       final acc = map.putIfAbsent(tId, () => _MerchantAcc(tId, mName));
       acc.totalEarned += o.deliveryFee;
       acc.ordersCount += 1;
+
+      // Asignar datos de política conocida
+      final pol = _merchantPolicies[tId];
+      if (pol != null) {
+        acc.payoutMode = pol['mode']?.toString() ?? 'WEEKLY';
+        acc.payoutDayOfWeek = (pol['payoutDayOfWeek'] as num?)?.toInt() ?? 1;
+        acc.payoutHour = pol['payoutHour']?.toString() ?? '20:00';
+        acc.minWithdrawalAmount = (pol['minWithdrawalAmount'] as num?)?.toDouble() ?? 5.0;
+        acc.payoutNotes = pol['payoutNotes']?.toString() ?? '';
+      }
     }
 
     // Solo descuenta retiros solicitados que pertenezcan explícitamente a este rider
@@ -198,6 +314,11 @@ class RiderService extends ChangeNotifier {
               totalEarned: a.totalEarned,
               totalWithdrawn: a.totalWithdrawn,
               ordersCount: a.ordersCount,
+              payoutMode: a.payoutMode,
+              payoutDayOfWeek: a.payoutDayOfWeek,
+              payoutHour: a.payoutHour,
+              minWithdrawalAmount: a.minWithdrawalAmount,
+              payoutNotes: a.payoutNotes,
             ))
         .toList();
   }
@@ -1082,6 +1203,19 @@ class RiderService extends ChangeNotifier {
 
       _completedDeliveries.clear();
       _completedDeliveries.addAll(list);
+
+      // Extraer y sincronizar políticas de los comercios
+      _extractPoliciesFromOrders(res);
+      final tenantIdsToSync = _completedDeliveries
+          .map((o) => o.tenantId)
+          .where((id) => id.isNotEmpty && id != 'general')
+          .toSet()
+          .toList();
+      if (tenantIdsToSync.isNotEmpty) {
+        syncMerchantPolicies(tenantIdsToSync).then((_) {
+          notifyListeners();
+        });
+      }
 
       // Guardar en almacenamiento local asociado únicamente a este rider
       try {

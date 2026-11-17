@@ -208,7 +208,16 @@
     "rating": 5,
     "review_count": 1,
     "reviewCount": 1,
-    "planExpiresAt": "2027-01-06T23:59:59.000Z"
+    "planExpiresAt": "2027-01-06T23:59:59.000Z",
+    "rider_payout_policy": {
+      "mode": "WEEKLY",
+      "payoutDayOfWeek": 1,
+      "payoutHour": "20:00",
+      "minWithdrawalAmount": 5,
+      "paymentMethod": "PAGO_MOVIL",
+      "payoutNotes": "Liquidación semanal directa por Pago Móvil todos los Lunes.",
+      "emailNotifications": true
+    }
   },
   "5ecb4b6c-6ad8-45a2-8a5d-26af406cd31c": {
     "category": "Restaurantes",

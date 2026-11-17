@@ -722,6 +722,14 @@ export class TenantsService {
       if (updateData.delivery_tiers !== undefined || updateData.deliveryTiers !== undefined) {
         globalDeliveryUpdate.delivery_tiers = updateData.delivery_tiers || updateData.deliveryTiers;
       }
+      if (updateData.rider_payout_policy !== undefined || updateData.riderPayoutPolicy !== undefined) {
+        const cur = (data && data.currency_settings) || {};
+        globalDeliveryUpdate.currency_settings = {
+          ...cur,
+          riderPayoutPolicy: metaToSave.rider_payout_policy,
+          rider_payout_policy: metaToSave.rider_payout_policy,
+        };
+      }
 
       if (Object.keys(globalDeliveryUpdate).length > 1) {
         await this.supabase

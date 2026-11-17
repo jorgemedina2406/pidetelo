@@ -296,13 +296,41 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
       return;
     }
 
-    final merchantList = _riderService.merchantBalances;
-    MerchantEarningSummary? selectedMerchant = preselectedMerchant;
-    if (selectedMerchant == null && merchantList.isNotEmpty) {
-      selectedMerchant = merchantList.firstWhere(
-        (m) => m.availableBalance > 0,
-        orElse: () => merchantList.first,
+    // Filtrar comercios donde realmente se pueda retirar a libre demanda
+    final merchantList = _riderService.merchantBalances
+        .where((m) => m.isOnDemand && m.availableBalance > 0)
+        .toList();
+
+    // Si el comercio preseleccionado no es ON_DEMAND, no permitir retiro manual
+    if (preselectedMerchant != null && !preselectedMerchant.isOnDemand) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${preselectedMerchant.merchantName} liquida por corte programado (${preselectedMerchant.scheduleDescription}). Los pagos se realizan automáticamente a tu cuenta.',
+          ),
+          backgroundColor: const Color(0xFF0F172A),
+          duration: const Duration(seconds: 4),
+        ),
       );
+      return;
+    }
+
+    if (merchantList.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Tus comercios asociados operan con liquidación programada automática. No requieres solicitar retiro manual.',
+          ),
+          backgroundColor: const Color(0xFF0F172A),
+          duration: const Duration(seconds: 4),
+        ),
+      );
+      return;
+    }
+
+    MerchantEarningSummary? selectedMerchant = preselectedMerchant;
+    if (selectedMerchant == null || !selectedMerchant.isOnDemand) {
+      selectedMerchant = merchantList.first;
     }
 
     final amountCtrl = TextEditingController();
@@ -524,9 +552,16 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
                         return;
                       }
 
-                      if (enteredAmount > maxBalance) {
+                      if (selectedMerchant != null && !selectedMerchant!.isOnDemand) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('El monto supera el saldo disponible de este comercio.')),
+                          SnackBar(content: Text('${selectedMerchant!.merchantName} liquida por corte programado (${selectedMerchant!.scheduleDescription}).')),
+                        );
+                        return;
+                      }
+
+                      if (selectedMerchant != null && enteredAmount < selectedMerchant!.minWithdrawalAmount) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('El monto mínimo de retiro para este comercio es de \$${selectedMerchant!.minWithdrawalAmount.toStringAsFixed(2)}.')),
                         );
                         return;
                       }
@@ -1662,17 +1697,44 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
               Row(
                 children: [
                   Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () => _showWithdrawalModal(context),
-                      icon: const Icon(Icons.arrow_upward_rounded, size: 16),
-                      label: Text('Retirar Ganancias', style: GoogleFonts.outfit(fontWeight: FontWeight.w700)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: const Color(0xFF064E3B),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      ),
-                    ),
+                    child: merchantBalances.any((m) => m.isOnDemand && m.availableBalance > 0)
+                        ? ElevatedButton.icon(
+                            onPressed: () => _showWithdrawalModal(context),
+                            icon: const Icon(Icons.arrow_upward_rounded, size: 16),
+                            label: Text('Retirar Ganancias (Libre Demanda)', style: GoogleFonts.outfit(fontWeight: FontWeight.w700)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: const Color(0xFF064E3B),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            ),
+                          )
+                        : Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: Colors.white24),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.event_available_rounded, size: 16, color: Color(0xFFA7F3D0)),
+                                const SizedBox(width: 8),
+                                Flexible(
+                                  child: Text(
+                                    'Liquidación automática por corte programado',
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                   ),
                 ],
               ),
@@ -1781,22 +1843,75 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
                         ),
                       ),
                       if (hasBalance)
-                        ElevatedButton(
-                          onPressed: () => _showWithdrawalModal(context, m),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primary,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                            minimumSize: Size.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          ),
+                        m.isOnDemand
+                            ? ElevatedButton(
+                                onPressed: () => _showWithdrawalModal(context, m),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.primary,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                  minimumSize: Size.zero,
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
+                                child: Text(
+                                  'Retirar',
+                                  style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w700),
+                                ),
+                              )
+                            : Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF0F172A),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: Colors.white12),
+                                ),
+                                child: Text(
+                                  'Programado',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFFA7F3D0),
+                                  ),
+                                ),
+                              ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  // Banner informativo de cronograma de liquidación del comercio
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: m.isOnDemand
+                          ? AppTheme.primary.withOpacity(0.08)
+                          : const Color(0xFF0F172A),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: m.isOnDemand
+                            ? AppTheme.primary.withOpacity(0.2)
+                            : Colors.white10,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          m.isOnDemand ? Icons.flash_on_rounded : Icons.calendar_today_rounded,
+                          size: 13,
+                          color: m.isOnDemand ? AppTheme.primary : const Color(0xFF94A3B8),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
                           child: Text(
-                            'Retirar',
-                            style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w700),
+                            m.scheduleDescription,
+                            style: GoogleFonts.outfit(
+                              fontSize: 11,
+                              color: m.isOnDemand ? AppTheme.primary : const Color(0xFFCBD5E1),
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
-                    ],
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 12),
                   Container(

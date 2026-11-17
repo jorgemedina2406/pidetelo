@@ -2832,6 +2832,23 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
           riderPayoutPolicy: res,
           rider_payout_policy: res
         }));
+
+        // Sincronizar en branches en Supabase directamente para disponibilidad inmediata en apps móviles
+        try {
+          const currentCur = this.currentTenant().currencySettings || {};
+          this.supabase.client
+            .from('branches')
+            .update({
+              currency_settings: {
+                ...currentCur,
+                riderPayoutPolicy: res,
+                rider_payout_policy: res,
+              }
+            })
+            .eq('company_id', tid)
+            .then(() => {});
+        } catch (_) {}
+
         this.isSavedNotificationVisible.set(true);
         setTimeout(() => this.isSavedNotificationVisible.set(false), 3000);
       },
