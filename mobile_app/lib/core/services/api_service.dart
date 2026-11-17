@@ -917,30 +917,43 @@ class ApiService {
         }
       }
 
+      final currentUserId = supabase.auth.currentUser?.id ?? SessionService().currentUser?.id;
+      final orderInsertMap = <String, dynamic>{
+        'tenant_id': resolvedTenantId,
+        'branch_id': validBranchId,
+        'order_number': order.orderNumber,
+        'source': 'mobile_app',
+        'status': 'received',
+        'fulfillment_type': 'delivery',
+        'payment_method': 'mobile_transfer',
+        'customer_name': order.customerName.isNotEmpty ? order.customerName : 'Cliente',
+        'customer_phone': order.customerPhone.isNotEmpty ? order.customerPhone : '04120000000',
+        'delivery_address': order.customerAddress.isNotEmpty ? order.customerAddress : 'Dirección de entrega',
+        'delivery_lat': order.customerLat,
+        'delivery_lng': order.customerLng,
+        'subtotal': order.subtotal,
+        'delivery_fee': order.deliveryFee,
+        'total': order.total,
+        'notes': '[PIN:${order.pin}]',
+      };
+      if (currentUserId != null && currentUserId.isNotEmpty) {
+        orderInsertMap['user_id'] = currentUserId;
+      }
+
       final inserted = await supabase
           .from('orders')
-          .insert({
-            'tenant_id': resolvedTenantId,
-            'branch_id': validBranchId,
-            'order_number': order.orderNumber,
-            'source': 'mobile_app',
-            'status': 'received',
-            'fulfillment_type': 'delivery',
-            'payment_method': 'mobile_transfer',
-            'customer_name': order.customerName.isNotEmpty ? order.customerName : 'Cliente',
-            'customer_phone': order.customerPhone.isNotEmpty ? order.customerPhone : '04120000000',
-            'delivery_address': order.customerAddress.isNotEmpty ? order.customerAddress : 'Dirección de entrega',
-            'delivery_lat': order.customerLat,
-            'delivery_lng': order.customerLng,
-            'subtotal': order.subtotal,
-            'delivery_fee': order.deliveryFee,
-            'total': order.total,
-            'notes': '[PIN:${order.pin}]',
-          })
+          .insert(orderInsertMap)
           .select()
           .single();
 
       final orderId = inserted['id']?.toString();
+      if (orderId != null) {
+        // Suscribir automáticamente al cliente al topic de este pedido para notificaciones push en tiempo real
+        try {
+          NotificationService().subscribeToOrder(orderId);
+          NotificationService().subscribeToOrder(order.orderNumber);
+        } catch (_) {}
+      }
       if (orderId != null && order.items.isNotEmpty) {
         final itemsPayload = order.items.map((i) => {
           'order_id': orderId,

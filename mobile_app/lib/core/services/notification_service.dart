@@ -12,7 +12,8 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   try {
     await Firebase.initializeApp();
   } catch (_) {}
-  debugPrint('[FCM Background Customer] Push recibido con app cerrada: ${message.messageId}');
+  debugPrint(
+      '[FCM Background Customer] Push recibido con app cerrada: ${message.messageId}');
   final notification = message.notification;
   if (notification != null) {
     NotificationService().showRawNotification(
@@ -27,7 +28,8 @@ class NotificationService {
   factory NotificationService() => _instance;
   NotificationService._internal();
 
-  final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _notificationsPlugin =
+      FlutterLocalNotificationsPlugin();
   bool _isInitialized = false;
   String? _currentCustomerId;
 
@@ -42,18 +44,21 @@ class NotificationService {
 
     try {
       // 1. Inicializar notificaciones locales
-      const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+      const androidSettings =
+          AndroidInitializationSettings('@mipmap/ic_launcher');
       const iosSettings = DarwinInitializationSettings(
         requestAlertPermission: true,
         requestBadgePermission: true,
         requestSoundPermission: true,
       );
-      const initSettings = InitializationSettings(android: androidSettings, iOS: iosSettings);
+      const initSettings =
+          InitializationSettings(android: androidSettings, iOS: iosSettings);
 
       await _notificationsPlugin.initialize(initSettings);
 
-      final androidImplementation = _notificationsPlugin
-          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      final androidImplementation =
+          _notificationsPlugin.resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
 
       if (androidImplementation != null) {
         await androidImplementation.requestNotificationsPermission();
@@ -61,7 +66,8 @@ class NotificationService {
         const channel = AndroidNotificationChannel(
           'orders_channel_v2',
           'Actualizaciones de Pedidos Pídetelo',
-          description: 'Avisos de preparación, salida a reparto y entrega de pedidos',
+          description:
+              'Avisos de preparación, salida a reparto y entrega de pedidos',
           importance: Importance.max,
           enableVibration: true,
           playSound: true,
@@ -74,7 +80,8 @@ class NotificationService {
       // 2. Inicializar Firebase Messaging Remoto
       try {
         await Firebase.initializeApp();
-        FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+        FirebaseMessaging.onBackgroundMessage(
+            _firebaseMessagingBackgroundHandler);
 
         final messaging = FirebaseMessaging.instance;
         await messaging.requestPermission(
@@ -84,19 +91,29 @@ class NotificationService {
           provisional: false,
         );
 
-        if (_currentCustomerId != null) {
+        // Suscribir al topic general de clientes
+        try {
+          await messaging.subscribeToTopic('all_customers');
+        } catch (_) {}
+
+        if (_currentCustomerId != null && _currentCustomerId!.isNotEmpty) {
           _syncToken(_currentCustomerId!);
+        } else {
+          // Obtener token y registrar como cliente genérico
+          _syncToken('guest_client');
         }
 
         messaging.onTokenRefresh.listen((newToken) {
-          if (_currentCustomerId != null) {
-            registerTokenWithBackend(_currentCustomerId!, newToken, 'customer');
-          }
+          final id = _currentCustomerId?.isNotEmpty == true
+              ? _currentCustomerId!
+              : 'guest_client';
+          registerTokenWithBackend(id, newToken, 'customer');
         });
 
         // Escuchar notificaciones mientras el cliente tiene la app abierta
         FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-          debugPrint('[FCM Foreground Customer] Mensaje recibido: ${message.notification?.title}');
+          debugPrint(
+              '[FCM Foreground Customer] Mensaje recibido: ${message.notification?.title}');
           final notif = message.notification;
           if (notif != null) {
             showRawNotification(
@@ -123,27 +140,54 @@ class NotificationService {
         await registerTokenWithBackend(customerId, token, 'customer');
       }
     } catch (e) {
-      debugPrint('[NotificationService] Error obteniendo FCM Token de Cliente: $e');
+      debugPrint(
+          '[NotificationService] Error obteniendo FCM Token de Cliente: $e');
     }
   }
 
-  Future<void> registerTokenWithBackend(String userId, String token, String role) async {
-    try {
-      final url = Uri.parse('${AppConfig.backendBaseUrl}/notifications/register-token');
-      await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'userId': userId,
-          'role': role,
-          'token': token,
-          'platform': defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android',
-        }),
-      ).timeout(const Duration(seconds: 4));
-      debugPrint('[NotificationService] Token FCM de cliente registrado en backend ($userId)');
-    } catch (e) {
-      debugPrint('[NotificationService] Error enviando token al backend: $e');
+  Future<void> registerTokenWithBackend(
+      String userId, String token, String role) async {
+    final targets = <String>{
+      'http://192.168.0.151:3000/api/notifications/register-token',
+      'https://api.pidetelo.app/api/notifications/register-token',
+      '${AppConfig.backendBaseUrl.replaceAll(RegExp(r'/api$'), '')}/api/notifications/register-token',
+    };
+
+    final payload = jsonEncode({
+      'userId': userId,
+      'role': role,
+      'token': token,
+      'platform':
+          defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android',
+    });
+
+    for (final target in targets) {
+      try {
+        final url = Uri.parse(target);
+        final res = await http
+            .post(
+              url,
+              headers: {'Content-Type': 'application/json'},
+              body: payload,
+            )
+            .timeout(const Duration(seconds: 3));
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          debugPrint(
+              '[NotificationService] Token FCM registrado en $target ($userId)');
+        }
+      } catch (_) {
+        // Fallback silently if host unreachable
+      }
     }
+  }
+
+  Future<void> subscribeToOrder(String orderId) async {
+    try {
+      final clean = orderId.replaceAll(RegExp(r'[^a-zA-Z0-9_\.~%]+'), '_');
+      await FirebaseMessaging.instance.subscribeToTopic('order_$clean');
+      debugPrint(
+          '[NotificationService] Suscrito a topic de orden: order_$clean');
+    } catch (_) {}
   }
 
   Future<void> showRawNotification({
@@ -154,7 +198,8 @@ class NotificationService {
       final androidDetails = AndroidNotificationDetails(
         'orders_channel_v2',
         'Actualizaciones de Pedidos Pídetelo',
-        channelDescription: 'Avisos de preparación, salida a reparto y entrega de pedidos',
+        channelDescription:
+            'Avisos de preparación, salida a reparto y entrega de pedidos',
         importance: Importance.max,
         priority: Priority.high,
         ticker: title,

@@ -12,7 +12,8 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   try {
     await Firebase.initializeApp();
   } catch (_) {}
-  debugPrint('[FCM Background Rider] Push recibido con app cerrada: ${message.messageId}');
+  debugPrint(
+      '[FCM Background Rider] Push recibido con app cerrada: ${message.messageId}');
   final notification = message.notification;
   if (notification != null) {
     NotificationService().showRawNotification(
@@ -27,7 +28,8 @@ class NotificationService {
   factory NotificationService() => _instance;
   NotificationService._internal();
 
-  final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _notificationsPlugin =
+      FlutterLocalNotificationsPlugin();
   bool _isInitialized = false;
   String? _currentRiderId;
 
@@ -42,19 +44,22 @@ class NotificationService {
 
     try {
       // 1. Inicializar notificaciones locales
-      const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+      const androidSettings =
+          AndroidInitializationSettings('@mipmap/ic_launcher');
       const iosSettings = DarwinInitializationSettings(
         requestAlertPermission: true,
         requestBadgePermission: true,
         requestSoundPermission: true,
       );
-      const initSettings = InitializationSettings(android: androidSettings, iOS: iosSettings);
+      const initSettings =
+          InitializationSettings(android: androidSettings, iOS: iosSettings);
 
       await _notificationsPlugin.initialize(initSettings);
 
       // Canal Android con máxima prioridad para emergentes en pantalla
-      final androidImplementation = _notificationsPlugin
-          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      final androidImplementation =
+          _notificationsPlugin.resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
 
       if (androidImplementation != null) {
         await androidImplementation.requestNotificationsPermission();
@@ -62,7 +67,8 @@ class NotificationService {
         const channel = AndroidNotificationChannel(
           'orders_channel_v2',
           'Nuevos Pedidos Pídetelo',
-          description: 'Notificaciones prioritarias de nuevos pedidos asignados',
+          description:
+              'Notificaciones prioritarias de nuevos pedidos asignados',
           importance: Importance.max,
           enableVibration: true,
           playSound: true,
@@ -75,7 +81,8 @@ class NotificationService {
       // 2. Inicializar Firebase Messaging Remoto
       try {
         await Firebase.initializeApp();
-        FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+        FirebaseMessaging.onBackgroundMessage(
+            _firebaseMessagingBackgroundHandler);
 
         final messaging = FirebaseMessaging.instance;
         await messaging.requestPermission(
@@ -102,7 +109,8 @@ class NotificationService {
 
         // Escuchar notificaciones mientras la app está abierta en pantalla
         FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-          debugPrint('[FCM Foreground Rider] Mensaje recibido: ${message.notification?.title}');
+          debugPrint(
+              '[FCM Foreground Rider] Mensaje recibido: ${message.notification?.title}');
           final notif = message.notification;
           if (notif != null) {
             showRawNotification(
@@ -133,22 +141,39 @@ class NotificationService {
     }
   }
 
-  Future<void> registerTokenWithBackend(String userId, String token, String role) async {
-    try {
-      final url = Uri.parse('${AppConfig.backendBaseUrl}/api/notifications/register-token');
-      await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'userId': userId,
-          'role': role,
-          'token': token,
-          'platform': defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android',
-        }),
-      ).timeout(const Duration(seconds: 4));
-      debugPrint('[NotificationService] Token FCM registrado exitosamente en backend para $role $userId');
-    } catch (e) {
-      debugPrint('[NotificationService] Error enviando token al backend: $e');
+  Future<void> registerTokenWithBackend(
+      String userId, String token, String role) async {
+    final targets = <String>{
+      'http://192.168.0.151:3000/api/notifications/register-token',
+      'https://api.pidetelo.app/api/notifications/register-token',
+      '${AppConfig.backendBaseUrl.replaceAll(RegExp(r'/api$'), '')}/api/notifications/register-token',
+    };
+
+    final payload = jsonEncode({
+      'userId': userId,
+      'role': role,
+      'token': token,
+      'platform':
+          defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android',
+    });
+
+    for (final target in targets) {
+      try {
+        final url = Uri.parse(target);
+        final res = await http
+            .post(
+              url,
+              headers: {'Content-Type': 'application/json'},
+              body: payload,
+            )
+            .timeout(const Duration(seconds: 3));
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          debugPrint(
+              '[NotificationService] Token FCM registrado en $target para $role $userId');
+        }
+      } catch (_) {
+        // Fallback silently if host unreachable
+      }
     }
   }
 

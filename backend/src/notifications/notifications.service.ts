@@ -137,15 +137,73 @@ export class NotificationsService implements OnModuleInit {
 
   getTokensForUser(userId: string): string[] {
     const cleanId = (userId || '').trim().toLowerCase();
+    if (!cleanId) return [];
     return this.readTokens()
       .filter(t => t.userId.trim().toLowerCase() === cleanId)
       .map(t => t.token);
+  }
+
+  getTokensForCandidates(candidates: (string | undefined | null)[]): string[] {
+    const cleanCandidates = candidates
+      .filter(Boolean)
+      .map(c => String(c).trim().toLowerCase());
+    if (cleanCandidates.length === 0) return [];
+
+    const found = this.readTokens()
+      .filter(t => cleanCandidates.includes(t.userId.trim().toLowerCase()))
+      .map(t => t.token);
+
+    return Array.from(new Set(found));
   }
 
   getTokensByRole(role: 'customer' | 'rider' | 'merchant' | 'admin'): string[] {
     return this.readTokens()
       .filter(t => t.role === role)
       .map(t => t.token);
+  }
+
+  // --- ENVÍO DE NOTIFICACIONES PUSH A TOPICS (TEMAS) ---
+  async sendTopicNotification(topic: string, payload: {
+    title: string;
+    body: string;
+    data?: Record<string, string>;
+  }) {
+    if (!this.firebaseInitialized || !topic) return { success: false };
+    const cleanTopic = topic.replace(/[^a-zA-Z0-9_\.~%]+/g, '_');
+    try {
+      const response = await getMessaging().send({
+        topic: cleanTopic,
+        notification: {
+          title: payload.title,
+          body: payload.body,
+        },
+        data: payload.data || {},
+        android: {
+          priority: 'high',
+          notification: {
+            channelId: 'orders_channel_v2',
+            sound: 'default',
+            priority: 'max',
+            defaultVibrateTimings: true,
+            visibility: 'public',
+          }
+        },
+        apns: {
+          payload: {
+            aps: {
+              sound: 'default',
+              badge: 1,
+              contentAvailable: true,
+            }
+          }
+        }
+      });
+      console.log(`[FirebaseMessaging] Push topic enviado a '${cleanTopic}': ${response}`);
+      return { success: true };
+    } catch (e: any) {
+      console.warn(`[FirebaseMessaging] Error enviando topic push a '${cleanTopic}':`, e.message);
+      return { success: false };
+    }
   }
 
   // --- ENVÍO DE NOTIFICACIONES PUSH REMOTAS (FCM) ---
@@ -270,21 +328,45 @@ export class NotificationsService implements OnModuleInit {
     });
 
     // 2. Enviar Push Remoto a los dispositivos del cliente
-    if (customerId) {
-      const tokens = this.getTokensForUser(customerId);
-      if (tokens.length > 0) {
-        await this.sendPushNotification({
-          tokens,
-          title,
-          body,
-          data: {
-            type: 'order_status',
-            orderId: String(order.id || ''),
-            status: String(newStatus),
-            orderNumber: String(orderNumber)
-          }
-        });
-      }
+    const candidateCustomerIds = [
+      order.user_id,
+      order.customer_id,
+      order.customerId,
+      order.customer_phone,
+      order.customerPhone,
+      order.customer_email,
+      order.customerEmail,
+    ];
+
+    const customerTokens = this.getTokensForCandidates(candidateCustomerIds);
+    if (customerTokens.length > 0) {
+      await this.sendPushNotification({
+        tokens: customerTokens,
+        title,
+        body,
+        data: {
+          type: 'order_status',
+          orderId: String(order.id || ''),
+          status: String(newStatus),
+          orderNumber: String(orderNumber)
+        }
+      });
+    }
+
+    // 3. Enviar adicionalmente por Topic de Pedido (Garantía de entrega instantánea)
+    if (order.id) {
+      await this.sendTopicNotification(`order_${order.id}`, {
+        title,
+        body,
+        data: { type: 'order_status', orderId: String(order.id), status: String(newStatus) }
+      });
+    }
+    if (orderNumber) {
+      await this.sendTopicNotification(`order_${orderNumber}`, {
+        title,
+        body,
+        data: { type: 'order_status', orderNumber: String(orderNumber), status: String(newStatus) }
+      });
     }
   }
 
@@ -294,8 +376,22 @@ export class NotificationsService implements OnModuleInit {
     const customer = order.customer_name || 'Cliente Pídetelo';
     const address = order.delivery_address || 'Dirección de Entrega';
 
-    // 1. Push urgente al REPARTIDOR
-    const riderTokens = this.getTokensForUser(riderId);
+    // 1. Push urgente al REPARTIDOR (buscar por riderId, user_id, teléfono y email)
+    const candidateRiderIds: string[] = [riderId];
+    if (order.driver_id) candidateRiderIds.push(order.driver_id);
+    if (order.rider_id) candidateRiderIds.push(order.rider_id);
+
+    try {
+      const client = this.supabase.getClient();
+      const { data: dbRider } = await client.from('riders').select('id, user_id, phone, email').eq('id', riderId).maybeSingle();
+      if (dbRider) {
+        if (dbRider.user_id) candidateRiderIds.push(dbRider.user_id);
+        if (dbRider.phone) candidateRiderIds.push(dbRider.phone);
+        if (dbRider.email) candidateRiderIds.push(dbRider.email);
+      }
+    } catch (_) {}
+
+    const riderTokens = this.getTokensForCandidates(candidateRiderIds);
     if (riderTokens.length > 0) {
       await this.sendPushNotification({
         tokens: riderTokens,
@@ -311,22 +407,44 @@ export class NotificationsService implements OnModuleInit {
       });
     }
 
+    // Topic de respaldo para el repartidor y para todos los repartidores
+    await this.sendTopicNotification(`rider_${riderId}`, {
+      title: `🛵 ¡Nuevo Pedido Asignado! ${orderNumber}`,
+      body: `Cliente: ${customer} | Destino: ${address}`,
+      data: { type: 'order_assigned', orderId: String(order.id || ''), orderNumber: String(orderNumber) }
+    });
+
     // 2. Push informativo al CLIENTE
-    const customerId = order.user_id || order.customer_id || order.customerId;
-    if (customerId) {
-      const customerTokens = this.getTokensForUser(customerId);
-      if (customerTokens.length > 0) {
-        await this.sendPushNotification({
-          tokens: customerTokens,
-          title: `🛵 Repartidor Asignado ${orderNumber}`,
-          body: 'Se ha asignado un repartidor a tu orden. Pronto estará en camino.',
-          data: {
-            type: 'rider_assigned',
-            orderId: String(order.id || ''),
-            orderNumber: String(orderNumber)
-          }
-        });
-      }
+    const candidateCustomerIds = [
+      order.user_id,
+      order.customer_id,
+      order.customerId,
+      order.customer_phone,
+      order.customerPhone,
+      order.customer_email,
+      order.customerEmail,
+    ];
+    const customerTokens = this.getTokensForCandidates(candidateCustomerIds);
+    if (customerTokens.length > 0) {
+      await this.sendPushNotification({
+        tokens: customerTokens,
+        title: `🛵 Repartidor Asignado ${orderNumber}`,
+        body: 'Se ha asignado un repartidor a tu orden. Pronto estará en camino.',
+        data: {
+          type: 'rider_assigned',
+          orderId: String(order.id || ''),
+          orderNumber: String(orderNumber)
+        }
+      });
+    }
+
+    // Topic de orden para el cliente
+    if (order.id) {
+      await this.sendTopicNotification(`order_${order.id}`, {
+        title: `🛵 Repartidor Asignado ${orderNumber}`,
+        body: 'Se ha asignado un repartidor a tu orden. Pronto estará en camino.',
+        data: { type: 'rider_assigned', orderId: String(order.id) }
+      });
     }
   }
 

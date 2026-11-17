@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
 import 'cart_service.dart';
 import 'api_service.dart';
+import 'notification_service.dart';
 
 class SessionService extends ChangeNotifier {
   static final SessionService _instance = SessionService._internal();
@@ -61,6 +62,9 @@ class SessionService extends ChangeNotifier {
     if (userJson != null) {
       try {
         _currentUser = AppUser.fromJson(jsonDecode(userJson));
+        if (_currentUser != null) {
+          NotificationService().init(customerId: _currentUser!.id);
+        }
       } catch (e) {
         debugPrint('[SessionService] Error decodificando usuario: $e');
       }
@@ -127,6 +131,7 @@ class SessionService extends ChangeNotifier {
         role: user.role.name,
         platform: 'mobile_app_flutter',
       );
+      NotificationService().init(customerId: user.id);
     } catch (_) {}
 
     notifyListeners();
