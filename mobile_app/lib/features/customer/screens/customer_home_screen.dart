@@ -1278,9 +1278,13 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        leadingWidth: 54,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        centerTitle: false,
+        titleSpacing: 8,
+        leadingWidth: 48,
         leading: Padding(
-          padding: const EdgeInsets.only(left: 12, top: 8, bottom: 8, right: 4),
+          padding: const EdgeInsets.only(left: 12, top: 8, bottom: 8, right: 2),
           child: Container(
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF1E293B) : Colors.white,
@@ -1320,17 +1324,24 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
           ),
         ),
         title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              'ENTREGAR EN',
-              style: GoogleFonts.outfit(
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                color:
-                    isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                letterSpacing: 0.5,
-              ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'ENTREGAR EN',
+                  style: GoogleFonts.outfit(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
             ),
+            const SizedBox(height: 1),
             AnimatedBuilder(
               animation: CartService(),
               builder: (context, _) {
@@ -1344,24 +1355,30 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                       ),
                     );
                   },
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(6),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.location_on_rounded,
-                          size: 15, color: AppTheme.primary),
-                      const SizedBox(width: 4),
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 180),
+                      const Icon(Icons.location_on_rounded, size: 14, color: AppTheme.primary),
+                      const SizedBox(width: 3),
+                      Flexible(
                         child: Text(
                           addr.title.isNotEmpty ? addr.title : 'Mi Dirección',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.outfit(
-                              fontSize: 13.5, fontWeight: FontWeight.w700),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: isDark ? Colors.white : const Color(0xFF0F172A),
+                          ),
                         ),
                       ),
-                      const Icon(Icons.keyboard_arrow_down_rounded, size: 16),
+                      const SizedBox(width: 2),
+                      Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        size: 16,
+                        color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                      ),
                     ],
                   ),
                 );
@@ -1424,28 +1441,25 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 ),
             ],
           ),
-          IconButton(
-            icon: Icon(
-              widget.sessionService.isDarkMode
-                  ? Icons.wb_sunny_rounded
-                  : Icons.nightlight_round,
-              color: widget.sessionService.isDarkMode ? Colors.amber : null,
-              size: 20,
-            ),
-            tooltip:
-                widget.sessionService.isDarkMode ? 'Modo claro' : 'Modo oscuro',
-            onPressed: () => widget.sessionService.toggleTheme(),
-          ),
-          IconButton(
-            icon: const Icon(Icons.person_rounded),
-            tooltip: 'Mi Perfil',
-            onPressed: _openUserProfile,
-          ),
+
           PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert_rounded),
+            icon: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                ),
+              ),
+              child: const Icon(Icons.person_rounded, size: 18, color: AppTheme.primary),
+            ),
+            tooltip: 'Opciones de Cuenta',
             onSelected: (val) {
               if (val == 'profile') {
                 _openUserProfile();
+              } else if (val == 'theme') {
+                widget.sessionService.toggleTheme();
               } else if (val == 'logout') {
                 widget.sessionService.logout();
                 Navigator.of(context).pushAndRemoveUntil(
@@ -1465,20 +1479,50 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                     const Icon(Icons.account_circle_rounded,
                         size: 20, color: AppTheme.primary),
                     const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        user?.name.isNotEmpty == true ? user!.name : 'Mi Perfil',
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'theme',
+                child: Row(
+                  children: [
+                    Icon(
+                      widget.sessionService.isDarkMode
+                          ? Icons.wb_sunny_rounded
+                          : Icons.nightlight_round,
+                      size: 20,
+                      color: widget.sessionService.isDarkMode ? Colors.amber : Colors.indigo,
+                    ),
+                    const SizedBox(width: 10),
                     Text(
-                        'Mi Perfil (${user?.name.isNotEmpty == true ? user!.name : "Cliente"})'),
+                      widget.sessionService.isDarkMode ? 'Modo Claro' : 'Modo Oscuro',
+                      style: GoogleFonts.outfit(fontWeight: FontWeight.w500),
+                    ),
                   ],
                 ),
               ),
               const PopupMenuDivider(),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'logout',
                 child: Row(
                   children: [
-                    Icon(Icons.logout_rounded,
+                    const Icon(Icons.logout_rounded,
                         size: 20, color: Colors.redAccent),
-                    SizedBox(width: 10),
-                    Text('Cerrar Sesión'),
+                    const SizedBox(width: 10),
+                    Text(
+                      'Cerrar Sesión',
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.w600,
+                        color: Colors.redAccent,
+                      ),
+                    ),
                   ],
                 ),
               ),
