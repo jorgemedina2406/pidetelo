@@ -920,6 +920,8 @@ class ApiService {
       }
 
       final currentUserId = supabase.auth.currentUser?.id ?? SessionService().currentUser?.id;
+      final notesExtra = currentUserId != null && currentUserId.isNotEmpty ? '[PIN:${order.pin}][UID:$currentUserId]' : '[PIN:${order.pin}]';
+
       final orderInsertMap = <String, dynamic>{
         'tenant_id': resolvedTenantId,
         'branch_id': validBranchId,
@@ -936,11 +938,8 @@ class ApiService {
         'subtotal': order.subtotal,
         'delivery_fee': order.deliveryFee,
         'total': order.total,
-        'notes': '[PIN:${order.pin}]',
+        'notes': notesExtra,
       };
-      if (currentUserId != null && currentUserId.isNotEmpty) {
-        orderInsertMap['user_id'] = currentUserId;
-      }
 
       final inserted = await supabase
           .from('orders')
@@ -954,6 +953,9 @@ class ApiService {
         try {
           NotificationService().subscribeToOrder(orderId);
           NotificationService().subscribeToOrder(order.orderNumber);
+          if (order.customerPhone.isNotEmpty) {
+            NotificationService().registerCustomerPhone(order.customerPhone);
+          }
         } catch (_) {}
       }
       if (orderId != null && order.items.isNotEmpty) {

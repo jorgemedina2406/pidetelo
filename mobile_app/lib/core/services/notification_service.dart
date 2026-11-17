@@ -132,6 +132,16 @@ class NotificationService {
     }
   }
 
+  Future<void> registerCustomerPhone(String phone) async {
+    if (phone.isEmpty) return;
+    try {
+      final token = await FirebaseMessaging.instance.getToken();
+      if (token != null && token.isNotEmpty) {
+        await registerTokenWithBackend(phone, token, 'customer');
+      }
+    } catch (_) {}
+  }
+
   Future<void> _syncToken(String customerId) async {
     try {
       final token = await FirebaseMessaging.instance.getToken();
