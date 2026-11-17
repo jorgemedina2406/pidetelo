@@ -28,15 +28,30 @@ android {
         versionName = flutter.versionName
         multiDexEnabled = true
         ndk {
-            abiFilters 'arm64-v8a'
+            abiFilters 'armeabi-v7a', 'arm64-v8a'
+        }
+    }
+
+    signingConfigs {
+        release {
+            if (file('upload-keystore.jks').exists()) {
+                keyAlias 'nextcon_key'
+                keyPassword 'nextcon123'
+                storeFile file('upload-keystore.jks')
+                storePassword 'nextcon123'
+            }
         }
     }
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.debug
+            if (file('upload-keystore.jks').exists()) {
+                signingConfig signingConfigs.release
+            } else {
+                signingConfig signingConfigs.debug
+            }
+            minifyEnabled false
+            shrinkResources false
         }
     }
 }
