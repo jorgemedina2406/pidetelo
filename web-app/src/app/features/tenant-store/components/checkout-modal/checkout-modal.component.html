@@ -354,7 +354,7 @@
           </div>
         </div>
 
-        <button (click)="submitOrder()"
+        <button (click)="promptConfirmOrder()"
                 [disabled]="!cart.isCustomerValid() || isSubmitting()"
                 class="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] disabled:opacity-40 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-emerald-600/25 flex items-center justify-center gap-2 transition-all cursor-pointer disabled:cursor-not-allowed">
           @if (isSubmitting()) {
@@ -372,4 +372,76 @@
 
     </div>
   </div>
+
+  <!-- Modal Emergente de Confirmación Final con Detalle del Pedido -->
+  @if (isConfirmPromptOpen()) {
+    <div class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
+      <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5 animate-scale-in">
+        <div class="text-center space-y-1">
+          <div class="w-12 h-12 bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto text-2xl">
+            📋
+          </div>
+          <h3 class="text-lg font-black text-slate-900 dark:text-white">¿Confirmar y Enviar Pedido?</h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Verifica los datos de tu orden antes de enviarla a cocina</p>
+        </div>
+
+        <div class="bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 space-y-3 text-xs">
+          <!-- Datos de Entrega -->
+          <div class="flex items-start gap-2.5">
+            <span class="text-base">📍</span>
+            <div class="min-w-0 flex-1">
+              <span class="font-extrabold text-slate-800 dark:text-slate-200 block">
+                {{ cart.fulfillmentType() === 'delivery' ? 'Entrega a Domicilio' : 'Retiro en Local' }}
+              </span>
+              <p class="text-slate-600 dark:text-slate-400 text-[11px] truncate">
+                {{ cart.customer().deliveryAddress || 'En local' }}
+              </p>
+            </div>
+          </div>
+
+          <!-- Método de Pago -->
+          <div class="flex items-center gap-2.5 pt-2 border-t border-slate-200 dark:border-slate-800">
+            <span class="text-base">💳</span>
+            <div class="min-w-0 flex-1">
+              <span class="font-bold text-slate-700 dark:text-slate-300">Método de Pago: </span>
+              <span class="font-extrabold text-slate-900 dark:text-white">{{ getPaymentLabel(cart.paymentMethod()) }}</span>
+            </div>
+          </div>
+
+          <!-- Resumen de Productos -->
+          <div class="pt-2 border-t border-slate-200 dark:border-slate-800 space-y-1.5 max-h-36 overflow-y-auto">
+            <span class="font-bold text-slate-500 text-[10px] uppercase tracking-wider block">Productos ({{ cart.totalItemsCount() }}):</span>
+            @for (item of cart.items(); track item.cartItemId) {
+              <div class="flex justify-between items-center text-[11px]">
+                <span class="text-slate-700 dark:text-slate-300 truncate max-w-[220px]">
+                  <strong>{{ item.quantity }}x</strong> {{ item.name }}
+                </span>
+                <span class="font-semibold text-slate-900 dark:text-white">${{ item.itemTotal.toFixed(2) }}</span>
+              </div>
+            }
+          </div>
+
+          <!-- Total Final -->
+          <div class="flex items-center justify-between pt-2.5 border-t border-slate-200 dark:border-slate-700 font-extrabold text-slate-900 dark:text-white">
+            <span class="text-sm">Total a Pagar:</span>
+            <div class="text-right">
+              <span class="text-base text-emerald-600 dark:text-emerald-400 block">${{ cart.total().toFixed(2) }}</span>
+              <span class="text-[11px] text-slate-500 font-semibold block">≈ Bs. {{ cart.totalVes().toFixed(2) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <button (click)="cancelConfirmOrder()"
+                  class="flex-1 py-3 px-4 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs transition cursor-pointer">
+            Modificar
+          </button>
+          <button (click)="submitOrder()"
+                  class="flex-1 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-xs shadow-lg shadow-emerald-600/30 transition cursor-pointer flex items-center justify-center gap-1.5">
+            <span>✓ Sí, Confirmar</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  }
 }

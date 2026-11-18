@@ -959,38 +959,80 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
   private tabBlinkInterval: any = null;
   private originalDocumentTitle: string = '';
 
+  private userAudioContext: AudioContext | null = null;
+  private audioUnlocked = false;
+
+  private setupAudioUnlockListeners(): void {
+    if (typeof window === 'undefined') return;
+    const unlock = () => {
+      this.initOrResumeAudio();
+    };
+    ['click', 'touchstart', 'touchend'].forEach(evt => {
+      window.addEventListener(evt, unlock, { passive: true });
+    });
+  }
+
+  private initOrResumeAudio(): void {
+    try {
+      if (!this.userAudioContext) {
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioCtx) {
+          this.userAudioContext = new AudioCtx();
+        }
+      }
+      if (this.userAudioContext && this.userAudioContext.state === 'suspended') {
+        this.userAudioContext.resume();
+      }
+      if (!this.audioUnlocked && this.userAudioContext) {
+        this.audioUnlocked = true;
+        // Desbloquear formalmente el canal de hardware de audio en iOS WebKit (iPhone/iPad)
+        const buffer = this.userAudioContext.createBuffer(1, 1, 22050);
+        const source = this.userAudioContext.createBufferSource();
+        source.buffer = buffer;
+        source.connect(this.userAudioContext.destination);
+        source.start(0);
+      }
+    } catch (_) {}
+  }
+
   requestNotificationPermission(): void {
+    this.initOrResumeAudio();
     if (typeof window === 'undefined' || !('Notification' in window)) {
-      this.showToast('info', 'Notificaciones', 'Las notificaciones del sistema no son soportadas por este navegador.');
+      this.showToast('info', 'Notificaciones', 'Las notificaciones emergentes no son soportadas directamente por este navegador móvil, pero el sonido de comanda ha sido activado.');
+      this.playKitchenBellSound();
       return;
     }
     Notification.requestPermission().then(permission => {
       this.notificationPermission.set(permission);
+      this.playKitchenBellSound();
       if (permission === 'granted') {
-        this.showToast('success', 'Alertas Activadas', 'Recibirás alertas nativas en tu PC o móvil aunque estés en otra pestaña.');
-        this.playKitchenBellSound();
+        this.showToast('success', 'Alertas Activadas', 'Recibirás alertas nativas y sonido en tu dispositivo.');
         try {
           new Notification('🔔 Pídetelo Comercio', {
-            body: '¡Notificaciones activadas! Te avisaremos de inmediato cada vez que entre un nuevo pedido.',
+            body: '¡Notificaciones activadas! Te avisaremos con sonido y alerta en cada nuevo pedido.',
             icon: '/assets/logo.png',
           });
         } catch (_) {}
       } else if (permission === 'denied') {
-        this.showToast('error', 'Permiso Denegado', 'Has bloqueado las notificaciones. Puedes activarlas desde el candado de la barra del navegador.');
+        this.showToast('error', 'Permiso Denegado', 'Has bloqueado las notificaciones visuales en el navegador.');
       }
     });
   }
 
   playKitchenBellSound(): void {
     try {
-      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      this.initOrResumeAudio();
+      const audioCtx = this.userAudioContext || new (window.AudioContext || (window as any).webkitAudioContext)();
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
       
       const playChime = (freq: number, startDelay: number, duration: number) => {
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.type = 'sine';
         osc.frequency.setValueAtTime(freq, audioCtx.currentTime + startDelay);
-        gain.gain.setValueAtTime(0.4, audioCtx.currentTime + startDelay);
+        gain.gain.setValueAtTime(0.5, audioCtx.currentTime + startDelay);
         gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + startDelay + duration);
         osc.connect(gain);
         gain.connect(audioCtx.destination);
@@ -1005,7 +1047,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       
       // Vibración háptica en teléfonos móviles
       if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-        navigator.vibrate([200, 100, 200, 100, 400]);
+        navigator.vibrate([300, 150, 300, 150, 600]);
       }
     } catch (_) {}
   }
@@ -1356,6 +1398,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    this.setupAudioUnlockListeners();
     if (typeof window !== 'undefined') {
       try {
         localStorage.removeItem('deliveryhub_riders_auth');

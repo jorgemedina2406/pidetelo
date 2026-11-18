@@ -199,6 +199,10 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
       paymentLabel = 'Tarjeta / Zelle';
     }
 
+    _showOrderConfirmationDialog(context, cart, paymentLabel);
+  }
+
+  void _executeFinalOrder(BuildContext context, CartService cart, String paymentLabel) {
     cart.createOrderFromCart(
       paymentMethod: paymentLabel,
       user: SessionService().currentUser,
@@ -216,6 +220,366 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
         ),
       );
     }
+  }
+
+  void _showOrderConfirmationDialog(BuildContext context, CartService cart, String paymentLabel) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final dialogBg = isDark ? const Color(0xFF0F172A) : Colors.white;
+    final cardBg = isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC);
+    final cardBorder = isDark ? Colors.white12 : const Color(0xFFE2E8F0);
+    final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final subtextColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+
+    final address = cart.selectedAddress;
+    final branchName = cart.currentBranch?.name ?? 'Comercio';
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogCtx) => Dialog(
+        backgroundColor: dialogBg,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        child: Padding(
+          padding: const EdgeInsets.all(22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Header
+              Center(
+                child: Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Center(
+                    child: Text('📋', style: TextStyle(fontSize: 26)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                '¿Confirmar Pedido?',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.outfit(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: textColor,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Verifica los datos de tu orden antes de enviarla a cocina',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.outfit(
+                  fontSize: 12,
+                  color: subtextColor,
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Summary Box
+              Flexible(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: cardBg,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: cardBorder),
+                  ),
+                  padding: const EdgeInsets.all(14),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Comercio
+                        Row(
+                          children: [
+                            const Text('🏪', style: TextStyle(fontSize: 15)),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                branchName,
+                                style: GoogleFonts.outfit(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: textColor,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Divider(color: cardBorder, height: 1),
+                        const SizedBox(height: 10),
+
+                        // Dirección de Entrega
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('📍', style: TextStyle(fontSize: 15)),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    address.title.isNotEmpty ? address.title : 'Dirección de Entrega',
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: textColor,
+                                    ),
+                                  ),
+                                  Text(
+                                    address.address,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 11,
+                                      color: subtextColor,
+                                    ),
+                                  ),
+                                  if (address.reference != null && address.reference!.trim().isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 2),
+                                      child: Text(
+                                        'Ref: ${address.reference!.trim()}',
+                                        style: GoogleFonts.outfit(
+                                          fontSize: 10,
+                                          fontStyle: FontStyle.italic,
+                                          color: subtextColor,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 10),
+                        Divider(color: cardBorder, height: 1),
+                        const SizedBox(height: 10),
+
+                        // Método de Pago
+                        Row(
+                          children: [
+                            const Text('💳', style: TextStyle(fontSize: 15)),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: RichText(
+                                text: TextSpan(
+                                  style: GoogleFonts.outfit(fontSize: 12, color: subtextColor),
+                                  children: [
+                                    const TextSpan(text: 'Método: '),
+                                    TextSpan(
+                                      text: paymentLabel,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        color: textColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 10),
+                        Divider(color: cardBorder, height: 1),
+                        const SizedBox(height: 10),
+
+                        // Lista de productos
+                        Text(
+                          'PRODUCTOS (${cart.totalItemCount})',
+                          style: GoogleFonts.outfit(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.8,
+                            color: subtextColor,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        ...cart.items.map((item) {
+                          final mods = [
+                            ...item.selectedOptions.map((o) => o.name),
+                            ...item.selectedModifiers.map((m) => m.optionName),
+                          ].join(', ');
+
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '${item.quantity}x ${item.product.name}',
+                                        style: GoogleFonts.outfit(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: textColor,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      if (mods.isNotEmpty)
+                                        Text(
+                                          mods,
+                                          style: GoogleFonts.outfit(
+                                            fontSize: 10,
+                                            color: subtextColor,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  '\$${item.totalPrice.toStringAsFixed(2)}',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: textColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+
+                        const SizedBox(height: 8),
+                        Divider(color: cardBorder, height: 1),
+                        const SizedBox(height: 8),
+
+                        // Subtotal & Costo de envío
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Subtotal:', style: GoogleFonts.outfit(fontSize: 11, color: subtextColor)),
+                            Text('\$${cart.subtotal.toStringAsFixed(2)}', style: GoogleFonts.outfit(fontSize: 11, color: textColor)),
+                          ],
+                        ),
+                        if (cart.deliveryFee > 0) ...[
+                          const SizedBox(height: 3),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('Costo de Envío:', style: GoogleFonts.outfit(fontSize: 11, color: subtextColor)),
+                              Text('\$${cart.deliveryFee.toStringAsFixed(2)}', style: GoogleFonts.outfit(fontSize: 11, color: textColor)),
+                            ],
+                          ),
+                        ],
+
+                        const SizedBox(height: 8),
+                        Divider(color: cardBorder, height: 1),
+                        const SizedBox(height: 8),
+
+                        // Total Final
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Total a Pagar:',
+                              style: GoogleFonts.outfit(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                color: textColor,
+                              ),
+                            ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  '\$${cart.grandTotal.toStringAsFixed(2)}',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w900,
+                                    color: const Color(0xFF10B981),
+                                  ),
+                                ),
+                                Text(
+                                  '≈ Bs. ${cart.grandTotalBs.toStringAsFixed(2)}',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: subtextColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 18),
+
+              // Botones de acción
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(dialogCtx),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        side: BorderSide(color: cardBorder),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      child: Text(
+                        'Modificar',
+                        style: GoogleFonts.outfit(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: subtextColor,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(dialogCtx);
+                        _executeFinalOrder(context, cart, paymentLabel);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF10B981),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      child: Text(
+                        '✓ Sí, Enviar',
+                        style: GoogleFonts.outfit(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override

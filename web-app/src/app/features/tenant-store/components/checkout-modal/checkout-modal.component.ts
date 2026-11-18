@@ -18,6 +18,22 @@ export class CheckoutModalComponent {
   readonly isSubmitting = signal(false);
   readonly isDetectingGps = signal(false);
   readonly gpsStatusMessage = signal<string | null>(null);
+  readonly isConfirmPromptOpen = signal(false);
+
+  promptConfirmOrder(): void {
+    if (this.cart.isCustomerValid() && !this.isSubmitting()) {
+      this.isConfirmPromptOpen.set(true);
+    }
+  }
+
+  cancelConfirmOrder(): void {
+    this.isConfirmPromptOpen.set(false);
+  }
+
+  getPaymentLabel(method: string): string {
+    const found = this.paymentMethods.find(m => m.id === method);
+    return found ? `${found.icon} ${found.label}` : method;
+  }
 
   readonly paymentMethods: { id: PaymentMethod; label: string; icon: string; desc: string }[] = [
     { id: 'cash_usd', label: 'Efectivo $', icon: '💵', desc: 'Pago exacto o con cambio' },
@@ -141,6 +157,7 @@ export class CheckoutModalComponent {
   }
 
   submitOrder(): void {
+    this.isConfirmPromptOpen.set(false);
     if (this.cart.isCustomerValid() && !this.isSubmitting()) {
       this.isSubmitting.set(true);
       const order = this.cart.submitOrder();
