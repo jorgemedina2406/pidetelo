@@ -42,6 +42,7 @@ export class RidersService implements OnModuleInit {
   }
 
   async syncProfilesRiders() {
+    const result = { totalFound: 0, newlySynced: 0, alreadyExisting: 0, errors: [] as string[] };
     try {
       const client = this.supabase.getClient();
       // Consultar usuarios en profiles con role RIDER (ej: Armando Repartidor, etc.)
@@ -50,8 +51,11 @@ export class RidersService implements OnModuleInit {
         .select('id, full_name, email, phone, role, tenant_id, branch_id, is_active')
         .eq('role', 'RIDER');
 
-      if (error || !profiles || profiles.length === 0) return;
+      if (error || !profiles || profiles.length === 0) {
+        return { ...result, message: error ? error.message : 'No hay perfiles RIDER pendientes por sincronizar.' };
+      }
 
+      result.totalFound = profiles.length;
       console.log(`[RidersService] 🔍 Verificando sincronización de ${profiles.length} perfiles RIDER con tabla riders...`);
 
       for (const p of profiles) {
@@ -93,14 +97,20 @@ export class RidersService implements OnModuleInit {
           const { error: insErr } = await client.from('riders').insert(insertPayload);
           if (insErr) {
             console.error(`[RidersService] ⚠️ Error auto-sincronizando perfil ${p.email} a tabla riders:`, insErr.message);
+            result.errors.push(`${p.email}: ${insErr.message}`);
           } else {
             console.log(`[RidersService] ✅ Perfil ${p.email} (${p.full_name}) auto-sincronizado a tabla riders con ID: ${riderId}`);
+            result.newlySynced++;
           }
+        } else {
+          result.alreadyExisting++;
         }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.warn('[RidersService] Excepción durante syncProfilesRiders:', err);
+      result.errors.push(err?.message || String(err));
     }
+    return result;
   }
 
   private loadFromDisk(): void {

@@ -18,6 +18,18 @@ export class RidersController {
     return this.ridersService.findAll(tenantId, branchId);
   }
 
+  @Get('sync-profiles')
+  @ApiOperation({ summary: 'Sincronizar perfiles de usuario con rol RIDER a la tabla riders' })
+  syncProfilesGet() {
+    return this.ridersService.syncProfilesRiders();
+  }
+
+  @Post('sync-profiles')
+  @ApiOperation({ summary: 'Sincronizar perfiles de usuario con rol RIDER a la tabla riders' })
+  syncProfilesPost() {
+    return this.ridersService.syncProfilesRiders();
+  }
+
   @Get('dispatch-pool')
   @ApiOperation({ summary: 'Obtener motorizados propios y de red cercana para asignación en comercios con filtros reales' })
   @ApiQuery({ name: 'tenantId', required: true })
