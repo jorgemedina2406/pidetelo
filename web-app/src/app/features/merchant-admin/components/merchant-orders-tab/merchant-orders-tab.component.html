@@ -53,7 +53,7 @@
             class="px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-2 cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs ml-1">
             <app-icon name="file-text" [size]="14"></app-icon>
             <span>Exportar Excel</span>
-            @if (!currentSubscriptionPlan.hasExcelReports) {
+            @if (currentSubscriptionPlan && !currentSubscriptionPlan.hasExcelReports) {
             <span
               class="text-[9px] font-black uppercase px-1.5 py-0.2 rounded-md bg-amber-400 text-slate-950">PRO</span>
             }
@@ -312,24 +312,23 @@
                   class="font-extrabold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/60">
                   ⚡ Asignar más cercano automáticamente
                 </option>
-                @if (getOwnRidersForOrder(o).length > 0) {
+                @if (getOwnRidersForOrder(o).length) {
                 <optgroup label="🛵 Flota Propia (Sede)">
                   @for (r of getOwnRidersForOrder(o); track r.id) {
                   <option [value]="r.id">{{ r.name }} ({{ r.vehiclePlate }})</option>
                   }
                 </optgroup>
                 }
-                @if (getNearbyRidersForOrder(o).length > 0) {
+                @if (getNearbyRidersForOrder(o).length) {
                 <optgroup label="🌐 Flota Libre / Motorizados Cercanos">
                   @for (r of getNearbyRidersForOrder(o); track r.id) {
                   <option [value]="r.id">
-                    {{ r.name }} ({{ r.vehiclePlate }}) {{ r.distanceKm != null ? '• ' + r.distanceKm.toFixed(1) + ' km'
-                    : '• Sin GPS' }} ⭐{{ r.rating ?? '5.0' }}
+                    {{ r.name }} ({{ r.vehiclePlate }}) {{ r.distanceKm != null ? ('• ' + r.distanceKm.toFixed(1) + ' km') : '• Sin GPS' }} ⭐{{ r.rating ?? '5.0' }}
                   </option>
                   }
                 </optgroup>
                 }
-                @if (getOwnRidersForOrder(o).length === 0 && getNearbyRidersForOrder(o).length === 0) {
+                @if (!getOwnRidersForOrder(o).length && !getNearbyRidersForOrder(o).length) {
                 @for (r of riders; track r.id) {
                 <option [value]="r.id">{{ r.name }} ({{ r.vehiclePlate }})</option>
                 }
@@ -461,7 +460,7 @@
           <div class="card-adaptive p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-1">
             <div class="text-[10px] font-black uppercase text-slate-400 tracking-wider">Ticket Promedio</div>
             <div class="text-xl font-black text-slate-900 dark:text-white font-mono">
-              ${{ (deliveredCount > 0 ? (completedRevenueUsd / deliveredCount).toFixed(2) : '0.00') }}
+              ${{ averageTicketUsd }}
             </div>
             <div class="text-[11px] text-slate-400 font-medium">Por entrega completada</div>
           </div>
@@ -486,7 +485,7 @@
               [class.text-slate-600]="historyStatusFilter !== 'all'"
               [class.dark:text-slate-300]="historyStatusFilter !== 'all'"
               class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer">
-              Todos ({{ filteredOrders.filter(o => o.status === 'delivered' || o.status === 'cancelled').length }})
+              Todos ({{ deliveredCount + cancelledCount }})
             </button>
             <button (click)="historyStatusFilterChange.emit('delivered')"
               [class.bg-emerald-600]="historyStatusFilter === 'delivered'"

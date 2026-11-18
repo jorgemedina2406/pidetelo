@@ -64,4 +64,8 @@ export class MerchantOrdersTabComponent {
     }
     return (usd * this.activeExchangeRate).toFixed(2);
   }
+
+  get averageTicketUsd(): string {
+    return this.deliveredCount > 0 ? (this.completedRevenueUsd / this.deliveredCount).toFixed(2) : '0.00';
+  }
 }
