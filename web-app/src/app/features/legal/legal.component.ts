@@ -170,9 +170,9 @@ export type LegalTab = 'terminos' | 'privacidad' | 'cookies' | 'reclamaciones';
           @if (activeTab() === 'privacidad') {
             <div class="space-y-6 animate-fade-in">
               <div class="border-b border-slate-100 dark:border-slate-800 pb-4">
-                <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Protección de Datos</span>
-                <h1 class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-1">Política de Privacidad</h1>
-                <p class="text-xs text-slate-400 mt-1">Compromiso de Confidencialidad • Pídetelo.app</p>
+                <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Protección de Datos & Geolocalización</span>
+                <h1 class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-1">Política de Privacidad y Tratamiento de Datos</h1>
+                <p class="text-xs text-slate-400 mt-1">Compromiso de Confidencialidad y Transparencia GPS • Pídetelo.app (Actualizado Noviembre 2026)</p>
               </div>
 
               <section class="space-y-3 text-xs sm:text-sm">
@@ -181,37 +181,96 @@ export type LegalTab = 'terminos' | 'privacidad' | 'cookies' | 'reclamaciones';
                   1. Información que Recopilamos
                 </h2>
                 <p>
-                  Para procesar tus solicitudes de delivery y permitir la comunicación directa con el comercio, recopilamos únicamente los datos necesarios:
+                  Para procesar tus solicitudes de delivery, conectar de manera eficiente a clientes, comercios y repartidores, y asegurar un servicio transparente, recopilamos las siguientes categorías de datos:
                 </p>
-                <ul class="list-disc list-inside space-y-1 pl-2 text-slate-600 dark:text-slate-400">
-                  <li>Nombre completo y número telefónico / WhatsApp de contacto.</li>
-                  <li>Dirección de entrega y coordenadas de geolocalización GPS cuando autorizas el cálculo de distancia.</li>
-                  <li>Historial de pedidos y comercios favoritos guardados en tu navegador o app.</li>
+                <ul class="list-disc list-inside space-y-1.5 pl-2 text-slate-600 dark:text-slate-400">
+                  <li><strong>Datos de Identificación y Contacto:</strong> Nombre, apellido, número de teléfono móvil / WhatsApp, correo electrónico y documento de identidad (C.I. / RIF).</li>
+                  <li><strong>Datos de Entrega:</strong> Dirección domiciliaria o comercial, puntos de referencia e instrucciones especiales de entrega.</li>
+                  <li><strong>Datos de Repartidores (Riders):</strong> Fotografías de documento oficial de identidad, fotografía facial biométrica (selfie en vivo para prevención de suplantación), datos del vehículo (placa, marca, modelo) y credenciales de cobro.</li>
+                  <li><strong>Datos Transaccionales:</strong> Historial de pedidos realizados, comprobantes de pago / transferencias de Pago Móvil y valoraciones de servicio.</li>
                 </ul>
               </section>
 
+              <!-- CLÁUSULA EXPLICITA DE UBICACIÓN Y RASTREO CONTINUO (REQUISITO GOOGLE PLAY / APP STORE) -->
+              <section class="space-y-4 text-xs sm:text-sm bg-amber-500/5 dark:bg-amber-500/10 border border-amber-500/20 rounded-2xl p-5">
+                <h2 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                  2. Permisos de Ubicación y Rastreo Continuo en Segundo Plano (GPS)
+                </h2>
+                
+                <p class="leading-relaxed">
+                  El funcionamiento de una plataforma de entregas a domicilio depende de la precisión geográfica para calcular distancias, garantizar la frescura de los alimentos y optimizar los tiempos de despacho. A continuación se detalla cómo gestionamos la ubicación según el rol:
+                </p>
+
+                <div class="space-y-3 pt-2">
+                  <div class="p-3.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
+                    <h3 class="font-black text-slate-900 dark:text-white flex items-center gap-2">
+                      📍 Para Clientes (App Móvil y Plataforma Web)
+                    </h3>
+                    <p class="text-slate-600 dark:text-slate-400 text-xs leading-relaxed">
+                      La app solicita acceso a la <strong>ubicación precisa en primer plano</strong> (únicamente mientras utilizas la aplicación) con el objetivo de fijar el punto exacto de entrega en el mapa, comprobar que te encuentras dentro del radio de cobertura del comercio, calcular automáticamente el costo de envío por kilómetro y mostrar al repartidor la ruta más rápida hacia tu dirección.
+                    </p>
+                  </div>
+
+                  <div class="p-3.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
+                    <h3 class="font-black text-slate-900 dark:text-white flex items-center gap-2">
+                      🛵 Para Repartidores (Pídetelo Rider) — Rastreo Continuo en Segundo Plano
+                    </h3>
+                    <p class="text-slate-600 dark:text-slate-400 text-xs leading-relaxed">
+                      <strong>Declaración Prominente:</strong> La aplicación <em>Pídetelo Rider</em> recopila y transmite datos de ubicación geográfica precisa de manera continua, <strong>incluso cuando la aplicación está cerrada o no está en pantalla (segundo plano)</strong>, con las siguientes finalidades críticas:
+                    </p>
+                    <ul class="list-disc list-inside space-y-1 pl-2 text-slate-600 dark:text-slate-400 text-xs">
+                      <li><strong>Seguimiento en Vivo del Pedido:</strong> Permitir al cliente y al comercio monitorear en tiempo real la trayectoria del repartidor en el mapa interactivo durante la entrega.</li>
+                      <li><strong>Asignación Eficiente de Despachos:</strong> Asignar pedidos de forma inteligente a los repartidores que se encuentren más cercanos físicamente al comercio emisor.</li>
+                      <li><strong>Cálculo Exacto de Tarifas por Kilómetro:</strong> Registrar la distancia real recorrida para la liquidación precisa de fletes y pagos al repartidor.</li>
+                      <li><strong>Seguridad Operativa y Auditoría:</strong> Verificar la entrega efectiva del paquete en el destino pactado y prevenir desvíos o incidencias.</li>
+                    </ul>
+                    <p class="text-[11px] text-amber-700 dark:text-amber-300 font-semibold mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                      ℹ️ El rastreo en segundo plano se ejecuta mediante un servicio permanente del sistema con notificación visible en la barra de estado y <strong>se detiene de manera inmediata e irrevocable en cuanto el repartidor pulsa "Desconectarse" o finaliza su turno activo</strong>.
+                    </p>
+                  </div>
+                </div>
+
+                <div class="text-xs text-slate-500 dark:text-slate-400 pt-1">
+                  <strong>Control de Permisos por el Usuario:</strong> Puedes revocar o modificar los permisos de ubicación en cualquier momento desde los ajustes de privacidad de tu dispositivo Android o iOS. Toma en cuenta que para los repartidores, revocar la ubicación impedirá recibir pedidos y prestar servicios en la plataforma.
+                </div>
+              </section>
+
               <section class="space-y-3 text-xs sm:text-sm">
                 <h2 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                  2. Uso de la Información
+                  3. Uso y No Divulgación de la Información
                 </h2>
                 <p>
-                  Tus datos se utilizan con el único fin de: coordinar el despacho con el comercio y el repartidor, calcular con precisión el costo de envío por kilómetro, enviar confirmaciones y ofrecer soporte al cliente.
+                  Tus datos se utilizan con el único fin de procesar la orden, coordinar el despacho con el comercio y el repartidor, calcular las tarifas de envío, enviar confirmaciones de estado y ofrecer soporte postventa.
                 </p>
-                <p class="font-bold text-slate-900 dark:text-white">
-                  Pídetelo.app no comercializa, no alquila y no comparte tus datos personales con terceros para fines publicitarios externos.
+                <div class="p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 rounded-xl text-emerald-800 dark:text-emerald-300 font-bold text-xs">
+                  🛡️ Compromiso Inquebrantable: Pídetelo jamás vende, comercializa, alquila ni comparte tus datos personales o de ubicación con agencias de publicidad o terceros para fines comerciales externos.
+                </div>
+              </section>
+
+              <section class="space-y-3 text-xs sm:text-sm">
+                <h2 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  4. Seguridad y Cifrado de Datos
+                </h2>
+                <p>
+                  Implementamos altos estándares de seguridad en la nube: todas las comunicaciones y transmisiones de telemetría GPS viajan encriptadas mediante protocolos seguros HTTPS/TLS con cifrado en reposo en bases de datos con control de acceso restringido.
                 </p>
               </section>
 
               <section class="space-y-3 text-xs sm:text-sm">
                 <h2 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                  3. Derechos del Titular y Cancelación
+                  5. Derechos ARCO, Retención y Eliminación de Cuenta
                 </h2>
                 <p>
-                  Puedes solicitar la rectificación o eliminación total de tus registros en cualquier momento enviando un correo a 
-                  <a href="mailto:pideteloadomicilio@gmail.com" class="text-brand-600 dark:text-brand-400 font-bold underline">pideteloadomicilio@gmail.com</a>.
+                  Tienes derecho de acceder, rectificar o solicitar la eliminación total de tus datos personales e historial de ubicaciones en cualquier momento. Puedes ejercer este derecho directamente desde la sección de Soporte en la app o enviando tu solicitud a:
                 </p>
+                <div class="p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs space-y-1">
+                  <div><strong>Correo de Privacidad:</strong> <a href="mailto:pideteloadomicilio@gmail.com" class="text-brand-600 dark:text-brand-400 font-bold underline">pideteloadomicilio@gmail.com</a></div>
+                  <div><strong>Tiempo de Respuesta:</strong> Menor a 48 horas hábiles para confirmación de eliminación definitiva.</div>
+                </div>
               </section>
             </div>
           }

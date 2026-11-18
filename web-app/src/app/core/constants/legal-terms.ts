@@ -43,15 +43,26 @@ La marca Pídetelo, sus logotipos, isotipos, interfaces de usuario, código fuen
 
 Última actualización: Noviembre 2026
 
-Pídetelo valora profundamente la confianza depositada por nuestros clientes, aliados comerciales y repartidores. La presente Política de Privacidad describe cómo recolectamos, utilizamos, almacenamos, protegemos y compartimos su información personal.
+Pídetelo valora profundamente la confianza depositada por nuestros clientes, aliados comerciales y repartidores. La presente Política de Privacidad describe cómo recolectamos, utilizamos, almacenamos, protegemos y compartimos su información personal, incluyendo el uso de servicios de geolocalización continua.
 
 1. INFORMACIÓN QUE RECOLECTAMOS
 1.1. Información de Perfil: Nombre completo, dirección de correo electrónico, número de teléfono móvil, documento nacional de identidad (Cédula de Identidad / RIF).
-1.2. Datos de Ubicación y Geolocalización GPS: Coordenadas geográficas exactas (latitud y longitud), historial de direcciones de entrega, y telemetría en tiempo real mientras la aplicación se encuentre en uso activo para la coordinación y seguimiento de pedidos en vivo.
+1.2. Datos de Ubicación y Geolocalización GPS: Coordenadas geográficas exactas (latitud y longitud), historial de direcciones de entrega y telemetría en tiempo real mientras la aplicación se encuentre en uso activo para la coordinación y seguimiento de pedidos en vivo.
 1.3. Datos de Repartidores (Riders): Fotografías de documento de identidad oficial, fotografías biométricas (selfies frontales en vivo para certificación y prevención de fraude), datos del vehículo (tipo, marca, modelo y placa de circulación) y cuenta de pago móvil.
 1.4. Información Transaccional: Historial de compras, referencias bancarias de Pago Móvil, montos pagados, propinas y saldo de Billetera.
 
-2. FINALIDAD DEL TRATAMIENTO DE DATOS
+2. PERMISOS DE UBICACIÓN Y RASTREO CONTINUO EN SEGUNDO PLANO (GPS)
+2.1. Clientes (App Móvil y Web): Solicitamos acceso a la ubicación precisa en primer plano (mientras usa la aplicación) para geolocalizar el punto exacto de entrega, comprobar cobertura del comercio, calcular tarifas de flete y trazar la ruta de despacho.
+2.2. Repartidores (Pídetelo Rider - Rastreo en Segundo Plano):
+Declaración Prominente: La aplicación Pídetelo Rider recopila datos de ubicación geográfica continua, INCLUSO CUANDO LA APLICACIÓN ESTÁ CERRADA O NO ESTÁ EN USO (segundo plano), para:
+  a) Permitir el seguimiento en vivo y en mapa interactivo de la trayectoria del pedido por parte del cliente y comercio.
+  b) Optimizar las rutas de despacho y calcular con precisión métrica la distancia en kilómetros para la liquidación de tarifas y propinas.
+  c) Asignar pedidos de forma inteligente a los repartidores más cercanos geográficamente al comercio.
+  d) Monitorear la seguridad de la entrega y validar el arribo al destino acordado.
+Este rastreo se ejecuta mediante un servicio en primer plano con notificación permanente y finaliza de inmediato cuando el repartidor pulsa "Desconectarse" o concluye su jornada de entregas.
+2.3. Control de Permisos: El usuario puede revocar los permisos de ubicación en cualquier momento desde los ajustes de su dispositivo móvil (Android / iOS). Revocar la ubicación impedirá la prestación de servicios a los repartidores.
+
+3. FINALIDAD DEL TRATAMIENTO DE DATOS
 La información recolectada se utiliza estrictamente para:
 a) Procesar, despachar y dar seguimiento en tiempo real a los pedidos solicitados.
 b) Calcular con precisión las tarifas de despacho y optimizar las rutas de entrega.
@@ -59,15 +70,15 @@ c) Permitir la comunicación bidireccional entre el cliente, el comercio y el re
 d) Certificar de forma automatizada y real la identidad de los repartidores para brindar un entorno seguro y confiable a los usuarios y comercios.
 e) Detectar y prevenir fraudes, pagos duplicados o conductas abusivas.
 
-3. CONFIDENCIALIDAD Y SEGURIDAD
-3.1. Cifrado y Protección: Todos los datos sensibles, credenciales de inicio de sesión y transmisiones de telemetría se procesan bajo protocolos seguros HTTPS/TLS con cifrado en tránsito y reposo.
-3.2. No Comercialización: Pídetelo jamás vende, alquila ni comercializa bases de datos personales a agencias publicitarias o terceros ajenos a la operativa del servicio.
-3.3. Acceso Limitado: Los datos de entrega del cliente (dirección y número) solo son accesibles temporalmente para el comercio y el repartidor asignado durante la vigencia del pedido en curso.
+4. CONFIDENCIALIDAD, SEGURIDAD Y NO COMERCIALIZACIÓN
+4.1. Cifrado y Protección: Todos los datos sensibles, credenciales de inicio de sesión y transmisiones de telemetría se procesan bajo protocolos seguros HTTPS/TLS con cifrado en tránsito y reposo.
+4.2. No Comercialización: Pídetelo jamás vende, alquila ni comercializa bases de datos personales ni de ubicación a agencias publicitarias o terceros ajenos a la operativa del servicio.
+4.3. Acceso Limitado: Los datos de entrega del cliente (dirección y número) solo son accesibles temporalmente para el comercio y el repartidor asignado durante la vigencia del pedido en curso.
 
-4. CONSERVACIÓN Y ELIMINACIÓN DE DATOS
-Los datos personales se conservan durante el tiempo que la cuenta permanezca activa. El usuario tiene el derecho de solicitar en cualquier momento la actualización, corrección o eliminación total de sus datos personales y registros mediante la sección de Soporte en la aplicación o escribiendo al canal oficial de privacidad de Pídetelo.
+5. CONSERVACIÓN Y ELIMINACIÓN DE DATOS
+Los datos personales se conservan durante el tiempo que la cuenta permanezca activa. El usuario tiene el derecho de solicitar en cualquier momento la actualización, corrección o eliminación total de sus datos personales y registros de ubicación mediante la sección de Soporte en la aplicación o escribiendo al canal oficial: pideteloadomicilio@gmail.com.
 
-5. CONSENTIMIENTO
+6. CONSENTIMIENTO
 Al registrarse y utilizar las aplicaciones de Pídetelo, el usuario otorga su consentimiento expreso, informado e inequívoco para el tratamiento de sus datos personales conforme a las finalidades descritas en esta política.`,
 
   riderServiceAgreement: `TÉRMINOS Y CONDICIONES DE CERTIFICACIÓN Y PRESTACIÓN DE SERVICIOS PARA REPARTIDORES (RIDERS) PÍDETELO

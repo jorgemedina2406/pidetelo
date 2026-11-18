@@ -82,7 +82,7 @@
       </span>
       <div class="flex items-center gap-1 text-amber-500 my-2">
         @for (star of [1,2,3,4,5]; track star) {
-          <app-icon name="star" [size]="18" [className]="star <= Math.round(avgRating) ? 'text-amber-500' : 'text-slate-300 dark:text-slate-700'"></app-icon>
+          <app-icon name="star" [size]="18" [fill]="star <= Math.round(avgRating) ? 'currentColor' : 'none'" [className]="star <= Math.round(avgRating) ? 'text-amber-500' : 'text-slate-300 dark:text-slate-700'"></app-icon>
         }
       </div>
       <span class="text-xs text-slate-500 dark:text-slate-400 font-medium">
