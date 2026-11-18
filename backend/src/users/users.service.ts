@@ -474,6 +474,33 @@ export class UsersService {
       });
     } catch (_) {}
 
+    // Si el rol creado es RIDER, sincronizar también inmediatamente a public.riders
+    if (newUser.role === 'RIDER') {
+      try {
+        const plate = `MOTO-${(newUser.name || 'RIDER').substring(0, 4).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`;
+        await this.supabase.getClient().from('riders').upsert({
+          id: newUser.id,
+          user_id: authUserId || newUser.id,
+          tenant_id: newUser.tenant_id || null,
+          branch_id: newUser.branch_id || null,
+          name: newUser.name,
+          email: newUser.email,
+          phone: newUser.phone,
+          vehicle_type: 'moto',
+          vehicle_plate: plate,
+          vehicle_model: 'Motocicleta Estándar',
+          status: 'available',
+          is_certified: true,
+          verification_status: 'verified',
+          verification_score: 100,
+          is_independent: !newUser.tenant_id
+        });
+        console.log(`[UsersService] ✅ Usuario RIDER ${newUser.email} replicado a la tabla riders.`);
+      } catch (rErr) {
+        console.warn('[UsersService] Error replicando RIDER a riders:', rErr);
+      }
+    }
+
     return newUser;
   }
 

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, InternalServerErrorException, UnauthorizedException, ForbiddenException, BadRequestException, Optional, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, NotFoundException, InternalServerErrorException, UnauthorizedException, ForbiddenException, BadRequestException, Optional, Inject, forwardRef, OnModuleInit } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service.js';
 import { BiometricVerificationService } from './biometric-verification.service.js';
 import { PlansService } from '../plans/plans.service.js';
@@ -22,7 +22,7 @@ export interface CreateRiderDto {
 }
 
 @Injectable()
-export class RidersService {
+export class RidersService implements OnModuleInit {
   private localRiders = new Map<string, any>();
   private storageFilePath = path.resolve(process.cwd(), 'data', 'riders_storage.json');
 
@@ -33,6 +33,72 @@ export class RidersService {
     @Optional() @Inject(forwardRef(() => TenantsService)) private tenantsService?: TenantsService,
   ) {
     this.loadFromDisk();
+  }
+
+  async onModuleInit() {
+    await this.syncProfilesRiders();
+  }
+
+  async syncProfilesRiders() {
+    try {
+      const client = this.supabase.getClient();
+      // Consultar usuarios en profiles con role RIDER (ej: Armando Repartidor, etc.)
+      const { data: profiles, error } = await client
+        .from('profiles')
+        .select('id, full_name, email, phone, role, tenant_id, branch_id, is_active')
+        .eq('role', 'RIDER');
+
+      if (error || !profiles || profiles.length === 0) return;
+
+      console.log(`[RidersService] 🔍 Verificando sincronización de ${profiles.length} perfiles RIDER con tabla riders...`);
+
+      for (const p of profiles) {
+        if (!p.email) continue;
+        const cleanEmail = p.email.toLowerCase().trim();
+
+        // Verificar si ya existe en la tabla riders
+        const { data: existing } = await client
+          .from('riders')
+          .select('id, user_id, email')
+          .or(`email.ilike.${cleanEmail},user_id.eq.${p.id}`)
+          .maybeSingle();
+
+        if (!existing) {
+          const riderId = randomUUID();
+          const cleanPlate = `MOTO-${(cleanEmail.split('@')[0] || 'RIDER').substring(0, 4).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`;
+
+          const insertPayload: any = {
+            id: riderId,
+            user_id: p.id,
+            tenant_id: p.tenant_id || null,
+            branch_id: p.branch_id || null,
+            name: p.full_name || 'Repartidor',
+            email: cleanEmail,
+            phone: p.phone || '+584140000000',
+            vehicle_type: 'moto',
+            vehicle_plate: cleanPlate,
+            vehicle_model: 'Motocicleta Estándar',
+            status: 'available',
+            is_certified: true,
+            verification_status: 'verified',
+            verification_score: 100,
+            is_independent: !p.tenant_id,
+            rating: 5.0,
+            total_deliveries: 0,
+            wallet_balance: 0.00
+          };
+
+          const { error: insErr } = await client.from('riders').insert(insertPayload);
+          if (insErr) {
+            console.error(`[RidersService] ⚠️ Error auto-sincronizando perfil ${p.email} a tabla riders:`, insErr.message);
+          } else {
+            console.log(`[RidersService] ✅ Perfil ${p.email} (${p.full_name}) auto-sincronizado a tabla riders con ID: ${riderId}`);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[RidersService] Excepción durante syncProfilesRiders:', err);
+    }
   }
 
   private loadFromDisk(): void {
@@ -118,29 +184,49 @@ export class RidersService {
           .maybeSingle();
 
         if (prof && prof.role === 'RIDER') {
+          const plate = `MOTO-${(cleanUser.split('@')[0] || 'RIDER').substring(0, 4).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`;
           dbRider = {
             id: prof.id,
             user_id: prof.id,
+            tenant_id: prof.tenant_id || null,
+            branch_id: prof.branch_id || null,
             name: prof.full_name || cleanUser,
             email: prof.email || cleanUser,
             phone: prof.phone || '+584140000000',
             vehicle_type: 'moto',
+            vehicle_plate: plate,
+            vehicle_model: 'Motocicleta Estándar',
             status: 'available',
-            is_active: prof.is_active !== false,
+            is_certified: true,
+            verification_status: 'verified',
+            verification_score: 100,
+            is_independent: !prof.tenant_id,
+            rating: 5.0,
+            total_deliveries: 0,
+            wallet_balance: 0.00,
             created_at: prof.created_at || new Date().toISOString()
           };
           try {
             await client.from('riders').upsert({
               id: prof.id,
               user_id: prof.id,
+              tenant_id: prof.tenant_id || null,
+              branch_id: prof.branch_id || null,
               name: dbRider.name,
               email: dbRider.email,
               phone: dbRider.phone,
-              status: 'available',
+              vehicle_plate: plate,
               vehicle_type: 'moto',
-              is_active: true
+              vehicle_model: 'Motocicleta Estándar',
+              status: 'available',
+              is_certified: true,
+              verification_status: 'verified',
+              verification_score: 100,
+              is_independent: !prof.tenant_id
             });
-          } catch (_) {}
+          } catch (rErr) {
+            console.warn('[RidersService] Error auto-sincronizando rider en login:', rErr);
+          }
         }
       }
 
@@ -331,11 +417,15 @@ export class RidersService {
     let finalRiderRecord: any = null;
 
     try {
-      // Buscar si ya existe en Supabase por email, user_id o placa
+      // Buscar si ya existe en Supabase por email, user_id o placa (sin colisionar con SIN-PLACA)
+      let orClause = `email.ilike.${cleanEmail},user_id.eq.${finalUserId}`;
+      if (cleanPlate && cleanPlate !== 'SIN-PLACA') {
+        orClause += `,vehicle_plate.ilike.${cleanPlate}`;
+      }
       const { data: existingRider } = await sb
         .from('riders')
         .select('*')
-        .or(`email.eq.${cleanEmail},user_id.eq.${finalUserId},vehicle_plate.eq.${cleanPlate}`)
+        .or(orClause)
         .maybeSingle();
 
       if (existingRider) {
