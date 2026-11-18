@@ -951,6 +951,111 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
   });
 
   readonly ownRiders = signal<Rider[]>([]);
+
+  // --- GESTIÓN DE NOTIFICACIONES NATIVAS DEL NAVEGADOR & AUDIO EN SEGUNDO PLANO ---
+  readonly notificationPermission = signal<NotificationPermission>(
+    typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'default'
+  );
+  private tabBlinkInterval: any = null;
+  private originalDocumentTitle: string = '';
+
+  requestNotificationPermission(): void {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      this.showToast('info', 'Notificaciones', 'Las notificaciones del sistema no son soportadas por este navegador.');
+      return;
+    }
+    Notification.requestPermission().then(permission => {
+      this.notificationPermission.set(permission);
+      if (permission === 'granted') {
+        this.showToast('success', 'Alertas Activadas', 'Recibirás alertas nativas en tu PC o móvil aunque estés en otra pestaña.');
+        this.playKitchenBellSound();
+        try {
+          new Notification('🔔 Pídetelo Comercio', {
+            body: '¡Notificaciones activadas! Te avisaremos de inmediato cada vez que entre un nuevo pedido.',
+            icon: '/assets/logo.png',
+          });
+        } catch (_) {}
+      } else if (permission === 'denied') {
+        this.showToast('error', 'Permiso Denegado', 'Has bloqueado las notificaciones. Puedes activarlas desde el candado de la barra del navegador.');
+      }
+    });
+  }
+
+  playKitchenBellSound(): void {
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      
+      const playChime = (freq: number, startDelay: number, duration: number) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime + startDelay);
+        gain.gain.setValueAtTime(0.4, audioCtx.currentTime + startDelay);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + startDelay + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(audioCtx.currentTime + startDelay);
+        osc.stop(audioCtx.currentTime + startDelay + duration);
+      };
+
+      // Timbre característico de comanda de restaurante (Doblete metálico brillante)
+      playChime(880, 0.0, 0.6);   // Nota A5
+      playChime(1174, 0.12, 0.8); // Nota D6
+      playChime(1760, 0.25, 1.0); // Nota A6
+      
+      // Vibración háptica en teléfonos móviles
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        navigator.vibrate([200, 100, 200, 100, 400]);
+      }
+    } catch (_) {}
+  }
+
+  private triggerNewOrderDesktopAlert(order: any): void {
+    // 1. Sonido fuerte de comanda
+    this.playKitchenBellSound();
+
+    const orderNum = order?.orderNumber || order?.id || 'Nuevo';
+    const customer = order?.customerName || 'Cliente';
+    const total = order?.total ? `$${Number(order.total).toFixed(2)}` : '';
+
+    // 2. Notificación nativa del sistema operativo (Windows, macOS, Android Chrome)
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+      try {
+        const n = new Notification(`🛎️ ¡NUEVO PEDIDO RECIBIDO! #${orderNum}`, {
+          body: `${customer} ha realizado un pedido ${total ? '(' + total + ')' : ''}. Haz clic para gestionarlo en cocina.`,
+          icon: '/assets/logo.png',
+          badge: '/assets/logo.png',
+          tag: `order-${order?.id || orderNum}`,
+          requireInteraction: true, // Se mantiene visible en pantalla hasta que se interactúe
+        });
+
+        n.onclick = () => {
+          window.focus();
+          n.close();
+          this.activeTab.set('orders');
+        };
+      } catch (_) {}
+    }
+
+    // 3. Efecto parpadeante en el título de la pestaña si está en segundo plano
+    if (typeof document !== 'undefined' && document.hidden) {
+      if (!this.originalDocumentTitle) {
+        this.originalDocumentTitle = document.title;
+      }
+      clearInterval(this.tabBlinkInterval);
+      let isBlink = false;
+      this.tabBlinkInterval = setInterval(() => {
+        if (!document.hidden) {
+          clearInterval(this.tabBlinkInterval);
+          this.tabBlinkInterval = null;
+          if (this.originalDocumentTitle) document.title = this.originalDocumentTitle;
+          return;
+        }
+        document.title = isBlink ? `🛎️ (1) ¡NUEVO PEDIDO! #${orderNum}` : `⚡ REVISAR COMANDA - Pídetelo`;
+        isBlink = !isBlink;
+      }, 1000);
+    }
+  }
   readonly nearbyRiders = signal<Rider[]>([]);
   readonly isNearbyRidersModalOpen = signal(false);
   readonly isDispatchConfigModalOpen = signal(false);
@@ -1409,18 +1514,9 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         const currentCount = this.orders().length;
 
         if (orderList.length > currentCount && currentCount > 0) {
-          try {
-            const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.frequency.setValueAtTime(587.33, audioCtx.currentTime);
-            gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
-            osc.start();
-            osc.stop(audioCtx.currentTime + 0.35);
-          } catch (_) { }
+          const newOrders = orderList.filter(no => !this.orders().some(oo => oo.id === no.id));
+          const latestOrder = newOrders.length > 0 ? newOrders[0] : orderList[0];
+          this.triggerNewOrderDesktopAlert(latestOrder);
         }
         this.orders.set(orderList);
         const currentRouteOrd = this.selectedRouteOrder();
@@ -1439,6 +1535,10 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
           console.log('[MerchantAdmin] Realtime event from Supabase:', payload);
           if (payload && payload.eventType === 'REJECTED_BY_RIDER' && payload.order) {
             triggerRejectionAlert(payload.order.orderNumber || payload.order.id, payload.order.riderName);
+          }
+          if (payload && (payload.eventType === 'INSERT' || payload.new)) {
+            const rawNew = payload.new || payload;
+            this.triggerNewOrderDesktopAlert(rawNew);
           }
           reloadOrders();
         });
@@ -1477,6 +1577,13 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.tabBlinkInterval) {
+      clearInterval(this.tabBlinkInterval);
+      this.tabBlinkInterval = null;
+    }
+    if (this.originalDocumentTitle && typeof document !== 'undefined') {
+      document.title = this.originalDocumentTitle;
+    }
     if (this.whatsappPollingInterval) {
       clearInterval(this.whatsappPollingInterval);
       this.whatsappPollingInterval = null;
@@ -2836,17 +2943,20 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         // Sincronizar en branches en Supabase directamente para disponibilidad inmediata en apps móviles
         try {
           const currentCur = this.currentTenant().currencySettings || {};
-          this.supabase.client
-            .from('branches')
-            .update({
-              currency_settings: {
-                ...currentCur,
-                riderPayoutPolicy: res,
-                rider_payout_policy: res,
-              }
-            })
-            .eq('company_id', tid)
-            .then(() => {});
+          const sbClient = this.supabase.getClient();
+          if (sbClient) {
+            sbClient
+              .from('branches')
+              .update({
+                currency_settings: {
+                  ...currentCur,
+                  riderPayoutPolicy: res,
+                  rider_payout_policy: res,
+                }
+              })
+              .eq('company_id', tid)
+              .then(() => {});
+          }
         } catch (_) {}
 
         this.isSavedNotificationVisible.set(true);

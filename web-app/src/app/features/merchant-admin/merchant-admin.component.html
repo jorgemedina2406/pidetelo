@@ -595,6 +595,24 @@
             </span>
           </div>
 
+          <!-- Botón de Notificaciones Nativas del Navegador / Móvil -->
+          <button (click)="requestNotificationPermission()"
+            [title]="notificationPermission() === 'granted' ? 'Notificaciones activadas (sonará y avisará aunque tengas otra pestaña abierta)' : 'Haz clic para permitir notificaciones de pedidos en tu PC y móvil'"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer"
+            [class.bg-brand-50]="notificationPermission() === 'granted'"
+            [class.dark:bg-brand-950/40]="notificationPermission() === 'granted'"
+            [class.text-brand-600]="notificationPermission() === 'granted'"
+            [class.dark:text-brand-400]="notificationPermission() === 'granted'"
+            [class.border-brand-300]="notificationPermission() === 'granted'"
+            [class.dark:border-brand-800]="notificationPermission() === 'granted'"
+            [class.bg-amber-500/10]="notificationPermission() !== 'granted'"
+            [class.text-amber-700]="notificationPermission() !== 'granted'"
+            [class.dark:text-amber-300]="notificationPermission() !== 'granted'"
+            [class.border-amber-400/40]="notificationPermission() !== 'granted'">
+            <app-icon [name]="notificationPermission() === 'granted' ? 'bell' : 'bell-off'" [size]="14"></app-icon>
+            <span class="hidden md:inline">{{ notificationPermission() === 'granted' ? 'Alertas PC/Móvil Activas' : 'Activar Alertas' }}</span>
+          </button>
+
           <button (click)="toggleBranch(currentB)"
             class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer"
             [class.bg-emerald-50]="currentB.isOpenNow" [class.dark:bg-emerald-950/40]="currentB.isOpenNow"
