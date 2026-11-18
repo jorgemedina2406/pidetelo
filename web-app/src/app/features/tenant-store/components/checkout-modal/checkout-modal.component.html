@@ -73,31 +73,47 @@
               </label>
 
               @if (!cart.customer().deliveryLat || !cart.customer().deliveryLng) {
-                <button type="button" (click)="captureGpsLocation()" [disabled]="isDetectingGps()"
-                        class="w-full py-3 px-4 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border-2 border-dashed border-amber-500 text-amber-800 dark:text-amber-200 font-black text-xs flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer disabled:opacity-50 animate-pulse">
-                  @if (isDetectingGps()) {
-                    <span class="animate-spin text-sm">⏳</span>
-                    <span>Conectando con satélites GPS...</span>
-                  } @else {
-                    <span class="text-base">📍</span>
-                    <span>TOCA AQUÍ PARA COMPARTIR TU UBICACIÓN GPS (OBLIGATORIO)</span>
-                  }
-                </button>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <button type="button" (click)="openAddressModal()"
+                          class="py-3 px-3.5 rounded-xl bg-brand-500 hover:bg-brand-600 active:scale-95 text-white font-extrabold text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-brand-500/20 cursor-pointer">
+                    <span class="text-base">🗺️</span>
+                    <span>Seleccionar en el Mapa</span>
+                  </button>
+                  <button type="button" (click)="captureGpsLocation()" [disabled]="isDetectingGps()"
+                          class="py-3 px-3.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border-2 border-dashed border-amber-500 text-amber-800 dark:text-amber-200 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer disabled:opacity-50">
+                    @if (isDetectingGps()) {
+                      <span class="animate-spin text-sm">⏳</span>
+                      <span>Conectando satélites...</span>
+                    } @else {
+                      <span class="text-base">📍</span>
+                      <span>Usar mi GPS Actual</span>
+                    }
+                  </button>
+                </div>
               } @else {
-                <div class="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-800 dark:text-emerald-200 text-xs flex items-center justify-between">
-                  <div class="flex items-center gap-2 font-bold">
-                    <span class="text-emerald-600 dark:text-emerald-400 text-base">✓</span>
-                    <div>
-                      <span>Ubicación GPS Confirmada</span>
-                      <span class="text-[10px] text-slate-500 block font-mono font-normal">
+                <div class="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-800 dark:text-emerald-200 text-xs flex items-center justify-between gap-2">
+                  <div class="flex items-center gap-2.5 font-bold min-w-0">
+                    <div class="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-sm font-extrabold shrink-0">
+                      ✓
+                    </div>
+                    <div class="min-w-0">
+                      <span class="block truncate font-extrabold text-emerald-900 dark:text-emerald-100">Ubicación Fijada</span>
+                      <span class="text-[10px] text-slate-500 dark:text-slate-400 block font-mono font-normal truncate">
                         Coord: {{ cart.customer().deliveryLat }}, {{ cart.customer().deliveryLng }}
                       </span>
                     </div>
                   </div>
-                  <button type="button" (click)="captureGpsLocation()" [disabled]="isDetectingGps()"
-                          class="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 underline cursor-pointer hover:text-emerald-800">
-                    Cambiar GPS
-                  </button>
+                  <div class="flex items-center gap-1.5 shrink-0">
+                    <button type="button" (click)="openAddressModal()"
+                            class="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-extrabold text-[11px] hover:bg-emerald-50 dark:hover:bg-slate-700 shadow-xs cursor-pointer transition-colors flex items-center gap-1">
+                      <span>🗺️</span>
+                      <span>Ajustar Pin</span>
+                    </button>
+                    <button type="button" (click)="captureGpsLocation()" [disabled]="isDetectingGps()"
+                            class="p-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-slate-800 text-xs cursor-pointer" title="Actualizar GPS">
+                      🎯
+                    </button>
+                  </div>
                 </div>
               }
             </div>
@@ -475,4 +491,17 @@
       </div>
     </div>
   }
+
+  <!-- Modal de Selección de Ubicación y Ajuste en Mapa -->
+  <app-customer-address-modal
+    [isOpen]="isAddressModalOpen()"
+    [initialLat]="cart.customer().deliveryLat"
+    [initialLng]="cart.customer().deliveryLng"
+    [initialAddress]="cart.customer().deliveryAddress"
+    [initialReference]="cart.customer().addressReference"
+    [storeLat]="storeLat()"
+    [storeLng]="storeLng()"
+    (close)="closeAddressModal()"
+    (locationSelected)="onLocationSelected($event)">
+  </app-customer-address-modal>
 }

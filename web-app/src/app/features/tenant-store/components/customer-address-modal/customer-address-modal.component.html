@@ -1,0 +1,173 @@
+@if (isOpen) {
+  <div class="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200">
+    <div class="relative w-full max-w-xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[92vh]">
+      
+      <!-- Header -->
+      <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-brand-500/10 text-brand-500 dark:text-brand-400 flex items-center justify-center text-lg font-bold">
+            📍
+          </div>
+          <div>
+            <h3 class="text-base font-extrabold text-slate-900 dark:text-white leading-tight">
+              Ubicación de Entrega
+            </h3>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400">
+              Busca tu dirección o ajusta el pin en el mapa
+            </p>
+          </div>
+        </div>
+        <button type="button" 
+                (click)="closeModal()" 
+                class="w-8 h-8 rounded-full bg-slate-200/60 dark:bg-slate-800 hover:bg-slate-200 text-slate-600 dark:text-slate-300 flex items-center justify-center transition-colors cursor-pointer text-sm font-bold">
+          ✕
+        </button>
+      </div>
+
+      <!-- Scrollable Content -->
+      <div class="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
+        
+        <!-- Search Bar with Autocomplete -->
+        <div class="relative">
+          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+            Buscar dirección o punto de interés
+          </label>
+          <div class="relative flex items-center">
+            <span class="absolute left-3.5 text-slate-400 text-sm">🔍</span>
+            <input type="text"
+                   [ngModel]="searchQuery"
+                   (ngModelChange)="onSearchInput($event)"
+                   placeholder="Ej: Av. Lara, Las Trinitarias, Los Cardones..."
+                   class="w-full pl-10 pr-20 py-2.5 text-xs sm:text-sm font-medium rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500 transition-all shadow-xs" />
+            
+            <div class="absolute right-2 flex items-center gap-1">
+              @if (isSearching()) {
+                <span class="animate-spin text-xs text-brand-500 mr-1">⏳</span>
+              }
+              @if (searchQuery) {
+                <button type="button" 
+                        (click)="clearSearch()"
+                        class="p-1 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs">
+                  ✕
+                </button>
+              }
+            </div>
+          </div>
+
+          <!-- Autocomplete Dropdown List -->
+          @if (searchSuggestions().length > 0) {
+            <div class="absolute top-full left-0 right-0 mt-1 z-30 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden divide-y divide-slate-100 dark:divide-slate-700/60 max-h-52 overflow-y-auto">
+              @for (item of searchSuggestions(); track item.display_name) {
+                <button type="button"
+                        (click)="selectSuggestion(item)"
+                        class="w-full text-left px-3.5 py-2.5 hover:bg-brand-50 dark:hover:bg-brand-500/10 transition-colors flex items-start gap-2.5 cursor-pointer">
+                  <span class="text-brand-500 text-sm mt-0.5">📍</span>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
+                      {{ item.display_name.split(',')[0] }}
+                    </p>
+                    <p class="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-1">
+                      {{ item.display_name }}
+                    </p>
+                  </div>
+                </button>
+              }
+            </div>
+          }
+        </div>
+
+        <!-- Quick GPS & Map Info Row -->
+        <div class="flex items-center justify-between gap-2">
+          <div class="flex items-center gap-1.5 text-[11px] text-slate-600 dark:text-slate-400 font-medium">
+            <span class="text-amber-500">💡</span>
+            <span>Arrastra el pin al punto exacto de tu puerta</span>
+          </div>
+
+          <!-- GPS Button -->
+          <button type="button"
+                  (click)="detectGps()"
+                  [disabled]="isDetectingGps()"
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 font-bold text-xs transition-all shadow-xs cursor-pointer disabled:opacity-50">
+            @if (isDetectingGps()) {
+              <span class="animate-spin text-xs">⏳</span>
+              <span>Detectando...</span>
+            } @else {
+              <span>🎯</span>
+              <span>Mi GPS Actual</span>
+            }
+          </button>
+        </div>
+
+        <!-- Leaflet Map Container -->
+        <div class="relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700/80 shadow-inner bg-slate-100 dark:bg-slate-800 h-64 sm:h-72">
+          <div id="customer-address-picker-map" class="w-full h-full z-10"></div>
+
+          <!-- Loading overlay during reverse geocoding -->
+          @if (isReverseGeocoding()) {
+            <div class="absolute bottom-3 left-3 right-3 z-20 px-3 py-2 rounded-xl bg-slate-900/80 text-white text-[11px] font-semibold backdrop-blur-xs flex items-center gap-2 shadow-lg animate-pulse">
+              <span class="animate-spin text-xs">⏳</span>
+              <span>Identificando calle y dirección exacta...</span>
+            </div>
+          }
+        </div>
+
+        <!-- Status Notice Pill -->
+        @if (statusNotice()) {
+          <div class="px-3 py-1.5 rounded-xl bg-brand-500/10 border border-brand-500/20 text-brand-700 dark:text-brand-300 text-xs font-semibold flex items-center gap-2">
+            <span>ℹ️</span>
+            <span class="truncate">{{ statusNotice() }}</span>
+          </div>
+        }
+
+        <!-- Manual Form Inputs -->
+        <div class="space-y-3 pt-1">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+              Dirección de Entrega (Requerida)
+            </label>
+            <textarea [(ngModel)]="address"
+                      rows="2"
+                      placeholder="Calle, Edificio/Casa, Número de piso o apartamento"
+                      class="w-full text-xs sm:text-sm font-medium rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 p-3 shadow-xs focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500 transition-colors"></textarea>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+              Punto de Referencia (Opcional)
+            </label>
+            <input type="text"
+                   [(ngModel)]="reference"
+                   placeholder="Ej: Portón blanco, frente al kiosco, al lado de la farmacia"
+                   class="w-full text-xs sm:text-sm font-medium rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 px-3.5 py-2.5 shadow-xs focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500 transition-colors" />
+          </div>
+
+          <!-- Coordinates Display Badge -->
+          <div class="flex items-center justify-between px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800/80 text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+            <span class="flex items-center gap-1.5 font-sans font-bold text-slate-700 dark:text-slate-300">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              Coordenadas fijadas:
+            </span>
+            <span>{{ selectedLat }}, {{ selectedLng }}</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Footer Buttons -->
+      <div class="flex items-center justify-end gap-3 px-5 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+        <button type="button"
+                (click)="closeModal()"
+                class="px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer">
+          Cancelar
+        </button>
+        <button type="button"
+                (click)="confirmLocation()"
+                class="px-5 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 active:scale-95 text-white font-extrabold text-xs shadow-md shadow-brand-500/20 transition-all flex items-center gap-1.5 cursor-pointer">
+          <span>✓</span>
+          <span>Confirmar Ubicación</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+}

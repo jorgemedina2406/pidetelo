@@ -196,16 +196,34 @@
                 </div>
 
                 @if (cart.isLocationRequired()) {
-                  <div class="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs flex items-center justify-between gap-2">
+                  <div class="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs flex items-center justify-between gap-1.5 flex-wrap">
                     <span class="text-amber-800 text-[11px] font-medium">📍 Calcula tarifa exacta por km:</span>
-                    <button type="button" (click)="captureGpsLocation()" [disabled]="isDetectingGps()"
-                            class="px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-bold text-[11px] shadow-xs cursor-pointer flex items-center gap-1 transition-all disabled:opacity-50">
-                      @if (isDetectingGps()) {
-                        <span class="animate-spin text-xs">⏳</span>
-                        <span>Fijando GPS...</span>
-                      } @else {
-                        <span>📍 Usar mi GPS</span>
-                      }
+                    <div class="flex items-center gap-1.5 ml-auto">
+                      <button type="button" (click)="openAddressModal()"
+                              class="px-2.5 py-1 rounded-lg bg-brand-500 hover:bg-brand-600 active:scale-95 text-white font-bold text-[11px] shadow-xs cursor-pointer flex items-center gap-1 transition-all">
+                        <span>🗺️ Mapa</span>
+                      </button>
+                      <button type="button" (click)="captureGpsLocation()" [disabled]="isDetectingGps()"
+                              class="px-2 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-bold text-[11px] shadow-xs cursor-pointer flex items-center gap-1 transition-all disabled:opacity-50">
+                        @if (isDetectingGps()) {
+                          <span class="animate-spin text-xs">⏳</span>
+                        } @else {
+                          <span>🎯 GPS</span>
+                        }
+                      </button>
+                    </div>
+                  </div>
+                } @else if (cart.customer().deliveryLat && cart.customer().deliveryLng) {
+                  <div class="px-2.5 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-1.5 min-w-0">
+                      <span class="text-emerald-600 text-xs font-bold">✓</span>
+                      <span class="text-[11px] text-emerald-800 font-semibold truncate">
+                        {{ cart.customer().deliveryAddress || 'Ubicación fijada' }}
+                      </span>
+                    </div>
+                    <button type="button" (click)="openAddressModal()"
+                            class="text-[10px] font-bold text-emerald-700 underline shrink-0 hover:text-emerald-900 cursor-pointer">
+                      Ajustar en Mapa
                     </button>
                   </div>
                 }
@@ -240,3 +258,16 @@
         </div>
       </div>
     }
+
+    <!-- Modal de Ubicación y Mapa del Cliente -->
+    <app-customer-address-modal
+      [isOpen]="isAddressModalOpen()"
+      [initialLat]="cart.customer().deliveryLat"
+      [initialLng]="cart.customer().deliveryLng"
+      [initialAddress]="cart.customer().deliveryAddress"
+      [initialReference]="cart.customer().addressReference"
+      [storeLat]="storeLat()"
+      [storeLng]="storeLng()"
+      (close)="closeAddressModal()"
+      (locationSelected)="onLocationSelected($event)">
+    </app-customer-address-modal>

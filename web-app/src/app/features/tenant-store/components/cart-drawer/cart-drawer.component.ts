@@ -1,17 +1,46 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CartStore } from '../../stores/cart.store';
+import { CustomerAddressModalComponent, LocationSelectedEvent } from '../customer-address-modal/customer-address-modal.component';
 
 @Component({
   selector: 'app-cart-drawer',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, CustomerAddressModalComponent],
   templateUrl: './cart-drawer.component.html'
 })
 export class CartDrawerComponent {
   readonly cart = inject(CartStore);
   readonly isDetectingGps = signal(false);
   readonly gpsMessage = signal<string | null>(null);
+  readonly isAddressModalOpen = signal(false);
+
+  openAddressModal(): void {
+    this.isAddressModalOpen.set(true);
+  }
+
+  closeAddressModal(): void {
+    this.isAddressModalOpen.set(false);
+  }
+
+  onLocationSelected(loc: LocationSelectedEvent): void {
+    this.cart.updateCustomer({
+      deliveryAddress: loc.address,
+      deliveryLat: loc.lat,
+      deliveryLng: loc.lng,
+      addressReference: loc.reference || this.cart.customer().addressReference
+    });
+  }
+
+  storeLat(): number | undefined {
+    const branch = this.cart.selectedBranch();
+    return branch?.latitude || (this.cart.activeTenant() as any)?.latitude;
+  }
+
+  storeLng(): number | undefined {
+    const branch = this.cart.selectedBranch();
+    return branch?.longitude || (this.cart.activeTenant() as any)?.longitude;
+  }
 
   captureGpsLocation(): void {
     if (typeof navigator !== 'undefined' && 'geolocation' in navigator) {

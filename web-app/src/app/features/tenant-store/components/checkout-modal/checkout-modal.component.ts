@@ -5,11 +5,12 @@ import { CartStore } from '../../stores/cart.store';
 import { ApiService } from '../../../../core/services/api.service';
 import { PaymentMethod } from '../../../../core/models/order.model';
 import { Coupon } from '../../../../core/models/coupon.model';
+import { CustomerAddressModalComponent, LocationSelectedEvent } from '../customer-address-modal/customer-address-modal.component';
 
 @Component({
   selector: 'app-checkout-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CustomerAddressModalComponent],
   templateUrl: './checkout-modal.component.html'
 })
 export class CheckoutModalComponent {
@@ -19,6 +20,35 @@ export class CheckoutModalComponent {
   readonly isDetectingGps = signal(false);
   readonly gpsStatusMessage = signal<string | null>(null);
   readonly isConfirmPromptOpen = signal(false);
+  readonly isAddressModalOpen = signal(false);
+
+  openAddressModal(): void {
+    this.isAddressModalOpen.set(true);
+  }
+
+  closeAddressModal(): void {
+    this.isAddressModalOpen.set(false);
+  }
+
+  onLocationSelected(loc: LocationSelectedEvent): void {
+    this.cart.updateCustomer({
+      deliveryAddress: loc.address,
+      deliveryLat: loc.lat,
+      deliveryLng: loc.lng,
+      addressReference: loc.reference || this.cart.customer().addressReference
+    });
+    this.gpsStatusMessage.set(`Ubicación fijada en el mapa (${loc.lat}, ${loc.lng})`);
+  }
+
+  storeLat(): number | undefined {
+    const branch = this.cart.selectedBranch();
+    return branch?.latitude || (this.cart.activeTenant() as any)?.latitude;
+  }
+
+  storeLng(): number | undefined {
+    const branch = this.cart.selectedBranch();
+    return branch?.longitude || (this.cart.activeTenant() as any)?.longitude;
+  }
 
   promptConfirmOrder(): void {
     const cust = this.cart.customer();
@@ -32,8 +62,8 @@ export class CheckoutModalComponent {
     }
     if (this.cart.fulfillmentType() === 'delivery') {
       if (!cust.deliveryLat || !cust.deliveryLng) {
-        this.gpsStatusMessage.set('⚠️ Es obligatorio compartir tu ubicación GPS para envíos a domicilio.');
-        this.captureGpsLocation();
+        this.gpsStatusMessage.set('⚠️ Por favor indica o ajusta tu ubicación de entrega en el mapa.');
+        this.openAddressModal();
         return;
       }
       if (!cust.deliveryAddress || cust.deliveryAddress.trim().length < 5) {
