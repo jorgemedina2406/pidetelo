@@ -13,24 +13,34 @@
       var s = window.location.search;
       var h = window.location.hash;
 
-      // 1. Si la URL contiene retorno de OAuth o callback de app móvil
+      // 1. PRIORIDAD MÁXIMA: Restablecer Contraseña (NUNCA interceptar por deep link nativo pidetelo://)
+      // Debe ejecutarse siempre en el navegador en la Web App (app.pidetelo.app/reset-password)
+      var isRecovery = p.indexOf('reset-password') !== -1 ||
+                       h.indexOf('type=recovery') !== -1 ||
+                       s.indexOf('type=recovery') !== -1;
+
+      if (isRecovery) {
+        window.location.replace('https://app.pidetelo.app/reset-password' + s + h);
+        return;
+      }
+
+      // 2. Si la URL es explícitamente para abrir la app móvil por OAuth (ej: login-callback de Google)
       if (p.indexOf('login-callback') !== -1 || s.indexOf('pidetelo://') !== -1) {
         window.location.href = 'pidetelo://login-callback' + s + h;
         return;
       }
 
-      // Si es dispositivo móvil y trae token de Google OAuth, abrir directamente la app móvil
+      // Si es dispositivo móvil y viene de Google OAuth (NO recovery ni reset-password)
       var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-      if (isMobile && (h.indexOf('access_token=') !== -1 || (s.indexOf('code=') !== -1 && p.indexOf('reset-password') === -1))) {
+      if (isMobile && !isRecovery && (p.indexOf('oauth') !== -1 || (h.indexOf('access_token=') !== -1 && h.indexOf('type=') === -1))) {
         window.location.href = 'pidetelo://login-callback' + s + h;
         return;
       }
 
-      // 2. Restablecer contraseña
-      if (p.indexOf('reset-password') !== -1 || (s.indexOf('code=') !== -1 && p.indexOf('reset-password') !== -1) || h.indexOf('type=recovery') !== -1) {
-        window.location.replace('https://app.pidetelo.app/reset-password' + s + h);
-      } else if (p.indexOf('/explorar') === 0 || p.indexOf('/login') === 0 || p.indexOf('/t/') === 0 || p.indexOf('/track') === 0 || p.indexOf('/merchant-admin') === 0 || p.indexOf('/super-admin') === 0) {
+      // 3. Redirección de rutas de la Web App al subdominio app.pidetelo.app
+      if (p.indexOf('/explorar') === 0 || p.indexOf('/login') === 0 || p.indexOf('/t/') === 0 || p.indexOf('/track') === 0 || p.indexOf('/merchant-admin') === 0 || p.indexOf('/super-admin') === 0) {
         window.location.replace('https://app.pidetelo.app' + p + s + h);
+        return;
       }
     })();
   </script>

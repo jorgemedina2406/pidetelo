@@ -97,7 +97,16 @@ export class ResetPasswordComponent implements OnInit {
         // 4. Si no hay código en query params, revisar fragmento hash (#access_token=... o #type=recovery)
         const hash = window.location.hash;
         if (hash && (hash.includes('access_token') || hash.includes('type=recovery'))) {
+          try {
+            const hashParams = new URLSearchParams(hash.startsWith('#') ? hash.substring(1) : hash);
+            const accessToken = hashParams.get('access_token');
+            const refreshToken = hashParams.get('refresh_token');
+            if (accessToken && refreshToken) {
+              await client.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+            }
+          } catch (_) {}
           this.sessionReady.set(true);
+          this.errorMessage.set(null);
         } else {
           // Margen para que el SDK resuelva el token de URL
           setTimeout(async () => {
