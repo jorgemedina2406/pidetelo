@@ -36,6 +36,8 @@ import { PayoutPolicyModalComponent } from './components/payout-policy-modal/pay
 import { MerchantCouponsTabComponent } from './components/merchant-coupons-tab/merchant-coupons-tab.component';
 import { MerchantRidersTabComponent } from './components/merchant-riders-tab/merchant-riders-tab.component';
 import { MerchantUsersTabComponent } from './components/merchant-users-tab/merchant-users-tab.component';
+import { MerchantReviewsTabComponent } from './components/merchant-reviews-tab/merchant-reviews-tab.component';
+import { MerchantWhatsappTabComponent } from './components/merchant-whatsapp-tab/merchant-whatsapp-tab.component';
 import { SupportKanbanComponent } from '../../shared/components/support-kanban/support-kanban.component';
 import { RiderWithdrawal } from '../../core/models/rider-withdrawal.model';
 
@@ -84,6 +86,8 @@ export interface Rider {
     MerchantCouponsTabComponent,
     MerchantRidersTabComponent,
     MerchantUsersTabComponent,
+    MerchantReviewsTabComponent,
+    MerchantWhatsappTabComponent,
     SupportKanbanComponent
   ],
   templateUrl: './merchant-admin.component.html'

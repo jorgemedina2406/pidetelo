@@ -21,6 +21,12 @@ export class TenantsController {
     return this.tenantsService.create(payload);
   }
 
+  @Get('reviews/all')
+  @ApiOperation({ summary: 'Obtener todas las reseñas de todos los comercios para Super Admin' })
+  getAllReviews(@Query('tenantId') tenantId?: string) {
+    return this.tenantsService.getAllReviews(tenantId);
+  }
+
   @Get(':slug')
   @ApiOperation({ summary: 'Obtener información de un comercio por su slug o ID' })
   findBySlug(@Param('slug') slug: string) {

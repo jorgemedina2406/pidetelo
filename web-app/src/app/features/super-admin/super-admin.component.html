@@ -466,6 +466,54 @@
               }
             </div>
 
+            <!-- Valoraciones Globales -->
+            <div class="relative group">
+              <button (click)="setActiveTab('reviews'); loadAllReviews()"
+                      [class.bg-brand-500]="activeTab() === 'reviews'"
+                      [class.text-white]="activeTab() === 'reviews'"
+                      [class.shadow-md]="activeTab() === 'reviews'"
+                      [class.shadow-brand-500/25]="activeTab() === 'reviews'"
+                      [class.text-slate-600]="activeTab() !== 'reviews'"
+                      [class.dark:text-slate-400]="activeTab() !== 'reviews'"
+                      [class.hover:bg-slate-100]="activeTab() !== 'reviews'"
+                      [class.dark:hover:bg-slate-850]="activeTab() !== 'reviews'"
+                      [class.justify-center]="!isSidebarExpanded()"
+                      [class.w-12]="!isSidebarExpanded()"
+                      [class.h-12]="!isSidebarExpanded()"
+                      [class.mx-auto]="!isSidebarExpanded()"
+                      [class.w-full]="isSidebarExpanded()"
+                      [class.px-3]="isSidebarExpanded()"
+                      [class.py-2.5]="isSidebarExpanded()"
+                      class="flex items-center gap-3 rounded-xl font-bold text-xs transition-all duration-150 active:scale-95 cursor-pointer">
+                <span class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
+                      [class.bg-white/20]="activeTab() === 'reviews'"
+                      [class.text-white]="activeTab() === 'reviews'"
+                      [class.bg-slate-100]="activeTab() !== 'reviews'"
+                      [class.dark:bg-slate-800]="activeTab() !== 'reviews'"
+                      [class.text-amber-500]="activeTab() !== 'reviews'">
+                  <app-icon name="star" [size]="17"></app-icon>
+                </span>
+                @if (isSidebarExpanded()) {
+                  <span class="truncate flex-1 text-left font-semibold">Valoraciones</span>
+                  @if (allReviews().length > 0) {
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-black"
+                          [class.bg-white/30]="activeTab() === 'reviews'"
+                          [class.bg-amber-500/20]="activeTab() !== 'reviews'"
+                          [class.text-amber-600]="activeTab() !== 'reviews'"
+                          [class.dark:text-amber-400]="activeTab() !== 'reviews'">
+                      ⭐ {{ superAdminReviewsAvg() }}
+                    </span>
+                  }
+                }
+              </button>
+              @if (!isSidebarExpanded()) {
+                <div class="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 flex items-center gap-2">
+                  <span>Valoraciones Globales</span>
+                  <span class="px-1.5 py-0.2 rounded-full bg-amber-500 text-white text-[10px]">{{ allReviews().length }}</span>
+                </div>
+              }
+            </div>
+
             <!-- Soporte & Mesa de Ayuda a Comercios -->
             <div class="relative group">
               <button (click)="setActiveTab('support')"
@@ -774,6 +822,22 @@
               (updatePlan)="handleUpdateTenantPlan($event)"
               (toggleActive)="toggleMerchantActive($event)">
             </app-super-admin-plan-report>
+          }
+
+          <!-- ================= TAB: VALORACIONES GLOBALES ================= -->
+          @if (activeTab() === 'reviews') {
+            <app-super-admin-reviews
+              [reviews]="filteredSuperAdminReviews()"
+              [merchants]="merchants()"
+              [isLoading]="loadingReviews()"
+              [merchantFilter]="reviewMerchantFilter()"
+              [searchQuery]="reviewSearchQuery()"
+              [avgRating]="superAdminReviewsAvg()"
+              [starCounts]="superAdminReviewsStarCounts()"
+              (filterChange)="reviewMerchantFilter.set($event); loadAllReviews()"
+              (searchChange)="reviewSearchQuery.set($event)"
+              (refresh)="loadAllReviews()">
+            </app-super-admin-reviews>
           }
 
           </main>

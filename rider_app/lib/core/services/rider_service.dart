@@ -1390,9 +1390,13 @@ class RiderService extends ChangeNotifier {
           'createdAt': o['delivered_at'] ?? o['created_at'],
         }).toList();
 
+        final avgRating = reviews.isNotEmpty
+            ? reviews.fold<double>(0.0, (acc, r) => acc + (r['rating'] as double)) / reviews.length
+            : 5.0;
+
         return {
           'riderId': riderId,
-          'rating': _currentRider?.rating ?? 5.0,
+          'rating': avgRating,
           'totalReviews': reviews.length,
           'reviews': reviews,
         };
@@ -1401,7 +1405,7 @@ class RiderService extends ChangeNotifier {
 
     return {
       'riderId': riderId,
-      'rating': _currentRider?.rating ?? 5.0,
+      'rating': 5.0,
       'totalReviews': 0,
       'reviews': [],
     };

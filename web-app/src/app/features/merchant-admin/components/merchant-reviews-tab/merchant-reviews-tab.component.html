@@ -1,0 +1,156 @@
+<div class="space-y-6 animate-fade-in pb-12">
+  <!-- Header Banner -->
+  <div class="bg-gradient-to-r from-amber-500 via-amber-600 to-orange-600 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
+    <div class="absolute -right-6 -bottom-8 opacity-10 pointer-events-none">
+      <app-icon name="star" [size]="160"></app-icon>
+    </div>
+    <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <span class="p-2.5 rounded-xl bg-white/20 backdrop-blur-xs flex items-center justify-center">
+          <app-icon name="star" [size]="24" className="text-white"></app-icon>
+        </span>
+        <div>
+          <h2 class="text-xl font-black tracking-tight flex items-center gap-2">
+            Valoraciones y Opiniones de Clientes
+          </h2>
+          <p class="text-xs text-amber-100/90 mt-1 max-w-2xl">
+            Monitorea el nivel de satisfacción de tus clientes, comentarios reales de cada pedido y el desempeño de cada sucursal.
+          </p>
+        </div>
+      </div>
+
+      <!-- Selector de Sucursal (Filtro) -->
+      <div class="flex items-center gap-2 bg-white/10 backdrop-blur-xs p-1.5 rounded-xl border border-white/20">
+        <app-icon name="map-pin" [size]="14" className="text-amber-100"></app-icon>
+        <select [ngModel]="selectedBranchId" 
+                (ngModelChange)="branchFilterChange.emit($event)"
+                [disabled]="isBranchLocked"
+                class="bg-transparent text-white font-bold text-xs outline-none cursor-pointer pr-2">
+          @if (!isBranchLocked) {
+            <option value="all" class="text-slate-900 bg-white">Todas las Sucursales</option>
+          }
+          @for (b of branches; track b.id) {
+            <option [value]="b.id" class="text-slate-900 bg-white">{{ b.name }}</option>
+          }
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Resumen de Métricas de Calificación -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <!-- Promedio General -->
+    <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-center items-center text-center">
+      <span class="text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+        {{ reviewsAverage }}
+      </span>
+      <div class="flex items-center gap-1 text-amber-500 my-2">
+        @for (star of [1,2,3,4,5]; track star) {
+          <app-icon name="star" [size]="18" [className]="star <= Math.round(reviewsAverage) ? 'text-amber-500' : 'text-slate-300 dark:text-slate-700'"></app-icon>
+        }
+      </div>
+      <span class="text-xs text-slate-500 dark:text-slate-400 font-medium">
+        Basado en {{ reviews.length }} valoraciones
+      </span>
+    </div>
+
+    <!-- Desglose por Estrellas -->
+    <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs md:col-span-2 space-y-2">
+      <h4 class="text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">Desglose de Calificaciones</h4>
+      @for (star of [5, 4, 3, 2, 1]; track star) {
+        <div class="flex items-center gap-3 text-xs">
+          <span class="w-20 font-bold text-slate-700 dark:text-slate-300 shrink-0">{{ star }} estrellas</span>
+          <div class="flex-1 h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+            <div class="h-full bg-amber-500 rounded-full transition-all duration-500"
+                 [style.width.%]="reviews.length > 0 ? (reviewsStarCounts[star] / reviews.length) * 100 : 0"></div>
+          </div>
+          <span class="w-8 text-right font-bold text-slate-500 dark:text-slate-400 shrink-0">
+            {{ reviewsStarCounts[star] }}
+          </span>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Lista de Comentarios y Reseñas -->
+  <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-xs space-y-4">
+    <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+      <div class="flex items-center gap-2">
+        <h3 class="font-bold text-sm text-slate-900 dark:text-white">
+          Opiniones Recibidas
+        </h3>
+        <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-brand-500/10 text-brand-600 dark:text-brand-400">
+          {{ reviews.length }}
+        </span>
+      </div>
+
+      <button (click)="refresh.emit()" [disabled]="isLoading"
+              class="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 transition-colors cursor-pointer">
+        <app-icon name="rotate-cw" [size]="13" [className]="isLoading ? 'animate-spin' : ''"></app-icon>
+        <span>Actualizar</span>
+      </button>
+    </div>
+
+    @if (isLoading) {
+      <div class="py-12 flex flex-col items-center justify-center text-slate-400 gap-3">
+        <div class="w-8 h-8 border-3 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
+        <span class="text-xs font-medium">Cargando opiniones de clientes...</span>
+      </div>
+    } @else if (reviews.length === 0) {
+      <div class="py-12 flex flex-col items-center justify-center text-center gap-2">
+        <div class="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center text-2xl">
+          ⭐
+        </div>
+        <h4 class="font-bold text-sm text-slate-800 dark:text-slate-200 mt-2">
+          Aún no hay valoraciones registradas
+        </h4>
+        <p class="text-xs text-slate-500 dark:text-slate-400 max-w-sm">
+          Cuando tus clientes califiquen sus pedidos entregados desde la App Web o Móvil, sus opiniones y estrellas aparecerán aquí.
+        </p>
+      </div>
+    } @else {
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+        @for (rev of reviews; track rev.id || rev.order_id) {
+          <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 space-y-2.5">
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="font-bold text-xs text-slate-900 dark:text-white">
+                    {{ rev.customer_name || 'Cliente' }}
+                  </span>
+                  @if (rev.branch_name || rev.branchName) {
+                    <span class="px-2 py-0.5 rounded-full text-[9.5px] font-bold bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                      📍 {{ rev.branch_name || rev.branchName }}
+                    </span>
+                  }
+                </div>
+                <span class="text-[10px] text-slate-400">
+                  {{ rev.created_at ? (rev.created_at | date:'short') : 'Reciente' }}
+                </span>
+              </div>
+
+              <!-- Estrellas -->
+              <div class="flex items-center gap-1 text-amber-500 bg-amber-500/10 px-2 py-1 rounded-lg">
+                <span class="font-black text-xs text-amber-600 dark:text-amber-400">{{ rev.rating }}</span>
+                <app-icon name="star" [size]="12" className="text-amber-500"></app-icon>
+              </div>
+            </div>
+
+            @if (rev.comment) {
+              <p class="text-xs text-slate-700 dark:text-slate-300 italic bg-white dark:bg-slate-850 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800">
+                "{{ rev.comment }}"
+              </p>
+            }
+
+            @if (rev.order_id || rev.orderNumber) {
+              <div class="text-[10px] font-bold text-slate-400 flex items-center gap-1">
+                <span>Pedido:</span>
+                <span class="font-mono text-slate-600 dark:text-slate-300">{{ rev.orderNumber || rev.order_id }}</span>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
+  </div>
+</div>

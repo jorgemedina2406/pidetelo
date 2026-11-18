@@ -587,6 +587,17 @@ export class ApiService {
     );
   }
 
+  getAllTenantReviews(tenantId?: string): Observable<any[]> {
+    const params: any = {};
+    if (tenantId && tenantId !== 'all') params.tenantId = tenantId;
+    return this.http.get<any[]>(`${this.baseUrl}/tenants/reviews/all`, { params }).pipe(
+      catchError(err => {
+        console.warn('[ApiService] Error obteniendo todas las reseñas:', err);
+        return of([]);
+      })
+    );
+  }
+
   getTenantReviews(tenantId: string, branchId?: string): Observable<any[]> {
     const params: any = {};
     if (branchId && branchId !== 'all') params.branchId = branchId;

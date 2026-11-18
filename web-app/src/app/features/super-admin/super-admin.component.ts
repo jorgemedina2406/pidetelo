@@ -26,6 +26,7 @@ import { SuperAdminCategoriesComponent } from './components/super-admin-categori
 import { SuperAdminCouponsComponent } from './components/super-admin-coupons/super-admin-coupons.component';
 import { SupportKanbanComponent } from '../../shared/components/support-kanban/support-kanban.component';
 import { SuperAdminPlanReportComponent } from './components/super-admin-plan-report/super-admin-plan-report.component';
+import { SuperAdminReviewsComponent } from './components/super-admin-reviews/super-admin-reviews.component';
 
 export interface ToastNotification {
   id: string;
@@ -51,7 +52,8 @@ export interface ToastNotification {
     SuperAdminCategoriesComponent,
     SuperAdminCouponsComponent,
     SupportKanbanComponent,
-    SuperAdminPlanReportComponent
+    SuperAdminPlanReportComponent,
+    SuperAdminReviewsComponent
   ],
   templateUrl: './super-admin.component.html'
 })
@@ -66,7 +68,63 @@ export class SuperAdminComponent implements OnInit {
 
   readonly isSidebarExpanded = signal(true);
   readonly isMobileMenuOpen = signal(false);
-  readonly activeTab = signal<'merchants' | 'branch_approvals' | 'categories' | 'roles' | 'metrics' | 'banners' | 'users' | 'global_coupons' | 'support' | 'plan_report'>('merchants');
+  readonly activeTab = signal<'merchants' | 'branch_approvals' | 'categories' | 'roles' | 'metrics' | 'banners' | 'users' | 'global_coupons' | 'support' | 'plan_report' | 'reviews'>('merchants');
+
+  // --- VALORACIONES GLOBALES DE TODOS LOS COMERCIOS ---
+  readonly allReviews = signal<any[]>([]);
+  readonly loadingReviews = signal<boolean>(false);
+  readonly reviewMerchantFilter = signal<string>('all');
+  readonly reviewSearchQuery = signal<string>('');
+
+  loadAllReviews(): void {
+    this.loadingReviews.set(true);
+    const merchantId = this.reviewMerchantFilter() !== 'all' ? this.reviewMerchantFilter() : undefined;
+    this.api.getAllTenantReviews(merchantId).subscribe({
+      next: (reviews) => {
+        this.allReviews.set(reviews || []);
+        this.loadingReviews.set(false);
+      },
+      error: (err) => {
+        console.error('[SuperAdmin] Error al cargar reseñas:', err);
+        this.loadingReviews.set(false);
+      }
+    });
+  }
+
+  readonly filteredSuperAdminReviews = computed(() => {
+    const list = this.allReviews();
+    const q = this.reviewSearchQuery().toLowerCase().trim();
+    const mFilter = this.reviewMerchantFilter();
+
+    return list.filter(r => {
+      const matchMerchant = !mFilter || mFilter === 'all' || r.tenant_id === mFilter || r.tenantId === mFilter;
+      const matchQuery = !q ||
+        (r.customer_name && r.customer_name.toLowerCase().includes(q)) ||
+        (r.tenantName && r.tenantName.toLowerCase().includes(q)) ||
+        (r.branch_name && r.branch_name.toLowerCase().includes(q)) ||
+        (r.comment && r.comment.toLowerCase().includes(q)) ||
+        (r.orderNumber && r.orderNumber.toLowerCase().includes(q));
+
+      return matchMerchant && matchQuery;
+    });
+  });
+
+  readonly superAdminReviewsAvg = computed(() => {
+    const list = this.filteredSuperAdminReviews();
+    if (!list || list.length === 0) return 5.0;
+    const sum = list.reduce((acc, curr) => acc + (Number(curr.rating) || 5), 0);
+    return Number((sum / list.length).toFixed(1));
+  });
+
+  readonly superAdminReviewsStarCounts = computed<Record<number, number>>(() => {
+    const list = this.filteredSuperAdminReviews();
+    const counts: Record<number, number> = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    for (const r of list) {
+      const star = Math.min(5, Math.max(1, Math.round(Number(r.rating) || 5)));
+      counts[star] = (counts[star] || 0) + 1;
+    }
+    return counts;
+  });
   searchMerchant = '';
   readonly isCreateModalOpen = signal(false);
 
@@ -158,6 +216,7 @@ export class SuperAdminComponent implements OnInit {
     this.loadPlatformUsers();
     this.loadMetricsSummary();
     this.loadAllCoupons();
+    this.loadAllReviews();
   }
 
   loadPlatformUsers(): void {

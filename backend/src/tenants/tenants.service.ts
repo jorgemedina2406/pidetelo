@@ -993,6 +993,40 @@ export class TenantsService {
     }
   }
 
+  async getAllReviews(tenantId?: string) {
+    // 1. Intentar desde Supabase
+    try {
+      let query = this.supabase.getClient()
+        .from('tenant_reviews')
+        .select('*');
+
+      if (tenantId && tenantId !== 'all') {
+        query = query.eq('tenant_id', tenantId);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
+      if (!error && Array.isArray(data) && data.length > 0) {
+        const tenants = await this.findAll(true);
+        const tenantMap = new Map((tenants || []).map((t: any) => [t.id, t.name]));
+        return data.map((r: any) => ({
+          ...r,
+          tenantName: tenantMap.get(r.tenant_id) || r.tenant_name || 'Comercio',
+        }));
+      }
+    } catch (_) { }
+
+    // 2. Fallback a almacenamiento local en JSON
+    const local = this.loadLocalReviews();
+    const allList: any[] = [];
+    for (const [tid, reviews] of Object.entries(local)) {
+      if (tenantId && tenantId !== 'all' && tid !== tenantId) continue;
+      if (Array.isArray(reviews)) {
+        allList.push(...reviews);
+      }
+    }
+    return allList.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+  }
+
   async getTenantReviews(tenantIdOrSlug: string, branchId?: string) {
     const tenant = await this.resolveTenant(tenantIdOrSlug);
     const tenantId = tenant?.id || tenantIdOrSlug;
