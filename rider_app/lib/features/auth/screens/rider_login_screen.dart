@@ -102,7 +102,10 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
                 }
                 setDlgState(() => isSending = true);
                 try {
-                  await Supabase.instance.client.auth.resetPasswordForEmail(email, redirectTo: 'pidetelo-rider://reset-password');
+                  await Supabase.instance.client.auth.resetPasswordForEmail(
+                    email,
+                    redirectTo: 'https://pidetelo.app/reset-password',
+                  );
                   if (mounted) {
                     Navigator.pop(ctx);
                     ScaffoldMessenger.of(context).showSnackBar(

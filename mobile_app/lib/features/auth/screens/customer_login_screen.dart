@@ -93,7 +93,10 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
                 }
                 setDlgState(() => isSending = true);
                 try {
-                  await Supabase.instance.client.auth.resetPasswordForEmail(email, redirectTo: 'pidetelo://reset-password');
+                  await Supabase.instance.client.auth.resetPasswordForEmail(
+                    email,
+                    redirectTo: 'https://pidetelo.app/reset-password',
+                  );
                   if (mounted) {
                     Navigator.pop(ctx);
                     ScaffoldMessenger.of(context).showSnackBar(

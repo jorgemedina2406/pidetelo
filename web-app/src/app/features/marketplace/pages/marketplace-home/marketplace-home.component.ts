@@ -1,7 +1,7 @@
 import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../../../core/services/api.service';
 import { ThemeService } from '../../../../core/services/theme.service';
 import { FavoritesService } from '../../../../core/services/favorites.service';
@@ -50,6 +50,7 @@ export class MarketplaceHomeComponent implements OnInit {
   readonly favorites = inject(FavoritesService);
   readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   readonly searchQuery = signal<string>('');
   readonly selectedCategory = signal<string>('Todos');
@@ -342,6 +343,13 @@ export class MarketplaceHomeComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // Si Supabase o un enlace de recuperación redirige a /explorar con código
+    const qParams = this.route.snapshot.queryParams;
+    if (qParams['code'] || qParams['error'] || qParams['error_description']) {
+      this.router.navigate(['/reset-password'], { queryParams: qParams });
+      return;
+    }
+
     try {
       const savedZoneJson = localStorage.getItem('pidetelo_customer_zone');
       if (savedZoneJson) {
