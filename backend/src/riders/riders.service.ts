@@ -312,13 +312,37 @@ export class RidersService implements OnModuleInit {
       cleanBranchId = null;
     }
 
-    const cleanPlate = ((dto as any).vehicle_plate || (dto as any).vehiclePlate || 'SIN-PLACA').toUpperCase().trim();
+    const cleanPlate = ((dto as any).vehicle_plate || (dto as any).vehiclePlate || '').toUpperCase().trim().replace(/\s+/g, '');
+    if (!cleanPlate || cleanPlate === 'SIN-PLACA' || cleanPlate.length < 3) {
+      throw new BadRequestException('La placa del vehículo es obligatoria y debe tener al menos 3 caracteres alfanuméricos.');
+    }
+
+    const cleanName = (dto.name || '').trim();
+    if (!cleanName || cleanName.length < 3) {
+      throw new BadRequestException('El nombre del repartidor es obligatorio y debe tener al menos 3 caracteres.');
+    }
+
+    const cleanEmail = (dto.email || '').toLowerCase().trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!cleanEmail || !emailRegex.test(cleanEmail)) {
+      throw new BadRequestException('El correo electrónico es obligatorio y debe tener un formato válido.');
+    }
+
+    const cleanPhone = (dto.phone || '').trim();
+    if (!cleanPhone || cleanPhone.length < 8) {
+      throw new BadRequestException('El número de teléfono celular es obligatorio (mínimo 8 dígitos).');
+    }
+
+    const cleanNationalId = ((dto as any).national_id || (dto as any).nationalId || '').toUpperCase().trim();
+    if (!cleanNationalId || cleanNationalId.length < 5) {
+      throw new BadRequestException('La cédula o documento de identidad es obligatorio.');
+    }
+
     const cleanType = ((dto as any).vehicle_type || (dto as any).vehicleType || 'moto').toLowerCase().trim();
-    const cleanName = (dto.name || `Repartidor (${cleanPlate})`).trim();
-    const cleanEmail = (dto.email || `${cleanName.toLowerCase().replace(/[^a-z0-9]/g, '.')}@pidetelo.app`).toLowerCase().trim();
     const cleanPassword = dto.password || 'Rider123!';
-    const cleanPhone = dto.phone || '+584140000000';
-    const cleanNationalId = (dto as any).national_id || (dto as any).nationalId || '';
+    if (cleanPassword.length < 8 || !/[A-Z]/.test(cleanPassword) || !/[*@#.!$%^&()_+\-=\[\]{};':"\\|,.<>\/?~]/.test(cleanPassword)) {
+      throw new BadRequestException('La contraseña debe tener al menos 8 caracteres, una letra mayúscula y un carácter especial.');
+    }
 
     const sb = this.supabase.getClient();
     let authUserId: string | null = null;
@@ -910,13 +934,30 @@ export class RidersService implements OnModuleInit {
     const cleanEmail = (payload.email || '').toLowerCase().trim();
     const cleanPhone = (payload.phone || '').trim();
     const cleanNationalId = (payload.national_id || '').toUpperCase().trim();
-    const cleanPlate = (payload.vehicle_plate || '').toUpperCase().trim();
+    const cleanPlate = (payload.vehicle_plate || '').toUpperCase().trim().replace(/\s+/g, '');
     const cleanType = (payload.vehicle_type || 'moto').toLowerCase().trim();
     const cleanModel = (payload.vehicle_model || 'Motocicleta Estándar').trim();
     const cleanPassword = payload.password || 'Rider123!';
 
-    if (!cleanName || !cleanEmail || !cleanPhone || !cleanNationalId || !cleanPlate) {
-      throw new BadRequestException('Nombre, correo, teléfono, cédula y placa son obligatorios para la certificación.');
+    if (!cleanPlate || cleanPlate === 'SIN-PLACA' || cleanPlate.length < 3) {
+      throw new BadRequestException('La placa del vehículo es obligatoria y debe ser válida (mínimo 3 caracteres alfanuméricos).');
+    }
+
+    if (!cleanName || cleanName.length < 3) {
+      throw new BadRequestException('El nombre y apellido completo son obligatorios (mínimo 3 caracteres).');
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!cleanEmail || !emailRegex.test(cleanEmail)) {
+      throw new BadRequestException('El correo electrónico es obligatorio y debe tener un formato válido.');
+    }
+
+    if (!cleanPhone || cleanPhone.length < 8) {
+      throw new BadRequestException('El número de teléfono móvil es obligatorio (mínimo 8 dígitos).');
+    }
+
+    if (!cleanNationalId || cleanNationalId.length < 5) {
+      throw new BadRequestException('La cédula o documento de identidad es obligatorio (mínimo 5 caracteres).');
     }
 
     const docImg = payload.id_document_image || '';

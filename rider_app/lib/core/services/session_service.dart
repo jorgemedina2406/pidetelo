@@ -258,8 +258,26 @@ class SessionService extends ChangeNotifier {
     required String vehiclePlate,
   }) async {
     final cleanEmail = email.trim().toLowerCase();
+    final cleanPlate = vehiclePlate.trim().toUpperCase().replaceAll(' ', '');
     String? authUserId;
     _lastErrorMessage = null;
+
+    if (cleanPlate.isEmpty || cleanPlate == 'SIN-PLACA' || cleanPlate.length < 3) {
+      _lastErrorMessage = 'La placa del vehículo es obligatoria y debe tener al menos 3 caracteres alfanuméricos.';
+      return false;
+    }
+    if (name.trim().length < 3) {
+      _lastErrorMessage = 'El nombre completo es obligatorio (mínimo 3 caracteres).';
+      return false;
+    }
+    if (nationalId.trim().length < 5) {
+      _lastErrorMessage = 'El número de cédula o documento de identidad es obligatorio.';
+      return false;
+    }
+    if (phone.trim().length < 8) {
+      _lastErrorMessage = 'El número de teléfono móvil es obligatorio y debe ser válido.';
+      return false;
+    }
 
     // 1. Create Auth user in Supabase
     try {
@@ -413,7 +431,25 @@ class SessionService extends ChangeNotifier {
     required String selfieBase64,
   }) async {
     final cleanEmail = email.trim().toLowerCase();
+    final cleanPlate = vehiclePlate.trim().toUpperCase().replaceAll(' ', '');
     _lastErrorMessage = null;
+
+    if (cleanPlate.isEmpty || cleanPlate == 'SIN-PLACA' || cleanPlate.length < 3) {
+      _lastErrorMessage = 'La placa del vehículo es obligatoria y debe ser válida (ej: AB1C23D).';
+      return false;
+    }
+    if (name.trim().length < 3) {
+      _lastErrorMessage = 'El nombre completo es obligatorio (mínimo 3 caracteres).';
+      return false;
+    }
+    if (nationalId.trim().length < 5) {
+      _lastErrorMessage = 'El número de cédula o documento de identidad es obligatorio.';
+      return false;
+    }
+    if (phone.trim().length < 8) {
+      _lastErrorMessage = 'El número de teléfono móvil es obligatorio y debe ser válido.';
+      return false;
+    }
 
     // Validación preliminar de formato y tamaño
     if (idDocumentBase64.length < 1500) {

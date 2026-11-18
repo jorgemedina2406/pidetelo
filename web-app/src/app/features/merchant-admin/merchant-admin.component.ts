@@ -2974,19 +2974,25 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     const branchName = targetBranch?.name || 'Sede Principal';
     const activeTenantId = this.auth.currentUser()?.tenantId || this.currentTenant()?.id || targetBranch?.companyId || 'dac59429-fd6f-4d3e-8b2e-ab0e23828c1f';
 
+    const cleanPlate = (riderPayload.vehicle_plate || riderPayload.vehiclePlate || '').trim().toUpperCase().replace(/\s+/g, '');
+    if (!cleanPlate || cleanPlate === 'SIN-PLACA' || cleanPlate.length < 3) {
+      alert('La placa del vehículo es obligatoria y debe tener al menos 3 caracteres alfanuméricos.');
+      return;
+    }
+
     const formattedPayload = {
       tenant_id: activeTenantId,
       tenantId: activeTenantId,
       branch_id: branchId,
       branchId: branchId,
-      name: riderPayload.name,
-      email: riderPayload.email,
+      name: (riderPayload.name || '').trim(),
+      email: (riderPayload.email || '').trim().toLowerCase(),
       password: riderPayload.password,
-      phone: riderPayload.phone,
-      national_id: riderPayload.national_id || riderPayload.nationalId || '',
-      nationalId: riderPayload.national_id || riderPayload.nationalId || '',
-      vehicle_plate: riderPayload.vehicle_plate || riderPayload.vehiclePlate,
-      vehiclePlate: riderPayload.vehicle_plate || riderPayload.vehiclePlate,
+      phone: (riderPayload.phone || '').trim(),
+      national_id: (riderPayload.national_id || riderPayload.nationalId || '').trim().toUpperCase(),
+      nationalId: (riderPayload.national_id || riderPayload.nationalId || '').trim().toUpperCase(),
+      vehicle_plate: cleanPlate,
+      vehiclePlate: cleanPlate,
       vehicle_type: riderPayload.vehicle_type || riderPayload.vehicleType || 'moto',
       vehicleType: riderPayload.vehicle_type || riderPayload.vehicleType || 'moto'
     };

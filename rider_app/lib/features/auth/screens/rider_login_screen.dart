@@ -386,14 +386,50 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
       }
       final name = _nameController.text.trim();
       final phone = _phoneController.text.trim();
-      final nationalId = _nationalIdController.text.trim();
+      final nationalId = _nationalIdController.text.trim().toUpperCase();
       final model = _modelController.text.trim();
-      final plate = _plateController.text.trim();
+      final plate = _plateController.text.trim().toUpperCase().replaceAll(' ', '');
 
-      if (name.isEmpty || phone.isEmpty || nationalId.isEmpty || plate.isEmpty) {
+      if (plate.isEmpty || plate == 'SIN-PLACA' || plate.length < 3) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Por favor completa todos los datos personales y de tu vehículo.')),
+          const SnackBar(
+            content: Text('La placa del vehículo es obligatoria y debe ser válida (ej: AB1C23D).'),
+            backgroundColor: Color(0xFFEF4444),
+          ),
+        );
+        return;
+      }
+
+      if (name.length < 3) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Por favor ingresa tu nombre y apellido completo (mínimo 3 caracteres).'),
+            backgroundColor: Color(0xFFEF4444),
+          ),
+        );
+        return;
+      }
+
+      if (nationalId.length < 5) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Por favor ingresa tu número de cédula o documento de identidad.'),
+            backgroundColor: Color(0xFFEF4444),
+          ),
+        );
+        return;
+      }
+
+      if (phone.length < 8) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Por favor ingresa un número de teléfono celular válido (mínimo 8 dígitos).'),
+            backgroundColor: Color(0xFFEF4444),
+          ),
         );
         return;
       }

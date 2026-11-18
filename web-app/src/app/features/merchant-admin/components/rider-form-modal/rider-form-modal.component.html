@@ -19,14 +19,14 @@
             </div>
           }
           <div>
-            <label class="block font-semibold mb-1">Nombre Completo del Motorizado</label>
+            <label class="block font-semibold mb-1">Nombre Completo del Motorizado *</label>
             <input type="text" [(ngModel)]="form.name" name="riderName" required placeholder="Ej: Carlos Rodríguez"
               class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-3 focus:outline-none focus:border-brand-500 font-medium" />
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label class="block font-semibold mb-1">Correo / Usuario de Acceso</label>
+              <label class="block font-semibold mb-1">Correo / Usuario de Acceso *</label>
               <input type="email" [(ngModel)]="form.email" name="riderEmail" required placeholder="repartidor@pidetelo.com"
                 class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-3 focus:outline-none focus:border-brand-500 font-medium" />
             </div>
@@ -54,21 +54,21 @@
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label class="block font-semibold mb-1">Teléfono WhatsApp</label>
+              <label class="block font-semibold mb-1">Teléfono WhatsApp *</label>
               <input type="text" [(ngModel)]="form.phone" name="riderPhone" required placeholder="+584141112233"
                 class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-3 focus:outline-none focus:border-brand-500 font-mono" />
             </div>
             <div>
-              <label class="block font-semibold mb-1">Cédula / DNI</label>
-              <input type="text" [(ngModel)]="form.nationalId" name="riderNationalId" placeholder="Ej: V-24.891.332"
+              <label class="block font-semibold mb-1">Cédula / DNI *</label>
+              <input type="text" [(ngModel)]="form.nationalId" name="riderNationalId" required placeholder="Ej: V-24.891.332"
                 class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-3 focus:outline-none focus:border-brand-500 font-mono" />
             </div>
           </div>
 
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="block font-semibold mb-1">Placa Vehículo</label>
-              <input type="text" [(ngModel)]="form.vehiclePlate" name="riderPlate" required placeholder="AC-8891-X"
+              <label class="block font-semibold mb-1">Placa Vehículo *</label>
+              <input type="text" [(ngModel)]="form.vehiclePlate" name="riderPlate" required placeholder="Ej: AB1C23D"
                 class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-3 font-mono uppercase focus:outline-none focus:border-brand-500" />
             </div>
             <div>

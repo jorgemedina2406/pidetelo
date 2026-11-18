@@ -39,7 +39,6 @@ export class RiderFormModalComponent implements OnChanges {
     return this.hasMinLength && this.hasUppercase && this.hasSpecialChar;
   }
 
-
   form = {
     name: '',
     email: '',
@@ -51,6 +50,9 @@ export class RiderFormModalComponent implements OnChanges {
   };
 
   ngOnChanges(changes: SimpleChanges): void {
+    if (changes['isOpen'] && this.isOpen) {
+      this.formError = null;
+    }
     if (changes['activeBranch'] && this.activeBranch) {
       this.selectedBranchId = this.activeBranch.id;
     } else if (changes['branches'] && this.branches.length > 0 && !this.selectedBranchId) {
@@ -60,16 +62,55 @@ export class RiderFormModalComponent implements OnChanges {
 
   onSubmit(e: Event): void {
     e.preventDefault();
+    this.formError = null;
+
+    const cleanPlate = (this.form.vehiclePlate || '').trim().toUpperCase().replace(/\s+/g, '');
+    const cleanName = (this.form.name || '').trim();
+    const cleanEmail = (this.form.email || '').trim().toLowerCase();
+    const cleanPhone = (this.form.phone || '').trim();
+    const cleanNationalId = (this.form.nationalId || '').trim().toUpperCase();
+
+    if (!cleanPlate || cleanPlate === 'SIN-PLACA' || cleanPlate.length < 3) {
+      this.formError = 'La placa del vehículo es obligatoria y debe tener al menos 3 caracteres alfanuméricos.';
+      return;
+    }
+
+    if (!cleanName || cleanName.length < 3) {
+      this.formError = 'El nombre completo del repartidor es obligatorio (mínimo 3 caracteres).';
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!cleanEmail || !emailRegex.test(cleanEmail)) {
+      this.formError = 'El correo electrónico no tiene un formato válido.';
+      return;
+    }
+
+    if (!this.isPasswordValid) {
+      this.formError = 'La contraseña debe tener al menos 8 caracteres, una letra mayúscula y un carácter especial.';
+      return;
+    }
+
+    if (!cleanPhone || cleanPhone.length < 8) {
+      this.formError = 'El número de teléfono WhatsApp es obligatorio (mínimo 8 dígitos).';
+      return;
+    }
+
+    if (!cleanNationalId || cleanNationalId.length < 5) {
+      this.formError = 'La cédula o documento de identidad es obligatorio (mínimo 5 caracteres).';
+      return;
+    }
+
     const effectiveBranchId = this.selectedBranchId || this.activeBranch?.id;
     this.save.emit({
-      name: this.form.name.trim(),
-      email: this.form.email.trim(),
+      name: cleanName,
+      email: cleanEmail,
       password: this.form.password.trim(),
-      phone: this.form.phone.trim(),
-      national_id: this.form.nationalId.trim(),
-      nationalId: this.form.nationalId.trim(),
-      vehicle_plate: this.form.vehiclePlate.trim().toUpperCase(),
-      vehiclePlate: this.form.vehiclePlate.trim().toUpperCase(),
+      phone: cleanPhone,
+      national_id: cleanNationalId,
+      nationalId: cleanNationalId,
+      vehicle_plate: cleanPlate,
+      vehiclePlate: cleanPlate,
       vehicle_type: this.form.vehicleType,
       vehicleType: this.form.vehicleType,
       branch_id: effectiveBranchId,
