@@ -304,6 +304,46 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     return true;
   }
 
+  hasValidPaymentMethods(branch: any): boolean {
+    if (!branch) return false;
+    let rawMethods = branch.acceptedPaymentMethods ?? 
+                     branch.accepted_payment_methods ?? 
+                     branch.currencySettings?.acceptedPaymentMethods ?? 
+                     branch.currency_settings?.acceptedPaymentMethods;
+    let methods: string[] = [];
+    if (Array.isArray(rawMethods)) {
+      methods = rawMethods;
+    } else if (rawMethods && typeof rawMethods === 'object') {
+      methods = Object.keys(rawMethods).filter(k => Boolean(rawMethods[k]));
+    }
+    const normalizedMethods = methods.map(m => {
+      const s = String(m).toLowerCase().trim();
+      if (s === 'pago_movil') return 'mobile_transfer';
+      if (s === 'efectivo') return 'cash_usd';
+      if (s === 'tarjeta') return 'card_terminal';
+      return s;
+    });
+    if (normalizedMethods.length === 0) return false;
+    const creds = branch.paymentCredentials || branch.payment_credentials || {};
+    const isPmValid = this.isRealPagoMovil(creds);
+    const zEmail = String(creds.zelleEmail || branch.zelleEmail || '').trim();
+    const isZelleValid = zEmail.includes('@') && zEmail.length >= 5;
+
+    const valid = normalizedMethods.filter(method => {
+      if (method === 'mobile_transfer') return isPmValid;
+      if (method === 'zelle') return isZelleValid;
+      if (method === 'cash_usd' || method === 'cash_local' || method === 'card_terminal') return true;
+      return false;
+    });
+    return valid.length > 0;
+  }
+
+  readonly isPaymentConfigMissing = computed<boolean>(() => {
+    const branch = this.activeBranch();
+    if (!branch) return false;
+    return !this.hasValidPaymentMethods(branch);
+  });
+
   // Compatibilidad con templates y referencias existentes
   readonly selectedBranchId = computed<string>(() => this.activeBranchId());
   readonly selectedBranch = computed<Branch | null>(() => this.activeBranch());

@@ -242,6 +242,75 @@ export class TenantsService {
     };
   }
 
+  hasValidPaymentMethods(branchOrTenant: any): boolean {
+    if (!branchOrTenant) return false;
+
+    const rawCreds = Array.isArray(branchOrTenant.branch_payment_credentials)
+      ? branchOrTenant.branch_payment_credentials[0]
+      : (branchOrTenant.branch_payment_credentials || branchOrTenant.payment_credentials || branchOrTenant.paymentCredentials || {});
+
+    const pm = rawCreds.pago_movil || {};
+    const zelle = rawCreds.zelle || {};
+
+    const pmPhone = String(pm.phone || rawCreds.pago_movil_phone || rawCreds.pagoMovilPhone || branchOrTenant.pagoMovilPhone || '').replace(/\D/g, '');
+    const pmBank = String(pm.bank_name || rawCreds.pago_movil_bank || rawCreds.pagoMovilBank || branchOrTenant.pagoMovilBank || '').trim();
+    const pmId = String(pm.id_number || rawCreds.pago_movil_id_number || rawCreds.pagoMovilIdNumber || branchOrTenant.pagoMovilIdNumber || '').replace(/\D/g, '');
+
+    const isRealPagoMovil = Boolean(
+      pmBank.length >= 2 &&
+      pmPhone.length >= 10 &&
+      !pmPhone.includes('1234567') &&
+      pmPhone !== '04140000000' &&
+      pmPhone !== '04121234567' &&
+      pmId.length >= 5 &&
+      !pmId.includes('50123456') &&
+      !pmId.includes('12345678') &&
+      pmId !== '00000000'
+    );
+
+    const zelleEmail = String(zelle.email || rawCreds.zelle_email || rawCreds.zelleEmail || branchOrTenant.zelleEmail || '').trim();
+    const isRealZelle = Boolean(zelleEmail.includes('@') && zelleEmail.length >= 5);
+
+    let rawMethods = branchOrTenant.accepted_payment_methods ?? 
+                     branchOrTenant.acceptedPaymentMethods ?? 
+                     branchOrTenant.currency_settings?.acceptedPaymentMethods ?? 
+                     branchOrTenant.currencySettings?.acceptedPaymentMethods;
+
+    let methods: string[] = [];
+    if (Array.isArray(rawMethods)) {
+      methods = rawMethods;
+    } else if (rawMethods && typeof rawMethods === 'object') {
+      methods = Object.keys(rawMethods).filter(k => Boolean(rawMethods[k]));
+    }
+
+    const normalizedMethods = methods.map(m => {
+      const s = String(m).toLowerCase().trim();
+      if (s === 'pago_movil') return 'mobile_transfer';
+      if (s === 'efectivo') return 'cash_usd';
+      if (s === 'tarjeta') return 'card_terminal';
+      return s;
+    });
+
+    if (normalizedMethods.length === 0) {
+      return false;
+    }
+
+    const validMethods = normalizedMethods.filter(method => {
+      if (method === 'mobile_transfer') {
+        return isRealPagoMovil;
+      }
+      if (method === 'zelle') {
+        return isRealZelle;
+      }
+      if (method === 'cash_usd' || method === 'cash_local' || method === 'card_terminal') {
+        return true;
+      }
+      return false;
+    });
+
+    return validMethods.length > 0;
+  }
+
   private mergeTenantWithMetadata(t: any): any {
     if (!t) return t;
     const meta = this.getTenantMetadata(t.id);
@@ -266,7 +335,7 @@ export class TenantsService {
     ];
     const deliveryTiers = t.delivery_tiers ?? meta.delivery_tiers ?? meta.deliveryTiers ?? defaultDeliveryTiers;
     const isFeatured = Boolean(t.is_featured ?? meta.is_featured ?? meta.isFeatured ?? false);
-    const acceptedPaymentMethods = t.accepted_payment_methods ?? meta.accepted_payment_methods ?? meta.acceptedPaymentMethods ?? ['mobile_transfer', 'cash_usd', 'cash_local'];
+    const acceptedPaymentMethods = t.accepted_payment_methods ?? meta.accepted_payment_methods ?? meta.acceptedPaymentMethods ?? [];
 
     let enrichedBranches = t.branches;
     if (Array.isArray(t.branches)) {
@@ -281,6 +350,12 @@ export class TenantsService {
       enrichedBranches = t.branches.map((b: any) => {
         const bm = branchMeta[b.id] || {};
         const bPaymentMethods = b.accepted_payment_methods ?? bm.accepted_payment_methods ?? bm.acceptedPaymentMethods ?? acceptedPaymentMethods;
+        const bCreds = b.branch_payment_credentials || b.payment_credentials || b.paymentCredentials || bm.payment_credentials || bm.paymentCredentials || {};
+        const bHasValidPayment = this.hasValidPaymentMethods({
+          ...b,
+          accepted_payment_methods: bPaymentMethods,
+          paymentCredentials: bCreds
+        });
         const bTiers = b.delivery_tiers ?? bm.delivery_tiers ?? bm.deliveryTiers ?? deliveryTiers;
         const bRate = Number(b.exchange_rate ?? bm.exchange_rate ?? bm.currency_settings?.exchangeRate ?? exchangeRate);
         const bCurrSettings = {
@@ -322,6 +397,8 @@ export class TenantsService {
           deliveryTiers: bTiers,
           accepted_payment_methods: bPaymentMethods,
           acceptedPaymentMethods: bPaymentMethods,
+          has_valid_payment_methods: bHasValidPayment,
+          hasValidPaymentMethods: bHasValidPayment,
           currency_settings: bCurrSettings,
           currencySettings: bCurrSettings,
           business_hours: {
@@ -349,6 +426,10 @@ export class TenantsService {
         };
       });
     }
+
+    const hasAnyValidBranch = Array.isArray(enrichedBranches) && enrichedBranches.length > 0
+      ? enrichedBranches.some((b: any) => b.has_valid_payment_methods && (b.status === 'active' || (!b.status && b.name?.toLowerCase().includes('principal'))))
+      : this.hasValidPaymentMethods({ accepted_payment_methods: acceptedPaymentMethods });
 
     const localReviews = this.loadLocalReviews();
     const reviews = localReviews[t.id] || [];
@@ -447,6 +528,8 @@ export class TenantsService {
       deliveryTiers,
       accepted_payment_methods: acceptedPaymentMethods,
       acceptedPaymentMethods,
+      has_valid_payment_methods: hasAnyValidBranch,
+      hasValidPaymentMethods: hasAnyValidBranch,
       rider_payout_policy: meta.rider_payout_policy || meta.riderPayoutPolicy || DEFAULT_RIDER_PAYOUT_POLICY,
       riderPayoutPolicy: meta.rider_payout_policy || meta.riderPayoutPolicy || DEFAULT_RIDER_PAYOUT_POLICY,
       business_hours: {
@@ -513,7 +596,11 @@ export class TenantsService {
     if (error) {
       throw new InternalServerErrorException(`Error fetching tenants: ${error.message}`);
     }
-    return (data || []).map(t => this.mergeTenantWithMetadata(t));
+    const tenants = (data || []).map(t => this.mergeTenantWithMetadata(t));
+    if (!includeInactive) {
+      return tenants.filter(t => t.has_valid_payment_methods === true);
+    }
+    return tenants;
   }
 
   async findBySlug(slug: string) {

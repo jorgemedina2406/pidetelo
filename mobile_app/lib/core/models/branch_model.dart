@@ -110,6 +110,7 @@ class Branch {
   final String? subscriptionPlanCode;
   final bool hasFeaturedBanners;
   final List<String> acceptedPaymentMethods;
+  final bool hasValidPaymentMethods;
 
   const Branch({
     required this.id,
@@ -147,8 +148,23 @@ class Branch {
     this.isFeatured = false,
     this.subscriptionPlanCode,
     this.hasFeaturedBanners = false,
-    this.acceptedPaymentMethods = const ['pago_movil', 'cash_usd', 'cash_local', 'mobile_transfer'],
+    this.acceptedPaymentMethods = const [],
+    this.hasValidPaymentMethods = true,
   });
+
+  bool get isPaymentValid {
+    if (!hasValidPaymentMethods) return false;
+    if (acceptedPaymentMethods.isEmpty) return false;
+    final pmPhone = paymentCredentials.pagoMovilPhone.replaceAll(RegExp(r'\D'), '');
+    final pmBank = paymentCredentials.pagoMovilBank.trim();
+    final pmId = paymentCredentials.pagoMovilIdNumber.replaceAll(RegExp(r'\D'), '');
+    final isRealPm = pmBank.length >= 2 && pmPhone.length >= 10 && pmId.length >= 5 &&
+      !pmPhone.contains('1234567') && pmPhone != '04140000000' && pmPhone != '04121234567' &&
+      !pmId.contains('50123456') && !pmId.contains('12345678') && pmId != '00000000';
+    final hasRealPm = acceptedPaymentMethods.any((m) => m == 'pago_movil' || m == 'mobile_transfer') && isRealPm;
+    final hasOther = acceptedPaymentMethods.any((m) => m == 'cash_usd' || m == 'cash_local' || m == 'card_terminal' || m == 'zelle');
+    return hasRealPm || hasOther;
+  }
 
   /// Aliases for opening and closing business hours
   String get businessHoursOpen => todayOpenTime;
@@ -393,6 +409,7 @@ class Branch {
       isFeatured: json['is_featured'] ?? json['isFeatured'] ?? (json['plan_code'] == 'FRANQUICIA'),
       subscriptionPlanCode: json['plan_code']?.toString() ?? json['subscription_plan_code']?.toString() ?? json['planCode']?.toString(),
       hasFeaturedBanners: json['has_featured_banners'] ?? (json['plan_code'] == 'FRANQUICIA') ?? false,
+      hasValidPaymentMethods: json['has_valid_payment_methods'] ?? json['hasValidPaymentMethods'] ?? true,
       acceptedPaymentMethods: (json['accepted_payment_methods'] is List && (json['accepted_payment_methods'] as List).isNotEmpty)
           ? (json['accepted_payment_methods'] as List).map((e) => e.toString()).toList()
           : (json['acceptedPaymentMethods'] is List && (json['acceptedPaymentMethods'] as List).isNotEmpty)
@@ -401,7 +418,7 @@ class Branch {
                   ? (json['currency_settings']['acceptedPaymentMethods'] as List).map((e) => e.toString()).toList()
                   : (json['currencySettings'] is Map && json['currencySettings']['acceptedPaymentMethods'] is List)
                       ? (json['currencySettings']['acceptedPaymentMethods'] as List).map((e) => e.toString()).toList()
-                      : const ['pago_movil', 'cash_usd', 'cash_local', 'mobile_transfer'],
+                      : const [],
     );
   }
 }

@@ -107,9 +107,21 @@ export class MarketplaceHomeComponent implements OnInit {
 
   readonly enrichedTenants = computed<TenantWithDistance[]>(() => {
     const zone = this.currentZone();
-    return this.allTenants().map(tenant => {
-      const tenantRadius = Number(tenant.deliverySettings?.deliveryRadiusKm) || 8.0;
-      const branches = (tenant.branches || []).filter((b: any) => b.status === 'active' || (!b.status && b.name?.toLowerCase().includes('principal')));
+    return this.allTenants()
+      .filter(tenant => {
+        // Excluir comercios sin métodos de pago válidos configurados
+        if ((tenant as any).hasValidPaymentMethods === false || (tenant as any).has_valid_payment_methods === false) {
+          return false;
+        }
+        return true;
+      })
+      .map(tenant => {
+        const tenantRadius = Number(tenant.deliverySettings?.deliveryRadiusKm) || 8.0;
+        const branches = (tenant.branches || []).filter((b: any) => 
+          (b.status === 'active' || (!b.status && b.name?.toLowerCase().includes('principal'))) &&
+          b.hasValidPaymentMethods !== false &&
+          b.has_valid_payment_methods !== false
+        );
 
       let minDistance = Infinity;
       let isWithinRange = false;

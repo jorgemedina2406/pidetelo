@@ -189,6 +189,76 @@ export class BranchesService {
     };
   }
 
+  hasValidPaymentMethods(branch: any): boolean {
+    if (!branch) return false;
+
+    // Resolve credentials
+    const rawCreds = Array.isArray(branch.branch_payment_credentials)
+      ? branch.branch_payment_credentials[0]
+      : (branch.branch_payment_credentials || branch.payment_credentials || branch.paymentCredentials || {});
+
+    const pm = rawCreds.pago_movil || {};
+    const zelle = rawCreds.zelle || {};
+
+    const pmPhone = String(pm.phone || rawCreds.pago_movil_phone || rawCreds.pagoMovilPhone || branch.pagoMovilPhone || '').replace(/\D/g, '');
+    const pmBank = String(pm.bank_name || rawCreds.pago_movil_bank || rawCreds.pagoMovilBank || branch.pagoMovilBank || '').trim();
+    const pmId = String(pm.id_number || rawCreds.pago_movil_id_number || rawCreds.pagoMovilIdNumber || branch.pagoMovilIdNumber || '').replace(/\D/g, '');
+
+    const isRealPagoMovil = Boolean(
+      pmBank.length >= 2 &&
+      pmPhone.length >= 10 &&
+      !pmPhone.includes('1234567') &&
+      pmPhone !== '04140000000' &&
+      pmPhone !== '04121234567' &&
+      pmId.length >= 5 &&
+      !pmId.includes('50123456') &&
+      !pmId.includes('12345678') &&
+      pmId !== '00000000'
+    );
+
+    const zelleEmail = String(zelle.email || rawCreds.zelle_email || rawCreds.zelleEmail || branch.zelleEmail || '').trim();
+    const isRealZelle = Boolean(zelleEmail.includes('@') && zelleEmail.length >= 5);
+
+    let rawMethods = branch.accepted_payment_methods ?? 
+                     branch.acceptedPaymentMethods ?? 
+                     branch.currency_settings?.acceptedPaymentMethods ?? 
+                     branch.currencySettings?.acceptedPaymentMethods;
+
+    let methods: string[] = [];
+    if (Array.isArray(rawMethods)) {
+      methods = rawMethods;
+    } else if (rawMethods && typeof rawMethods === 'object') {
+      methods = Object.keys(rawMethods).filter(k => Boolean(rawMethods[k]));
+    }
+
+    const normalizedMethods = methods.map(m => {
+      const s = String(m).toLowerCase().trim();
+      if (s === 'pago_movil') return 'mobile_transfer';
+      if (s === 'efectivo') return 'cash_usd';
+      if (s === 'tarjeta') return 'card_terminal';
+      return s;
+    });
+
+    if (normalizedMethods.length === 0) {
+      return false;
+    }
+
+    const validMethods = normalizedMethods.filter(method => {
+      if (method === 'mobile_transfer') {
+        return isRealPagoMovil;
+      }
+      if (method === 'zelle') {
+        return isRealZelle;
+      }
+      if (method === 'cash_usd' || method === 'cash_local' || method === 'card_terminal') {
+        return true;
+      }
+      return false;
+    });
+
+    return validMethods.length > 0;
+  }
+
   private mergeBranchWithMetadata(branch: any, parentTenant?: any): any {
     if (!branch) return branch;
     const meta = this.getBranchMetadata(branch.id);
@@ -218,8 +288,39 @@ export class BranchesService {
     ];
 
     const deliveryTiers = branch.delivery_tiers ?? meta.delivery_tiers ?? meta.deliveryTiers ?? tenant.delivery_tiers ?? defaultDeliveryTiers;
-    const acceptedPaymentMethods = branch.accepted_payment_methods ?? meta.accepted_payment_methods ?? meta.acceptedPaymentMethods ?? tenant.accepted_payment_methods ?? tenant.acceptedPaymentMethods ?? ['mobile_transfer', 'cash_usd', 'cash_local'];
+    const acceptedPaymentMethods = branch.accepted_payment_methods ?? meta.accepted_payment_methods ?? meta.acceptedPaymentMethods ?? tenant.accepted_payment_methods ?? tenant.acceptedPaymentMethods ?? [];
     
+    const rawCreds = Array.isArray(branch.branch_payment_credentials)
+      ? branch.branch_payment_credentials[0]
+      : (branch.branch_payment_credentials || branch.payment_credentials || branch.paymentCredentials || meta.payment_credentials || meta.paymentCredentials || null);
+
+    const pm = rawCreds?.pago_movil || {};
+    const zelle = rawCreds?.zelle || {};
+
+    const rawBank = pm.bank_name || rawCreds?.pago_movil_bank || rawCreds?.pagoMovilBank || branch.pagoMovilBank || '';
+    const rawPhone = pm.phone || rawCreds?.pago_movil_phone || rawCreds?.pagoMovilPhone || branch.pagoMovilPhone || '';
+    const rawIdNumber = pm.id_number || rawCreds?.pago_movil_id_number || rawCreds?.pagoMovilIdNumber || branch.pagoMovilIdNumber || '';
+    const rawAccountName = pm.account_name || rawCreds?.pago_movil_account_name || rawCreds?.pagoMovilAccountName || branch.pagoMovilAccountName || '';
+    const zelleEmail = zelle.email || rawCreds?.zelle_email || rawCreds?.zelleEmail || branch.zelleEmail || '';
+    const zelleAccountName = zelle.account_name || rawCreds?.zelle_account_name || rawCreds?.zelleAccountName || branch.zelleAccountName || '';
+
+    const paymentCredentials = {
+      pagoMovilBank: rawBank,
+      pagoMovilPhone: rawPhone,
+      pagoMovilIdNumber: rawIdNumber,
+      pagoMovilAccountName: rawAccountName,
+      zelleEmail: zelleEmail,
+      zelleAccountName: zelleAccountName,
+      isActive: Boolean(pm.enabled ?? rawCreds?.is_active ?? (rawPhone && rawBank))
+    };
+
+    const hasValidPayment = this.hasValidPaymentMethods({
+      ...branch,
+      accepted_payment_methods: acceptedPaymentMethods,
+      branch_payment_credentials: rawCreds,
+      paymentCredentials
+    });
+
     const rawBh = branch.business_hours ?? meta.business_hours ?? tenant.business_hours ?? { open: '08:00', close: '23:00', isOpenToday: true };
     const scheduleDays = rawBh?.scheduleDays || meta.business_hours?.scheduleDays || tenant.business_hours?.scheduleDays || null;
     const businessHours = {
@@ -253,6 +354,10 @@ export class BranchesService {
       deliveryTiers,
       accepted_payment_methods: acceptedPaymentMethods,
       acceptedPaymentMethods,
+      payment_credentials: paymentCredentials,
+      paymentCredentials,
+      has_valid_payment_methods: hasValidPayment,
+      hasValidPaymentMethods: hasValidPayment,
       business_hours: {
         ...businessHours,
         open: openTime,

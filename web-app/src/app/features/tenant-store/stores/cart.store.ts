@@ -868,6 +868,7 @@ export const CartStore = signalStore(
         cash_local: 'Efectivo Moneda Local',
         mobile_transfer: 'Pago Móvil / Transferencia',
         pago_movil: 'Pago Móvil',
+        zelle: 'Zelle Directo',
         card_terminal: 'Punto de Venta al recibir',
         online: 'Pago Online'
       };

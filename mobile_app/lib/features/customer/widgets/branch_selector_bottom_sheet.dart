@@ -51,7 +51,7 @@ class BranchSelectorBottomSheet extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     // Filtrar estrictamente solo sucursales activas y ordenar por distancia
-    final sortedBranches = List<Branch>.from(branches.where((b) => b.status == 'active'))
+    final sortedBranches = List<Branch>.from(branches.where((b) => b.status == 'active' && b.isPaymentValid))
       ..sort((a, b) => a
           .distanceKmTo(userLat, userLng)
           .compareTo(b.distanceKmTo(userLat, userLng)));

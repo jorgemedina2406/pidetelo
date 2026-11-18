@@ -2411,6 +2411,39 @@ export class ApiService {
       label: rawBh.label
     };
 
+    const rawMethods = r.accepted_payment_methods ?? 
+                       r.acceptedPaymentMethods ?? 
+                       r.currency_settings?.acceptedPaymentMethods ?? 
+                       r.currencySettings?.acceptedPaymentMethods;
+    let acceptedPaymentMethods: string[] = [];
+    if (Array.isArray(rawMethods)) {
+      acceptedPaymentMethods = rawMethods;
+    } else if (rawMethods && typeof rawMethods === 'object') {
+      acceptedPaymentMethods = Object.keys(rawMethods).filter(k => Boolean(rawMethods[k]));
+    }
+
+    const paymentCredentials = this.mapPaymentCredentials(r.branch_payment_credentials || r.paymentCredentials);
+    
+    let hasValidPaymentMethods = r.has_valid_payment_methods ?? r.hasValidPaymentMethods;
+    if (hasValidPaymentMethods === undefined) {
+      const pmPhone = String(paymentCredentials.pagoMovilPhone || '').replace(/\D/g, '');
+      const pmBank = String(paymentCredentials.pagoMovilBank || '').trim();
+      const pmId = String(paymentCredentials.pagoMovilIdNumber || '').replace(/\D/g, '');
+      const isRealPm = pmBank.length >= 2 && pmPhone.length >= 10 && pmId.length >= 5 &&
+        !pmPhone.includes('1234567') && pmPhone !== '04140000000' && pmPhone !== '04121234567' &&
+        !pmId.includes('50123456') && !pmId.includes('12345678') && pmId !== '00000000';
+      const isRealZelle = Boolean(paymentCredentials.zelleEmail && paymentCredentials.zelleEmail.includes('@') && paymentCredentials.zelleEmail.length >= 5);
+      
+      const valid = acceptedPaymentMethods.filter(m => {
+        const s = String(m).toLowerCase().trim();
+        if (s === 'mobile_transfer' || s === 'pago_movil') return isRealPm;
+        if (s === 'zelle') return isRealZelle;
+        if (s === 'cash_usd' || s === 'cash_local' || s === 'card_terminal' || s === 'efectivo' || s === 'tarjeta') return true;
+        return false;
+      });
+      hasValidPaymentMethods = valid.length > 0;
+    }
+
     return {
       id: r.id,
       companyId: r.company_id || r.companyId,
@@ -2450,7 +2483,9 @@ export class ApiService {
       business_hours: branchBh,
       isOpenNow: rawBh.isOpenNow ?? rawBh.isOpenToday ?? r.is_open_now ?? (r.status === 'active'),
       createdAt: r.created_at || r.createdAt,
-      paymentCredentials: this.mapPaymentCredentials(r.branch_payment_credentials || r.paymentCredentials),
+      acceptedPaymentMethods,
+      hasValidPaymentMethods: Boolean(hasValidPaymentMethods),
+      paymentCredentials,
       isMain: Boolean(r.is_main || r.isMain || r.name?.toLowerCase().includes('principal')),
       managerEmail: r.manager_email || r.managerEmail || r.email || undefined,
       managerName: r.manager_name || r.managerName || undefined,

@@ -172,6 +172,21 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
       return;
     }
 
+    if (cart.currentBranch != null && !cart.currentBranch!.isPaymentValid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'El comercio no tiene métodos de pago válidos configurados y no puede recibir pedidos en este momento.',
+            style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+          ),
+          backgroundColor: const Color(0xFFEF4444),
+          duration: const Duration(seconds: 4),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     String paymentLabel = 'Pago Móvil';
     if (_selectedPayment == 'pago_movil') {
       paymentLabel = _pagoMovilRefController.text.isNotEmpty
@@ -1128,12 +1143,48 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
 
                               final availableMethods = allMethodsDef.where((m) {
                                 final matches = m['match'] as List<String>;
-                                return rawAccepted.any((a) => matches.contains(a));
+                                if (!rawAccepted.any((a) => matches.contains(a))) return false;
+                                if (m['id'] == 'pago_movil') {
+                                  final p = cart.currentBranchPayment;
+                                  if (p == null) return false;
+                                  final phone = p.pagoMovilPhone.replaceAll(RegExp(r'\D'), '');
+                                  final idNum = p.pagoMovilIdNumber.replaceAll(RegExp(r'\D'), '');
+                                  final bank = p.pagoMovilBank.trim();
+                                  if (phone.length < 10 || bank.length < 2 || idNum.length < 5) return false;
+                                  if (phone.contains('1234567') || phone == '04140000000' || phone == '04121234567') return false;
+                                  if (idNum.contains('50123456') || idNum.contains('12345678') || idNum == '00000000') return false;
+                                }
+                                return true;
                               }).toList();
 
-                              final effectiveMethods = availableMethods.isNotEmpty
-                                  ? availableMethods
-                                  : allMethodsDef.take(2).toList();
+                              if (availableMethods.isEmpty) {
+                                return Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.amber.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: Colors.amber.withOpacity(0.3)),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.warning_amber_rounded, color: Colors.amber, size: 20),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          'Este comercio no tiene métodos de pago configurados y no puede recibir pedidos.',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                            color: isDark ? Colors.amber[200] : Colors.amber[900],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }
+
+                              final effectiveMethods = availableMethods;
 
                               if (!effectiveMethods.any((m) => m['id'] == _selectedPayment)) {
                                 WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1600,16 +1651,16 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
                   child: ElevatedButton(
-                    onPressed: cart.isOutOfCoverage
+                    onPressed: (cart.isOutOfCoverage || (cart.currentBranch != null && !cart.currentBranch!.isPaymentValid))
                         ? null
                         : () => _confirmOrder(context, cart),
                     style: ElevatedButton.styleFrom(
                       backgroundColor:
-                          cart.isOutOfCoverage ? Colors.grey : AppTheme.primary,
+                          (cart.isOutOfCoverage || (cart.currentBranch != null && !cart.currentBranch!.isPaymentValid)) ? Colors.grey : AppTheme.primary,
                       minimumSize: const Size(double.infinity, 54),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16)),
-                      elevation: cart.isOutOfCoverage ? 0 : 4,
+                      elevation: (cart.isOutOfCoverage || (cart.currentBranch != null && !cart.currentBranch!.isPaymentValid)) ? 0 : 4,
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1617,7 +1668,9 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                         Text(
                           cart.isOutOfCoverage
                               ? 'Fuera de Cobertura'
-                              : 'Confirmar Pedido',
+                              : (cart.currentBranch != null && !cart.currentBranch!.isPaymentValid)
+                                  ? 'Sin Métodos de Pago'
+                                  : 'Confirmar Pedido',
                           style: GoogleFonts.outfit(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,

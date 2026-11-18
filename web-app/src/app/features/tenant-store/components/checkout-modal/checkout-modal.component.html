@@ -164,40 +164,49 @@
             Método de Pago
           </label>
 
-          <div class="grid grid-cols-2 gap-2.5 text-xs">
-            @for (method of availablePaymentMethods(); track method.id) {
-              <button type="button"
-                      (click)="cart.setPaymentMethod(method.id)"
-                      [class.ring-2]="cart.paymentMethod() === method.id"
-                      [class.ring-brand-500]="cart.paymentMethod() === method.id"
-                      [class.border-brand-500]="cart.paymentMethod() === method.id"
-                      [class.bg-brand-50]="cart.paymentMethod() === method.id"
-                      [class.dark:bg-brand-950]="cart.paymentMethod() === method.id"
-                      [class.border-slate-200]="cart.paymentMethod() !== method.id"
-                      [class.dark:border-slate-700]="cart.paymentMethod() !== method.id"
-                      [class.bg-white]="cart.paymentMethod() !== method.id"
-                      [class.dark:bg-slate-800]="cart.paymentMethod() !== method.id"
-                      class="p-3 rounded-2xl border transition-all flex flex-col justify-between text-left cursor-pointer hover:border-brand-500/50 shadow-xs">
-                <div class="flex items-center justify-between w-full mb-1">
-                  <span class="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                    <span>{{ method.icon }}</span>
-                    <span>{{ method.label }}</span>
-                  </span>
-                  <span class="w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0"
+          @if (availablePaymentMethods().length > 0) {
+            <div class="grid grid-cols-2 gap-2.5 text-xs">
+              @for (method of availablePaymentMethods(); track method.id) {
+                <button type="button"
+                        (click)="cart.setPaymentMethod(method.id)"
+                        [class.ring-2]="cart.paymentMethod() === method.id"
+                        [class.ring-brand-500]="cart.paymentMethod() === method.id"
                         [class.border-brand-500]="cart.paymentMethod() === method.id"
-                        [class.bg-brand-500]="cart.paymentMethod() === method.id"
-                        [class.border-slate-300]="cart.paymentMethod() !== method.id"
-                        [class.dark:border-slate-600]="cart.paymentMethod() !== method.id">
-                    @if (cart.paymentMethod() === method.id) {
-                      <span class="w-1.5 h-1.5 rounded-full bg-white"></span>
-                    }
-                  </span>
-                </div>
-                <span class="text-[10px] text-slate-500 dark:text-slate-400 leading-tight">{{ method.desc }}</span>
-              </button>
-            }
-
-          </div>
+                        [class.bg-brand-50]="cart.paymentMethod() === method.id"
+                        [class.dark:bg-brand-950]="cart.paymentMethod() === method.id"
+                        [class.border-slate-200]="cart.paymentMethod() !== method.id"
+                        [class.dark:border-slate-700]="cart.paymentMethod() !== method.id"
+                        [class.bg-white]="cart.paymentMethod() !== method.id"
+                        [class.dark:bg-slate-800]="cart.paymentMethod() !== method.id"
+                        class="p-3 rounded-2xl border transition-all flex flex-col justify-between text-left cursor-pointer hover:border-brand-500/50 shadow-xs">
+                  <div class="flex items-center justify-between w-full mb-1">
+                    <span class="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                      <span>{{ method.icon }}</span>
+                      <span>{{ method.label }}</span>
+                    </span>
+                    <span class="w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0"
+                          [class.border-brand-500]="cart.paymentMethod() === method.id"
+                          [class.bg-brand-500]="cart.paymentMethod() === method.id"
+                          [class.border-slate-300]="cart.paymentMethod() !== method.id"
+                          [class.dark:border-slate-600]="cart.paymentMethod() !== method.id">
+                      @if (cart.paymentMethod() === method.id) {
+                        <span class="w-1.5 h-1.5 rounded-full bg-white"></span>
+                      }
+                    </span>
+                  </div>
+                  <span class="text-[10px] text-slate-500 dark:text-slate-400 leading-tight">{{ method.desc }}</span>
+                </button>
+              }
+            </div>
+          } @else {
+            <div class="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-xs font-semibold flex items-start gap-2.5">
+              <span class="text-base leading-none">⚠️</span>
+              <div>
+                <p class="font-bold">Este comercio no tiene métodos de pago configurados</p>
+                <p class="text-[11px] opacity-90 mt-0.5">El establecimiento se encuentra completando sus datos de cobro y no puede recibir pedidos en este momento.</p>
+              </div>
+            </div>
+          }
 
           <!-- Pago Móvil Datos Reales del Comercio -->
           @if (cart.paymentMethod() === 'mobile_transfer') {
@@ -375,11 +384,13 @@
         </div>
 
         <button (click)="promptConfirmOrder()"
-                [disabled]="isSubmitting() || !cart.customer().name || !cart.customer().phone"
+                [disabled]="isSubmitting() || !cart.customer().name || !cart.customer().phone || availablePaymentMethods().length === 0"
                 class="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] disabled:opacity-40 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-emerald-600/25 flex items-center justify-center gap-2 transition-all cursor-pointer disabled:cursor-not-allowed">
           @if (isSubmitting()) {
             <span class="inline-block animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></span>
             <span>Registrando pedido...</span>
+          } @else if (availablePaymentMethods().length === 0) {
+            <span>⚠️ Sin Métodos de Pago Activos</span>
           } @else if (cart.fulfillmentType() === 'delivery' && (!cart.customer().deliveryLat || !cart.customer().deliveryLng)) {
             <span>📍 Toca para Compartir tu Ubicación GPS</span>
           } @else if (cart.fulfillmentType() === 'delivery' && cart.isOutOfCoverage()) {

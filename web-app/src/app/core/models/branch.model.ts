@@ -57,6 +57,8 @@ export interface Branch {
   business_hours?: any;
   isOpenNow: boolean;
   paymentCredentials: BranchPaymentCredentials;
+  acceptedPaymentMethods?: string[];
+  hasValidPaymentMethods?: boolean;
   createdAt?: string;
   rejectionReason?: string;
   isMain?: boolean;

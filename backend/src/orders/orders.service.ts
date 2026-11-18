@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, InternalServerErrorException, BadRequest
 import { SupabaseService } from '../supabase/supabase.service.js';
 import { PlansService } from '../plans/plans.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
+import { BranchesService } from '../branches/branches.service.js';
 
 @Injectable()
 export class OrdersService {
@@ -9,6 +10,7 @@ export class OrdersService {
     private supabase: SupabaseService,
     private plansService: PlansService,
     private notificationsService: NotificationsService,
+    private branchesService: BranchesService,
   ) {}
 
   async create(orderPayload: any) {
@@ -48,6 +50,35 @@ export class OrdersService {
       const { data: mainB } = await client.from('branches').select('id').eq('company_id', resolvedTenantId).eq('is_main', true).maybeSingle();
       if (mainB?.id) {
         resolvedBranchId = mainB.id;
+      }
+    }
+
+    // Validar que la sucursal tenga métodos de pago activos y configurados
+    if (resolvedBranchId) {
+      try {
+        const branchData = await this.branchesService.findById(resolvedBranchId);
+        if (!this.branchesService.hasValidPaymentMethods(branchData)) {
+          throw new BadRequestException('El comercio seleccionado no tiene métodos de pago configurados y no puede recibir pedidos en este momento.');
+        }
+
+        const pMethod = orderPayload.payment_method || 'mobile_transfer';
+        if (pMethod === 'mobile_transfer' || pMethod === 'pago_movil') {
+          const pmCreds = branchData.paymentCredentials || branchData.payment_credentials;
+          const pmPhone = String(pmCreds?.pagoMovilPhone || '').replace(/\D/g, '');
+          const pmBank = String(pmCreds?.pagoMovilBank || '').trim();
+          const pmId = String(pmCreds?.pagoMovilIdNumber || '').replace(/\D/g, '');
+          const isReal = pmBank.length >= 2 && pmPhone.length >= 10 && pmId.length >= 5 &&
+            !pmPhone.includes('1234567') && pmPhone !== '04140000000' && pmPhone !== '04121234567' &&
+            !pmId.includes('50123456') && !pmId.includes('12345678') && pmId !== '00000000';
+          if (!isReal) {
+            throw new BadRequestException('El comercio seleccionado no tiene configurados los datos de Pago Móvil para recibir pagos.');
+          }
+        }
+      } catch (err: any) {
+        if (err instanceof BadRequestException) {
+          throw err;
+        }
+        // Si no se pudo obtener detalles por error de red pero la sucursal existe, continuar con resiliencia
       }
     }
 

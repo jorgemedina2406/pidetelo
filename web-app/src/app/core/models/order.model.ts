@@ -16,8 +16,9 @@ export type FulfillmentType = 'delivery' | 'pickup';
 export type PaymentMethod = 
   | 'cash_usd'
   | 'cash_local'
-  | 'mobile_transfer' // Pago Móvil / Zelle / Bizum
+  | 'mobile_transfer' // Pago Móvil / Bizum
   | 'pago_movil'
+  | 'zelle'
   | 'card_terminal'
   | 'online';
 

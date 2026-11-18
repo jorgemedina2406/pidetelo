@@ -105,6 +105,14 @@ export class StoreViewComponent implements OnInit {
       return { isOpen: false, label: 'Comercio pausado temporalmente (Membresía)', openStr: fallbackOpen, closeStr: fallbackClose };
     }
 
+    if (b && (b as any).hasValidPaymentMethods === false) {
+      return { isOpen: false, label: 'Configurando métodos de pago', openStr: fallbackOpen, closeStr: fallbackClose };
+    }
+
+    if ((t as any)?.hasValidPaymentMethods === false) {
+      return { isOpen: false, label: 'Configurando métodos de pago', openStr: fallbackOpen, closeStr: fallbackClose };
+    }
+
     if (rawBh?.forceOpen === true || rawBh?.force_open === true) {
       return { isOpen: true, label: 'Abierto 24 Horas', openStr: '00:00', closeStr: '23:59' };
     }

@@ -68,6 +68,17 @@ export class CheckoutModalComponent {
     { id: 'cash_local', label: 'Efectivo Bs', icon: '🪙', desc: 'A tasa del día' }
   ];
 
+  isRealPagoMovil(cred?: any): boolean {
+    if (!cred) return false;
+    const phone = String(cred.pagoMovilPhone || cred.pago_movil_phone || '').replace(/\D/g, '');
+    const bank = String(cred.pagoMovilBank || cred.pago_movil_bank || '').trim();
+    const idNum = String(cred.pagoMovilIdNumber || cred.pago_movil_id_number || '').replace(/\D/g, '');
+    if (phone.length < 10 || bank.length < 2 || idNum.length < 5) return false;
+    if (phone.includes('1234567') || phone === '04140000000' || phone === '04121234567') return false;
+    if (idNum.includes('50123456') || idNum.includes('12345678') || idNum === '00000000') return false;
+    return true;
+  }
+
   readonly availablePaymentMethods = computed(() => {
     const branch = this.cart.selectedBranch();
     const tenant = this.cart.activeTenant();
@@ -80,17 +91,32 @@ export class CheckoutModalComponent {
                              (tenant as any)?.currencySettings?.acceptedPaymentMethods ||
                              (tenant as any)?.currency_settings?.acceptedPaymentMethods;
     
-    if (Array.isArray(rawAccepted) && rawAccepted.length > 0) {
-      const normalizedAccepted = rawAccepted.map((m: string) => {
-        if (m === 'pago_movil') return 'mobile_transfer';
-        if (m === 'efectivo') return 'cash_usd';
-        if (m === 'tarjeta') return 'card_terminal';
-        return m;
+    let normalizedAccepted: string[] = [];
+    if (Array.isArray(rawAccepted)) {
+      normalizedAccepted = rawAccepted.map((m: string) => {
+        const s = String(m).toLowerCase().trim();
+        if (s === 'pago_movil') return 'mobile_transfer';
+        if (s === 'efectivo') return 'cash_usd';
+        if (s === 'tarjeta') return 'card_terminal';
+        return s;
       });
-      const filtered = this.paymentMethods.filter(pm => normalizedAccepted.includes(pm.id));
-      if (filtered.length > 0) return filtered;
     }
-    return this.paymentMethods;
+
+    if (normalizedAccepted.length === 0) {
+      return [];
+    }
+
+    const creds = branch?.paymentCredentials || (branch as any)?.payment_credentials || {};
+    const isPmValid = this.isRealPagoMovil(creds);
+    const zEmail = String(creds.zelleEmail || (branch as any)?.zelleEmail || '').trim();
+    const isZelleValid = zEmail.includes('@') && zEmail.length >= 5;
+
+    return this.paymentMethods.filter(pm => {
+      if (!normalizedAccepted.includes(pm.id)) return false;
+      if (pm.id === 'mobile_transfer') return isPmValid;
+      if (pm.id === 'zelle') return isZelleValid;
+      return true;
+    });
   });
 
   constructor() {
