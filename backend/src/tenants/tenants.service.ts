@@ -993,17 +993,22 @@ export class TenantsService {
     }
   }
 
-  async getTenantReviews(tenantIdOrSlug: string) {
+  async getTenantReviews(tenantIdOrSlug: string, branchId?: string) {
     const tenant = await this.resolveTenant(tenantIdOrSlug);
     const tenantId = tenant?.id || tenantIdOrSlug;
 
     // 1. Intentar desde Supabase
     try {
-      const { data, error } = await this.supabase.getClient()
+      let query = this.supabase.getClient()
         .from('tenant_reviews')
         .select('*')
-        .eq('tenant_id', tenantId)
-        .order('created_at', { ascending: false });
+        .eq('tenant_id', tenantId);
+
+      if (branchId && branchId !== 'all') {
+        query = query.eq('branch_id', branchId);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
 
       if (!error && Array.isArray(data) && data.length > 0) {
         return data;
@@ -1012,10 +1017,14 @@ export class TenantsService {
 
     // 2. Fallback a almacenamiento local en JSON
     const local = this.loadLocalReviews();
-    return local[tenantId] || [];
+    const list = local[tenantId] || [];
+    if (branchId && branchId !== 'all') {
+      return list.filter((r: any) => r.branch_id === branchId || r.branchId === branchId);
+    }
+    return list;
   }
 
-  async createTenantReview(tenantIdOrSlug: string, payload: { rating: number; comment?: string; customerName: string; customerPhone?: string; orderId?: string }) {
+  async createTenantReview(tenantIdOrSlug: string, payload: { rating: number; comment?: string; customerName: string; customerPhone?: string; orderId?: string; branchId?: string; branchName?: string }) {
     const tenant = await this.resolveTenant(tenantIdOrSlug);
     if (!tenant) {
       throw new BadRequestException('Comercio no encontrado para valorar');
@@ -1028,9 +1037,25 @@ export class TenantsService {
     const customerPhone = (payload.customerPhone || '').trim();
     const orderId = payload.orderId || null;
 
+    let branchId = payload.branchId || null;
+    let branchName = payload.branchName || null;
+    if (orderId && !branchId) {
+      try {
+        const { data: ord } = await this.supabase.getClient()
+          .from('orders')
+          .select('branch_id, branch_name')
+          .eq('id', orderId)
+          .maybeSingle();
+        if (ord?.branch_id) branchId = ord.branch_id;
+        if (ord?.branch_name) branchName = ord.branch_name;
+      } catch (_) {}
+    }
+
     const newReview = {
       id: crypto.randomUUID(),
       tenant_id: tenantId,
+      branch_id: branchId,
+      branch_name: branchName,
       order_id: orderId,
       customer_name: customerName,
       customer_phone: customerPhone,
@@ -1044,6 +1069,15 @@ export class TenantsService {
     try {
       await this.supabase.getClient().from('tenant_reviews').insert(newReview);
     } catch (_) { }
+
+    if (orderId) {
+      try {
+        await this.supabase.getClient().from('orders').update({
+          store_rating: rating,
+          store_review: comment || null,
+        }).eq('id', orderId);
+      } catch (_) {}
+    }
 
     // 2. Guardar en almacenamiento local persistente
     const local = this.loadLocalReviews();

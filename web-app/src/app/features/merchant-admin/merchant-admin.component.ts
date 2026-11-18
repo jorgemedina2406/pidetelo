@@ -106,7 +106,36 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
   readonly isSidebarExpanded = signal(true);
   readonly isMobileMenuOpen = signal(false);
   readonly productViewMode = signal<'grid' | 'list'>('grid');
-  readonly activeTab = signal<'orders' | 'products' | 'branches' | 'riders' | 'gps_map' | 'users' | 'settings' | 'coupons' | 'whatsapp' | 'support'>('orders');
+  readonly activeTab = signal<'orders' | 'products' | 'branches' | 'riders' | 'gps_map' | 'users' | 'settings' | 'coupons' | 'whatsapp' | 'support' | 'reviews'>('orders');
+
+  // --- VALORACIONES POR SUCURSAL ---
+  readonly branchReviews = signal<any[]>([]);
+  readonly isLoadingReviews = signal<boolean>(false);
+  readonly selectedReviewBranchId = signal<string>('all');
+
+  readonly filteredBranchReviews = computed(() => {
+    const list = this.branchReviews();
+    const branchFilter = this.selectedReviewBranchId();
+    if (!branchFilter || branchFilter === 'all') return list;
+    return list.filter(r => r.branch_id === branchFilter || r.branchId === branchFilter);
+  });
+
+  readonly reviewsAverage = computed(() => {
+    const list = this.filteredBranchReviews();
+    if (!list || list.length === 0) return 5.0;
+    const sum = list.reduce((acc, curr) => acc + (Number(curr.rating) || 5), 0);
+    return Number((sum / list.length).toFixed(1));
+  });
+
+  readonly reviewsStarCounts = computed<Record<number, number>>(() => {
+    const list = this.filteredBranchReviews();
+    const counts: Record<number, number> = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    for (const r of list) {
+      const star = Math.min(5, Math.max(1, Math.round(Number(r.rating) || 5)));
+      counts[star] = (counts[star] || 0) + 1;
+    }
+    return counts;
+  });
 
   // --- WHATSAPP BOT & CENTRAL DE MENSAJERIA ---
   readonly whatsappSubTab = signal<'chat' | 'settings'>('chat');
@@ -1526,6 +1555,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       // 3. Cargar sucursales reales (esto fija la sede activa y dispara la carga aislada de pedidos, productos, motorizados y colaboradores)
       this.loadBranches(activeTenantId);
       this.loadCoupons();
+      this.loadBranchReviews();
       this.loadRiderWithdrawals();
       if (activeTenantId) {
         this.supabase.subscribeToRiderWithdrawals(activeTenantId, () => {
@@ -3628,6 +3658,31 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         this.deleteBranchErrorMessage.set(err?.error?.message || err?.message || 'Error al eliminar la sucursal en el servidor.');
       }
     });
+  }
+
+  loadBranchReviews(): void {
+    const tenantId = this.currentTenant().id || this.auth.currentUser()?.tenantId;
+    if (!tenantId) return;
+
+    this.isLoadingReviews.set(true);
+    const branchId = this.selectedReviewBranchId() !== 'all' 
+      ? this.selectedReviewBranchId() 
+      : (this.isBranchLocked() ? this.activeBranchId() : undefined);
+    this.api.getTenantReviews(tenantId, branchId).subscribe({
+      next: (reviews) => {
+        this.branchReviews.set(reviews || []);
+        this.isLoadingReviews.set(false);
+      },
+      error: (err) => {
+        console.error('[MerchantAdmin] Error al cargar valoraciones:', err);
+        this.isLoadingReviews.set(false);
+      }
+    });
+  }
+
+  setReviewBranchFilter(branchId: string): void {
+    this.selectedReviewBranchId.set(branchId);
+    this.loadBranchReviews();
   }
 
   // --- GESTIÓN DE CUPONES DE OFERTA DEL COMERCIO ---

@@ -307,6 +307,95 @@
 
           </div>
 
+          <!-- ================= VALORACIONES / CALIFICACIÓN DE LA ENTREGA ================= -->
+          @if (ord.status === 'delivered') {
+            <!-- 1. Valorar el Comercio -->
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm space-y-3">
+              @if (hasRatedStore()) {
+                <div class="flex items-center gap-2.5 text-emerald-600 dark:text-emerald-400 font-bold text-xs">
+                  <span class="text-lg">⭐</span>
+                  <span>¡Gracias por valorar a {{ ord.tenantName || 'este comercio' }} con {{ storeRating() }} estrellas!</span>
+                </div>
+              } @else {
+                <div class="space-y-1">
+                  <div class="flex items-center gap-2">
+                    <span class="text-base">🏪</span>
+                    <h4 class="font-bold text-xs text-slate-900 dark:text-white">
+                      ¿Qué tal estuvo la comida de {{ ord.tenantName || 'este comercio' }}?
+                    </h4>
+                  </div>
+                  <p class="text-[11px] text-slate-500">Valora el sabor, presentación y calidad de tu orden:</p>
+                </div>
+
+                <!-- Estrellas interactivas -->
+                <div class="flex items-center justify-center gap-2 py-1">
+                  @for (star of [1, 2, 3, 4, 5]; track star) {
+                    <button type="button" (click)="storeRating.set(star)"
+                            class="text-2xl transition-transform hover:scale-125 cursor-pointer">
+                      {{ star <= storeRating() ? '⭐' : '☆' }}
+                    </button>
+                  }
+                </div>
+
+                <!-- Comentario opcional -->
+                <textarea [ngModel]="storeComment()"
+                          (ngModelChange)="storeComment.set($event)"
+                          placeholder="Escribe un comentario sobre tu comida (opcional)..."
+                          rows="2"
+                          class="w-full text-xs font-medium rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 p-2.5 shadow-xs focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500"></textarea>
+
+                <button type="button" (click)="submitStoreReview()" [disabled]="isSubmittingStoreRating()"
+                        class="w-full py-2.5 px-4 rounded-xl bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+                  <span>{{ isSubmittingStoreRating() ? 'Enviando...' : 'Calificar Comercio ⭐' }}</span>
+                </button>
+              }
+            </div>
+
+            <!-- 2. Valorar al Repartidor (si tuvo driver asignado) -->
+            @if (ord.driverId || ord.driverName) {
+              <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm space-y-3">
+                @if (hasRatedRider()) {
+                  <div class="flex items-center gap-2.5 text-emerald-600 dark:text-emerald-400 font-bold text-xs">
+                    <span class="text-lg">🛵</span>
+                    <span>¡Gracias por valorar a {{ ord.driverName || 'tu repartidor' }} con {{ riderRating() }} estrellas!</span>
+                  </div>
+                } @else {
+                  <div class="space-y-1">
+                    <div class="flex items-center gap-2">
+                      <span class="text-base">🛵</span>
+                      <h4 class="font-bold text-xs text-slate-900 dark:text-white">
+                        ¿Cómo fue tu experiencia con {{ ord.driverName || 'el repartidor' }}?
+                      </h4>
+                    </div>
+                    <p class="text-[11px] text-slate-500">Valora la amabilidad, rapidez y cuidado de la entrega:</p>
+                  </div>
+
+                  <!-- Estrellas interactivas -->
+                  <div class="flex items-center justify-center gap-2 py-1">
+                    @for (star of [1, 2, 3, 4, 5]; track star) {
+                      <button type="button" (click)="riderRating.set(star)"
+                              class="text-2xl transition-transform hover:scale-125 cursor-pointer">
+                        {{ star <= riderRating() ? '⭐' : '☆' }}
+                      </button>
+                    }
+                  </div>
+
+                  <!-- Comentario opcional -->
+                  <textarea [ngModel]="riderComment()"
+                            (ngModelChange)="riderComment.set($event)"
+                            placeholder="Escribe un comentario sobre el servicio del repartidor (opcional)..."
+                            rows="2"
+                            class="w-full text-xs font-medium rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 p-2.5 shadow-xs focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500"></textarea>
+
+                  <button type="button" (click)="submitRiderReview()" [disabled]="isSubmittingRiderRating()"
+                          class="w-full py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-slate-950 font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+                    <span>{{ isSubmittingRiderRating() ? 'Enviando...' : 'Calificar Repartidor ⭐' }}</span>
+                  </button>
+                }
+              </div>
+            }
+          }
+
           <!-- ================= COURIER PROFILE ================= -->
           @if (ord.driverId) {
             <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm space-y-3">
@@ -475,11 +564,24 @@
                              [ngModel]="regPassword()" 
                              (ngModelChange)="regPassword.set($event)"
                              name="regPassword"
-                             placeholder="Mín. 8 car., 1 mayúscula y 1 símbolo"
-                             class="w-full text-xs font-medium rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 shadow-xs focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500" />
-                      <p class="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
-                        Debe tener al menos 8 caracteres, 1 letra mayúscula y 1 carácter especial (*, ., @, #, etc.)
-                      </p>
+                             placeholder="Mínimo 8 caracteres"
+                             class="w-full text-xs font-medium rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 shadow-xs focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500 font-mono" />
+                      
+                      <!-- Indicadores dinámicos de condiciones de contraseña -->
+                      <div class="mt-2 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-[10.5px] space-y-1">
+                        <div class="flex items-center gap-1.5 transition-colors" [class.text-emerald-600]="regHasMinLength()" [class.dark:text-emerald-400]="regHasMinLength()" [class.text-slate-400]="!regHasMinLength()">
+                          <span class="font-bold">{{ regHasMinLength() ? '✓' : '○' }}</span>
+                          <span>Mínimo 8 caracteres</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 transition-colors" [class.text-emerald-600]="regHasUppercase()" [class.dark:text-emerald-400]="regHasUppercase()" [class.text-slate-400]="!regHasUppercase()">
+                          <span class="font-bold">{{ regHasUppercase() ? '✓' : '○' }}</span>
+                          <span>Al menos 1 letra Mayúscula</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 transition-colors" [class.text-emerald-600]="regHasSpecialChar()" [class.dark:text-emerald-400]="regHasSpecialChar()" [class.text-slate-400]="!regHasSpecialChar()">
+                          <span class="font-bold">{{ regHasSpecialChar() ? '✓' : '○' }}</span>
+                          <span>Al menos 1 carácter especial (*, ., @, #, etc.)</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -489,7 +591,7 @@
                     </a>
 
                     <button type="submit" 
-                            [disabled]="isRegistering()"
+                            [disabled]="isRegistering() || !isRegPasswordValid() || !regEmail()"
                             class="px-4 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer">
                       @if (isRegistering()) {
                         <span class="inline-block animate-spin rounded-full h-3 w-3 border-2 border-white border-t-transparent"></span>

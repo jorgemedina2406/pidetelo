@@ -575,6 +575,8 @@ class ApiService {
     required String customerName,
     String? customerPhone,
     String? orderId,
+    String? branchId,
+    String? branchName,
   }) async {
     final payload = {
       'rating': rating.toInt(),
@@ -582,6 +584,8 @@ class ApiService {
       'customerName': customerName.trim(),
       'customerPhone': customerPhone?.trim() ?? '',
       'orderId': orderId,
+      'branchId': branchId,
+      'branchName': branchName,
     };
 
     final urls = [

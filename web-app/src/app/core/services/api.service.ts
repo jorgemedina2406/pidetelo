@@ -555,6 +555,15 @@ export class ApiService {
     );
   }
 
+  getRiderReviews(riderId: string): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/riders/${riderId}/reviews`).pipe(
+      catchError(err => {
+        console.warn('[ApiService] Error obteniendo reseñas de rider:', err);
+        return of({ riderId, rating: 5.0, totalReviews: 0, reviews: [] });
+      })
+    );
+  }
+
   verifyRiderCertification(riderId: string, isApproved: boolean, notes?: string): Observable<any> {
     const url = `${this.baseUrl}/riders/${riderId}/verify-certification`;
     return this.http.post<any>(url, { isApproved, notes }).pipe(
@@ -578,8 +587,10 @@ export class ApiService {
     );
   }
 
-  getTenantReviews(tenantId: string): Observable<any[]> {
-    return this.http.get<any[]>(`${this.baseUrl}/tenants/${tenantId}/reviews`).pipe(
+  getTenantReviews(tenantId: string, branchId?: string): Observable<any[]> {
+    const params: any = {};
+    if (branchId && branchId !== 'all') params.branchId = branchId;
+    return this.http.get<any[]>(`${this.baseUrl}/tenants/${tenantId}/reviews`, { params }).pipe(
       catchError(err => {
         console.warn('[ApiService] Error obteniendo reseñas de comercio:', err);
         return of([]);
@@ -641,7 +652,7 @@ export class ApiService {
     );
   }
 
-  submitTenantReview(tenantId: string, review: { rating: number; comment?: string; customerName: string; customerPhone?: string; orderId?: string }): Observable<any> {
+  submitTenantReview(tenantId: string, review: { rating: number; comment?: string; customerName: string; customerPhone?: string; orderId?: string; branchId?: string; branchName?: string }): Observable<any> {
     return this.http.post<any>(`${this.baseUrl}/tenants/${tenantId}/reviews`, review).pipe(
       catchError(err => {
         console.error('[ApiService] Error enviando reseña de comercio:', err);

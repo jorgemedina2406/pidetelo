@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit, OnDestroy, AfterViewInit } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, OnDestroy, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
@@ -39,6 +39,13 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
   // Quick Customer Registration
   readonly regEmail = signal<string>('');
   readonly regPassword = signal<string>('');
+  readonly regHasMinLength = computed(() => (this.regPassword() || '').length >= 8);
+  readonly regHasUppercase = computed(() => /[A-Z]/.test(this.regPassword() || ''));
+  readonly regHasSpecialChar = computed(() => {
+    const specialRegex = new RegExp('[!@#$%^&*(),.?":{}|<>\_\-+=\\[\\]\\\\/~`]');
+    return specialRegex.test(this.regPassword() || '');
+  });
+  readonly isRegPasswordValid = computed(() => this.regHasMinLength() && this.regHasUppercase() && this.regHasSpecialChar());
   readonly isRegistering = signal<boolean>(false);
   readonly registrationSuccess = signal<boolean>(false);
   readonly registrationError = signal<string>('');
@@ -48,6 +55,60 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
   readonly newPaymentRefInput = signal<string>('');
   readonly isSubmittingPaymentRef = signal<boolean>(false);
   readonly paymentRefUpdatedSuccess = signal<boolean>(false);
+
+  // Valoración del Comercio y del Repartidor
+  readonly storeRating = signal<number>(5);
+  readonly storeComment = signal<string>('');
+  readonly isSubmittingStoreRating = signal<boolean>(false);
+  readonly hasRatedStore = signal<boolean>(false);
+
+  readonly riderRating = signal<number>(5);
+  readonly riderComment = signal<string>('');
+  readonly isSubmittingRiderRating = signal<boolean>(false);
+  readonly hasRatedRider = signal<boolean>(false);
+
+  submitStoreReview(): void {
+    const ord = this.order();
+    if (!ord || !ord.tenantId) return;
+
+    this.isSubmittingStoreRating.set(true);
+    this.api.submitTenantReview(ord.tenantId, {
+      rating: this.storeRating(),
+      comment: this.storeComment().trim(),
+      customerName: ord.customer?.name || 'Cliente',
+      customerPhone: ord.customer?.phone || '',
+      orderId: ord.id,
+      branchId: (ord as any).branchId || (ord as any).branch_id,
+      branchName: (ord as any).branchName || (ord as any).branch_name,
+    }).subscribe({
+      next: () => {
+        this.isSubmittingStoreRating.set(false);
+        this.hasRatedStore.set(true);
+      },
+      error: () => {
+        this.isSubmittingStoreRating.set(false);
+        this.hasRatedStore.set(true);
+      }
+    });
+  }
+
+  submitRiderReview(): void {
+    const ord = this.order();
+    const driverId = ord?.driverId || (ord as any)?.driver_id;
+    if (!driverId) return;
+
+    this.isSubmittingRiderRating.set(true);
+    this.api.rateRider(driverId, this.riderRating(), ord?.id, this.riderComment().trim()).subscribe({
+      next: () => {
+        this.isSubmittingRiderRating.set(false);
+        this.hasRatedRider.set(true);
+      },
+      error: () => {
+        this.isSubmittingRiderRating.set(false);
+        this.hasRatedRider.set(true);
+      }
+    });
+  }
 
   private leafletMap?: L.Map;
   private storeMarker?: L.Marker;

@@ -53,6 +53,12 @@ export class RidersController {
     return this.ridersService.rateRider(riderId, body.rating, body.orderId, body.comment);
   }
 
+  @Get(':id/reviews')
+  @ApiOperation({ summary: 'Obtener las reseñas y valoraciones del motorizado' })
+  getRiderReviews(@Param('id') riderId: string) {
+    return this.ridersService.getRiderReviews(riderId);
+  }
+
   @Post('register-with-verification')
   @ApiOperation({ summary: 'Registrar nuevo repartidor con verificación automática biométrica y de documento' })
   registerWithVerification(@Body() body: any) {

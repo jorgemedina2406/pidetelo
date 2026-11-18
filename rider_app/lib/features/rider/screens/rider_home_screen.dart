@@ -2315,6 +2315,100 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
         ),
         const SizedBox(height: 24),
 
+        // Rating & Reviews Summary Card
+        Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                const Color(0xFFF59E0B).withOpacity(0.15),
+                const Color(0xFF1E293B),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: const Color(0xFFF59E0B).withOpacity(0.35)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF59E0B).withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.star_rounded, color: Color(0xFFF59E0B), size: 24),
+                      ),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Calificación del Repartidor',
+                            style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFF94A3B8)),
+                          ),
+                          Row(
+                            children: [
+                              Text(
+                                (rider?.rating ?? 5.0).toStringAsFixed(1),
+                                style: GoogleFonts.outfit(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Row(
+                                children: List.generate(5, (idx) {
+                                  final star = idx + 1;
+                                  final r = rider?.rating ?? 5.0;
+                                  return Icon(
+                                    star <= r ? Icons.star_rounded : Icons.star_outline_rounded,
+                                    color: const Color(0xFFF59E0B),
+                                    size: 16,
+                                  );
+                                }),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    if (rider != null) _showRiderReviewsModal(context, rider.id);
+                  },
+                  icon: const Icon(Icons.rate_review_outlined, size: 16),
+                  label: Text(
+                    'Ver Opiniones y Comentarios',
+                    style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.w800),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFF59E0B),
+                    foregroundColor: const Color(0xFF0F172A),
+                    padding: const EdgeInsets.symmetric(vertical: 11),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
         // Vehicle info card
         Container(
           padding: const EdgeInsets.all(16),
@@ -2378,6 +2472,199 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
         Text(label, style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xFF94A3B8))),
         Text(value, style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white)),
       ],
+    );
+  }
+
+  void _showRiderReviewsModal(BuildContext context, String riderId) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF0F172A),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.75,
+          minChildSize: 0.4,
+          maxChildSize: 0.95,
+          expand: false,
+          builder: (_, scrollController) {
+            return FutureBuilder<Map<String, dynamic>>(
+              future: _riderService.getRiderReviews(riderId),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: Color(0xFFF59E0B)),
+                  );
+                }
+
+                final data = snapshot.data ?? {};
+                final reviews = (data['reviews'] as List<dynamic>?) ?? [];
+                final avg = (data['averageRating'] as num?)?.toDouble() ?? 5.0;
+                final total = (data['totalReviews'] as int?) ?? reviews.length;
+
+                return Column(
+                  children: [
+                    Container(
+                      margin: const EdgeInsets.only(top: 12, bottom: 8),
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.white24,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Valoraciones de Clientes',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              Text(
+                                '$total valoraciones recibidas',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 12,
+                                  color: const Color(0xFF94A3B8),
+                                ),
+                              ),
+                            ],
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF59E0B).withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFFF59E0B).withOpacity(0.4)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.star_rounded, color: Color(0xFFF59E0B), size: 18),
+                                const SizedBox(width: 4),
+                                Text(
+                                  avg.toStringAsFixed(1),
+                                  style: GoogleFonts.outfit(
+                                    fontWeight: FontWeight.w900,
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Divider(color: Color(0xFF1E293B), height: 1),
+                    Expanded(
+                      child: reviews.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.star_border_rounded, size: 54, color: Color(0xFF64748B)),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    'Aún no tienes valoraciones registradas',
+                                    style: GoogleFonts.outfit(
+                                      color: const Color(0xFF94A3B8),
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : ListView.separated(
+                              controller: scrollController,
+                              padding: const EdgeInsets.all(16),
+                              itemCount: reviews.length,
+                              separatorBuilder: (_, __) => const SizedBox(height: 12),
+                              itemBuilder: (context, i) {
+                                final r = reviews[i];
+                                final rating = (r['rating'] as num?)?.toInt() ?? 5;
+                                final comment = (r['comment'] as String?) ?? '';
+                                final orderNumber = (r['orderNumber'] as String?) ?? '';
+                                final createdAt = (r['createdAt'] as String?) ?? '';
+
+                                return Container(
+                                  padding: const EdgeInsets.all(14),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF1E293B),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(color: const Color(0xFF334155)),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Row(
+                                            children: List.generate(5, (starIdx) {
+                                              return Icon(
+                                                starIdx < rating
+                                                    ? Icons.star_rounded
+                                                    : Icons.star_outline_rounded,
+                                                color: const Color(0xFFF59E0B),
+                                                size: 16,
+                                              );
+                                            }),
+                                          ),
+                                          if (orderNumber.isNotEmpty)
+                                            Text(
+                                              orderNumber,
+                                              style: GoogleFonts.outfit(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w700,
+                                                color: const Color(0xFF64748B),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                      if (comment.isNotEmpty) ...[
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          '"$comment"',
+                                          style: GoogleFonts.outfit(
+                                            fontSize: 13,
+                                            fontStyle: FontStyle.italic,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ],
+                                      if (createdAt.isNotEmpty) ...[
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          createdAt.length > 10 ? createdAt.substring(0, 10) : createdAt,
+                                          style: GoogleFonts.outfit(
+                                            fontSize: 10,
+                                            color: const Color(0xFF64748B),
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+        );
+      },
     );
   }
 }

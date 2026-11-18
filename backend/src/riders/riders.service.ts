@@ -964,6 +964,41 @@ export class RidersService {
     };
   }
 
+  async getRiderReviews(riderId: string) {
+    const sb = this.supabase.getClient();
+    let reviews: any[] = [];
+
+    try {
+      const { data, error } = await sb
+        .from('orders')
+        .select('id, order_number, customer_name, customer_phone, rider_rating, rider_review, delivered_at, created_at, tenant_id, branch_id')
+        .or(`rider_id.eq.${riderId},driver_id.eq.${riderId}`)
+        .not('rider_rating', 'is', null)
+        .order('created_at', { ascending: false });
+
+      if (!error && Array.isArray(data)) {
+        reviews = data.map(o => ({
+          id: o.id,
+          orderNumber: o.order_number,
+          customerName: o.customer_name || 'Cliente',
+          rating: Number(o.rider_rating) || 5,
+          comment: o.rider_review || '',
+          createdAt: o.delivered_at || o.created_at,
+        }));
+      }
+    } catch (_) {}
+
+    const rider = await this.findById(riderId);
+
+    return {
+      riderId,
+      name: rider?.name,
+      rating: rider?.rating ?? 5.0,
+      totalReviews: reviews.length,
+      reviews,
+    };
+  }
+
   // ==============================================================================
   // POOL DE DESPACHO PARA COMERCIOS: FLOTA PROPIA + FLOTA LIBRE CERCANA CON FILTROS REALES
   // ==============================================================================

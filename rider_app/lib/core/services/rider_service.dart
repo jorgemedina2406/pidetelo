@@ -1360,6 +1360,53 @@ class RiderService extends ChangeNotifier {
     }
   }
 
+  Future<Map<String, dynamic>> getRiderReviews(String riderId) async {
+    // 1. Intentar desde Backend
+    try {
+      final res = await http.get(Uri.parse('${AppConfig.backendBaseUrl}/riders/$riderId/reviews'))
+          .timeout(const Duration(seconds: 4));
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body);
+      }
+    } catch (_) {}
+
+    // 2. Fallback directo a Supabase
+    try {
+      final supabase = Supabase.instance.client;
+      final data = await supabase
+          .from('orders')
+          .select('id, order_number, customer_name, rider_rating, rider_review, delivered_at, created_at')
+          .or('rider_id.eq.$riderId,driver_id.eq.$riderId')
+          .not('rider_rating', 'is', null)
+          .order('created_at', ascending: false);
+
+      if (data is List) {
+        final reviews = data.map((o) => {
+          'id': o['id'],
+          'orderNumber': o['order_number'],
+          'customerName': o['customer_name'] ?? 'Cliente',
+          'rating': (o['rider_rating'] as num?)?.toDouble() ?? 5.0,
+          'comment': o['rider_review'] ?? '',
+          'createdAt': o['delivered_at'] ?? o['created_at'],
+        }).toList();
+
+        return {
+          'riderId': riderId,
+          'rating': _currentRider?.rating ?? 5.0,
+          'totalReviews': reviews.length,
+          'reviews': reviews,
+        };
+      }
+    } catch (_) {}
+
+    return {
+      'riderId': riderId,
+      'rating': _currentRider?.rating ?? 5.0,
+      'totalReviews': 0,
+      'reviews': [],
+    };
+  }
+
   @override
   void dispose() {
     _pollTimer?.cancel();

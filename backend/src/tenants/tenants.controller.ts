@@ -40,9 +40,9 @@ export class TenantsController {
   }
 
   @Get(':id/reviews')
-  @ApiOperation({ summary: 'Obtener reseñas y valoraciones reales de un comercio' })
-  getReviews(@Param('id') id: string) {
-    return this.tenantsService.getTenantReviews(id);
+  @ApiOperation({ summary: 'Obtener reseñas y valoraciones reales de un comercio o sucursal' })
+  getReviews(@Param('id') id: string, @Query('branchId') branchId?: string) {
+    return this.tenantsService.getTenantReviews(id, branchId);
   }
 
   @Post(':id/reviews')

@@ -92,6 +92,8 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
       tenantId: tenantId,
       rating: _selectedStoreRating,
       orderId: _order.id,
+      branchId: _order.branchId,
+      branchName: _order.branchName,
       comment: _storeRatingCommentController.text.trim(),
       customerName: _order.customerName.isNotEmpty ? _order.customerName : 'Cliente',
       customerPhone: _order.customerPhone,
@@ -1588,6 +1590,19 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                                       ),
                                     );
                                   }),
+                                ),
+                                const SizedBox(height: 6),
+                                TextField(
+                                  controller: _ratingCommentController,
+                                  style: GoogleFonts.outfit(fontSize: 12.5, color: isDark ? Colors.white : Colors.black87),
+                                  decoration: InputDecoration(
+                                    hintText: 'Escribe un comentario sobre el servicio del repartidor (opcional)...',
+                                    hintStyle: GoogleFonts.outfit(fontSize: 12, color: Colors.grey),
+                                    filled: true,
+                                    fillColor: isDark ? const Color(0xFF0F172A) : Colors.white,
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                  ),
                                 ),
                                 const SizedBox(height: 10),
                                 SizedBox(
