@@ -1,0 +1,93 @@
+<!-- Top Sticky Header -->
+<header class="topbar-adaptive px-4 sm:px-8 py-3.5 flex items-center justify-between flex-shrink-0">
+  <div class="flex items-center gap-3">
+    <!-- Mobile Menu Toggle Button -->
+    <button (click)="toggleMobileMenu.emit()"
+      class="lg:hidden p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:text-brand-500 transition-colors">
+      <app-icon name="menu" [size]="18"></app-icon>
+    </button>
+
+    <div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+      <span class="font-bold text-slate-900 dark:text-white truncate max-w-[150px] sm:max-w-[240px]">{{
+        cleanBranchDisplayName(currentTenant?.name || auth.currentUser()?.tenantName || 'Mi Comercio') }}</span>
+      <span class="hidden sm:inline">/</span>
+      <span class="text-brand-500 font-semibold hidden sm:inline">
+        {{ activeTab === 'orders' ? i18n.t('ma.orders') : activeTab === 'products' ? i18n.t('ma.catalog') :
+        activeTab === 'branches' ? 'Mis Sucursales' :
+        activeTab === 'riders' ? i18n.t('ma.riders') : activeTab === 'gps_map' ? i18n.t('ma.radar') :
+        activeTab === 'coupons' ? 'Cupones de Oferta' :
+        activeTab === 'whatsapp' ? 'WhatsApp Bot & Chat' :
+        activeTab === 'reviews' ? 'Valoraciones y Opiniones' :
+        activeTab === 'settings' ? 'Configuración' :
+        i18n.t('ma.team') }}
+      </span>
+    </div>
+  </div>
+
+  <div class="flex items-center gap-2 sm:gap-3">
+
+    <!-- Indicador y Control de Estado de la Sede Activa (Operación Exclusiva por Sede) -->
+    @if (activeBranch; as currentB) {
+    <div class="flex items-center gap-2">
+      <div class="flex items-center gap-2 border rounded-xl px-3 py-1.5 shadow-xs"
+        [class.bg-amber-500/10]="isBranchLocked" [class.dark:bg-amber-500/20]="isBranchLocked"
+        [class.border-amber-500/30]="isBranchLocked" [class.bg-slate-100]="!isBranchLocked"
+        [class.dark:bg-slate-900]="!isBranchLocked" [class.border-slate-200]="!isBranchLocked"
+        [class.dark:border-slate-800]="!isBranchLocked"
+        [title]="isBranchLocked ? 'Sesión iniciada con credenciales exclusivas de esta sucursal' : 'Panel de operación exclusivo de la Sede Principal'">
+        <app-icon [name]="isBranchLocked ? 'lock' : 'store'" [size]="13"
+          [className]="isBranchLocked ? 'text-amber-600 dark:text-amber-400' : 'text-brand-500'"></app-icon>
+        <span class="text-xs font-black truncate max-w-[150px] sm:max-w-[200px]"
+          [class.text-amber-900]="isBranchLocked" [class.dark:text-amber-200]="isBranchLocked"
+          [class.text-slate-800]="!isBranchLocked" [class.dark:text-slate-100]="!isBranchLocked">
+          {{ cleanBranchDisplayName(currentB.name) }}
+        </span>
+        <span class="text-[9px] font-bold px-1.5 py-0.5 rounded uppercase hidden sm:inline"
+          [class.bg-amber-500/20]="isBranchLocked" [class.text-amber-700]="isBranchLocked"
+          [class.dark:text-amber-300]="isBranchLocked" [class.bg-brand-500/10]="!isBranchLocked"
+          [class.text-brand-600]="!isBranchLocked" [class.dark:text-brand-400]="!isBranchLocked">
+          {{ isBranchLocked ? 'Acceso Sede' : 'Sede Principal' }}
+        </span>
+      </div>
+
+      <!-- Botón de Notificaciones Nativas del Navegador / Móvil -->
+      <button (click)="requestNotificationPermission.emit()"
+        [title]="notificationPermission === 'granted' ? 'Notificaciones activadas (sonará y avisará aunque tengas otra pestaña abierta)' : 'Haz clic para permitir notificaciones de pedidos en tu PC y móvil'"
+        class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer"
+        [class.bg-brand-50]="notificationPermission === 'granted'"
+        [class.dark:bg-brand-950/40]="notificationPermission === 'granted'"
+        [class.text-brand-600]="notificationPermission === 'granted'"
+        [class.dark:text-brand-400]="notificationPermission === 'granted'"
+        [class.border-brand-300]="notificationPermission === 'granted'"
+        [class.dark:border-brand-800]="notificationPermission === 'granted'"
+        [class.bg-amber-500/10]="notificationPermission !== 'granted'"
+        [class.text-amber-700]="notificationPermission !== 'granted'"
+        [class.dark:text-amber-300]="notificationPermission !== 'granted'"
+        [class.border-amber-400/40]="notificationPermission !== 'granted'">
+        <app-icon [name]="notificationPermission === 'granted' ? 'bell' : 'bell-off'" [size]="14"></app-icon>
+        <span class="hidden md:inline">{{ notificationPermission === 'granted' ? 'Alertas PC/Móvil Activas' : 'Activar Alertas' }}</span>
+      </button>
+
+      <button (click)="toggleBranch.emit(currentB)"
+        class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer"
+        [class.bg-emerald-50]="currentB.isOpenNow" [class.dark:bg-emerald-950/40]="currentB.isOpenNow"
+        [class.text-emerald-700]="currentB.isOpenNow" [class.dark:text-emerald-300]="currentB.isOpenNow"
+        [class.border-emerald-300]="currentB.isOpenNow" [class.dark:border-emerald-800]="currentB.isOpenNow"
+        [class.hover:bg-emerald-100]="currentB.isOpenNow" [class.bg-amber-50]="!currentB.isOpenNow"
+        [class.dark:bg-amber-950/40]="!currentB.isOpenNow" [class.text-amber-800]="!currentB.isOpenNow"
+        [class.dark:text-amber-300]="!currentB.isOpenNow" [class.border-amber-300]="!currentB.isOpenNow"
+        [class.dark:border-amber-800]="!currentB.isOpenNow" [class.hover:bg-amber-100]="!currentB.isOpenNow"
+        [title]="currentB.isOpenNow ? 'Pausar temporalmente esta sede (dejar de recibir pedidos)' : 'Reactivar sede (comenzar a recibir pedidos)'">
+        <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" [class.bg-emerald-500]="currentB.isOpenNow"
+          [class.bg-amber-500]="!currentB.isOpenNow"></span>
+        <span class="hidden md:inline">{{ currentB.isOpenNow ? 'Recibiendo Pedidos' : 'Sede Pausada' }}</span>
+        <span class="text-[10px] px-1.5 py-0.2 rounded font-mono font-black"
+          [class.bg-emerald-200/60]="currentB.isOpenNow" [class.dark:bg-emerald-900]="currentB.isOpenNow"
+          [class.bg-amber-200/60]="!currentB.isOpenNow" [class.dark:bg-amber-900]="!currentB.isOpenNow">
+          {{ currentB.isOpenNow ? 'Activa' : 'Pausada' }}
+        </span>
+      </button>
+    </div>
+    }
+  </div>
+</header>

@@ -1,0 +1,533 @@
+<!-- Mobile Backdrop Overlay -->
+@if (isMobileMenuOpen) {
+<div (click)="closeMobileMenu.emit()"
+  class="fixed inset-0 bg-black/60 backdrop-blur-xs z-40 lg:hidden animate-fade-in"></div>
+}
+
+<!-- ================= EXPANDABLE MODERN SIDEBAR ================= -->
+<aside [class.w-72]="isSidebarExpanded" [class.w-20]="!isSidebarExpanded"
+  [class.translate-x-0]="isMobileMenuOpen" [class.-translate-x-full]="!isMobileMenuOpen"
+  class="sidebar-adaptive fixed inset-y-0 left-0 z-50 lg:static lg:translate-x-0 h-full max-h-screen flex flex-col justify-between transition-all duration-300 ease-in-out flex-shrink-0 select-none overflow-hidden">
+
+  <!-- Floating Edge Toggle Button -->
+  <button (click)="toggleSidebar.emit()"
+    [title]="isSidebarExpanded ? i18n.t('sb.collapse') : i18n.t('sb.expand')"
+    class="absolute -right-3.5 top-6 w-7 h-7 rounded-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 shadow-md flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-brand-500 dark:hover:text-brand-400 hover:border-brand-500 dark:hover:border-brand-500 hover:scale-110 active:scale-95 transition-all z-50 cursor-pointer">
+    <app-icon [name]="isSidebarExpanded ? 'chevron-left' : 'chevron-right'" [size]="14"></app-icon>
+  </button>
+
+  <!-- Sidebar Brand Header (Fixed Top) -->
+  <div class="flex-shrink-0">
+    <div [class.px-5]="isSidebarExpanded" [class.px-2]="!isSidebarExpanded"
+      class="py-4 border-b border-slate-200 dark:border-slate-800 transition-all flex items-center"
+      [class.justify-start]="isSidebarExpanded" [class.justify-center]="!isSidebarExpanded">
+
+      <div class="flex items-center gap-3 min-w-0">
+        <!-- Striking Gradient Logo Badge / Custom Merchant Logo -->
+        <div
+          class="w-10 h-10 rounded-xl flex items-center justify-center shadow-md flex-shrink-0 transition-transform hover:scale-105 overflow-hidden"
+          [ngClass]="merchantLogoUrl ? 'bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-750 p-1 shadow-slate-200/50 dark:shadow-none' : 'bg-gradient-to-tr from-brand-500 via-orange-500 to-amber-500 text-white shadow-brand-500/25'">
+          @if (merchantLogoUrl) {
+            <img [src]="merchantLogoUrl"
+                 [alt]="currentTenant?.name || 'Logo del Comercio'"
+                 (error)="merchantLogoFailed = true"
+                 class="w-full h-full object-contain rounded-lg" />
+          } @else {
+            <app-icon name="store" [size]="20" className="text-white"></app-icon>
+          }
+        </div>
+
+        @if (isSidebarExpanded) {
+        <div class="leading-tight truncate animate-fade-in">
+          <span class="font-extrabold text-base tracking-tight text-slate-900 dark:text-white truncate block">{{
+            cleanBranchDisplayName(currentTenant?.name || auth.currentUser()?.tenantName || 'Mi Comercio') }}</span>
+          <div class="flex items-center gap-1.5 mt-0.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span class="text-[10px] font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+              {{ i18n.t('ma.brandSubtitle') }}
+            </span>
+          </div>
+        </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- Scrollable Navigation Links (Middle Area) -->
+  <div class="flex-1 overflow-y-auto overflow-x-hidden min-h-0 py-1">
+    <!-- Section Label (Only in expanded mode) -->
+    @if (isSidebarExpanded) {
+    <div
+      class="px-5 pt-3 pb-1 text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+      Gestión Restaurante
+    </div>
+    }
+
+    <!-- Navigation Links -->
+    <nav class="p-3 space-y-1.5">
+
+      <!-- Comandas en Vivo -->
+      <div class="relative group">
+        <button (click)="tabChange.emit('orders')" [class.bg-brand-500]="activeTab === 'orders'"
+          [class.text-white]="activeTab === 'orders'" [class.shadow-md]="activeTab === 'orders'"
+          [class.shadow-brand-500/25]="activeTab === 'orders'" [class.text-slate-600]="activeTab !== 'orders'"
+          [class.dark:text-slate-400]="activeTab !== 'orders'" [class.hover:bg-slate-100]="activeTab !== 'orders'"
+          [class.dark:hover:bg-slate-850]="activeTab !== 'orders'" [class.justify-center]="!isSidebarExpanded"
+          [class.w-12]="!isSidebarExpanded" [class.h-12]="!isSidebarExpanded"
+          [class.mx-auto]="!isSidebarExpanded" [class.w-full]="isSidebarExpanded"
+          [class.px-3]="isSidebarExpanded" [class.py-2.5]="isSidebarExpanded"
+          class="flex items-center gap-3 rounded-xl font-bold text-xs transition-all duration-150 active:scale-95 cursor-pointer">
+          <span class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
+            [class.bg-white/20]="activeTab === 'orders'" [class.text-white]="activeTab === 'orders'"
+            [class.bg-slate-100]="activeTab !== 'orders'" [class.dark:bg-slate-800]="activeTab !== 'orders'"
+            [class.text-slate-500]="activeTab !== 'orders'" [class.dark:text-slate-400]="activeTab !== 'orders'">
+            <app-icon name="clipboard-list" [size]="17"></app-icon>
+          </span>
+          @if (isSidebarExpanded) {
+          <span class="truncate flex-1 text-left font-semibold">{{ i18n.t('ma.orders') }}</span>
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-black" [class.bg-white/30]="activeTab === 'orders'"
+            [class.bg-slate-200]="activeTab !== 'orders'" [class.dark:bg-slate-800]="activeTab !== 'orders'">
+            {{ activeOrdersCount }}
+          </span>
+          }
+        </button>
+
+        @if (!isSidebarExpanded) {
+        <div
+          class="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 flex items-center gap-2">
+          <span>{{ i18n.t('ma.orders') }}</span>
+          <span class="px-1.5 py-0.2 rounded-full bg-brand-500 text-white text-[10px]">{{ activeOrdersCount }}</span>
+        </div>
+        }
+      </div>
+
+      <!-- Catálogo & Extras -->
+      <div class="relative group">
+        <button (click)="tabChange.emit('products')" [class.bg-brand-500]="activeTab === 'products'"
+          [class.text-white]="activeTab === 'products'" [class.shadow-md]="activeTab === 'products'"
+          [class.shadow-brand-500/25]="activeTab === 'products'" [class.text-slate-600]="activeTab !== 'products'"
+          [class.dark:text-slate-400]="activeTab !== 'products'"
+          [class.hover:bg-slate-100]="activeTab !== 'products'"
+          [class.dark:hover:bg-slate-850]="activeTab !== 'products'" [class.justify-center]="!isSidebarExpanded"
+          [class.w-12]="!isSidebarExpanded" [class.h-12]="!isSidebarExpanded"
+          [class.mx-auto]="!isSidebarExpanded" [class.w-full]="isSidebarExpanded"
+          [class.px-3]="isSidebarExpanded" [class.py-2.5]="isSidebarExpanded"
+          class="flex items-center gap-3 rounded-xl font-bold text-xs transition-all duration-150 active:scale-95 cursor-pointer">
+          <span class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
+            [class.bg-white/20]="activeTab === 'products'" [class.text-white]="activeTab === 'products'"
+            [class.bg-slate-100]="activeTab !== 'products'" [class.dark:bg-slate-800]="activeTab !== 'products'"
+            [class.text-slate-500]="activeTab !== 'products'"
+            [class.dark:text-slate-400]="activeTab !== 'products'">
+            <app-icon name="utensils" [size]="17"></app-icon>
+          </span>
+          @if (isSidebarExpanded) {
+          <span class="truncate flex-1 text-left font-semibold">{{ i18n.t('ma.catalog') }}</span>
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-black"
+            [class.bg-white/30]="activeTab === 'products'" [class.bg-slate-200]="activeTab !== 'products'"
+            [class.dark:bg-slate-800]="activeTab !== 'products'">
+            {{ productsCount }}
+          </span>
+          }
+        </button>
+
+        @if (!isSidebarExpanded) {
+        <div
+          class="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 flex items-center gap-2">
+          <span>{{ i18n.t('ma.catalog') }}</span>
+          <span class="text-slate-400 text-[10px]">{{ productsCount }}</span>
+        </div>
+        }
+      </div>
+
+      <!-- Mis Sucursales (Multi-Branch) -->
+      <div class="relative group">
+        <button (click)="tabChange.emit('branches')" [class.bg-brand-500]="activeTab === 'branches'"
+          [class.text-white]="activeTab === 'branches'" [class.shadow-md]="activeTab === 'branches'"
+          [class.shadow-brand-500/25]="activeTab === 'branches'" [class.text-slate-600]="activeTab !== 'branches'"
+          [class.dark:text-slate-400]="activeTab !== 'branches'"
+          [class.hover:bg-slate-100]="activeTab !== 'branches'"
+          [class.dark:hover:bg-slate-850]="activeTab !== 'branches'" [class.justify-center]="!isSidebarExpanded"
+          [class.w-12]="!isSidebarExpanded" [class.h-12]="!isSidebarExpanded"
+          [class.mx-auto]="!isSidebarExpanded" [class.w-full]="isSidebarExpanded"
+          [class.px-3]="isSidebarExpanded" [class.py-2.5]="isSidebarExpanded"
+          class="flex items-center gap-3 rounded-xl font-bold text-xs transition-all duration-150 active:scale-95 cursor-pointer">
+          <span class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
+            [class.bg-white/20]="activeTab === 'branches'" [class.text-white]="activeTab === 'branches'"
+            [class.bg-slate-100]="activeTab !== 'branches'" [class.dark:bg-slate-800]="activeTab !== 'branches'"
+            [class.text-slate-500]="activeTab !== 'branches'"
+            [class.dark:text-slate-400]="activeTab !== 'branches'">
+            <app-icon name="store" [size]="17"></app-icon>
+          </span>
+          @if (isSidebarExpanded) {
+          <span class="truncate flex-1 text-left font-semibold">
+            {{ isBranchLocked ? 'Mi Sucursal' : 'Mis Sucursales' }}
+          </span>
+          <div class="flex items-center gap-1">
+            @if (pendingBranchesCount > 0) {
+            <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"
+              title="Sedes pendientes de aprobación"></span>
+            }
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-black"
+              [class.bg-white/30]="activeTab === 'branches'" [class.bg-slate-200]="activeTab !== 'branches'"
+              [class.dark:bg-slate-800]="activeTab !== 'branches'">
+              {{ isBranchLocked ? '1' : branchesCount }}
+            </span>
+          </div>
+          }
+        </button>
+
+        @if (!isSidebarExpanded) {
+        <div
+          class="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 flex items-center gap-2">
+          <span>{{ isBranchLocked ? 'Mi Sucursal' : 'Mis Sucursales' }}</span>
+          <span class="text-slate-400 text-[10px]">{{ isBranchLocked ? '1' : branchesCount }}</span>
+        </div>
+        }
+      </div>
+
+      <!-- Repartidores / Flota de la Sede -->
+      <div class="relative group">
+        <button (click)="tabChange.emit('riders')" [class.bg-brand-500]="activeTab === 'riders'"
+          [class.text-white]="activeTab === 'riders'" [class.shadow-md]="activeTab === 'riders'"
+          [class.shadow-brand-500/25]="activeTab === 'riders'" [class.text-slate-600]="activeTab !== 'riders'"
+          [class.dark:text-slate-400]="activeTab !== 'riders'" [class.hover:bg-slate-100]="activeTab !== 'riders'"
+          [class.dark:hover:bg-slate-850]="activeTab !== 'riders'" [class.justify-center]="!isSidebarExpanded"
+          [class.w-12]="!isSidebarExpanded" [class.h-12]="!isSidebarExpanded"
+          [class.mx-auto]="!isSidebarExpanded" [class.w-full]="isSidebarExpanded"
+          [class.px-3]="isSidebarExpanded" [class.py-2.5]="isSidebarExpanded"
+          class="flex items-center gap-3 rounded-xl font-bold text-xs transition-all duration-150 active:scale-95 cursor-pointer">
+          <span class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
+            [class.bg-white/20]="activeTab === 'riders'" [class.text-white]="activeTab === 'riders'"
+            [class.bg-slate-100]="activeTab !== 'riders'" [class.dark:bg-slate-800]="activeTab !== 'riders'"
+            [class.text-slate-500]="activeTab !== 'riders'" [class.dark:text-slate-400]="activeTab !== 'riders'">
+            <app-icon name="bike" [size]="17"></app-icon>
+          </span>
+          @if (isSidebarExpanded) {
+          <span class="truncate flex-1 text-left font-semibold">
+            {{ i18n.t('ma.riders') }}
+          </span>
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-black" [class.bg-white/30]="activeTab === 'riders'"
+            [class.bg-slate-200]="activeTab !== 'riders'" [class.dark:bg-slate-800]="activeTab !== 'riders'">
+            {{ ownRidersCount }}
+          </span>
+          }
+        </button>
+
+        @if (!isSidebarExpanded) {
+        <div
+          class="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 flex items-center gap-2">
+          <span>{{ i18n.t('ma.riders') }}</span>
+          <span class="text-slate-400 text-[10px]">{{ ownRidersCount }}</span>
+        </div>
+        }
+      </div>
+
+      <!-- Radar GPS en Vivo -->
+      <div class="relative group">
+        <button (click)="tabChange.emit('gps_map')" [class.bg-brand-500]="activeTab === 'gps_map'"
+          [class.text-white]="activeTab === 'gps_map'" [class.shadow-md]="activeTab === 'gps_map'"
+          [class.shadow-brand-500/25]="activeTab === 'gps_map'" [class.text-slate-600]="activeTab !== 'gps_map'"
+          [class.dark:text-slate-400]="activeTab !== 'gps_map'"
+          [class.hover:bg-slate-100]="activeTab !== 'gps_map'"
+          [class.dark:hover:bg-slate-850]="activeTab !== 'gps_map'" [class.justify-center]="!isSidebarExpanded"
+          [class.w-12]="!isSidebarExpanded" [class.h-12]="!isSidebarExpanded"
+          [class.mx-auto]="!isSidebarExpanded" [class.w-full]="isSidebarExpanded"
+          [class.px-3]="isSidebarExpanded" [class.py-2.5]="isSidebarExpanded"
+          class="flex items-center gap-3 rounded-xl font-bold text-xs transition-all duration-150 active:scale-95 cursor-pointer">
+          <span class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
+            [class.bg-white/20]="activeTab === 'gps_map'" [class.text-white]="activeTab === 'gps_map'"
+            [class.bg-slate-100]="activeTab !== 'gps_map'" [class.dark:bg-slate-800]="activeTab !== 'gps_map'"
+            [class.text-slate-500]="activeTab !== 'gps_map'"
+            [class.dark:text-slate-400]="activeTab !== 'gps_map'">
+            <app-icon name="map-pin" [size]="17"></app-icon>
+          </span>
+          @if (isSidebarExpanded) {
+          <span class="truncate flex-1 text-left font-semibold">{{ i18n.t('ma.radar') }}</span>
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse flex-shrink-0"></span>
+          }
+        </button>
+
+        @if (!isSidebarExpanded) {
+        <div
+          class="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
+          {{ i18n.t('ma.radar') }}
+        </div>
+        }
+      </div>
+
+      <!-- Equipo & Accesos -->
+      <div class="relative group">
+        <button (click)="tabChange.emit('users')" [class.bg-brand-500]="activeTab === 'users'"
+          [class.text-white]="activeTab === 'users'" [class.shadow-md]="activeTab === 'users'"
+          [class.shadow-brand-500/25]="activeTab === 'users'" [class.text-slate-600]="activeTab !== 'users'"
+          [class.dark:text-slate-400]="activeTab !== 'users'" [class.hover:bg-slate-100]="activeTab !== 'users'"
+          [class.dark:hover:bg-slate-850]="activeTab !== 'users'" [class.justify-center]="!isSidebarExpanded"
+          [class.w-12]="!isSidebarExpanded" [class.h-12]="!isSidebarExpanded"
+          [class.mx-auto]="!isSidebarExpanded" [class.w-full]="isSidebarExpanded"
+          [class.px-3]="isSidebarExpanded" [class.py-2.5]="isSidebarExpanded"
+          class="flex items-center gap-3 rounded-xl font-bold text-xs transition-all duration-150 active:scale-95 cursor-pointer">
+          <span class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
+            [class.bg-white/20]="activeTab === 'users'" [class.text-white]="activeTab === 'users'"
+            [class.bg-slate-100]="activeTab !== 'users'" [class.dark:bg-slate-800]="activeTab !== 'users'"
+            [class.text-slate-500]="activeTab !== 'users'" [class.dark:text-slate-400]="activeTab !== 'users'">
+            <app-icon name="users" [size]="17"></app-icon>
+          </span>
+          @if (isSidebarExpanded) {
+          <span class="truncate flex-1 text-left font-semibold">{{ i18n.t('ma.team') }}</span>
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-black" [class.bg-white/30]="activeTab === 'users'"
+            [class.bg-slate-200]="activeTab !== 'users'" [class.dark:bg-slate-800]="activeTab !== 'users'">
+            {{ storeUsersCount }}
+          </span>
+          }
+        </button>
+
+        @if (!isSidebarExpanded) {
+        <div
+          class="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
+          {{ i18n.t('ma.team') }}
+        </div>
+        }
+      </div>
+
+      <!-- Marca & Moneda / Configuración -->
+      <div class="relative group">
+        <button (click)="tabChange.emit('settings')" [class.bg-brand-500]="activeTab === 'settings'"
+          [class.text-white]="activeTab === 'settings'" [class.shadow-md]="activeTab === 'settings'"
+          [class.shadow-brand-500/25]="activeTab === 'settings'" [class.text-slate-600]="activeTab !== 'settings'"
+          [class.dark:text-slate-400]="activeTab !== 'settings'"
+          [class.hover:bg-slate-100]="activeTab !== 'settings'"
+          [class.dark:hover:bg-slate-850]="activeTab !== 'settings'" [class.justify-center]="!isSidebarExpanded"
+          [class.w-12]="!isSidebarExpanded" [class.h-12]="!isSidebarExpanded"
+          [class.mx-auto]="!isSidebarExpanded" [class.w-full]="isSidebarExpanded"
+          [class.px-3]="isSidebarExpanded" [class.py-2.5]="isSidebarExpanded"
+          class="flex items-center gap-3 rounded-xl font-bold text-xs transition-all duration-150 active:scale-95 cursor-pointer">
+          <span class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
+            [class.bg-white/20]="activeTab === 'settings'" [class.text-white]="activeTab === 'settings'"
+            [class.bg-slate-100]="activeTab !== 'settings'" [class.dark:bg-slate-800]="activeTab !== 'settings'"
+            [class.text-slate-500]="activeTab !== 'settings'"
+            [class.dark:text-slate-400]="activeTab !== 'settings'">
+            <app-icon name="palette" [size]="17"></app-icon>
+          </span>
+          @if (isSidebarExpanded) {
+          <span class="truncate flex-1 text-left font-semibold">Marca & Moneda</span>
+          }
+        </button>
+
+        @if (!isSidebarExpanded) {
+        <div
+          class="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
+          Marca & Moneda
+        </div>
+        }
+      </div>
+
+      <!-- Valoraciones de Clientes -->
+      <div class="relative group">
+        <button (click)="tabChange.emit('reviews')" [class.bg-brand-500]="activeTab === 'reviews'"
+          [class.text-white]="activeTab === 'reviews'" [class.shadow-md]="activeTab === 'reviews'"
+          [class.shadow-brand-500/25]="activeTab === 'reviews'" [class.text-slate-600]="activeTab !== 'reviews'"
+          [class.dark:text-slate-400]="activeTab !== 'reviews'"
+          [class.hover:bg-slate-100]="activeTab !== 'reviews'"
+          [class.dark:hover:bg-slate-850]="activeTab !== 'reviews'" [class.justify-center]="!isSidebarExpanded"
+          [class.w-12]="!isSidebarExpanded" [class.h-12]="!isSidebarExpanded"
+          [class.mx-auto]="!isSidebarExpanded" [class.w-full]="isSidebarExpanded"
+          [class.px-3]="isSidebarExpanded" [class.py-2.5]="isSidebarExpanded"
+          class="flex items-center gap-3 rounded-xl font-bold text-xs transition-all duration-150 active:scale-95 cursor-pointer">
+          <span class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
+            [class.bg-white/20]="activeTab === 'reviews'" [class.text-white]="activeTab === 'reviews'"
+            [class.bg-slate-100]="activeTab !== 'reviews'" [class.dark:bg-slate-800]="activeTab !== 'reviews'"
+            [class.text-amber-500]="activeTab !== 'reviews'">
+            <app-icon name="star" [size]="17"></app-icon>
+          </span>
+          @if (isSidebarExpanded) {
+          <span class="truncate flex-1 text-left font-semibold">Valoraciones</span>
+          @if (reviewsCount > 0) {
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-black"
+            [class.bg-white/30]="activeTab === 'reviews'" [class.bg-amber-500/20]="activeTab !== 'reviews'"
+            [class.text-amber-600]="activeTab !== 'reviews'" [class.dark:text-amber-400]="activeTab !== 'reviews'">
+            ⭐ {{ reviewsAverage }}
+          </span>
+          }
+          }
+        </button>
+
+        @if (!isSidebarExpanded) {
+        <div
+          class="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
+          Valoraciones ⭐
+        </div>
+        }
+      </div>
+
+      <!-- Soporte Central / Mesa de Ayuda -->
+      <div class="relative group">
+        <button (click)="tabChange.emit('support')" [class.bg-brand-500]="activeTab === 'support'"
+          [class.text-white]="activeTab === 'support'" [class.shadow-md]="activeTab === 'support'"
+          [class.shadow-brand-500/25]="activeTab === 'support'" [class.text-slate-600]="activeTab !== 'support'"
+          [class.dark:text-slate-400]="activeTab !== 'support'"
+          [class.hover:bg-slate-100]="activeTab !== 'support'"
+          [class.dark:hover:bg-slate-850]="activeTab !== 'support'" [class.justify-center]="!isSidebarExpanded"
+          [class.w-12]="!isSidebarExpanded" [class.h-12]="!isSidebarExpanded"
+          [class.mx-auto]="!isSidebarExpanded" [class.w-full]="isSidebarExpanded"
+          [class.px-3]="isSidebarExpanded" [class.py-2.5]="isSidebarExpanded"
+          class="flex items-center gap-3 rounded-xl font-bold text-xs transition-all duration-150 active:scale-95 cursor-pointer">
+          <span class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
+            [class.bg-white/20]="activeTab === 'support'" [class.text-white]="activeTab === 'support'"
+            [class.bg-slate-100]="activeTab !== 'support'" [class.dark:bg-slate-800]="activeTab !== 'support'"
+            [class.text-slate-500]="activeTab !== 'support'"
+            [class.dark:text-slate-400]="activeTab !== 'support'">
+            <app-icon name="headphones" [size]="17"></app-icon>
+          </span>
+          @if (isSidebarExpanded) {
+          <span class="truncate flex-1 text-left font-semibold">Soporte Central</span>
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500 text-white">🎧</span>
+          }
+        </button>
+        @if (!isSidebarExpanded) {
+        <div
+          class="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
+          Soporte Central
+        </div>
+        }
+      </div>
+
+      <!-- Cupones de Oferta -->
+      <div class="relative group">
+        <button (click)="tabChange.emit('coupons')" [class.bg-brand-500]="activeTab === 'coupons'"
+          [class.text-white]="activeTab === 'coupons'" [class.shadow-md]="activeTab === 'coupons'"
+          [class.shadow-brand-500/25]="activeTab === 'coupons'" [class.text-slate-600]="activeTab !== 'coupons'"
+          [class.dark:text-slate-400]="activeTab !== 'coupons'"
+          [class.hover:bg-slate-100]="activeTab !== 'coupons'"
+          [class.dark:hover:bg-slate-850]="activeTab !== 'coupons'" [class.justify-center]="!isSidebarExpanded"
+          [class.w-12]="!isSidebarExpanded" [class.h-12]="!isSidebarExpanded"
+          [class.mx-auto]="!isSidebarExpanded" [class.w-full]="isSidebarExpanded"
+          [class.px-3]="isSidebarExpanded" [class.py-2.5]="isSidebarExpanded"
+          class="flex items-center gap-3 rounded-xl font-bold text-xs transition-all duration-150 active:scale-95 cursor-pointer">
+          <span class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
+            [class.bg-white/20]="activeTab === 'coupons'" [class.text-white]="activeTab === 'coupons'"
+            [class.bg-slate-100]="activeTab !== 'coupons'" [class.dark:bg-slate-800]="activeTab !== 'coupons'"
+            [class.text-slate-500]="activeTab !== 'coupons'"
+            [class.dark:text-slate-400]="activeTab !== 'coupons'">
+            <app-icon name="tag" [size]="17"></app-icon>
+          </span>
+          @if (isSidebarExpanded) {
+          <span class="truncate flex-1 text-left font-semibold">Cupones de Oferta</span>
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-black"
+            [class.bg-white/30]="activeTab === 'coupons'" [class.bg-slate-200]="activeTab !== 'coupons'"
+            [class.dark:bg-slate-800]="activeTab !== 'coupons'">
+            {{ couponsCount }}
+          </span>
+          }
+        </button>
+
+        @if (!isSidebarExpanded) {
+        <div
+          class="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 flex items-center gap-2">
+          <span>Cupones de Oferta</span>
+          <span class="px-1.5 py-0.2 rounded-full bg-brand-500 text-white text-[10px]">{{ couponsCount }}</span>
+        </div>
+        }
+      </div>
+
+      <!-- Pestaña WhatsApp Bot & Live Chat -->
+      <div class="relative group">
+        <button (click)="tabChange.emit('whatsapp')" [class.bg-emerald-600]="activeTab === 'whatsapp'"
+          [class.text-white]="activeTab === 'whatsapp'" [class.shadow-md]="activeTab === 'whatsapp'"
+          [class.shadow-emerald-600/25]="activeTab === 'whatsapp'"
+          [class.text-slate-600]="activeTab !== 'whatsapp'" [class.dark:text-slate-400]="activeTab !== 'whatsapp'"
+          [class.hover:bg-slate-100]="activeTab !== 'whatsapp'"
+          [class.dark:hover:bg-slate-850]="activeTab !== 'whatsapp'" [class.justify-center]="!isSidebarExpanded"
+          [class.w-12]="!isSidebarExpanded" [class.h-12]="!isSidebarExpanded"
+          [class.mx-auto]="!isSidebarExpanded" [class.w-full]="isSidebarExpanded"
+          [class.px-3]="isSidebarExpanded" [class.py-2.5]="isSidebarExpanded"
+          class="flex items-center gap-3 rounded-xl font-bold text-xs transition-all duration-150 active:scale-95 cursor-pointer">
+          <span class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
+            [class.bg-white/20]="activeTab === 'whatsapp'" [class.text-white]="activeTab === 'whatsapp'"
+            [class.bg-emerald-50]="activeTab !== 'whatsapp'"
+            [class.dark:bg-emerald-950/40]="activeTab !== 'whatsapp'"
+            [class.text-emerald-600]="activeTab !== 'whatsapp'"
+            [class.dark:text-emerald-400]="activeTab !== 'whatsapp'">
+            <app-icon name="message-circle" [size]="17"></app-icon>
+          </span>
+          @if (isSidebarExpanded) {
+          <span class="truncate flex-1 text-left font-semibold">WhatsApp Bot</span>
+          @if (whatsappConnected) {
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" title="WhatsApp Conectado"></span>
+          }
+          }
+        </button>
+
+        @if (!isSidebarExpanded) {
+        <div
+          class="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 flex items-center gap-2">
+          <span>WhatsApp Bot</span>
+          @if (whatsappConnected) {
+          <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+          }
+        </div>
+        }
+      </div>
+
+    </nav>
+
+  </div>
+
+  <!-- Sidebar Bottom Footer (Always Visible Pinned to Bottom) -->
+  <div
+    class="flex-shrink-0 mt-auto p-2.5 border-t border-slate-200 dark:border-slate-800 space-y-2 bg-white dark:bg-slate-950">
+
+    <!-- Theme Switcher -->
+    <div
+      class="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800"
+      [class.flex-col]="!isSidebarExpanded">
+
+      <button (click)="theme.toggleTheme()"
+        [title]="theme.isDark() ? i18n.t('sb.themeLight') : i18n.t('sb.themeDark')"
+        [class.w-full]="isSidebarExpanded" [class.w-8]="!isSidebarExpanded" [class.h-8]="!isSidebarExpanded"
+        class="py-1.5 px-2 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-brand-500 hover:bg-white dark:hover:bg-slate-800 flex items-center justify-center gap-1.5 transition-colors cursor-pointer">
+        @if (theme.isDark()) {
+        <app-icon name="sun" [size]="15" className="text-amber-400"></app-icon>
+        @if (isSidebarExpanded) {
+        <span>Light</span>
+        }
+        } @else {
+        <app-icon name="moon" [size]="15" className="text-slate-600"></app-icon>
+        @if (isSidebarExpanded) {
+        <span>Dark</span>
+        }
+        }
+      </button>
+    </div>
+
+    <!-- User Profile Pill -->
+    <div
+      class="p-2 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2"
+      [class.justify-center]="!isSidebarExpanded">
+      <div class="flex items-center gap-2.5 min-w-0">
+        <div class="relative flex-shrink-0">
+          <img
+            [src]="auth.currentUser()?.avatarUrl || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100'"
+            class="w-8 h-8 rounded-xl object-cover border border-slate-300 dark:border-slate-700" />
+          <span
+            class="w-2.5 h-2.5 rounded-full bg-emerald-500 absolute -bottom-0.5 -right-0.5 ring-2 ring-white dark:ring-slate-900"></span>
+        </div>
+        @if (isSidebarExpanded) {
+        <div class="truncate">
+          <div class="text-xs font-bold truncate">{{ auth.currentUser()?.name }}</div>
+          <div class="text-[10px] text-brand-600 dark:text-brand-400 truncate font-semibold">{{
+            cleanBranchDisplayName(currentTenant?.name || auth.currentUser()?.tenantName || 'Comercio') }}</div>
+        </div>
+        }
+      </div>
+
+      @if (isSidebarExpanded) {
+      <button (click)="logout.emit()" [title]="i18n.t('sb.logout')"
+        class="text-slate-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer">
+        <app-icon name="log-out" [size]="16"></app-icon>
+      </button>
+      }
+    </div>
+
+  </div>
+
+</aside>

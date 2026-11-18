@@ -38,6 +38,13 @@ import { MerchantRidersTabComponent } from './components/merchant-riders-tab/mer
 import { MerchantUsersTabComponent } from './components/merchant-users-tab/merchant-users-tab.component';
 import { MerchantReviewsTabComponent } from './components/merchant-reviews-tab/merchant-reviews-tab.component';
 import { MerchantWhatsappTabComponent } from './components/merchant-whatsapp-tab/merchant-whatsapp-tab.component';
+import { MerchantSidebarComponent } from './components/merchant-sidebar/merchant-sidebar.component';
+import { MerchantHeaderComponent } from './components/merchant-header/merchant-header.component';
+import { MerchantOrdersTabComponent } from './components/merchant-orders-tab/merchant-orders-tab.component';
+import { MerchantProductsTabComponent } from './components/merchant-products-tab/merchant-products-tab.component';
+import { MerchantBranchesTabComponent } from './components/merchant-branches-tab/merchant-branches-tab.component';
+import { MerchantGpsTabComponent } from './components/merchant-gps-tab/merchant-gps-tab.component';
+import { MerchantSettingsTabComponent } from './components/merchant-settings-tab/merchant-settings-tab.component';
 import { SupportKanbanComponent } from '../../shared/components/support-kanban/support-kanban.component';
 import { RiderWithdrawal } from '../../core/models/rider-withdrawal.model';
 
@@ -88,6 +95,13 @@ export interface Rider {
     MerchantUsersTabComponent,
     MerchantReviewsTabComponent,
     MerchantWhatsappTabComponent,
+    MerchantSidebarComponent,
+    MerchantHeaderComponent,
+    MerchantOrdersTabComponent,
+    MerchantProductsTabComponent,
+    MerchantBranchesTabComponent,
+    MerchantGpsTabComponent,
+    MerchantSettingsTabComponent,
     SupportKanbanComponent
   ],
   templateUrl: './merchant-admin.component.html'
@@ -402,6 +416,10 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     if (plan.maxBranches === 0) return false;
     const additionalBranches = this.branches().filter(b => !b.isMain && b.status !== 'rejected').length;
     return additionalBranches < plan.maxBranches;
+  });
+  readonly isProductLimitReached = computed(() => {
+    const plan = this.currentSubscriptionPlan();
+    return plan.maxProducts !== -1 && this.products().length >= plan.maxProducts;
   });
   readonly liveExchangeRate = signal<number | null>(null);
   readonly activeExchangeRate = computed(() => this.liveExchangeRate() || this.currentTenant()?.currencySettings?.exchangeRate || this.brandingForm.exchangeRate || 54.50);

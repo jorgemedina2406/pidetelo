@@ -1,0 +1,629 @@
+    <div class="space-y-6">
+
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 class="text-2xl font-extrabold tracking-tight">{{ i18n.t('ma.orders') }}</h2>
+            @if (selectedBranch; as sb) {
+            <span
+              class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20">
+              📍 Sede: {{ sb.name }}
+            </span>
+            }
+          </div>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            Monitorea comandas de cocina en vivo y consulta el historial consolidado de despachos finalizados.
+          </p>
+        </div>
+
+        <!-- Sub-pestañas: Comandas Activas vs Historial de Pedidos -->
+        <div
+          class="flex items-center gap-1.5 p-1 bg-slate-200/70 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-xl shadow-xs">
+          <button (click)="ordersSubTabChange.emit('kanban')" [class.bg-white]="ordersSubTab === 'kanban'"
+            [class.dark:bg-slate-800]="ordersSubTab === 'kanban'" [class.text-brand-600]="ordersSubTab === 'kanban'"
+            [class.dark:text-brand-400]="ordersSubTab === 'kanban'" [class.shadow-xs]="ordersSubTab === 'kanban'"
+            [class.text-slate-600]="ordersSubTab !== 'kanban'"
+            [class.dark:text-slate-400]="ordersSubTab !== 'kanban'"
+            class="px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-2 cursor-pointer">
+            <app-icon name="clipboard-list" [size]="14"></app-icon>
+            <span>Comandas en Vivo</span>
+            <span
+              class="px-2 py-0.2 rounded-full text-[10px] font-bold bg-brand-500/15 text-brand-700 dark:text-brand-300">
+              {{ receivedOrders.length + kitchenOrders.length + transitOrders.length }}
+            </span>
+          </button>
+
+          <button (click)="ordersSubTabChange.emit('history')" [class.bg-white]="ordersSubTab === 'history'"
+            [class.dark:bg-slate-800]="ordersSubTab === 'history'"
+            [class.text-emerald-600]="ordersSubTab === 'history'"
+            [class.dark:text-emerald-400]="ordersSubTab === 'history'"
+            [class.shadow-xs]="ordersSubTab === 'history'" [class.text-slate-600]="ordersSubTab !== 'history'"
+            [class.dark:text-slate-400]="ordersSubTab !== 'history'"
+            class="px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-2 cursor-pointer">
+            <app-icon name="check" [size]="14"></app-icon>
+            <span>Historial de Pedidos</span>
+            <span
+              class="px-2 py-0.2 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+              {{ completedOrders.length }}
+            </span>
+          </button>
+
+          <!-- Botón Exportar a Excel -->
+          <button (click)="exportExcel.emit()"
+            class="px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-2 cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs ml-1">
+            <app-icon name="file-text" [size]="14"></app-icon>
+            <span>Exportar Excel</span>
+            @if (!currentSubscriptionPlan.hasExcelReports) {
+            <span
+              class="text-[9px] font-black uppercase px-1.5 py-0.2 rounded-md bg-amber-400 text-slate-950">PRO</span>
+            }
+          </button>
+        </div>
+      </div>
+
+      <!-- Alerta de Pedido Rechazado por Rider -->
+      @if (rejectedAlert; as alert) {
+      <div
+        class="bg-red-500/15 border-2 border-red-500/50 rounded-xl p-4 flex items-center justify-between gap-4 animate-bounce">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center text-white shrink-0">
+            <app-icon name="alert-triangle" [size]="20"></app-icon>
+          </div>
+          <div>
+            <h4 class="text-xs font-black uppercase text-red-600 dark:text-red-400 tracking-wider">¡Atención Comercio!
+              Motorizado Rechazó Pedido</h4>
+            <p class="text-xs text-slate-700 dark:text-slate-200 font-medium">{{ alert.message }}</p>
+          </div>
+        </div>
+        <button (click)="dismissAlert.emit()"
+          class="text-xs font-bold text-red-600 dark:text-red-400 hover:underline px-2 py-1">
+          Entendido
+        </button>
+      </div>
+      }
+
+      @if (ordersSubTab === 'kanban') {
+      <!-- Kanban Columns -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5 items-start">
+
+        <!-- 1. Recibidos -->
+        <div
+          class="bg-slate-200/60 dark:bg-slate-900 border border-slate-300/70 dark:border-slate-800 rounded-xl p-3.5 space-y-3">
+          <div
+            class="flex items-center justify-between px-2 pt-1 pb-2.5 border-b border-slate-300/70 dark:border-slate-800">
+            <div class="flex items-center gap-2 font-bold text-xs text-amber-600 dark:text-amber-400">
+              <span class="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-sm shadow-amber-500/50"></span>
+              <span>{{ i18n.t('ma.colNew') }}</span>
+            </div>
+            <span
+              class="bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 px-2.5 py-0.5 rounded-full text-[11px] font-black">
+              {{ receivedOrders.length }}
+            </span>
+          </div>
+
+          @for (o of receivedOrders; track o.id) {
+          <div
+            class="bg-white dark:bg-slate-850 border border-slate-200/90 dark:border-slate-750 rounded-lg p-3 shadow-xs hover:shadow-md hover:border-amber-500/50 transition-all space-y-2.5">
+            <div class="flex items-start justify-between">
+              <div>
+                <span class="text-brand-500 font-bold text-[10px] font-mono">{{ o.orderNumber }}</span>
+                <div class="font-bold text-xs mt-0.5 text-slate-900 dark:text-white">{{ o.customer.name }}</div>
+              </div>
+              <span
+                class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                <app-icon name="phone" [size]="9"></app-icon>
+                <span>WhatsApp</span>
+              </span>
+            </div>
+
+            <div class="text-[11px] space-y-0.5 py-0.5 text-slate-600 dark:text-slate-300">
+              @for (item of o.items; track item.cartItemId) {
+              <div class="flex justify-between">
+                <span class="font-semibold">{{ item.quantity }}x {{ item.name }}</span>
+                <span class="font-bold">${{ item.itemTotal.toFixed(2) }}</span>
+              </div>
+              @if (getModifiersText(item.selectedModifiers)) {
+              <div class="text-[10px] text-amber-500 dark:text-amber-400 font-semibold pl-2">
+                + {{ getModifiersText(item.selectedModifiers) }}
+              </div>
+              }
+              }
+            </div>
+
+            <div
+              class="text-[10px] text-slate-400 flex items-center gap-1 pt-1 border-t border-slate-100 dark:border-slate-800">
+              <app-icon name="map-pin" [size]="11"></app-icon>
+              <span class="truncate">{{ o.customer.deliveryAddress }}</span>
+            </div>
+
+            <!-- Status y Auditoría de Pago Móvil (Fase 1) -->
+            @if (o.paymentMethod === 'mobile_transfer' || (o.paymentMethod === 'pago_movil')) {
+            @if (o.paymentStatus === 'verified') {
+            <div
+              class="px-2 py-1 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold flex items-center justify-between">
+              <span class="flex items-center gap-1">
+                <app-icon name="check-circle" [size]="11"></app-icon>
+                <span>Pago Móvil Confirmado</span>
+              </span>
+              <span class="font-mono text-[9px] opacity-80">Ref: {{ o.paymentReference || 'Auditado' }}</span>
+            </div>
+            } @else if (o.paymentStatus === 'rejected') {
+            <div
+              class="px-2 py-1 rounded-md bg-red-500/15 border border-red-500/30 text-red-700 dark:text-red-300 text-[10px] font-bold flex items-center justify-between">
+              <span class="flex items-center gap-1">
+                <app-icon name="alert-triangle" [size]="11"></app-icon>
+                <span>Pago No Recibido / Rechazado</span>
+              </span>
+              <button (click)="openPaymentVerification.emit(o)"
+                class="underline text-[9px] hover:text-red-800 cursor-pointer">
+                Revisar
+              </button>
+            </div>
+            } @else {
+            <div class="p-2 rounded-lg bg-amber-500/10 border border-amber-500/30 space-y-1">
+              <div class="flex items-center justify-between text-[10px] font-bold text-amber-700 dark:text-amber-400">
+                <span class="flex items-center gap-1">
+                  <app-icon name="clock" [size]="11"></app-icon>
+                  <span>Validar Pago Móvil</span>
+                </span>
+                @if (o.paymentReference) {
+                <span
+                  class="font-mono bg-amber-500/20 text-amber-800 dark:text-amber-300 px-1.5 py-0.5 rounded text-[9px] font-bold">
+                  Ref: {{ o.paymentReference }}
+                </span>
+                }
+              </div>
+              <div class="text-[9px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
+                <span>≈ Bs. {{ getOrderBsTotal(o.total) }}</span>
+                @if (o.paymentOriginBank) {
+                <span class="truncate max-w-[100px]">Banco: {{ o.paymentOriginBank }}</span>
+                }
+              </div>
+            </div>
+            }
+            }
+
+            <div class="flex items-center justify-between pt-1">
+              <div>
+                <span class="font-black text-sm text-slate-900 dark:text-white">${{ o.total.toFixed(2) }}</span>
+                @if (o.paymentMethod === 'mobile_transfer' || o.paymentMethod === 'pago_movil') {
+                <span class="text-[9px] text-slate-400 block font-semibold leading-none">≈ Bs. {{
+                  getOrderBsTotal(o.total) }}</span>
+                }
+              </div>
+
+              @if ((o.paymentMethod === 'mobile_transfer' || o.paymentMethod === 'pago_movil') && o.paymentStatus !==
+              'verified') {
+              <button (click)="openPaymentVerification.emit(o)"
+                class="bg-amber-600 hover:bg-amber-500 text-white font-bold text-[11px] px-2.5 py-1.5 rounded-md shadow-xs transition-all active:scale-95 flex items-center gap-1 cursor-pointer">
+                <app-icon name="check-circle" [size]="12"></app-icon>
+                <span>Verificar Pago</span>
+              </button>
+              } @else {
+              <button (click)="sendToKitchen.emit(o)"
+                class="bg-amber-500 hover:bg-amber-600 text-white font-bold text-[11px] px-3 py-1.5 rounded-md shadow-xs transition-all active:scale-95 cursor-pointer">
+                {{ i18n.t('ma.sendToKitchen') }}
+              </button>
+              }
+            </div>
+          </div>
+          }
+
+          @if (receivedOrders.length === 0) {
+          <div
+            class="p-6 text-center text-[11px] text-slate-400 border border-dashed border-slate-300 dark:border-slate-800 rounded-lg bg-white/40 dark:bg-slate-950/40">
+            {{ i18n.t('ma.noNewOrders') }}
+          </div>
+          }
+        </div>
+
+        <!-- 2. En Cocina & Asignar Motorizado -->
+        <div
+          class="bg-slate-200/60 dark:bg-slate-900 border border-slate-300/70 dark:border-slate-800 rounded-xl p-3.5 space-y-3">
+          <div
+            class="flex items-center justify-between px-2 pt-1 pb-2.5 border-b border-slate-300/70 dark:border-slate-800">
+            <div class="flex items-center gap-2 font-bold text-xs text-blue-600 dark:text-blue-400">
+              <span class="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-sm shadow-blue-500/50"></span>
+              <span>{{ i18n.t('ma.colKitchen') }}</span>
+            </div>
+            <span
+              class="bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 px-2.5 py-0.5 rounded-full text-[11px] font-black">
+              {{ kitchenOrders.length }}
+            </span>
+          </div>
+
+          @for (o of kitchenOrders; track o.id) {
+          <div
+            class="bg-white dark:bg-slate-850 border border-slate-200/90 dark:border-slate-750 rounded-lg p-3 shadow-xs hover:shadow-md hover:border-blue-500/50 transition-all space-y-2.5">
+            <div class="flex items-start justify-between">
+              <div>
+                <span class="text-brand-500 font-bold text-[10px] font-mono">{{ o.orderNumber }}</span>
+                <div class="font-bold text-xs mt-0.5 text-slate-900 dark:text-white">{{ o.customer.name }}</div>
+              </div>
+              <span
+                [class]="o.status === 'at_merchant' ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30' :
+                             o.status === 'picked_up' ? 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30' :
+                             o.status === 'assigned_driver' ? (o.riderAccepted ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30' : 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-500/30') :
+                             (o.riderRejected ? 'bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/30' : 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30')"
+                class="text-[9px] font-bold px-2 py-0.5 rounded-full border">
+                {{ o.status === 'at_merchant' ? 'Rider en Local' :
+                o.status === 'picked_up' ? 'Rider Recogió' :
+                o.status === 'assigned_driver' ? (o.riderAccepted ? '¡Rider Aceptó!' : 'Rider Notificado') :
+                (o.riderRejected ? 'Rider Rechazó' : 'En Cocina') }}
+              </span>
+            </div>
+
+            <div class="text-[11px] space-y-0.5 py-0.5 text-slate-600 dark:text-slate-300">
+              @for (item of o.items; track item.cartItemId) {
+              <div class="flex justify-between">
+                <span class="font-semibold">{{ item.quantity }}x {{ item.name }}</span>
+                <span class="font-bold">${{ item.itemTotal.toFixed(2) }}</span>
+              </div>
+              @if (getModifiersText(item.selectedModifiers)) {
+              <div class="text-[10px] text-amber-500 dark:text-amber-400 font-semibold pl-2">
+                + {{ getModifiersText(item.selectedModifiers) }}
+              </div>
+              }
+              }
+            </div>
+
+            <!-- Rider Selector (Flota Propia + Flota Libre Cercana) -->
+            <div
+              class="bg-slate-50 dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 space-y-1.5">
+              <div class="flex items-center justify-between">
+                <label class="block text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  {{ i18n.t('ma.assignRider') }}
+                </label>
+                <div class="flex items-center gap-1.5">
+                  <button (click)="openNearbyRiders.emit(o)" type="button"
+                    class="text-[9px] text-brand-600 dark:text-brand-400 hover:underline font-bold flex items-center gap-0.5 cursor-pointer">
+                    <app-icon name="map-pin" [size]="10"></app-icon>
+                    Radar Cercano
+                  </button>
+                  <button (click)="openDispatchConfig.emit()" type="button"
+                    class="text-[9px] text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-bold flex items-center gap-0.5 cursor-pointer"
+                    title="Configurar filtros de distancia y valoración para motorizados">
+                    <app-icon name="settings" [size]="10"></app-icon>
+                    Filtros
+                  </button>
+                  @if (o.driverId && o.status === 'at_merchant') {
+                  <span class="text-[9px] font-bold text-amber-600 dark:text-amber-400">¡Llegó al local!</span>
+                  } @else if (o.driverId && o.status === 'picked_up') {
+                  <span class="text-[9px] font-bold text-purple-600 dark:text-purple-400">Listo para despacho</span>
+                  } @else if (o.driverId && o.status === 'assigned_driver' && o.riderAccepted) {
+                  <span class="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    En camino al local
+                  </span>
+                  } @else if (o.driverId && o.status === 'assigned_driver') {
+                  <span class="text-[9px] text-indigo-500 font-semibold">Esperando aceptación...</span>
+                  } @else if (o.riderRejected) {
+                  <span class="text-[9px] font-bold text-red-600 dark:text-red-400 flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                    Rechazado {{ o.rejectedRiderName ? 'por ' + o.rejectedRiderName : '' }}
+                  </span>
+                  }
+                </div>
+              </div>
+              <select [ngModel]="o.driverId" (ngModelChange)="assignRider.emit({ orderId: o.id, riderId: $event })"
+                class="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[11px] rounded p-1.5 focus:outline-none focus:border-brand-500 font-medium">
+                <option [value]="undefined">{{ i18n.t('ma.assignRider') }}</option>
+                <option value="auto_closest"
+                  class="font-extrabold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/60">
+                  ⚡ Asignar más cercano automáticamente
+                </option>
+                @if (getOwnRidersForOrder(o).length > 0) {
+                <optgroup label="🛵 Flota Propia (Sede)">
+                  @for (r of getOwnRidersForOrder(o); track r.id) {
+                  <option [value]="r.id">{{ r.name }} ({{ r.vehiclePlate }})</option>
+                  }
+                </optgroup>
+                }
+                @if (getNearbyRidersForOrder(o).length > 0) {
+                <optgroup label="🌐 Flota Libre / Motorizados Cercanos">
+                  @for (r of getNearbyRidersForOrder(o); track r.id) {
+                  <option [value]="r.id">
+                    {{ r.name }} ({{ r.vehiclePlate }}) {{ r.distanceKm != null ? '• ' + r.distanceKm.toFixed(1) + ' km'
+                    : '• Sin GPS' }} ⭐{{ r.rating ?? '5.0' }}
+                  </option>
+                  }
+                </optgroup>
+                }
+                @if (getOwnRidersForOrder(o).length === 0 && getNearbyRidersForOrder(o).length === 0) {
+                @for (r of riders; track r.id) {
+                <option [value]="r.id">{{ r.name }} ({{ r.vehiclePlate }})</option>
+                }
+                }
+              </select>
+            </div>
+
+            <div class="flex items-center justify-between pt-1">
+              <span class="font-black text-sm text-slate-900 dark:text-white">${{ o.total.toFixed(2) }}</span>
+              <button (click)="advanceStatus.emit({ orderId: o.id, status: 'on_the_way' })"
+                [disabled]="!o.driverId && o.fulfillmentType === 'delivery'"
+                class="bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white font-bold text-[11px] px-3 py-1 rounded-md shadow-xs transition-all active:scale-95 flex items-center gap-1">
+                <span>{{ o.status === 'picked_up' ? 'Confirmar Despacho' : i18n.t('ma.dispatch') }}</span>
+                <app-icon name="bike" [size]="12"></app-icon>
+              </button>
+            </div>
+          </div>
+          }
+
+          @if (kitchenOrders.length === 0) {
+          <div
+            class="p-6 text-center text-[11px] text-slate-400 border border-dashed border-slate-300 dark:border-slate-800 rounded-lg bg-white/40 dark:bg-slate-950/40">
+            {{ i18n.t('ma.kitchenDone') }}
+          </div>
+          }
+        </div>
+
+        <!-- 3. En Camino (GPS Activo) -->
+        <div
+          class="bg-slate-200/60 dark:bg-slate-900 border border-slate-300/70 dark:border-slate-800 rounded-xl p-3.5 space-y-3">
+          <div
+            class="flex items-center justify-between px-2 pt-1 pb-2.5 border-b border-slate-300/70 dark:border-slate-800">
+            <div class="flex items-center gap-2 font-bold text-xs text-emerald-600 dark:text-emerald-400">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50"></span>
+              <span>{{ i18n.t('ma.colTransit') }}</span>
+            </div>
+            <span
+              class="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full text-[11px] font-black">
+              {{ transitOrders.length }}
+            </span>
+          </div>
+
+          @for (o of transitOrders; track o.id) {
+          <div
+            class="bg-white dark:bg-slate-850 border border-slate-200/90 dark:border-slate-750 rounded-lg p-3 shadow-xs hover:shadow-md hover:border-emerald-500/50 transition-all space-y-2.5">
+            <div class="flex items-start justify-between">
+              <div>
+                <span class="text-brand-500 font-bold text-[10px] font-mono">{{ o.orderNumber }}</span>
+                <div class="font-bold text-xs mt-0.5 text-slate-900 dark:text-white">{{ o.customer.name }}</div>
+              </div>
+              <span
+                class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                <app-icon name="bike" [size]="11"></app-icon>
+                <span>En Ruta</span>
+              </span>
+            </div>
+
+            <div
+              class="bg-slate-50 dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800 text-[11px] space-y-1">
+              <div class="text-[10px] font-bold text-slate-500 dark:text-slate-400 flex items-center justify-between">
+                <span>Repartidor:</span>
+                <span class="text-slate-900 dark:text-white font-mono">{{ o.driverName || 'Asignado' }}</span>
+              </div>
+              <div class="text-[10px] text-slate-400 flex items-center justify-between">
+                <span>Destino:</span>
+                <span class="truncate max-w-[130px] text-right">{{ o.customer.deliveryAddress }}</span>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-1">
+              <button (click)="openRoute.emit(o)"
+                class="bg-brand-500/10 hover:bg-brand-500 hover:text-white text-brand-600 dark:text-brand-400 border border-brand-500/30 px-2.5 py-1 rounded-md text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer">
+                <app-icon name="map-pin" [size]="12"></app-icon>
+                <span>Ruta en Vivo</span>
+              </button>
+
+              <button (click)="advanceStatus.emit({ orderId: o.id, status: 'delivered' })"
+                class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] px-3 py-1 rounded-md shadow-xs transition-all active:scale-95 flex items-center gap-1">
+                <app-icon name="check" [size]="12"></app-icon>
+                <span>{{ i18n.t('ma.delivered') }}</span>
+              </button>
+            </div>
+          </div>
+          }
+
+          @if (transitOrders.length === 0) {
+          <div
+            class="p-6 text-center text-[11px] text-slate-400 border border-dashed border-slate-300 dark:border-slate-800 rounded-lg bg-white/40 dark:bg-slate-950/40">
+            {{ i18n.t('ma.noTransit') }}
+          </div>
+          }
+        </div>
+
+      </div>
+      } @else {
+      <!-- ================= VISTA HISTORIAL DE PEDIDOS COMPLETADOS ================= -->
+      <div class="space-y-6">
+
+        <!-- KPIs Finanzas & Despachos -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="card-adaptive p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-1">
+            <div class="text-[10px] font-black uppercase text-slate-400 tracking-wider">Total Facturado Exitoso</div>
+            <div class="text-xl font-black text-slate-900 dark:text-white font-mono">${{
+              completedRevenueUsd.toFixed(2) }}</div>
+            <div class="text-[11px] text-brand-600 dark:text-brand-400 font-semibold font-mono">
+              ≈ Bs. {{ completedRevenueBs.toFixed(2) }}
+            </div>
+          </div>
+
+          <div class="card-adaptive p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-1">
+            <div class="text-[10px] font-black uppercase text-slate-400 tracking-wider">Entregas Exitosas</div>
+            <div class="text-xl font-black text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+              <span>{{ deliveredCount }}</span>
+              <span
+                class="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 font-bold">100%
+                OK</span>
+            </div>
+            <div class="text-[11px] text-slate-400 font-medium">Pedidos entregados al cliente</div>
+          </div>
+
+          <div class="card-adaptive p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-1">
+            <div class="text-[10px] font-black uppercase text-slate-400 tracking-wider">Cancelados / Rechazados</div>
+            <div class="text-xl font-black text-red-600 dark:text-red-400 flex items-center gap-2">
+              <span>{{ cancelledCount }}</span>
+            </div>
+            <div class="text-[11px] text-slate-400 font-medium">Anulados o no recibidos</div>
+          </div>
+
+          <div class="card-adaptive p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-1">
+            <div class="text-[10px] font-black uppercase text-slate-400 tracking-wider">Ticket Promedio</div>
+            <div class="text-xl font-black text-slate-900 dark:text-white font-mono">
+              ${{ (deliveredCount > 0 ? (completedRevenueUsd / deliveredCount).toFixed(2) : '0.00') }}
+            </div>
+            <div class="text-[11px] text-slate-400 font-medium">Por entrega completada</div>
+          </div>
+        </div>
+
+        <!-- Filtros & Buscador -->
+        <div
+          class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+          <div class="relative flex-1 max-w-md">
+            <app-icon name="search" [size]="16"
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></app-icon>
+            <input type="text" [ngModel]="historySearchQuery" (ngModelChange)="historySearchQueryChange.emit($event)"
+              placeholder="Buscar por N° orden, cliente, teléfono o motorizado..."
+              class="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700/80 rounded-xl text-xs font-semibold focus:outline-none focus:border-brand-500 text-slate-800 dark:text-slate-100 placeholder:text-slate-400" />
+          </div>
+
+          <div class="flex items-center gap-1.5 self-end sm:self-auto">
+            <button (click)="historyStatusFilterChange.emit('all')" [class.bg-brand-500]="historyStatusFilter === 'all'"
+              [class.text-white]="historyStatusFilter === 'all'"
+              [class.bg-slate-100]="historyStatusFilter !== 'all'"
+              [class.dark:bg-slate-800]="historyStatusFilter !== 'all'"
+              [class.text-slate-600]="historyStatusFilter !== 'all'"
+              [class.dark:text-slate-300]="historyStatusFilter !== 'all'"
+              class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer">
+              Todos ({{ filteredOrders.filter(o => o.status === 'delivered' || o.status === 'cancelled').length }})
+            </button>
+            <button (click)="historyStatusFilterChange.emit('delivered')"
+              [class.bg-emerald-600]="historyStatusFilter === 'delivered'"
+              [class.text-white]="historyStatusFilter === 'delivered'"
+              [class.bg-slate-100]="historyStatusFilter !== 'delivered'"
+              [class.dark:bg-slate-800]="historyStatusFilter !== 'delivered'"
+              [class.text-slate-600]="historyStatusFilter !== 'delivered'"
+              [class.dark:text-slate-300]="historyStatusFilter !== 'delivered'"
+              class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer">
+              Entregados ({{ deliveredCount }})
+            </button>
+            <button (click)="historyStatusFilterChange.emit('cancelled')"
+              [class.bg-red-600]="historyStatusFilter === 'cancelled'"
+              [class.text-white]="historyStatusFilter === 'cancelled'"
+              [class.bg-slate-100]="historyStatusFilter !== 'cancelled'"
+              [class.dark:bg-slate-800]="historyStatusFilter !== 'cancelled'"
+              [class.text-slate-600]="historyStatusFilter !== 'cancelled'"
+              [class.dark:text-slate-300]="historyStatusFilter !== 'cancelled'"
+              class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer">
+              Cancelados ({{ cancelledCount }})
+            </button>
+          </div>
+        </div>
+
+        <!-- Tabla de Pedidos -->
+        <div class="card-adaptive rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs">
+          @if (completedOrders.length === 0) {
+          <div class="py-16 px-6 text-center space-y-3">
+            <div
+              class="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 mx-auto flex items-center justify-center">
+              <app-icon name="clipboard-list" [size]="26"></app-icon>
+            </div>
+            <h4 class="text-sm font-bold text-slate-700 dark:text-slate-200">No hay pedidos en el historial</h4>
+            <p class="text-xs text-slate-400 max-w-sm mx-auto">
+              Los pedidos finalizados o cancelados aparecerán registrados aquí automáticamente con todos sus detalles y
+              rutas.
+            </p>
+          </div>
+          } @else {
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr
+                  class="bg-slate-50 dark:bg-slate-850/60 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 text-[10px] uppercase font-black tracking-wider">
+                  <th class="py-3 px-4">N° Orden / Fecha</th>
+                  <th class="py-3 px-4">Sucursal</th>
+                  <th class="py-3 px-4">Cliente / Contacto</th>
+                  <th class="py-3 px-4">Dirección Destino</th>
+                  <th class="py-3 px-4">Motorizado</th>
+                  <th class="py-3 px-4">Total</th>
+                  <th class="py-3 px-4">Estado</th>
+                  <th class="py-3 px-4 text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                @for (o of completedOrders; track o.id) {
+                <tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
+                  <td class="py-3.5 px-4">
+                    <div class="font-mono font-black text-brand-600 dark:text-brand-400">{{ o.orderNumber }}</div>
+                    <div class="text-[10px] text-slate-400 font-medium">
+                      {{ o.createdAt ? (o.createdAt | date:'short') : 'Hoy' }}
+                    </div>
+                  </td>
+                  <td class="py-3.5 px-4">
+                    <span class="inline-flex items-center gap-1 font-semibold text-slate-700 dark:text-slate-200">
+                      <span>🏪</span>
+                      <span>{{ o.branchName || 'Sede Principal' }}</span>
+                    </span>
+                  </td>
+                  <td class="py-3.5 px-4">
+                    <div class="font-bold text-slate-900 dark:text-white">{{ o.customer.name }}</div>
+                    <a [href]="'https://wa.me/' + o.customer.phone.replace(/[^0-9]/g, '')" target="_blank"
+                      class="text-[10px] text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 font-semibold">
+                      <app-icon name="phone" [size]="10"></app-icon>
+                      <span>{{ o.customer.phone }}</span>
+                    </a>
+                  </td>
+                  <td class="py-3.5 px-4 max-w-[200px]">
+                    <div class="truncate text-slate-600 dark:text-slate-300 font-medium"
+                      [title]="o.customer.deliveryAddress">
+                      {{ o.customer.deliveryAddress || 'Retiro en Sede' }}
+                    </div>
+                  </td>
+                  <td class="py-3.5 px-4">
+                    @if (o.driverName) {
+                    <div class="flex items-center gap-1.5">
+                      <app-icon name="bike" [size]="13" className="text-brand-500"></app-icon>
+                      <span class="font-bold text-slate-800 dark:text-slate-200">{{ o.driverName }}</span>
+                    </div>
+                    } @else {
+                    <span class="text-slate-400 italic text-[11px]">Sin asignar</span>
+                    }
+                  </td>
+                  <td class="py-3.5 px-4">
+                    <div class="font-mono font-black text-slate-900 dark:text-white">${{ o.total.toFixed(2) }}</div>
+                    <div class="text-[10px] text-slate-400 font-mono" [title]="o.exchangeRate ? 'Tasa fijada del pedido: Bs. ' + o.exchangeRate + '/$' : ''">
+                      Bs. {{ (o.totalBs || (o.total * (o.exchangeRate || activeExchangeRate))).toFixed(2) }}
+                    </div>
+                  </td>
+                  <td class="py-3.5 px-4">
+                    @if (o.status === 'delivered') {
+                    <span
+                      class="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 flex items-center gap-1 w-max">
+                      <app-icon name="check" [size]="11"></app-icon>
+                      <span>Entregado</span>
+                    </span>
+                    } @else {
+                    <span
+                      class="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-red-500/15 text-red-700 dark:text-red-300 border border-red-500/30 flex items-center gap-1 w-max">
+                      <app-icon name="x" [size]="11"></app-icon>
+                      <span>Cancelado</span>
+                    </span>
+                    }
+                  </td>
+                  <td class="py-3.5 px-4 text-right">
+                    <div class="flex items-center justify-end gap-1.5">
+                      <button (click)="openRoute.emit(o)" title="Ver recorrido satelital del pedido"
+                        class="px-2 py-1 bg-brand-500/10 hover:bg-brand-500 hover:text-white text-brand-600 dark:text-brand-400 font-bold text-[10px] rounded-lg transition-all flex items-center gap-1 cursor-pointer">
+                        <app-icon name="map-pin" [size]="11"></app-icon>
+                        <span>Ruta</span>
+                      </button>
+                      <button (click)="openDetail.emit(o)" title="Ver detalle y productos de la orden"
+                        class="px-2 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-[10px] rounded-lg transition-all flex items-center gap-1 cursor-pointer">
+                        <app-icon name="eye" [size]="11"></app-icon>
+                        <span>Detalle</span>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          }
+        </div>
+
+      </div>
+      }
+
+    </div>

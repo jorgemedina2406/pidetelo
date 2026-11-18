@@ -1,0 +1,500 @@
+    <div class="space-y-6">
+
+      <!-- Header & Plan Limit Status Banner: Diferenciado entre Sede Principal y Sucursal Secundaria -->
+      @if (isBranchLocked) {
+      <div
+        class="card-adaptive rounded-2xl p-6 shadow-sm border border-amber-200 dark:border-amber-900/50 bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div class="space-y-2">
+            <div class="flex items-center gap-2.5 flex-wrap">
+              <span
+                class="px-2.5 py-1 rounded-full text-xs font-black tracking-wider uppercase bg-amber-500 text-white shadow-sm flex items-center gap-1.5">
+                <app-icon name="lock" [size]="12"></app-icon>
+                <span>Acceso Exclusivo de Sucursal</span>
+              </span>
+              <span
+                class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20">
+                Sede: {{ userAssignedBranch?.name || auth.currentUser()?.branchName || 'Sucursal Asignada' }}
+              </span>
+            </div>
+            <h2 class="text-2xl font-extrabold tracking-tight">Mi Sucursal</h2>
+            <p class="text-xs text-slate-600 dark:text-slate-300 max-w-2xl leading-relaxed">
+              Has iniciado sesión con las credenciales independientes de esta sucursal. Esta cuenta solo opera los
+              pedidos y catálogo local de esta sede física. <strong>La Sede Principal es la única encargada de llevar el
+                conteo de la red y registrar nuevas sucursales.</strong>
+            </p>
+          </div>
+
+          <div
+            class="bg-amber-500/10 dark:bg-amber-950/40 border border-amber-500/20 p-4 rounded-2xl text-center space-y-1 flex-shrink-0">
+            <span class="text-[10px] uppercase font-black tracking-wider text-amber-600 dark:text-amber-400 block">Rol
+              Activo</span>
+            <span class="font-extrabold text-sm text-slate-800 dark:text-slate-100 block">Encargado de Sucursal</span>
+            <span class="text-[10px] text-slate-400 block">Acceso local protegido</span>
+          </div>
+        </div>
+      </div>
+      } @else {
+      <!-- Header & Plan Limit Status Banner para Sede Principal / Dueño -->
+      <div
+        class="card-adaptive rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-800 bg-gradient-to-br from-white via-slate-50 to-orange-50/30 dark:from-slate-900 dark:via-slate-900 dark:to-orange-950/20">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+
+          <div class="space-y-2">
+            <div class="flex items-center gap-2.5 flex-wrap">
+              <span
+                class="px-2.5 py-1 rounded-full text-xs font-black tracking-wider uppercase bg-brand-500 text-white shadow-sm">
+                {{ currentSubscriptionPlan.name }}
+              </span>
+              <span
+                class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                Sede Principal (Gestión y Creación de Sucursales)
+              </span>
+            </div>
+            <h2 class="text-2xl font-extrabold tracking-tight">Gestión Multi-Sucursal</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400 max-w-2xl">
+              Como <strong>Sede Principal</strong>, supervisas el conteo total de sucursales creadas en tu plan y eres
+              la única autorizada para registrar nuevas sedes y asignarles sus propias credenciales de acceso
+              independientes.
+            </p>
+          </div>
+
+          <!-- Cupo de Sedes Progress Card (Solo Sede Principal lleva el conteo) -->
+          <div
+            class="bg-white dark:bg-slate-800/90 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-xs min-w-[240px] flex-shrink-0 space-y-2">
+            @if (currentSubscriptionPlan.maxBranches === -1) {
+            <div class="flex items-center justify-between text-xs font-bold">
+              <span class="text-slate-500 dark:text-slate-400">Sucursales Creadas:</span>
+              <span
+                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-black bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                <span>{{ activeBranchesCount }}</span>
+                <span class="opacity-50">/</span>
+                <span class="text-sm">Ilimitadas ∞</span>
+              </span>
+            </div>
+            <div class="w-full h-2 rounded-full bg-emerald-100 dark:bg-emerald-950/40 overflow-hidden">
+              <div class="h-full bg-gradient-to-r from-emerald-500 to-teal-500 w-full rounded-full"></div>
+            </div>
+            <span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1.5">
+              <app-icon name="check" [size]="12"></app-icon>
+              <span>Hasta 5 sedes base (Plan Pro)</span>
+            </span>
+            } @else {
+            <div class="flex items-center justify-between text-xs font-bold">
+              <span class="text-slate-500 dark:text-slate-400">Sucursales Creadas:</span>
+              <span class="font-extrabold text-brand-600 dark:text-brand-400 font-mono text-sm">
+                {{ Math.max(0, activeBranchesCount - 1) }} / {{ currentSubscriptionPlan.maxBranches }}
+              </span>
+            </div>
+            <div class="w-full h-2 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
+              <div class="h-full bg-gradient-to-r from-brand-500 to-amber-500 transition-all duration-300"
+                [style.width.%]="currentSubscriptionPlan.maxBranches > 0 ? Math.min(100, (Math.max(0, activeBranchesCount - 1) / currentSubscriptionPlan.maxBranches) * 100) : 100">
+              </div>
+            </div>
+            <span class="text-[10px] text-slate-500 dark:text-slate-400 block font-medium">
+              @if (currentSubscriptionPlan.maxBranches === 0) {
+              Solo sede principal autorizada (Plan Emprendedor)
+              } @else {
+              {{ Math.max(0, currentSubscriptionPlan.maxBranches - Math.max(0, activeBranchesCount - 1)) }}
+              sucursal(es) adicional(es) disponible(s)
+              }
+            </span>
+            }
+          </div>
+
+        </div>
+      </div>
+      }
+
+      <!-- Dedicated Action Toolbar -->
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <!-- View Mode Switcher -->
+        <div
+          class="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xs">
+          <button (click)="toggleBranchesView.emit('grid')" [class.bg-white]="branchesViewMode === 'grid'"
+            [class.dark:bg-slate-800]="branchesViewMode === 'grid'"
+            [class.text-brand-600]="branchesViewMode === 'grid'"
+            [class.dark:text-brand-400]="branchesViewMode === 'grid'"
+            [class.shadow-xs]="branchesViewMode === 'grid'" [class.text-slate-600]="branchesViewMode !== 'grid'"
+            [class.dark:text-slate-400]="branchesViewMode !== 'grid'"
+            class="px-3.5 py-2 rounded-lg text-xs font-black transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap">
+            <app-icon name="grid" [size]="14"></app-icon>
+            <span>Vista de Tarjetas</span>
+          </button>
+          <button (click)="toggleBranchesView.emit('map')" [class.bg-white]="branchesViewMode === 'map'"
+            [class.dark:bg-slate-800]="branchesViewMode === 'map'"
+            [class.text-brand-600]="branchesViewMode === 'map'"
+            [class.dark:text-brand-400]="branchesViewMode === 'map'" [class.shadow-xs]="branchesViewMode === 'map'"
+            [class.text-slate-600]="branchesViewMode !== 'map'"
+            [class.dark:text-slate-400]="branchesViewMode !== 'map'"
+            class="px-3.5 py-2 rounded-lg text-xs font-black transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap">
+            <app-icon name="map-pin" [size]="14"></app-icon>
+            <span>Mapa de Sedes</span>
+          </button>
+        </div>
+
+        <!-- New Branch Action Button: Visible SOLO para Sede Principal -->
+        @if (isMainBranchOrOwner()) {
+        <button (click)="openNewBranchModal.emit()"
+          class="bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md shadow-brand-500/20 flex items-center gap-2 transition-all active:scale-95 flex-shrink-0 whitespace-nowrap cursor-pointer">
+          <app-icon name="plus" [size]="16" className="text-white"></app-icon>
+          <span>Registrar Nueva Sucursal</span>
+        </button>
+        } @else {
+        <div
+          class="text-[11px] font-bold text-amber-700 dark:text-amber-300 bg-amber-500/10 border border-amber-500/20 px-3.5 py-2 rounded-xl flex items-center gap-2 shadow-xs">
+          <app-icon name="lock" [size]="13" className="text-amber-600"></app-icon>
+          <span>Solo la Sede Principal tiene permisos para crear sucursales</span>
+        </div>
+        }
+      </div>
+
+      <!-- Success Alert if Branch created -->
+      @if (isBranchSavedSuccess) {
+      <div
+        class="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 flex items-center justify-between gap-3 text-emerald-700 dark:text-emerald-300 animate-fade-in">
+        <div class="flex items-center gap-3 text-xs font-semibold">
+          <span
+            class="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center flex-shrink-0">✓</span>
+          <span>¡Sucursal registrada con éxito! Cuenta con sus propias credenciales de acceso independientes. Se
+            activará en la app una vez aprobada.</span>
+        </div>
+        <button (click)="dismissSavedSuccess.emit()" class="text-xs font-bold hover:underline">Cerrar</button>
+      </div>
+      }
+
+      <!-- Branches Grid (Mantiene DOM vivo para evitar mapa en blanco al alternar) -->
+      <div [class.hidden]="branchesViewMode !== 'grid'">
+        @if (visibleBranches.length === 0) {
+        <div
+          class="card-adaptive rounded-2xl p-12 text-center space-y-4 border border-dashed border-slate-300 dark:border-slate-800 animate-fade-in">
+          <div class="w-16 h-16 rounded-2xl bg-brand-500/10 text-brand-500 mx-auto flex items-center justify-center">
+            <app-icon name="store" [size]="32"></app-icon>
+          </div>
+          <div class="space-y-1">
+            <h3 class="text-base font-extrabold text-slate-900 dark:text-white">Sin Sucursales Registradas</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+              Tu comercio aún no cuenta con sedes físicas o sucursales registradas. Registra tu primera sucursal para
+              definir tu cobertura y comenzar a recibir comandas.
+            </p>
+          </div>
+          @if (isMainBranchOrOwner()) {
+          <button (click)="openNewBranchModal.emit()"
+            class="px-4 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs shadow-sm inline-flex items-center gap-2 cursor-pointer transition-all active:scale-95">
+            <app-icon name="plus" [size]="15" className="text-white"></app-icon>
+            <span>Registrar Primera Sucursal</span>
+          </button>
+          }
+        </div>
+        } @else {
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          @for (branch of visibleBranches; track branch.id) {
+          <div
+            class="card-adaptive rounded-2xl p-5 shadow-sm space-y-4 border border-slate-200 dark:border-slate-800 transition-all hover:shadow-md relative overflow-hidden">
+
+            <!-- Status Header -->
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex items-center gap-3">
+                <div
+                  class="w-11 h-11 rounded-xl bg-brand-500/10 text-brand-500 flex items-center justify-center font-bold flex-shrink-0"
+                  [class.bg-emerald-500/10]="branch.isMain" [class.text-emerald-600]="branch.isMain">
+                  <app-icon name="store" [size]="22"></app-icon>
+                </div>
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    <h3 class="font-extrabold text-sm truncate max-w-[180px] sm:max-w-[220px]"
+                      [title]="cleanBranchDisplayName(branch.name)">{{ cleanBranchDisplayName(branch.name) }}</h3>
+                    @if (branch.isMain) {
+                    <span
+                      class="px-1.5 py-0.2 rounded text-[9px] font-black uppercase tracking-wider bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30">
+                      Matriz
+                    </span>
+                    }
+                  </div>
+                  <p class="text-[11px] text-slate-400 font-mono flex items-center gap-1">
+                    <app-icon name="map-pin" [size]="11"></app-icon>
+                    <span class="truncate">{{ branch.latitude }}, {{ branch.longitude }}</span>
+                  </p>
+                </div>
+              </div>
+
+              <!-- Status Pill -->
+              @if (branch.status === 'active') {
+              @if (branch.isOpenNow) {
+              <span
+                class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800 flex-shrink-0 flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                <span>Activa / Abierta</span>
+              </span>
+              } @else {
+              <span
+                class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800 flex-shrink-0 flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                <span>Pausada</span>
+              </span>
+              }
+              } @else if (branch.status === 'inactive') {
+              <span
+                class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800 flex-shrink-0 flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                <span>Desactivada</span>
+              </span>
+              } @else if (branch.status === 'pending_approval') {
+              <span
+                class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-800 flex-shrink-0 flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping"></span>
+                <span>En Verificación</span>
+              </span>
+              } @else {
+              <span
+                class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-red-50 text-red-700 border border-red-200 dark:bg-red-950/40 dark:text-red-400 flex-shrink-0">
+                Rechazada
+              </span>
+              }
+            </div>
+
+            <!-- Address & Delivery Info -->
+            <div
+              class="text-xs text-slate-600 dark:text-slate-400 space-y-1.5 bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+              <div class="flex items-start gap-1.5">
+                <span class="font-bold text-slate-700 dark:text-slate-300 flex-shrink-0">Dirección:</span>
+                <span class="truncate">{{ branch.address }}</span>
+              </div>
+              <div class="flex items-center justify-between text-[11px]">
+                <span>Radio: <strong class="text-slate-900 dark:text-white">{{ branch.deliveryRadiusKm }}
+                    km</strong></span>
+                <span>Envío: <strong class="text-brand-600 dark:text-brand-400">${{ branch.baseDeliveryFee.toFixed(2)
+                    }}</strong></span>
+                <span>Horario: <strong class="text-slate-900 dark:text-white">{{ branch.openTime }} - {{
+                    branch.closeTime }}</strong></span>
+              </div>
+            </div>
+
+            <!-- Credenciales de Acceso Propias de Esta Sucursal -->
+            <div
+              class="p-3 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/60 dark:border-blue-900/40 space-y-1.5 text-xs">
+              <div
+                class="flex items-center justify-between font-extrabold text-[11px] text-blue-700 dark:text-blue-300">
+                <span class="flex items-center gap-1.5">
+                  <app-icon name="lock" [size]="12" className="text-blue-600 dark:text-blue-400"></app-icon>
+                  <span>Credenciales de Ingreso</span>
+                </span>
+                <span class="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded font-black"
+                  [class.bg-emerald-100]="branch.isMain" [class.text-emerald-800]="branch.isMain"
+                  [class.dark:bg-emerald-950]="branch.isMain" [class.dark:text-emerald-300]="branch.isMain"
+                  [class.bg-blue-100]="!branch.isMain" [class.text-blue-800]="!branch.isMain"
+                  [class.dark:bg-blue-900/60]="!branch.isMain" [class.dark:text-blue-300]="!branch.isMain">
+                  {{ branch.isMain ? 'Sede Matriz' : 'Acceso Aislado' }}
+                </span>
+              </div>
+              <div class="text-[11px] space-y-0.5 font-mono">
+                <div class="flex items-center justify-between">
+                  <span class="text-slate-500 font-sans text-[10px]">Correo:</span>
+                  <strong
+                    class="text-blue-700 dark:text-blue-300 select-all font-semibold truncate max-w-[170px] sm:max-w-[210px]"
+                    [title]="branch.managerEmail || (branch.isMain ? getTenantEmail() : '')">
+                    {{ branch.managerEmail || (branch.isMain ? getTenantEmail() : 'Sin correo asignado') }}
+                  </strong>
+                </div>
+                @if (branch.managerName) {
+                <div class="flex items-center justify-between text-[10px] font-sans text-slate-500">
+                  <span>Responsable:</span>
+                  <span class="font-semibold text-slate-700 dark:text-slate-300">{{ branch.managerName }}</span>
+                </div>
+                }
+              </div>
+            </div>
+
+            <!-- Direct Payment Credentials Card -->
+            @if (branch.paymentCredentials && isRealPagoMovil(branch.paymentCredentials)) {
+            <div
+              class="p-3 rounded-xl bg-orange-50/50 dark:bg-orange-950/20 border border-orange-200/60 dark:border-orange-900/30 space-y-1 text-xs">
+              <div
+                class="flex items-center justify-between font-extrabold text-[11px] text-orange-700 dark:text-orange-300">
+                <span class="flex items-center gap-1">
+                  <app-icon name="wallet" [size]="12"></app-icon>
+                  Pago Móvil Directo
+                </span>
+                <span
+                  class="text-[9px] uppercase tracking-wider bg-orange-200/60 dark:bg-orange-900/50 px-1.5 py-0.2 rounded font-black">100%
+                  Comercio</span>
+              </div>
+              <div class="font-mono text-[11px] text-slate-700 dark:text-slate-300 leading-tight">
+                <div><strong>Banco:</strong> {{ branch.paymentCredentials.pagoMovilBank }}</div>
+                <div><strong>Teléfono:</strong> {{ branch.paymentCredentials.pagoMovilPhone }}</div>
+                <div><strong>RIF/CI:</strong> {{ branch.paymentCredentials.pagoMovilIdNumber }} ({{
+                  branch.paymentCredentials.pagoMovilAccountName }})</div>
+                @if (branch.paymentCredentials.zelleEmail) {
+                <div class="mt-1 pt-1 border-t border-orange-200/40 dark:border-orange-900/30 text-[10px]">
+                  <strong>Zelle:</strong> {{ branch.paymentCredentials.zelleEmail }}
+                </div>
+                }
+              </div>
+            </div>
+            } @else {
+            <div
+              class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-2">
+              <span>💳</span>
+              <span>Pago Móvil no configurado aún para esta sede.</span>
+            </div>
+            }
+
+            <!-- Rejection Notice if any -->
+            @if (branch.status === 'rejected' && branch.rejectionReason) {
+            <div
+              class="p-2.5 rounded-lg bg-red-500/10 border border-red-500/30 text-[11px] text-red-600 dark:text-red-400">
+              <strong>Motivo del rechazo:</strong> {{ branch.rejectionReason }}
+            </div>
+            }
+
+            <!-- Footer Actions / Open & Pause Toggle -->
+            <div
+              class="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 flex-wrap">
+              @if (branch.status === 'active' || branch.status === 'inactive') {
+              @if (canToggleBranch(branch)) {
+              <button (click)="toggleBranch.emit(branch)"
+                class="text-xs font-bold flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border transition-all cursor-pointer active:scale-95"
+                [class.text-emerald-700]="branch.isOpenNow" [class.dark:text-emerald-300]="branch.isOpenNow"
+                [class.bg-emerald-50]="branch.isOpenNow" [class.dark:bg-emerald-950/40]="branch.isOpenNow"
+                [class.border-emerald-200]="branch.isOpenNow" [class.dark:border-emerald-800]="branch.isOpenNow"
+                [class.hover:bg-emerald-100]="branch.isOpenNow" [class.text-amber-800]="!branch.isOpenNow"
+                [class.dark:text-amber-300]="!branch.isOpenNow" [class.bg-amber-50]="!branch.isOpenNow"
+                [class.dark:bg-amber-950/40]="!branch.isOpenNow" [class.border-amber-200]="!branch.isOpenNow"
+                [class.dark:border-amber-800]="!branch.isOpenNow" [class.hover:bg-amber-100]="!branch.isOpenNow"
+                [title]="branch.isOpenNow ? 'Clic para pausar temporalmente la sucursal' : 'Clic para reactivar sucursal'">
+                <span class="w-2 h-2 rounded-full" [class.bg-emerald-500]="branch.isOpenNow"
+                  [class.bg-amber-500]="!branch.isOpenNow"></span>
+                <span>{{ branch.isOpenNow ? 'Abierta (Recibiendo pedidos)' : 'Desactivada temporalmente' }}</span>
+                <span class="text-[9px] uppercase font-mono font-black ml-1 px-1 py-0.2 rounded"
+                  [class.bg-emerald-200/60]="branch.isOpenNow" [class.dark:bg-emerald-900]="branch.isOpenNow"
+                  [class.bg-amber-200/60]="!branch.isOpenNow" [class.dark:bg-amber-900]="!branch.isOpenNow">
+                  {{ branch.isOpenNow ? 'Pausar' : 'Reactivar' }}
+                </span>
+              </button>
+              } @else {
+              <div class="text-xs font-semibold flex items-center gap-1.5" [class.text-emerald-600]="branch.isOpenNow"
+                [class.text-amber-600]="!branch.isOpenNow">
+                <span class="w-2 h-2 rounded-full" [class.bg-emerald-500]="branch.isOpenNow"
+                  [class.bg-amber-500]="!branch.isOpenNow"></span>
+                <span>{{ branch.isOpenNow ? 'Abierta' : 'Pausada' }}</span>
+              </div>
+              }
+              } @else {
+              <span class="text-[11px] text-slate-400 italic">En proceso de verificación satelital</span>
+              }
+
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <button (click)="manageBranchRiders.emit(branch.id)"
+                  class="text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-brand-500 dark:hover:text-brand-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
+                  title="Ver motorizados asignados a esta sucursal">
+                  <app-icon name="bike" [size]="12"></app-icon>
+                  <span>Motorizados</span>
+                </button>
+                <button (click)="newRiderForBranch.emit(branch.id)"
+                  class="text-xs font-bold text-brand-600 dark:text-brand-400 hover:bg-brand-500 hover:text-white bg-brand-50 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-900/50 px-2.5 py-1 rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
+                  title="Registrar nuevo motorizado en esta sede">
+                  <app-icon name="plus" [size]="12"></app-icon>
+                  <span>+ Rider</span>
+                </button>
+                <button (click)="openEditBranchModal.emit(branch)"
+                  class="text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-brand-500 dark:hover:text-brand-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-lg flex items-center gap-1 cursor-pointer transition-colors">
+                  <app-icon name="edit" [size]="12"></app-icon>
+                  <span>Editar Sede</span>
+                </button>
+                @if (isMainBranchOrOwner() && !branch.isMain) {
+                <button (click)="openDeleteBranchModal.emit(branch)"
+                  class="text-xs font-bold text-red-600 dark:text-red-400 hover:text-white hover:bg-red-600 dark:hover:bg-red-600 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 px-2.5 py-1 rounded-lg flex items-center gap-1 cursor-pointer transition-all active:scale-95"
+                  title="Eliminar esta sucursal y todos sus datos">
+                  <app-icon name="trash" [size]="12"></app-icon>
+                  <span>Eliminar</span>
+                </button>
+                }
+                <button (click)="focusBranchOnMap.emit(branch)"
+                  class="text-xs font-bold text-brand-500 hover:underline flex items-center gap-1 cursor-pointer">
+                  <app-icon name="map-pin" [size]="13"></app-icon>
+                  <span>Ver en Mapa</span>
+                </button>
+              </div>
+            </div>
+
+
+
+            <!-- Botón Copiar Enlace Directo y Respuesta Automática de WhatsApp -->
+            <div class="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-1.5">
+              <button (click)="copyWhatsAppGreeting.emit(branch)"
+                class="w-full py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                title="Copiar mensaje de bienvenida automático con link web y app móvil para WhatsApp Business">
+                <span>💬</span>
+                <span>Copiar Mensaje Bienvenida WhatsApp</span>
+              </button>
+              <button (click)="copyBranchMenuLink.emit(branch)"
+                class="w-full py-1.5 px-3 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-bold text-[11px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                title="Copiar link web directo de esta sucursal">
+                <span>🔗</span>
+                <span>Copiar Solo Enlace Web</span>
+              </button>
+            </div>
+
+          </div>
+          }
+        </div>
+        }
+      </div>
+
+      <!-- ================= VISTA MAPA DE COBERTURA DE SUCURSALES ================= -->
+      <div [class.hidden]="branchesViewMode !== 'map'" class="space-y-4">
+
+        <!-- Floating Summary Bar -->
+        <div
+          class="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+          <div class="flex items-center gap-4 flex-wrap">
+            <div class="flex items-center gap-2">
+              <span class="w-3.5 h-3.5 rounded-lg bg-brand-500"></span>
+              <span class="text-xs font-bold text-slate-800 dark:text-slate-200">Sedes Activas ({{ activeBranchesCount
+                }})</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="w-3.5 h-3.5 rounded-lg bg-amber-500"></span>
+              <span class="text-xs font-bold text-slate-800 dark:text-slate-200">En Revisión ({{ pendingBranchesCount
+                }})</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="w-3.5 h-3.5 rounded-full border-2 border-dashed border-brand-500 bg-brand-500/10"></span>
+              <span class="text-xs font-bold text-slate-500 dark:text-slate-400">Radios de Despacho (km)</span>
+            </div>
+          </div>
+
+          <!-- Sedes Shortcut Pills -->
+          <div class="flex items-center gap-1.5 overflow-x-auto max-w-full py-1">
+            @for (b of branches; track b.id) {
+            <button (click)="focusBranchOnMap.emit(b)"
+              class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 dark:bg-slate-800 hover:bg-brand-500 hover:text-white text-slate-700 dark:text-slate-300 transition-colors flex items-center gap-1 cursor-pointer flex-shrink-0">
+              <span>📍</span>
+              <span>{{ b.name }}</span>
+            </button>
+            }
+          </div>
+        </div>
+
+        <!-- Leaflet Container for Branches Map -->
+        <div
+          class="card-adaptive rounded-2xl overflow-hidden shadow-xs relative border border-slate-200 dark:border-slate-800">
+          <div id="branches-leaflet-map" class="w-full h-[520px] min-h-[520px] z-0"></div>
+
+          <!-- Map Overlay Legend -->
+          <div
+            class="absolute bottom-4 left-4 z-[400] bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-md space-y-1 text-xs">
+            <div class="font-black text-slate-900 dark:text-white flex items-center gap-1.5">
+              <app-icon name="store" [size]="14" className="text-brand-500"></app-icon>
+              <span>Red de Cobertura Física</span>
+            </div>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400">
+              Haz clic en el pin de cualquier sede para consultar sus datos o seleccionarla.
+            </p>
+          </div>
+        </div>
+
+      </div>
+
+    </div>

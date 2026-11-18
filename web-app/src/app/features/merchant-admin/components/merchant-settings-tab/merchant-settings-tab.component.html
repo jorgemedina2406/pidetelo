@@ -1,0 +1,1010 @@
+    <div class="space-y-6 animate-fade-in">
+
+      <!-- Settings Header -->
+      <div
+        class="flex flex-wrap items-center justify-between gap-4 pb-2 border-b border-slate-200 dark:border-slate-800">
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 class="text-2xl font-extrabold tracking-tight">Marca & Configuración Monetaria</h2>
+            <span
+              class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20">
+              Por Sucursal
+            </span>
+          </div>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            Configura la identidad visual, logotipo, número de WhatsApp para pedidos, tasa de cambio y escalas de
+            delivery de cada sede de forma independiente.
+          </p>
+        </div>
+
+        <div class="flex items-center gap-2">
+          @if (isSavedNotificationVisible) {
+          <span
+            class="px-3 py-1.5 rounded-xl bg-emerald-500 text-white text-xs font-bold shadow-sm animate-fade-in flex items-center gap-1.5">
+            <app-icon name="check" [size]="14" className="text-white"></app-icon>
+            <span>¡Guardado con éxito!</span>
+          </span>
+          }
+
+          <button (click)="saveSettings.emit()" [disabled]="isSavingBranding"
+            class="bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm flex items-center gap-2 transition-all active:scale-95 cursor-pointer">
+            @if (isSavingBranding) {
+            <span class="animate-spin text-sm">⏳</span>
+            <span>Guardando Cambios...</span>
+            } @else {
+            <app-icon name="check" [size]="16" className="text-white"></app-icon>
+            <span>Guardar Cambios</span>
+            }
+          </button>
+        </div>
+      </div>
+
+      <!-- Barra de Selección de Sucursal / Sede a Configurar -->
+      <div
+        class="flex flex-wrap items-center justify-between gap-3 p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+        <div class="flex items-center gap-3">
+          <div
+            class="w-10 h-10 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center font-bold">
+            <app-icon name="store" [size]="20"></app-icon>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-white">Sucursal en
+                Configuración:</span>
+              @if (isBranchLocked) {
+              <span
+                class="text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-md border border-amber-300/40">
+                🔒 Sede Asignada
+              </span>
+              }
+            </div>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400">
+              Estás editando la identidad visual, tasa, WhatsApp, radio y tarifas de delivery para esta sede específica.
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <label class="text-xs font-bold text-slate-600 dark:text-slate-400 hidden sm:inline">Cambiar Sede:</label>
+          <select [ngModel]="selectedConfigBranchId" (ngModelChange)="configBranchChange.emit($event)"
+            [disabled]="isBranchLocked"
+            class="bg-white dark:bg-slate-800 border-2 border-brand-500/30 hover:border-brand-500 rounded-xl px-3.5 py-2 text-xs font-extrabold text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 shadow-sm transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-60">
+            @for (b of visibleBranches; track b.id) {
+            <option [value]="b.id">
+              {{ cleanBranchDisplayName(b.name) }} {{ b.isMain ? '★ (Sede Principal)' : '' }}
+            </option>
+            }
+          </select>
+        </div>
+      </div>
+
+      <!-- Main Grid of Settings Cards -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+
+        <!-- COLUMNA IZQUIERDA -->
+        <div class="flex flex-col gap-6">
+          <!-- PANEL 1: CONFIGURACIÓN MONETARIA Y TASA DE CAMBIO -->
+          <div class="card-adaptive rounded-2xl p-5 shadow-xs space-y-5 border border-slate-200 dark:border-slate-800">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div class="flex items-center gap-2.5">
+                <div
+                  class="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+                  <app-icon name="dollar" [size]="18"></app-icon>
+                </div>
+                <div>
+                  <h3 class="font-extrabold text-sm text-slate-900 dark:text-white">Moneda & Tasa de Cambio</h3>
+                  <p class="text-[11px] text-slate-500">Manejo simultáneo de precios en USD y Bolívares (Bs.)</p>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <button (click)="fetchBcvRate.emit('oficial')" [disabled]="isFetchingBcv"
+                  title="Sincronizar tasa oficial BCV desde dolarapi.com"
+                  class="text-[11px] font-bold px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-xs">
+                  @if (isFetchingBcv && bcvRateSource === 'oficial') {
+                  <span class="animate-spin text-xs">⏳</span>
+                  } @else {
+                  <app-icon name="refresh-cw" [size]="12"></app-icon>
+                  }
+                  <span>Oficial BCV</span>
+                </button>
+
+                <button (click)="fetchBcvRate.emit('paralelo')" [disabled]="isFetchingBcv"
+                  title="Sincronizar tasa paralela desde dolarapi.com"
+                  class="text-[11px] font-bold px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 hover:bg-slate-200 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50">
+                  @if (isFetchingBcv && bcvRateSource === 'paralelo') {
+                  <span class="animate-spin text-xs">⏳</span>
+                  } @else {
+                  <span>⚡</span>
+                  }
+                  <span>Paralelo</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- API Status Banner -->
+            <div
+              class="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 dark:text-emerald-200 text-xs flex flex-wrap items-center justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span class="font-bold">API Conectada:</span>
+                <span
+                  class="font-mono text-[11px] bg-white/50 dark:bg-slate-900/50 px-2 py-0.5 rounded border border-emerald-500/30">ve.dolarapi.com</span>
+              </div>
+              @if (bcvLastUpdated) {
+              <span class="text-[10px] text-slate-600 dark:text-slate-400">
+                Última cotización: {{ bcvLastUpdated | date:'short' }} ({{ bcvRateSource | uppercase }})
+              </span>
+              }
+            </div>
+
+            <!-- Tasa del Día Input -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-bold mb-1.5 text-slate-700 dark:text-slate-300">
+                  Tasa de Cambio del Día (Bs / USD)
+                </label>
+                <div class="relative">
+                  <span
+                    class="absolute inset-y-0 left-0 pl-3 flex items-center text-xs font-bold text-slate-400">Bs.</span>
+                  <input type="number" step="0.05" [(ngModel)]="brandingForm.exchangeRate"
+                    class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-3 py-2 text-sm font-extrabold text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
+                </div>
+                <span class="text-[10px] text-slate-400 mt-1 block">
+                  Tasa aplicada: <strong>{{ brandingForm.exchangeRate }} Bs/$</strong> (fuente: dolarapi.com).
+                </span>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold mb-1.5 text-slate-700 dark:text-slate-300">
+                  Moneda Base de Registro
+                </label>
+                <select [(ngModel)]="brandingForm.baseCurrency"
+                  class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-brand-500">
+                  <option value="USD">Dólares Americanos ($ USD)</option>
+                  <option value="VES">Bolívares Digitales (Bs. VES)</option>
+                </select>
+                <span class="text-[10px] text-slate-400 mt-1 block">Moneda en que cargas tus costos y
+                  platillos.</span>
+              </div>
+            </div>
+
+            <!-- Modo de visualización para el cliente -->
+            <div class="space-y-2 pt-2">
+              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                ¿Cómo verá el cliente los precios en tu menú público?
+              </label>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <!-- Opción 1: USD + Bs -->
+                <label (click)="brandingForm.displayMode = 'usd_and_bs'"
+                  [class.border-brand-500]="brandingForm.displayMode === 'usd_and_bs'"
+                  [class.bg-brand-50/40]="brandingForm.displayMode === 'usd_and_bs'"
+                  [class.dark:bg-brand-950/20]="brandingForm.displayMode === 'usd_and_bs'"
+                  class="p-3 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer transition-all flex items-start gap-2.5">
+                  <input type="radio" name="displayMode" value="usd_and_bs" [(ngModel)]="brandingForm.displayMode"
+                    class="mt-0.5 text-brand-500" />
+                  <div>
+                    <div class="font-bold text-xs text-slate-800 dark:text-white">$ USD con equivalente en Bs.</div>
+                    <div class="text-[10px] text-slate-500 font-mono mt-0.5">$9.99 (Bs. 454.55)</div>
+                  </div>
+                </label>
+
+                <!-- Opción 2: Bs + USD -->
+                <label (click)="brandingForm.displayMode = 'bs_and_usd'"
+                  [class.border-brand-500]="brandingForm.displayMode === 'bs_and_usd'"
+                  [class.bg-brand-50/40]="brandingForm.displayMode === 'bs_and_usd'"
+                  [class.dark:bg-brand-950/20]="brandingForm.displayMode === 'bs_and_usd'"
+                  class="p-3 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer transition-all flex items-start gap-2.5">
+                  <input type="radio" name="displayMode" value="bs_and_usd" [(ngModel)]="brandingForm.displayMode"
+                    class="mt-0.5 text-brand-500" />
+                  <div>
+                    <div class="font-bold text-xs text-slate-800 dark:text-white">Bs. con equivalente en $ USD</div>
+                    <div class="text-[10px] text-slate-500 font-mono mt-0.5">Bs. 454.55 ($9.99)</div>
+                  </div>
+                </label>
+
+                <!-- Opción 3: Solo USD -->
+                <label (click)="brandingForm.displayMode = 'only_usd'"
+                  [class.border-brand-500]="brandingForm.displayMode === 'only_usd'"
+                  [class.bg-brand-50/40]="brandingForm.displayMode === 'only_usd'"
+                  [class.dark:bg-brand-950/20]="brandingForm.displayMode === 'only_usd'"
+                  class="p-3 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer transition-all flex items-start gap-2.5">
+                  <input type="radio" name="displayMode" value="only_usd" [(ngModel)]="brandingForm.displayMode"
+                    class="mt-0.5 text-brand-500" />
+                  <div>
+                    <div class="font-bold text-xs text-slate-800 dark:text-white">Únicamente USD</div>
+                    <div class="text-[10px] text-slate-500 font-mono mt-0.5">$9.99</div>
+                  </div>
+                </label>
+
+                <!-- Opción 4: Solo Bs -->
+                <label (click)="brandingForm.displayMode = 'only_bs'"
+                  [class.border-brand-500]="brandingForm.displayMode === 'only_bs'"
+                  [class.bg-brand-50/40]="brandingForm.displayMode === 'only_bs'"
+                  [class.dark:bg-brand-950/20]="brandingForm.displayMode === 'only_bs'"
+                  class="p-3 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer transition-all flex items-start gap-2.5">
+                  <input type="radio" name="displayMode" value="only_bs" [(ngModel)]="brandingForm.displayMode"
+                    class="mt-0.5 text-brand-500" />
+                  <div>
+                    <div class="font-bold text-xs text-slate-800 dark:text-white">Únicamente Bolívares</div>
+                    <div class="text-[10px] text-slate-500 font-mono mt-0.5">Bs. 454.55</div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <!-- Previsualización en Vivo de Precio -->
+            <div
+              class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+              <div>
+                <span class="text-[10px] uppercase font-bold text-slate-400 block">Previsualización en Tarjeta de
+                  Menú</span>
+                <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">Ejemplo: Combo Smash Burger
+                  ($9.99)</span>
+              </div>
+
+              <div class="text-right">
+                @if (brandingForm.displayMode === 'usd_and_bs') {
+                <div class="font-extrabold text-base text-brand-500">$9.99</div>
+                <div class="text-[11px] font-bold text-slate-400 font-mono">
+                  Bs. {{ (9.99 * brandingForm.exchangeRate).toLocaleString('es-VE', { minimumFractionDigits: 2,
+                  maximumFractionDigits: 2 }) }}
+                </div>
+                } @else if (brandingForm.displayMode === 'bs_and_usd') {
+                <div class="font-extrabold text-base text-brand-500 font-mono">
+                  Bs. {{ (9.99 * brandingForm.exchangeRate).toLocaleString('es-VE', { minimumFractionDigits: 2,
+                  maximumFractionDigits: 2 }) }}
+                </div>
+                <div class="text-[11px] font-bold text-slate-400">$9.99</div>
+                } @else if (brandingForm.displayMode === 'only_usd') {
+                <div class="font-extrabold text-base text-brand-500">$9.99</div>
+                } @else {
+                <div class="font-extrabold text-base text-brand-500 font-mono">
+                  Bs. {{ (9.99 * brandingForm.exchangeRate).toLocaleString('es-VE', { minimumFractionDigits: 2,
+                  maximumFractionDigits: 2 }) }}
+                </div>
+                }
+              </div>
+            </div>
+
+          </div>
+
+          <!-- PANEL 5: MÉTODOS DE PAGO ACEPTADOS & CUENTAS DE COBRO DIRECTO -->
+          <div class="card-adaptive rounded-2xl p-5 shadow-xs space-y-5 border border-slate-200 dark:border-slate-800">
+            <div class="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div
+                class="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+                <app-icon name="wallet" [size]="18"></app-icon>
+              </div>
+              <div>
+                <h3 class="font-extrabold text-sm text-slate-900 dark:text-white">Métodos de Pago Aceptados & Cuentas de
+                  Cobro</h3>
+                <p class="text-[11px] text-slate-500">Selecciona los métodos que tus clientes podrán utilizar al momento
+                  de pagar</p>
+              </div>
+            </div>
+
+            <!-- Checkboxes de Métodos Aceptados -->
+            <div class="space-y-2">
+              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                Selecciona los métodos de pago habilitados:
+              </label>
+              <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-1">
+
+                <!-- Pago Móvil -->
+                <div (click)="togglePaymentMethod.emit('mobile_transfer')"
+                  class="p-3 rounded-xl border cursor-pointer transition-all flex items-center gap-2.5"
+                  [class.border-brand-500]="brandingForm.acceptedPaymentMethods?.includes('mobile_transfer')"
+                  [class.bg-brand-500/5]="brandingForm.acceptedPaymentMethods?.includes('mobile_transfer')"
+                  [class.border-slate-200]="!brandingForm.acceptedPaymentMethods?.includes('mobile_transfer')"
+                  [class.dark:border-slate-800]="!brandingForm.acceptedPaymentMethods?.includes('mobile_transfer')">
+                  <input type="checkbox" [checked]="brandingForm.acceptedPaymentMethods?.includes('mobile_transfer')"
+                    class="rounded text-brand-500 pointer-events-none" />
+                  <div>
+                    <div class="font-bold text-xs">📲 Pago Móvil</div>
+                    <div class="text-[10px] text-slate-400">Transferencia bancaria rápida</div>
+                  </div>
+                </div>
+
+                <!-- Efectivo USD -->
+                <div (click)="togglePaymentMethod.emit('cash_usd')"
+                  class="p-3 rounded-xl border cursor-pointer transition-all flex items-center gap-2.5"
+                  [class.border-brand-500]="brandingForm.acceptedPaymentMethods?.includes('cash_usd')"
+                  [class.bg-brand-500/5]="brandingForm.acceptedPaymentMethods?.includes('cash_usd')"
+                  [class.border-slate-200]="!brandingForm.acceptedPaymentMethods?.includes('cash_usd')"
+                  [class.dark:border-slate-800]="!brandingForm.acceptedPaymentMethods?.includes('cash_usd')">
+                  <input type="checkbox" [checked]="brandingForm.acceptedPaymentMethods?.includes('cash_usd')"
+                    class="rounded text-brand-500 pointer-events-none" />
+                  <div>
+                    <div class="font-bold text-xs">💵 Efectivo $ (USD)</div>
+                    <div class="text-[10px] text-slate-400">Pago en divisa al recibir</div>
+                  </div>
+                </div>
+
+                <!-- Efectivo Bs -->
+                <div (click)="togglePaymentMethod.emit('cash_local')"
+                  class="p-3 rounded-xl border cursor-pointer transition-all flex items-center gap-2.5"
+                  [class.border-brand-500]="brandingForm.acceptedPaymentMethods?.includes('cash_local')"
+                  [class.bg-brand-500/5]="brandingForm.acceptedPaymentMethods?.includes('cash_local')"
+                  [class.border-slate-200]="!brandingForm.acceptedPaymentMethods?.includes('cash_local')"
+                  [class.dark:border-slate-800]="!brandingForm.acceptedPaymentMethods?.includes('cash_local')">
+                  <input type="checkbox" [checked]="brandingForm.acceptedPaymentMethods?.includes('cash_local')"
+                    class="rounded text-brand-500 pointer-events-none" />
+                  <div>
+                    <div class="font-bold text-xs">🪙 Efectivo Bs.</div>
+                    <div class="text-[10px] text-slate-400">Bolívares a tasa oficial</div>
+                  </div>
+                </div>
+
+                <!-- Zelle -->
+                <div (click)="togglePaymentMethod.emit('zelle')"
+                  class="p-3 rounded-xl border cursor-pointer transition-all flex items-center gap-2.5"
+                  [class.border-brand-500]="brandingForm.acceptedPaymentMethods?.includes('zelle')"
+                  [class.bg-brand-500/5]="brandingForm.acceptedPaymentMethods?.includes('zelle')"
+                  [class.border-slate-200]="!brandingForm.acceptedPaymentMethods?.includes('zelle')"
+                  [class.dark:border-slate-800]="!brandingForm.acceptedPaymentMethods?.includes('zelle')">
+                  <input type="checkbox" [checked]="brandingForm.acceptedPaymentMethods?.includes('zelle')"
+                    class="rounded text-brand-500 pointer-events-none" />
+                  <div>
+                    <div class="font-bold text-xs">⚡ Zelle Directo</div>
+                    <div class="text-[10px] text-slate-400">Transferencia Zelle USA</div>
+                  </div>
+                </div>
+
+                <!-- Punto de Venta -->
+                <div (click)="togglePaymentMethod.emit('card_terminal')"
+                  class="p-3 rounded-xl border cursor-pointer transition-all flex items-center gap-2.5"
+                  [class.border-brand-500]="brandingForm.acceptedPaymentMethods?.includes('card_terminal')"
+                  [class.bg-brand-500/5]="brandingForm.acceptedPaymentMethods?.includes('card_terminal')"
+                  [class.border-slate-200]="!brandingForm.acceptedPaymentMethods?.includes('card_terminal')"
+                  [class.dark:border-slate-800]="!brandingForm.acceptedPaymentMethods?.includes('card_terminal')">
+                  <input type="checkbox" [checked]="brandingForm.acceptedPaymentMethods?.includes('card_terminal')"
+                    class="rounded text-brand-500 pointer-events-none" />
+                  <div>
+                    <div class="font-bold text-xs">💳 Punto de Venta</div>
+                    <div class="text-[10px] text-slate-400">Tarjeta débito/crédito</div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- Formulario de Datos Reales de Pago Móvil -->
+            @if (brandingForm.acceptedPaymentMethods?.includes('mobile_transfer')) {
+            <div
+              class="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3">
+              <div class="flex items-center gap-2 font-bold text-xs text-brand-600 dark:text-brand-400">
+                <app-icon name="phone" [size]="14"></app-icon>
+                <span>Datos de Pago Móvil Oficiales del Comercio:</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-[11px] font-semibold mb-1">Banco Receptor</label>
+                  <input type="text" [(ngModel)]="brandingForm.pagoMovilBank"
+                    placeholder="Ej: Banesco (0134) o Mercantil"
+                    class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-500" />
+                </div>
+                <div>
+                  <label class="block text-[11px] font-semibold mb-1">Teléfono Pago Móvil</label>
+                  <input type="text" [(ngModel)]="brandingForm.pagoMovilPhone" placeholder="Ej: 04141234567"
+                    class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-500 font-mono" />
+                </div>
+                <div>
+                  <label class="block text-[11px] font-semibold mb-1">Cédula / RIF</label>
+                  <input type="text" [(ngModel)]="brandingForm.pagoMovilIdNumber"
+                    placeholder="Ej: J-12345678-9 o V-12345678"
+                    class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-500 font-mono" />
+                </div>
+                <div>
+                  <label class="block text-[11px] font-semibold mb-1">Nombre del Titular</label>
+                  <input type="text" [(ngModel)]="brandingForm.pagoMovilAccountName"
+                    placeholder="Ej: Inversiones Burger Lab C.A."
+                    class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-500" />
+                </div>
+              </div>
+            </div>
+            }
+
+            <!-- Formulario de Datos Reales de Zelle -->
+            @if (brandingForm.acceptedPaymentMethods?.includes('zelle')) {
+            <div
+              class="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3">
+              <div class="flex items-center gap-2 font-bold text-xs text-purple-600 dark:text-purple-400">
+                <app-icon name="mail" [size]="14"></app-icon>
+                <span>Datos de Zelle Oficiales:</span>
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold mb-1">Correo Electrónico Zelle</label>
+                <input type="email" [(ngModel)]="brandingForm.zelleEmail" placeholder="pagos@tucomercio.com"
+                  class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-500 font-mono" />
+              </div>
+            </div>
+            }
+
+          </div>
+
+          <!-- PANEL 3: INFORMACIÓN DE CONTACTO & WHATSAPP PARA PEDIDOS -->
+          <div class="card-adaptive rounded-2xl p-5 shadow-xs space-y-4 border border-slate-200 dark:border-slate-800">
+            <div class="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div
+                class="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+                <app-icon name="message-circle" [size]="18"></app-icon>
+              </div>
+              <div>
+                <h3 class="font-extrabold text-sm text-slate-900 dark:text-white">Contacto & WhatsApp de Pedidos</h3>
+                <p class="text-[11px] text-slate-500">A este número recibirás los pedidos automáticos del cliente</p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">
+                  Número de WhatsApp (con código de país)
+                </label>
+                <input type="text" [(ngModel)]="brandingForm.whatsappNumber" placeholder="+584121234567"
+                  class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-mono" />
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">
+                  Teléfono Secundario / Local
+                </label>
+                <input type="text" [(ngModel)]="brandingForm.phone" placeholder="+582121234567"
+                  class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-mono" />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">
+                Dirección Física del Local
+              </label>
+              <input type="text" [(ngModel)]="brandingForm.address"
+                class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
+            </div>
+          </div>
+        </div>
+
+        <!-- COLUMNA DERECHA -->
+        <div class="flex flex-col gap-6">
+          <!-- PANEL 2: PALETA DE COLORES E IDENTIDAD DE MARCA -->
+          <div class="card-adaptive rounded-2xl p-5 shadow-xs space-y-5 border border-slate-200 dark:border-slate-800">
+            <div class="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div
+                class="w-9 h-9 rounded-xl bg-orange-500/10 text-brand-500 flex items-center justify-center font-bold">
+                <app-icon name="palette" [size]="18"></app-icon>
+              </div>
+              <div>
+                <h3 class="font-extrabold text-sm text-slate-900 dark:text-white">Identidad Visual & Color de Marca
+                </h3>
+                <p class="text-[11px] text-slate-500">Personaliza cómo lucirá tu tienda web para tus clientes</p>
+              </div>
+            </div>
+
+            <!-- Nombre Comercial y Eslogan -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div>
+                <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">
+                  Nombre de la Sucursal / Sede
+                </label>
+                <input type="text" [(ngModel)]="brandingForm.name" placeholder="Ej: Burger King Trinitarias"
+                  class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
+              </div>
+              <div>
+                <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">
+                  Eslogan o Subtítulo Comercial
+                </label>
+                <input type="text" [(ngModel)]="brandingForm.tagline" placeholder="Ej: A la parrilla sabe mejor"
+                  class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
+              </div>
+            </div>
+
+            <!-- Selector de Color de Acento -->
+            <div class="space-y-3">
+              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                Color de Acento Principal (Botones, Destacados y Carrito)
+              </label>
+
+              <div class="flex items-center gap-2.5 flex-wrap">
+                @for (c of colorPresets; track c.hex) {
+                <button type="button" (click)="colorPresetSelected.emit(c.hex)" [title]="c.name"
+                  [style.backgroundColor]="c.hex"
+                  class="w-9 h-9 rounded-xl flex items-center justify-center text-white shadow-sm hover:scale-110 active:scale-95 transition-transform cursor-pointer relative"
+                  [class.ring-3]="brandingForm.accentColor === c.hex"
+                  [class.ring-offset-2]="brandingForm.accentColor === c.hex">
+                  @if (brandingForm.accentColor === c.hex) {
+                  <app-icon name="check" [size]="16" className="text-white drop-shadow"></app-icon>
+                  }
+                </button>
+                }
+
+                <!-- Custom Color Hex Input -->
+                <div class="flex items-center gap-2 ml-auto">
+                  <input type="color" [(ngModel)]="brandingForm.accentColor"
+                    class="w-9 h-9 rounded-xl cursor-pointer border-0 bg-transparent" />
+                  <input type="text" [(ngModel)]="brandingForm.accentColor"
+                    class="w-24 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1.5 text-xs font-mono font-bold uppercase text-slate-900 dark:text-white" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Logo & Portada con Subida desde el Dispositivo y Dimensiones Recomendadas -->
+            <div class="space-y-4 pt-2">
+              <!-- LOGO PICKER -->
+              <div
+                class="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3">
+                <div class="flex items-start justify-between gap-3 flex-wrap sm:flex-nowrap">
+                  <div class="flex items-center gap-3">
+                    <!-- Mini Thumbnail -->
+                    <div
+                      class="w-14 h-14 rounded-xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 flex items-center justify-center overflow-hidden shadow-xs flex-shrink-0">
+                      @if (brandingForm.logoUrl) {
+                      <img [src]="brandingForm.logoUrl" class="w-full h-full object-cover" alt="Logo" />
+                      } @else {
+                      <app-icon name="camera" [size]="22" className="text-slate-400"></app-icon>
+                      }
+                    </div>
+
+                    <div>
+                      <div class="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-1.5 flex-wrap">
+                        <span>Logo del Comercio</span>
+                        <span
+                          class="text-[9px] px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 font-extrabold uppercase">1:1
+                          Cuadrado</span>
+                      </div>
+                      <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                        Recomendado: <strong class="text-slate-700 dark:text-slate-200">500 x 500 px</strong> (mín. 200
+                        x 200 px).<br />
+                        Formatos: <span class="font-medium">PNG transparente, JPG o WEBP</span> (máx. 3 MB).
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Upload Button -->
+                  <div class="sm:self-center">
+                    <input type="file" #logoFileInput accept="image/png,image/jpeg,image/webp"
+                      (change)="imageFileSelected.emit({ event: $event, type: 'logo' })" class="hidden" />
+                    <button type="button" (click)="logoFileInput.click()" [disabled]="isUploadingLogo"
+                      class="px-3.5 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white text-xs font-extrabold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer flex-shrink-0 active:scale-95">
+                      @if (isUploadingLogo) {
+                        <span class="animate-spin text-sm">⏳</span>
+                        <span>Subiendo a Storage...</span>
+                      } @else {
+                        <app-icon name="upload" [size]="14" className="text-white"></app-icon>
+                        <span>{{ brandingForm.logoUrl ? 'Cambiar Logo' : 'Subir desde dispositivo' }}</span>
+                      }
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Direct URL toggle -->
+                <div
+                  class="pt-2 border-t border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between">
+                  <button type="button" (click)="toggleLogoUrlInput.emit()"
+                    class="text-[10px] text-brand-600 dark:text-brand-400 hover:underline font-semibold flex items-center gap-1 cursor-pointer">
+                    <span>🔗 {{ showLogoUrlInput ? 'Ocultar enlace URL' : 'O pegar enlace URL de logo externo'
+                      }}</span>
+                  </button>
+                </div>
+
+                @if (showLogoUrlInput) {
+                <input type="url" [(ngModel)]="brandingForm.logoUrl" placeholder="https://ejemplo.com/logo.png"
+                  class="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-mono" />
+                }
+              </div>
+
+              <!-- BANNER PICKER -->
+              <div
+                class="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3">
+                <div class="flex items-start justify-between gap-3 flex-wrap sm:flex-nowrap">
+                  <div class="flex items-center gap-3">
+                    <!-- Mini Thumbnail -->
+                    <div
+                      class="w-20 h-12 rounded-xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 flex items-center justify-center overflow-hidden shadow-xs flex-shrink-0">
+                      @if (brandingForm.bannerUrl) {
+                      <img [src]="brandingForm.bannerUrl" class="w-full h-full object-cover" alt="Banner" />
+                      } @else {
+                      <app-icon name="camera" [size]="22" className="text-slate-400"></app-icon>
+                      }
+                    </div>
+
+                    <div>
+                      <div class="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-1.5 flex-wrap">
+                        <span>Portada / Banner Hero</span>
+                        <span
+                          class="text-[9px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 font-extrabold uppercase">16:9
+                          Panorámico</span>
+                      </div>
+                      <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                        Recomendado: <strong class="text-slate-700 dark:text-slate-200">1200 x 450 px</strong> o <strong
+                          class="text-slate-700 dark:text-slate-200">1600 x 600 px</strong>.<br />
+                        Formatos: <span class="font-medium">JPG o WEBP de alta resolución</span> (máx. 5 MB).
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Upload Button -->
+                  <div class="sm:self-center">
+                    <input type="file" #bannerFileInput accept="image/png,image/jpeg,image/webp"
+                      (change)="imageFileSelected.emit({ event: $event, type: 'banner' })" class="hidden" />
+                    <button type="button" (click)="bannerFileInput.click()" [disabled]="isUploadingBanner"
+                      class="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-extrabold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer flex-shrink-0 active:scale-95">
+                      @if (isUploadingBanner) {
+                        <span class="animate-spin text-sm">⏳</span>
+                        <span>Subiendo a Storage...</span>
+                      } @else {
+                        <app-icon name="upload" [size]="14" className="text-white"></app-icon>
+                        <span>{{ brandingForm.bannerUrl ? 'Cambiar Portada' : 'Subir desde dispositivo' }}</span>
+                      }
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Direct URL toggle -->
+                <div
+                  class="pt-2 border-t border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between">
+                  <button type="button" (click)="toggleBannerUrlInput.emit()"
+                    class="text-[10px] text-blue-600 dark:text-blue-400 hover:underline font-semibold flex items-center gap-1 cursor-pointer">
+                    <span>🔗 {{ showBannerUrlInput ? 'Ocultar enlace URL' : 'O pegar enlace URL de portada externa'
+                      }}</span>
+                  </button>
+                </div>
+
+                @if (showBannerUrlInput) {
+                <input type="url" [(ngModel)]="brandingForm.bannerUrl" placeholder="https://ejemplo.com/portada.jpg"
+                  class="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-blue-500 font-mono" />
+                }
+              </div>
+            </div>
+
+            <!-- Mini Live Mockup de Cabecera de la Tienda -->
+            <div class="pt-2">
+              <span class="text-[10px] uppercase font-bold text-slate-400 block mb-2">Vista Previa de tu Cabecera
+                Web</span>
+              <div
+                class="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-sm relative h-32 flex items-end p-3 bg-slate-900">
+                @if (brandingForm.bannerUrl) {
+                  <img [src]="brandingForm.bannerUrl" class="absolute inset-0 w-full h-full object-cover opacity-85" />
+                } @else {
+                  <div class="absolute inset-0 bg-gradient-to-r from-slate-900 to-slate-800"></div>
+                }
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent"></div>
+
+                <div class="relative z-10 flex items-center gap-3">
+                  @if (brandingForm.logoUrl) {
+                    <img [src]="brandingForm.logoUrl"
+                      class="w-12 h-12 rounded-xl object-contain p-0.5 border-2 border-white shadow-md bg-white flex-shrink-0" />
+                  } @else {
+                    <div class="w-12 h-12 rounded-xl bg-brand-500 flex items-center justify-center text-white border-2 border-white shadow-md flex-shrink-0">
+                      <app-icon name="store" [size]="20"></app-icon>
+                    </div>
+                  }
+                  <div>
+                    <div class="font-extrabold text-sm text-white leading-tight">{{ brandingForm.name }}</div>
+                    <div class="text-[10px] text-slate-200 line-clamp-1">{{ brandingForm.tagline }}</div>
+                    <div
+                      class="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold text-white shadow-xs"
+                      [style.backgroundColor]="brandingForm.accentColor">
+                      Abierto ahora • Delivery Express
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- PANEL 4: TARIFAS DE DELIVERY & COBERTURA -->
+          <div class="card-adaptive rounded-2xl p-5 shadow-xs space-y-4 border border-slate-200 dark:border-slate-800">
+            <div class="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div
+                class="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
+                <app-icon name="bike" [size]="18"></app-icon>
+              </div>
+              <div>
+                <h3 class="font-extrabold text-sm text-slate-900 dark:text-white">Delivery & Despacho</h3>
+                <p class="text-[11px] text-slate-500">Parámetros de envío para el cálculo en el checkout</p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">
+                  Tarifa Base de Envío ($ USD)
+                </label>
+                <div class="relative">
+                  <span
+                    class="absolute inset-y-0 left-0 pl-3 flex items-center text-xs font-bold text-slate-400">$</span>
+                  <input type="number" step="0.5" [(ngModel)]="brandingForm.baseDeliveryFee"
+                    class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl pl-8 pr-3 py-2 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
+                </div>
+                <span class="text-[10px] text-slate-400 mt-1 block">
+                  Equivalente: Bs. {{ (brandingForm.baseDeliveryFee * brandingForm.exchangeRate).toFixed(2) }}
+                </span>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">
+                  Radio Máximo de Cobertura (km)
+                </label>
+                <input type="number" step="1" [(ngModel)]="brandingForm.deliveryRadiusKm"
+                  class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
+                <span class="text-[10px] text-slate-400 mt-1 block">
+                  Límite máximo permitido para delivery a domicilio.
+                </span>
+              </div>
+            </div>
+
+            <!-- RANGOS PERSONALIZADOS POR KILOMETRAJE -->
+            <div class="border-t border-slate-100 dark:border-slate-800 pt-3 space-y-3">
+              <div class="flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <h4 class="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <span>📏</span>
+                    <span>Tarifas por Kilometraje (Escalas de Distancia)</span>
+                  </h4>
+                  <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    Configura el precio exacto según los kilómetros entre tu local y el cliente
+                  </p>
+                </div>
+
+                <button type="button" (click)="addDeliveryTier.emit()"
+                  class="px-2.5 py-1.5 rounded-lg bg-brand-500/10 hover:bg-brand-500/20 text-brand-600 dark:text-brand-400 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer">
+                  <app-icon name="plus" [size]="14"></app-icon>
+                  <span>Agregar Rango</span>
+                </button>
+              </div>
+
+              <!-- Tiers List -->
+              <div class="space-y-2">
+                @for (tier of brandingForm.deliveryTiers; track tier.id; let idx = $index) {
+                <div
+                  class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                  <!-- Range label -->
+                  <div
+                    class="flex items-center gap-1 text-xs font-bold text-slate-700 dark:text-slate-300 flex-shrink-0">
+                    <span
+                      class="w-5 h-5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-[10px]">
+                      {{ idx + 1 }}
+                    </span>
+                    <span>De</span>
+                    <input type="number" step="0.5" [(ngModel)]="tier.minKm"
+                      class="w-16 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1 text-xs font-bold text-center text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
+                    <span>a</span>
+                    <input type="number" step="0.5" [(ngModel)]="tier.maxKm"
+                      class="w-16 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1 text-xs font-bold text-center text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
+                    <span>km</span>
+                  </div>
+
+                  <!-- Price input -->
+                  <div class="flex items-center gap-1.5 flex-1 min-w-[140px] ml-auto">
+                    <span class="text-xs font-semibold text-slate-500">Costo:</span>
+                    <div class="relative flex-1">
+                      <span
+                        class="absolute inset-y-0 left-0 pl-2.5 flex items-center text-xs font-bold text-slate-400">$</span>
+                      <input type="number" step="0.25" [(ngModel)]="tier.price"
+                        class="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg pl-6 pr-2 py-1 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
+                    </div>
+                    <span class="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                      ≈ Bs. {{ (tier.price * brandingForm.exchangeRate).toFixed(2) }}
+                    </span>
+                  </div>
+
+                  <!-- Delete action -->
+                  @if (brandingForm.deliveryTiers.length > 1) {
+                  <button type="button" (click)="removeDeliveryTier.emit(idx)" title="Eliminar rango"
+                    class="p-1.5 rounded-lg hover:bg-rose-500/10 text-slate-400 hover:text-rose-500 transition-colors cursor-pointer flex-shrink-0">
+                    <app-icon name="trash" [size]="14"></app-icon>
+                  </button>
+                  }
+                </div>
+                }
+              </div>
+
+              <!-- Informational banner -->
+              <div
+                class="p-2.5 rounded-xl bg-blue-500/5 border border-blue-500/15 text-blue-700 dark:text-blue-300 text-[11px] leading-relaxed">
+                💡 <strong>Cálculo Automático:</strong> Cuando el cliente fija su ubicación, el sistema calcula la
+                distancia exacta vía GPS. Si supera los <strong>{{ brandingForm.deliveryRadiusKm }} km</strong> de
+                cobertura máxima, la orden de delivery se bloqueará informando que está fuera de rango.
+              </div>
+            </div>
+
+            <!-- Coordenadas GPS del Comercio -->
+            <div class="border-t border-slate-100 dark:border-slate-800 pt-3 space-y-2">
+              <div class="flex items-center justify-between">
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Coordenadas GPS del Local (Origen de Rutas)
+                  </label>
+                  <span class="text-[10px] text-slate-400">Punto de partida para el cálculo de distancia y ruta de
+                    entrega</span>
+                </div>
+
+                <button type="button" (click)="captureStoreGps.emit()" [disabled]="isDetectingStoreGps"
+                  class="text-[11px] font-bold text-brand-600 dark:text-brand-400 hover:text-brand-700 flex items-center gap-1.5 bg-brand-500/10 hover:bg-brand-500/20 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer disabled:opacity-50">
+                  @if (isDetectingStoreGps) {
+                  <span class="animate-spin text-xs">⏳</span>
+                  <span>Detectando GPS...</span>
+                  } @else {
+                  <span>📍 Capturar GPS Actual</span>
+                  }
+                </button>
+              </div>
+
+              @if (storeGpsMessage) {
+              <div
+                class="text-[11px] font-medium px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5">
+                <span>🛰️</span>
+                <span>{{ storeGpsMessage }}</span>
+              </div>
+              }
+
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-[11px] font-semibold text-slate-500 mb-1">Latitud</label>
+                  <input type="number" step="0.000001" [(ngModel)]="brandingForm.latitude"
+                    (ngModelChange)="updateLocation.emit()" placeholder="Ej: 10.4820"
+                    class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
+                </div>
+                <div>
+                  <label class="block text-[11px] font-semibold text-slate-500 mb-1">Longitud</label>
+                  <input type="number" step="0.000001" [(ngModel)]="brandingForm.longitude"
+                    (ngModelChange)="updateLocation.emit()" placeholder="Ej: -66.8610"
+                    class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
+                </div>
+              </div>
+
+              <!-- Selector Interactivo en Mapa Satelital -->
+              <div class="mt-3 space-y-1.5">
+                <div class="flex items-center justify-between text-[11px] text-slate-500">
+                  <span class="font-bold flex items-center gap-1 text-slate-700 dark:text-slate-300">
+                    <span>🗺️</span>
+                    <span>Seleccionar ubicación en el mapa interactivo</span>
+                  </span>
+                  <span class="text-[10px] text-brand-600 dark:text-brand-400 font-semibold">Haz clic en el mapa o
+                    arrastra el marcador</span>
+                </div>
+                <div id="settings-location-picker-map"
+                  class="w-full h-56 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-xs z-0">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- PANEL 6: HORARIO DE TRABAJO & DÍAS DE ATENCIÓN (Ancho Completo) -->
+      <div class="mt-6">
+        <!-- PANEL 5: HORARIO DE TRABAJO & DÍAS DE ATENCIÓN -->
+        <div class="card-adaptive rounded-2xl p-5 shadow-xs space-y-4 border border-slate-200 dark:border-slate-800">
+          <div
+            class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div class="flex items-center gap-2.5">
+              <div
+                class="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
+                <app-icon name="clock" [size]="18"></app-icon>
+              </div>
+              <div>
+                <h3 class="font-extrabold text-sm text-slate-900 dark:text-white">Horario de Trabajo & Operación Semanal
+                </h3>
+                <p class="text-[11px] text-slate-500">Define las horas de apertura, cierre y días activos de esta
+                  sucursal</p>
+              </div>
+            </div>
+
+            <!-- Presets Rápidos -->
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-[11px] font-bold text-slate-400">Plantillas:</span>
+              <button type="button" (click)="schedulePreset.emit('24h')"
+                class="px-2.5 py-1 text-[11px] font-black rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800 hover:bg-emerald-500 hover:text-white transition-colors cursor-pointer">
+                ⚡ 24 Horas (Siempre Abierto)
+              </button>
+              <button type="button" (click)="schedulePreset.emit('all')"
+                class="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-brand-500 hover:text-white transition-colors cursor-pointer">
+                Todos los días
+              </button>
+              <button type="button" (click)="schedulePreset.emit('weekdays')"
+                class="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-brand-500 hover:text-white transition-colors cursor-pointer">
+                Lunes a Viernes
+              </button>
+              <button type="button" (click)="schedulePreset.emit('weekends')"
+                class="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-brand-500 hover:text-white transition-colors cursor-pointer">
+                Fines de Semana
+              </button>
+            </div>
+          </div>
+
+          <!-- Indicador de Tiempo Real Venezuela (UTC-4) y Estado Actual -->
+          <div
+            class="px-3.5 py-2.5 rounded-xl bg-blue-50/80 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div class="flex items-center gap-2">
+              <span class="text-base">🇻🇪</span>
+              <span class="text-slate-700 dark:text-slate-300">
+                Zona horaria oficial: <strong>Venezuela (UTC-4)</strong> • Hora actual: <strong
+                  class="text-blue-700 dark:text-blue-300">{{ currentVzlaTimeFormatted }}</strong>
+              </span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-[11px] font-bold text-slate-500 dark:text-slate-400">Estado en este momento:</span>
+              <span
+                class="px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider shadow-xs flex items-center gap-1.5"
+                [class.bg-emerald-500]="isCurrentScheduleOpenNow" [class.text-white]="true"
+                [class.bg-rose-500]="!isCurrentScheduleOpenNow">
+                <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                <span>{{ isCurrentScheduleOpenNow ? 'Abierto Ahora' : 'Cerrado Ahora' }}</span>
+              </span>
+            </div>
+          </div>
+
+          <!-- Horario General y Botón de Aplicar -->
+          <div
+            class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-3 flex-wrap">
+              <span class="text-xs font-bold text-slate-700 dark:text-slate-300">Horario Base:</span>
+              <div class="flex items-center gap-1.5">
+                <span class="text-[11px] text-slate-400">Apertura:</span>
+                <input type="text" [(ngModel)]="brandingForm.openTime" placeholder="11:00"
+                  class="w-20 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1 text-xs font-mono font-bold text-center text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="text-[11px] text-slate-400">Cierre:</span>
+                <input type="text" [(ngModel)]="brandingForm.closeTime" placeholder="23:00"
+                  class="w-20 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1 text-xs font-mono font-bold text-center text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
+              </div>
+            </div>
+
+            <button type="button" (click)="copyGeneralHours.emit()"
+              class="px-3 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer">
+              <app-icon name="copy" [size]="13"></app-icon>
+              <span>Copiar a todos los días</span>
+            </button>
+          </div>
+
+          <!-- Días de la semana interactivos -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2.5 pt-1">
+            @for (d of brandingForm.scheduleDays; track d.day) {
+            <div class="p-3 rounded-xl border transition-all" [class.bg-white]="d.open"
+              [class.dark:bg-slate-900]="d.open" [class.border-brand-500]="d.open" [class.shadow-xs]="d.open"
+              [class.bg-slate-100]="!d.open" [class.dark:bg-slate-800/40]="!d.open" [class.border-slate-200]="!d.open"
+              [class.dark:border-slate-800]="!d.open" [class.opacity-60]="!d.open">
+              <div class="flex items-center justify-between mb-2">
+                <span class="font-extrabold text-xs" [class.text-brand-600]="d.open"
+                  [class.dark:text-brand-400]="d.open">
+                  {{ d.day }}
+                </span>
+                <button type="button" (click)="d.open = !d.open"
+                  class="text-[10px] font-black uppercase px-2 py-0.5 rounded-md cursor-pointer transition-colors"
+                  [class.bg-emerald-500]="d.open" [class.text-white]="d.open" [class.bg-slate-300]="!d.open"
+                  [class.text-slate-700]="!d.open" [class.dark:bg-slate-700]="!d.open"
+                  [class.dark:text-slate-300]="!d.open">
+                  {{ d.open ? 'Abierto' : 'Cerrado' }}
+                </button>
+              </div>
+
+              @if (d.open) {
+              <div class="space-y-1.5 text-[11px]">
+                <div>
+                  <span class="text-[10px] text-slate-400 font-semibold block">De:</span>
+                  <input type="text" [(ngModel)]="d.from" placeholder="11:00"
+                    class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
+                </div>
+                <div>
+                  <span class="text-[10px] text-slate-400 font-semibold block">A:</span>
+                  <input type="text" [(ngModel)]="d.to" placeholder="23:00"
+                    class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" />
+                </div>
+              </div>
+              } @else {
+              <div class="h-16 flex items-center justify-center text-[11px] font-bold text-slate-400 italic">
+                No laboral
+              </div>
+              }
+            </div>
+            }
+          </div>
+        </div>
+      </div>
+
+    </div>

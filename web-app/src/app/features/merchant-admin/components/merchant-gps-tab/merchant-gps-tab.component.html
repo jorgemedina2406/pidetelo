@@ -1,0 +1,261 @@
+
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 class="text-2xl font-extrabold tracking-tight">Radar GPS en Vivo</h2>
+            <span
+              class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              Flota en Servicio (OpenStreetMap)
+            </span>
+            @if (selectedBranch; as sb) {
+            <span
+              class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20">
+              📍 {{ sb.name }}
+            </span>
+            }
+          </div>
+
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            Monitoreo satelital exclusivo de la ubicación de tus motorizados en tiempo real.
+          </p>
+        </div>
+
+        <!-- Radar Controls & Filter Pills -->
+        <div class="flex items-center gap-2 flex-wrap">
+          <!-- Filtro por Tipo de Flota: Propios vs Independientes -->
+          <div
+            class="bg-slate-100 dark:bg-slate-900 p-1 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center gap-1">
+            <button (click)="radarFleetTypeChange.emit('all')"
+              [class.bg-white]="radarFleetType === 'all'" [class.dark:bg-slate-800]="radarFleetType === 'all'"
+              [class.text-brand-600]="radarFleetType === 'all'" [class.shadow-xs]="radarFleetType === 'all'"
+              class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer">
+              Toda la Flota ({{ radarCountAll }})
+            </button>
+            <button (click)="radarFleetTypeChange.emit('own')"
+              [class.bg-white]="radarFleetType === 'own'" [class.dark:bg-slate-800]="radarFleetType === 'own'"
+              [class.text-amber-600]="radarFleetType === 'own'" [class.shadow-xs]="radarFleetType === 'own'"
+              class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1">
+              <span>🏢 Propios</span>
+              <span class="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-500/10 text-amber-600 font-extrabold">{{ radarCountOwn }}</span>
+            </button>
+            <button (click)="radarFleetTypeChange.emit('independent')"
+              [class.bg-white]="radarFleetType === 'independent'" [class.dark:bg-slate-800]="radarFleetType === 'independent'"
+              [class.text-purple-600]="radarFleetType === 'independent'" [class.shadow-xs]="radarFleetType === 'independent'"
+              class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1">
+              <span>🌐 Independientes</span>
+              <span class="text-[10px] px-1.5 py-0.2 rounded-full bg-purple-500/10 text-purple-600 font-extrabold">{{ radarCountIndependent }}</span>
+            </button>
+          </div>
+
+          <!-- Filtro por Estado: Disponibles vs En Reparto -->
+          <div
+            class="bg-slate-100 dark:bg-slate-900 p-1 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center gap-1">
+            <button (click)="radarFilterChange.emit('all')"
+              [class.bg-white]="radarFilter === 'all'" [class.dark:bg-slate-800]="radarFilter === 'all'"
+              [class.text-brand-600]="radarFilter === 'all'" [class.shadow-xs]="radarFilter === 'all'"
+              class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer">
+              Todos
+            </button>
+            <button (click)="radarFilterChange.emit('available')"
+              [class.bg-white]="radarFilter === 'available'" [class.dark:bg-slate-800]="radarFilter === 'available'"
+              [class.text-emerald-600]="radarFilter === 'available'" [class.shadow-xs]="radarFilter === 'available'"
+              class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              <span>Disponibles ({{ radarCountAvailable }})</span>
+            </button>
+            <button (click)="radarFilterChange.emit('delivering')"
+              [class.bg-white]="radarFilter === 'delivering'"
+              [class.dark:bg-slate-800]="radarFilter === 'delivering'"
+              [class.text-blue-600]="radarFilter === 'delivering'" [class.shadow-xs]="radarFilter === 'delivering'"
+              class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+              <span>En Reparto ({{ radarCountDelivering }})</span>
+            </button>
+          </div>
+
+          <button (click)="recenterFleetMap.emit()" title="Centrar toda la flota"
+            class="px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:text-brand-500 hover:border-brand-500 shadow-xs text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer">
+            <app-icon name="crosshair" [size]="14"></app-icon>
+            <span>Centrar Flota</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Grid: Riders List Sidebar + Leaflet Map -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+
+        <!-- Left Sidebar: Riders Card List (4 cols) -->
+        <div class="lg:col-span-4 space-y-3 max-h-[580px] overflow-y-auto pr-1">
+          <div class="flex items-center justify-between text-[11px] font-black uppercase text-slate-400 tracking-wider px-1">
+            <span>Motorizados en Radar ({{ radarRiders.length }})</span>
+            @if (radarFleetType !== 'all') {
+            <span class="text-[10px] text-brand-500 lowercase font-bold">filtrado por tipo</span>
+            }
+          </div>
+
+          @for (r of radarRiders; track r.id) {
+          @let activeOrder = getRiderActiveOrder(r.id);
+          <div (click)="flyToRider.emit(r)" [class.border-brand-500]="selectedRadarRider?.id === r.id"
+            [class.bg-brand-500/[0.04]]="selectedRadarRider?.id === r.id"
+            [class.dark:bg-brand-500/[0.08]]="selectedRadarRider?.id === r.id"
+            [class.shadow-md]="selectedRadarRider?.id === r.id"
+            [class.shadow-brand-500/10]="selectedRadarRider?.id === r.id"
+            [class.border-slate-200]="selectedRadarRider?.id !== r.id"
+            [class.dark:border-slate-800]="selectedRadarRider?.id !== r.id"
+            class="card-adaptive rounded-2xl p-3.5 shadow-xs border-2 transition-all cursor-pointer space-y-2.5 hover:border-brand-500/60">
+
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-xl flex items-center justify-center font-bold relative"
+                  [class.bg-emerald-500/15]="r.status === 'available'"
+                  [class.text-emerald-600]="r.status === 'available'" [class.bg-blue-500/15]="r.status === 'delivering'"
+                  [class.text-blue-600]="r.status === 'delivering'" [class.bg-slate-200]="r.status === 'offline'"
+                  [class.text-slate-500]="r.status === 'offline'">
+                  <app-icon name="bike" [size]="18"></app-icon>
+                  <span
+                    class="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-slate-900"
+                    [class.bg-emerald-500]="r.status === 'available'" [class.bg-blue-500]="r.status === 'delivering'"
+                    [class.bg-slate-400]="r.status === 'offline'"></span>
+                </div>
+
+                <div>
+                  <div class="font-extrabold text-xs text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <span>{{ r.name }}</span>
+                    @if (!r.isIndependent) {
+                    <span class="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/20">
+                      🏢 Propio
+                    </span>
+                    } @else {
+                    <span class="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-purple-500/15 text-purple-700 dark:text-purple-400 border border-purple-500/20">
+                      🌐 Red Libre
+                    </span>
+                    }
+                  </div>
+                  <div class="text-[10px] font-mono text-slate-400 uppercase">{{ r.vehiclePlate }} • {{ r.vehicleType }}
+                  </div>
+                </div>
+              </div>
+
+              <span class="px-2 py-0.5 rounded-full text-[9px] font-extrabold border"
+                [class.bg-emerald-50]="r.status === 'available'" [class.text-emerald-700]="r.status === 'available'"
+                [class.border-emerald-200]="r.status === 'available'"
+                [class.dark:bg-emerald-950/40]="r.status === 'available'"
+                [class.dark:text-emerald-400]="r.status === 'available'" [class.bg-blue-50]="r.status === 'delivering'"
+                [class.text-blue-700]="r.status === 'delivering'" [class.border-blue-200]="r.status === 'delivering'">
+                {{ r.status === 'available' ? 'Disponible' : r.status === 'delivering' ? 'En Reparto' : 'Desconectado'
+                }}
+              </span>
+            </div>
+
+            @if (r.branchName || r.branchId) {
+            <div class="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
+              <span>🏢</span>
+              <span>Sede: <strong>{{ r.branchName || getBranchName(r.branchId) }}</strong></span>
+            </div>
+            }
+
+            <!-- Indicador destacado de orden activa en entrega -->
+            @if (activeOrder) {
+            <div class="px-2.5 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/50 text-[10px] space-y-0.5">
+              <div class="text-blue-700 dark:text-blue-300 font-extrabold flex items-center justify-between">
+                <span>🛵 Entregando: {{ activeOrder.orderNumber }}</span>
+                <span class="text-[9px] bg-blue-500 text-white px-1.5 py-0.2 rounded-full font-bold animate-pulse">En Ruta</span>
+              </div>
+              <div class="text-slate-600 dark:text-slate-400 truncate">
+                Destino: {{ activeOrder.customer?.deliveryAddress || 'En camino al cliente' }}
+              </div>
+            </div>
+            }
+
+            <!-- Estado satelital real del GPS del teléfono del motorizado -->
+            <div class="flex items-center justify-between text-[10px]">
+              @if (r.currentLocation) {
+              <span class="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>GPS en Vivo ({{ r.currentLocation.lat | number:'1.4-4' }}, {{ r.currentLocation.lng |
+                  number:'1.4-4' }})</span>
+              </span>
+              } @else {
+              <span class="text-amber-500 dark:text-amber-400 font-medium flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                <span>Esperando señal GPS del móvil</span>
+              </span>
+              }
+            </div>
+
+            <!-- Action shortcuts -->
+            <div class="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
+              <div class="flex items-center gap-1.5">
+                <a [href]="'tel:' + r.phone" (click)="$event.stopPropagation()"
+                  class="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 transition-colors"
+                  title="Llamar al motorizado">
+                  <app-icon name="phone" [size]="12"></app-icon>
+                </a>
+                <a [href]="'https://wa.me/' + r.phone.replace('+', '')" target="_blank"
+                  (click)="$event.stopPropagation()"
+                  class="p-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 transition-colors"
+                  title="Escribir por WhatsApp">
+                  <app-icon name="message-circle" [size]="12"></app-icon>
+                </a>
+              </div>
+
+              <button (click)="flyToRider.emit(r); $event.stopPropagation()"
+                class="text-brand-500 hover:text-brand-600 font-extrabold text-[11px] flex items-center gap-1">
+                <app-icon name="crosshair" [size]="12"></app-icon>
+                <span>Localizar</span>
+              </button>
+            </div>
+
+          </div>
+          }
+
+          @if (radarRiders.length === 0) {
+          <div
+            class="p-8 text-center text-xs text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl">
+            No hay motorizados que coincidan con los filtros seleccionados.
+          </div>
+          }
+        </div>
+
+        <!-- Right Map Container (8 cols) -->
+        <div class="lg:col-span-8">
+          <div
+            class="card-adaptive rounded-2xl overflow-hidden shadow-xs relative border border-slate-200 dark:border-slate-800">
+            <div id="merchant-leaflet-map" class="w-full h-[580px] min-h-[580px] z-0"></div>
+
+            <!-- Floating Overlay Map Legend -->
+            <div
+              class="absolute bottom-4 left-4 z-[400] bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-md space-y-1.5 text-xs">
+              <div class="font-black text-slate-900 dark:text-white flex items-center gap-1.5">
+                <app-icon name="bike" [size]="14" className="text-brand-500"></app-icon>
+                <span>Radar de Repartidores</span>
+              </div>
+              <div class="flex items-center gap-3 text-[11px]">
+                <div class="flex items-center gap-1.5">
+                  <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                  <span class="text-slate-600 dark:text-slate-300">Disponible</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+                  <span class="text-slate-600 dark:text-slate-300">En Reparto</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <span class="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
+                  <span class="text-slate-600 dark:text-slate-300">Offline</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Floating Recenter Shortcut -->
+            <div class="absolute top-4 right-4 z-[400]">
+              <button (click)="recenterFleetMap.emit()"
+                class="px-3 py-1.5 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-800 shadow-md text-slate-700 dark:text-slate-300 hover:text-brand-500 flex items-center gap-1.5 transition-colors cursor-pointer">
+                <app-icon name="crosshair" [size]="14"></app-icon>
+                <span>Re-centrar Flota</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
