@@ -760,9 +760,10 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
             : '';
         categoriesList.add({
           'name': catName,
-          'icon': (cat['icon'] != null && cat['icon'].toString().trim().isNotEmpty)
-              ? cat['icon'].toString().trim()
-              : '🏷️',
+          'icon':
+              (cat['icon'] != null && cat['icon'].toString().trim().isNotEmpty)
+                  ? cat['icon'].toString().trim()
+                  : '🏷️',
           'filter': catName,
           'desc': cat['description']?.toString() ??
               (subcats.isNotEmpty ? subcats : 'Comercios de $catName'),
@@ -788,12 +789,42 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     // Si aún está vacía o no hay conexión, mantener catálogo base
     if (categoriesList.length <= 1) {
       final fallbackList = [
-        {'name': 'Restaurantes', 'icon': '🍽️', 'filter': 'Comida', 'desc': 'Hamburguesas, pizzas, sushi y más'},
-        {'name': 'Súper & Bodegones', 'icon': '🛒', 'filter': 'Markets', 'desc': 'Víveres, compras y abastos'},
-        {'name': 'Farmacias', 'icon': '💊', 'filter': 'Farmacias', 'desc': 'Medicinas y artículos de salud'},
-        {'name': 'Mascotas', 'icon': '🐾', 'filter': 'Mascotas', 'desc': 'Alimento y accesorios'},
-        {'name': 'Licores', 'icon': '🍷', 'filter': 'Licores', 'desc': 'Cervezas, vinos y destilados'},
-        {'name': 'Postres & Dulces', 'icon': '🧁', 'filter': 'Postres', 'desc': 'Pastelería, helados y tortas'},
+        {
+          'name': 'Restaurantes',
+          'icon': '🍽️',
+          'filter': 'Comida',
+          'desc': 'Hamburguesas, pizzas, sushi y más'
+        },
+        {
+          'name': 'Súper & Bodegones',
+          'icon': '🛒',
+          'filter': 'Markets',
+          'desc': 'Víveres, compras y abastos'
+        },
+        {
+          'name': 'Farmacias',
+          'icon': '💊',
+          'filter': 'Farmacias',
+          'desc': 'Medicinas y artículos de salud'
+        },
+        {
+          'name': 'Mascotas',
+          'icon': '🐾',
+          'filter': 'Mascotas',
+          'desc': 'Alimento y accesorios'
+        },
+        {
+          'name': 'Licores',
+          'icon': '🍷',
+          'filter': 'Licores',
+          'desc': 'Cervezas, vinos y destilados'
+        },
+        {
+          'name': 'Postres & Dulces',
+          'icon': '🧁',
+          'filter': 'Postres',
+          'desc': 'Pastelería, helados y tortas'
+        },
       ];
       categoriesList.addAll(fallbackList);
     }
@@ -802,9 +833,12 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
       if (filter == 'Todos') return _stores.length;
       final target = filter.toLowerCase().trim();
       return _stores.where((store) {
-        final storeCat = (store['category'] ?? '').toString().toLowerCase().trim();
+        final storeCat =
+            (store['category'] ?? '').toString().toLowerCase().trim();
         final storeName = (store['name'] ?? '').toString().toLowerCase();
-        final storeDesc = (store['tagline'] ?? store['description'] ?? '').toString().toLowerCase();
+        final storeDesc = (store['tagline'] ?? store['description'] ?? '')
+            .toString()
+            .toLowerCase();
         if (target == 'comida' || target == 'restaurantes') {
           return storeCat.contains('hamburguesa') ||
               storeCat.contains('sushi') ||
@@ -1335,7 +1369,9 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   style: GoogleFonts.outfit(
                     fontSize: 9.5,
                     fontWeight: FontWeight.w700,
-                    color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                    color: isDark
+                        ? const Color(0xFF94A3B8)
+                        : const Color(0xFF64748B),
                     letterSpacing: 0.5,
                   ),
                 ),
@@ -1359,7 +1395,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.location_on_rounded, size: 14, color: AppTheme.primary),
+                      const Icon(Icons.location_on_rounded,
+                          size: 14, color: AppTheme.primary),
                       const SizedBox(width: 3),
                       Flexible(
                         child: Text(
@@ -1369,7 +1406,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                           style: GoogleFonts.outfit(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
-                            color: isDark ? Colors.white : const Color(0xFF0F172A),
+                            color:
+                                isDark ? Colors.white : const Color(0xFF0F172A),
                           ),
                         ),
                       ),
@@ -1377,7 +1415,9 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                       Icon(
                         Icons.keyboard_arrow_down_rounded,
                         size: 16,
-                        color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                        color: isDark
+                            ? const Color(0xFF94A3B8)
+                            : const Color(0xFF64748B),
                       ),
                     ],
                   ),
@@ -1441,18 +1481,21 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 ),
             ],
           ),
-
           PopupMenuButton<String>(
             icon: Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                color:
+                    isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                  color: isDark
+                      ? const Color(0xFF334155)
+                      : const Color(0xFFE2E8F0),
                 ),
               ),
-              child: const Icon(Icons.person_rounded, size: 18, color: AppTheme.primary),
+              child: const Icon(Icons.person_rounded,
+                  size: 18, color: AppTheme.primary),
             ),
             tooltip: 'Opciones de Cuenta',
             onSelected: (val) {
@@ -1481,7 +1524,9 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        user?.name.isNotEmpty == true ? user!.name : 'Mi Perfil',
+                        user?.name.isNotEmpty == true
+                            ? user!.name
+                            : 'Mi Perfil',
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
                       ),
@@ -1498,11 +1543,15 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                           ? Icons.wb_sunny_rounded
                           : Icons.nightlight_round,
                       size: 20,
-                      color: widget.sessionService.isDarkMode ? Colors.amber : Colors.indigo,
+                      color: widget.sessionService.isDarkMode
+                          ? Colors.amber
+                          : Colors.indigo,
                     ),
                     const SizedBox(width: 10),
                     Text(
-                      widget.sessionService.isDarkMode ? 'Modo Claro' : 'Modo Oscuro',
+                      widget.sessionService.isDarkMode
+                          ? 'Modo Claro'
+                          : 'Modo Oscuro',
                       style: GoogleFonts.outfit(fontWeight: FontWeight.w500),
                     ),
                   ],
