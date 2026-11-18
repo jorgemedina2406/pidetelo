@@ -68,16 +68,19 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
 
   ngOnInit(): void {
     this.loadRecentGuestOrders();
-    const orderIdParam = this.route.snapshot.paramMap.get('orderId') || '';
-    if (orderIdParam) {
-      this.loadOrderDetails(orderIdParam);
-      this.livePollingInterval = setInterval(() => {
-        const currentOrd = this.order();
-        if (!currentOrd || currentOrd.status !== 'delivered') {
-          this.pollLiveOrderAndTelemetry(orderIdParam);
-        }
-      }, 4000);
-    }
+    this.route.paramMap.subscribe(params => {
+      const orderIdParam = params.get('orderId') || '';
+      if (orderIdParam) {
+        if (this.livePollingInterval) clearInterval(this.livePollingInterval);
+        this.loadOrderDetails(orderIdParam);
+        this.livePollingInterval = setInterval(() => {
+          const currentOrd = this.order();
+          if (!currentOrd || currentOrd.status !== 'delivered') {
+            this.pollLiveOrderAndTelemetry(orderIdParam);
+          }
+        }, 4000);
+      }
+    });
   }
 
   loadRecentGuestOrders(): void {
@@ -677,8 +680,9 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
       this.registrationError.set('Ingresa un correo electrónico válido.');
       return;
     }
-    if (!password || password.length < 6) {
-      this.registrationError.set('La contraseña debe tener al menos 6 caracteres.');
+    const specialRegex = new RegExp('[!@#$%^&*(),.?":{}|<>_\\-+=\\[\\]\\\\/~`]');
+    if (!password || password.length < 8 || !/[A-Z]/.test(password) || !specialRegex.test(password)) {
+      this.registrationError.set('La contraseña debe tener al menos 8 caracteres, incluir al menos una letra mayúscula y un carácter especial (*, ., @, etc).');
       return;
     }
 

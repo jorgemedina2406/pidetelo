@@ -72,18 +72,24 @@ export class StoreHeaderComponent {
     }
   }
 
-  get activeGuestOrder(): any {
-    if (typeof window === 'undefined') return null;
+  get activeGuestOrders(): any[] {
+    if (typeof window === 'undefined') return [];
     try {
       const raw = localStorage.getItem('pidetelo_recent_web_orders');
-      if (!raw) return null;
+      if (!raw) return [];
       const list = JSON.parse(raw);
-      if (!Array.isArray(list) || list.length === 0) return null;
-      const latest = list[0];
-      const hoursAgo = (Date.now() - new Date(latest.createdAt).getTime()) / (1000 * 60 * 60);
-      if (hoursAgo < 24) return latest;
+      if (!Array.isArray(list)) return [];
+      return list.filter(item => {
+        const hoursAgo = (Date.now() - new Date(item.createdAt).getTime()) / (1000 * 60 * 60);
+        return hoursAgo < 24;
+      });
     } catch (_) {}
-    return null;
+    return [];
+  }
+
+  get activeGuestOrder(): any {
+    const list = this.activeGuestOrders;
+    return list.length > 0 ? list[0] : null;
   }
 }
 

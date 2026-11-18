@@ -21,6 +21,31 @@ export class CheckoutModalComponent {
   readonly isConfirmPromptOpen = signal(false);
 
   promptConfirmOrder(): void {
+    const cust = this.cart.customer();
+    if (!cust.name || cust.name.trim().length < 2) {
+      alert('Por favor ingresa tu nombre completo.');
+      return;
+    }
+    if (!cust.phone || cust.phone.trim().length < 7) {
+      alert('Por favor ingresa un número de teléfono / WhatsApp válido.');
+      return;
+    }
+    if (this.cart.fulfillmentType() === 'delivery') {
+      if (!cust.deliveryLat || !cust.deliveryLng) {
+        this.gpsStatusMessage.set('⚠️ Es obligatorio compartir tu ubicación GPS para envíos a domicilio.');
+        this.captureGpsLocation();
+        return;
+      }
+      if (!cust.deliveryAddress || cust.deliveryAddress.trim().length < 5) {
+        alert('Por favor escribe tu dirección exacta (calle, edificio o casa).');
+        return;
+      }
+      if (this.cart.isOutOfCoverage()) {
+        alert(`Tu dirección está a ${this.cart.customerDistanceKm()} km del local, superando el radio máximo de entrega (${this.cart.maxCoverageRadiusKm()} km). Cambia a "Retiro en Tienda" o ingresa otra dirección.`);
+        return;
+      }
+    }
+
     if (this.cart.isCustomerValid() && !this.isSubmitting()) {
       this.isConfirmPromptOpen.set(true);
     }

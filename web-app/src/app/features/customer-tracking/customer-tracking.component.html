@@ -31,6 +31,32 @@
         </div>
       </header>
 
+      <!-- SELECTOR DE MULTIPLES PEDIDOS ACTIVOS EN CURSO -->
+      @if (recentGuestOrders().length > 1) {
+        <div class="bg-amber-500/10 dark:bg-slate-900 border-b border-amber-500/20 dark:border-slate-800 px-4 py-2.5 flex items-center gap-2 overflow-x-auto">
+          <span class="text-[11px] font-black text-amber-800 dark:text-amber-400 shrink-0 flex items-center gap-1">
+            <span>🛍️</span>
+            <span>Tus Pedidos ({{ recentGuestOrders().length }}):</span>
+          </span>
+          <div class="flex items-center gap-1.5 shrink-0">
+            @for (gOrd of recentGuestOrders(); track gOrd.orderNumber) {
+              <a [routerLink]="['/track', gOrd.cleanNumber]"
+                 [class.bg-brand-500]="gOrd.cleanNumber === order()?.orderNumber?.replace('#', '')"
+                 [class.text-white]="gOrd.cleanNumber === order()?.orderNumber?.replace('#', '')"
+                 [class.shadow-md]="gOrd.cleanNumber === order()?.orderNumber?.replace('#', '')"
+                 [class.bg-white]="gOrd.cleanNumber !== order()?.orderNumber?.replace('#', '')"
+                 [class.dark:bg-slate-800]="gOrd.cleanNumber !== order()?.orderNumber?.replace('#', '')"
+                 [class.text-slate-700]="gOrd.cleanNumber !== order()?.orderNumber?.replace('#', '')"
+                 [class.dark:text-slate-300]="gOrd.cleanNumber !== order()?.orderNumber?.replace('#', '')"
+                 class="px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer">
+                <span>{{ gOrd.orderNumber }}</span>
+                <span class="text-[10px] opacity-75">({{ gOrd.tenantName }})</span>
+              </a>
+            }
+          </div>
+        </div>
+      }
+
       @if (order(); as ord) {
         <main class="p-4 space-y-4 flex-1">
           
@@ -449,8 +475,11 @@
                              [ngModel]="regPassword()" 
                              (ngModelChange)="regPassword.set($event)"
                              name="regPassword"
-                             placeholder="Mínimo 6 caracteres"
+                             placeholder="Mín. 8 car., 1 mayúscula y 1 símbolo"
                              class="w-full text-xs font-medium rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 shadow-xs focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500" />
+                      <p class="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+                        Debe tener al menos 8 caracteres, 1 letra mayúscula y 1 carácter especial (*, ., @, #, etc.)
+                      </p>
                     </div>
                   </div>
 

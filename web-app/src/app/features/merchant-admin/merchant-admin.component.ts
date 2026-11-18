@@ -961,15 +961,33 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
 
   private userAudioContext: AudioContext | null = null;
   private audioUnlocked = false;
+  private wakeLockSentinel: any = null;
+
+  async requestScreenWakeLock(): Promise<void> {
+    try {
+      if (typeof navigator !== 'undefined' && 'wakeLock' in navigator) {
+        this.wakeLockSentinel = await (navigator as any).wakeLock.request('screen');
+      }
+    } catch (_) {}
+  }
 
   private setupAudioUnlockListeners(): void {
     if (typeof window === 'undefined') return;
     const unlock = () => {
       this.initOrResumeAudio();
+      this.requestScreenWakeLock();
     };
     ['click', 'touchstart', 'touchend'].forEach(evt => {
       window.addEventListener(evt, unlock, { passive: true });
     });
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          this.requestScreenWakeLock();
+          this.initOrResumeAudio();
+        }
+      });
+    }
   }
 
   private initOrResumeAudio(): void {
