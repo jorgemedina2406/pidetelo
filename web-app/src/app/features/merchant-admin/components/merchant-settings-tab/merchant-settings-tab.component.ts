@@ -16,8 +16,8 @@ export class MerchantSettingsTabComponent {
   @Input() isSavedNotificationVisible = false;
   @Input() isUploadingLogo = false;
   @Input() isUploadingBanner = false;
-  @Input() showLogoUrlInput = false;
-  @Input() showBannerUrlInput = false;
+  showLogoUrlInput = false;
+  showBannerUrlInput = false;
   @Input() isDetectingStoreGps = false;
   @Input() storeGpsMessage: string | null = null;
   @Input() isFetchingBcv = false;
@@ -33,8 +33,6 @@ export class MerchantSettingsTabComponent {
   @Output() saveSettings = new EventEmitter<void>();
   @Output() imageFileSelected = new EventEmitter<{ event: Event, type: 'logo' | 'banner' }>();
   @Output() colorPresetSelected = new EventEmitter<string>();
-  @Output() toggleLogoUrlInput = new EventEmitter<void>();
-  @Output() toggleBannerUrlInput = new EventEmitter<void>();
   @Output() captureStoreGps = new EventEmitter<void>();
   @Output() updateLocation = new EventEmitter<void>();
   @Output() fetchBcvRate = new EventEmitter<'oficial' | 'paralelo'>();
@@ -44,6 +42,14 @@ export class MerchantSettingsTabComponent {
   @Output() removeDeliveryTier = new EventEmitter<number>();
   @Output() togglePaymentMethod = new EventEmitter<string>();
   @Output() configBranchChange = new EventEmitter<string>();
+
+  toggleLogoUrl(): void {
+    this.showLogoUrlInput = !this.showLogoUrlInput;
+  }
+
+  toggleBannerUrl(): void {
+    this.showBannerUrlInput = !this.showBannerUrlInput;
+  }
 
   cleanBranchDisplayName(name?: string | null): string {
     if (!name) return '';

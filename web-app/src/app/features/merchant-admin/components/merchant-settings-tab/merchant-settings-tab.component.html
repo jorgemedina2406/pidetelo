@@ -580,7 +580,7 @@
                 <!-- Direct URL toggle -->
                 <div
                   class="pt-2 border-t border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between">
-                  <button type="button" (click)="toggleLogoUrlInput.emit()"
+                  <button type="button" (click)="toggleLogoUrl()"
                     class="text-[10px] text-brand-600 dark:text-brand-400 hover:underline font-semibold flex items-center gap-1 cursor-pointer">
                     <span>🔗 {{ showLogoUrlInput ? 'Ocultar enlace URL' : 'O pegar enlace URL de logo externo'
                       }}</span>
@@ -643,7 +643,7 @@
                 <!-- Direct URL toggle -->
                 <div
                   class="pt-2 border-t border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between">
-                  <button type="button" (click)="toggleBannerUrlInput.emit()"
+                  <button type="button" (click)="toggleBannerUrl()"
                     class="text-[10px] text-blue-600 dark:text-blue-400 hover:underline font-semibold flex items-center gap-1 cursor-pointer">
                     <span>🔗 {{ showBannerUrlInput ? 'Ocultar enlace URL' : 'O pegar enlace URL de portada externa'
                       }}</span>
