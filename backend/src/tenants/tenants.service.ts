@@ -870,7 +870,7 @@ export class TenantsService {
       business_name: payload.business_name || name,
       phone: payload.whatsapp || payload.phone || '+584120000000',
       whatsapp_number: payload.whatsapp || payload.whatsapp_number || '+584120000000',
-      email: payload.owner_email || payload.email || `${slug}@deliveryhub.io`,
+      email: payload.owner_email || payload.email || `${slug}@pidetelo.app`,
       address: payload.address || 'Sede Principal',
       latitude: payload.latitude !== undefined && !isNaN(Number(payload.latitude)) ? Number(payload.latitude) : 10.0777,
       longitude: payload.longitude !== undefined && !isNaN(Number(payload.longitude)) ? Number(payload.longitude) : -69.2812,
@@ -930,7 +930,7 @@ export class TenantsService {
 
     // 2. Crear automáticamente la cuenta del dueño en Supabase Auth (auth.users)
     const ownerName = payload.owner_name?.trim() || `${name} (Dueño)`;
-    const ownerEmail = payload.owner_email?.trim().toLowerCase() || `${slug}@deliveryhub.io`;
+    const ownerEmail = payload.owner_email?.trim().toLowerCase() || `${slug}@pidetelo.app`;
     const ownerPassword = payload.owner_password || '123456';
     const ownerPhone = payload.owner_phone || tenantRecord.phone;
 

@@ -373,7 +373,7 @@ class _MapAddressPickerScreenState extends State<MapAddressPickerScreen> {
               children: [
                 TileLayer(
                   urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  userAgentPackageName: 'com.deliveryhub.mobile_app',
+                  userAgentPackageName: 'com.pidetelo.customer',
                   maxZoom: 19,
                 ),
                 MarkerLayer(

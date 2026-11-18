@@ -23,7 +23,7 @@ export const DEMO_USERS: Record<string, AppUser> = {
 
 function getInitialUser(): AppUser | null {
   if (typeof window !== 'undefined') {
-    const raw = localStorage.getItem('deliveryhub_user');
+    const raw = localStorage.getItem('pidetelo_user') || localStorage.getItem('deliveryhub_user');
     if (raw) {
       try {
         return JSON.parse(raw);
@@ -65,7 +65,7 @@ export const AuthStore = signalStore(
   withMethods((store) => ({
     login(user: AppUser): void {
       if (typeof window !== 'undefined') {
-        localStorage.setItem('deliveryhub_user', JSON.stringify(user));
+        localStorage.setItem('pidetelo_user', JSON.stringify(user));
       }
       patchState(store, { currentUser: user, isAuthenticated: true });
     },
@@ -77,7 +77,7 @@ export const AuthStore = signalStore(
         const perms = store.rolePermissions()[user.role] || user.permissions;
         const loggedUser = { ...user, permissions: perms };
         if (typeof window !== 'undefined') {
-          localStorage.setItem('deliveryhub_user', JSON.stringify(loggedUser));
+          localStorage.setItem('pidetelo_user', JSON.stringify(loggedUser));
         }
         patchState(store, { 
           currentUser: loggedUser, 
@@ -88,7 +88,7 @@ export const AuthStore = signalStore(
 
     loginAsRider(rider: { id: string; name: string; email?: string; phone?: string; vehiclePlate?: string; vehicleType?: string; vehicleModel?: string; tenantId?: string; nationalId?: string; avatarUrl?: string; paymentAccounts?: any[] }): void {
       const cleanName = rider.name || 'Repartidor';
-      const email = rider.email || `${cleanName.toLowerCase().replace(/[^a-z0-9]/g, '.')}@deliveryhub.io`;
+      const email = rider.email || `${cleanName.toLowerCase().replace(/[^a-z0-9]/g, '.')}@pidetelo.app`;
       const perms = store.rolePermissions()['RIDER'] || ROLE_PERMISSIONS_PRESETS.RIDER;
       const user: AppUser = {
         id: rider.id,
@@ -108,7 +108,7 @@ export const AuthStore = signalStore(
         paymentAccounts: rider.paymentAccounts || []
       };
       if (typeof window !== 'undefined') {
-        localStorage.setItem('deliveryhub_user', JSON.stringify(user));
+        localStorage.setItem('pidetelo_user', JSON.stringify(user));
       }
       patchState(store, { currentUser: user, isAuthenticated: true });
     },
@@ -124,13 +124,14 @@ export const AuthStore = signalStore(
         isActive: true
       };
       if (typeof window !== 'undefined') {
-        localStorage.setItem('deliveryhub_user', JSON.stringify(user));
+        localStorage.setItem('pidetelo_user', JSON.stringify(user));
       }
       patchState(store, { currentUser: user, isAuthenticated: true });
     },
 
     logout(): void {
       if (typeof window !== 'undefined') {
+        localStorage.removeItem('pidetelo_user');
         localStorage.removeItem('deliveryhub_user');
       }
       patchState(store, { currentUser: null, isAuthenticated: false });

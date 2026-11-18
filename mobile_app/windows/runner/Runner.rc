@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.deliveryhub" "\0"
-            VALUE "FileDescription", "mobile_app" "\0"
+            VALUE "CompanyName", "com.pidetelo" "\0"
+            VALUE "FileDescription", "Pidetelo" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "mobile_app" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.deliveryhub. All rights reserved." "\0"
-            VALUE "OriginalFilename", "mobile_app.exe" "\0"
-            VALUE "ProductName", "mobile_app" "\0"
+            VALUE "InternalName", "pidetelo" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 com.pidetelo. All rights reserved." "\0"
+            VALUE "OriginalFilename", "pidetelo.exe" "\0"
+            VALUE "ProductName", "Pidetelo" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

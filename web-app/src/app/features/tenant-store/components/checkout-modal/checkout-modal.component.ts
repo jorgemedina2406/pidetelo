@@ -177,7 +177,7 @@ export class CheckoutModalComponent {
           this.gpsStatusMessage.set(`Ubicación GPS fijada (${lat}, ${lng})`);
 
           try {
-            localStorage.setItem('deliveryhub_customer_zone', JSON.stringify({
+            localStorage.setItem('pidetelo_customer_zone', JSON.stringify({
               id: 'gps-custom',
               name: 'Mi Ubicación GPS',
               lat,

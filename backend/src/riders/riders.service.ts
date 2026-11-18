@@ -105,7 +105,7 @@ export class RidersService {
           vehicle_plate: dbRider.vehicle_plate,
           vehicle_model: dbRider.vehicle_model || '',
           name: dbRider.name || cleanUser,
-          email: dbRider.email || (cleanUser.includes('@') ? cleanUser : `${cleanUser}@deliveryhub.io`),
+          email: dbRider.email || (cleanUser.includes('@') ? cleanUser : `${cleanUser}@pidetelo.app`),
           password: passwordAttempt,
           phone: dbRider.phone || '+584140000000',
           national_id: dbRider.national_id || '',
@@ -180,7 +180,7 @@ export class RidersService {
     const cleanPlate = ((dto as any).vehicle_plate || (dto as any).vehiclePlate || 'SIN-PLACA').toUpperCase().trim();
     const cleanType = ((dto as any).vehicle_type || (dto as any).vehicleType || 'moto').toLowerCase().trim();
     const cleanName = (dto.name || `Repartidor (${cleanPlate})`).trim();
-    const cleanEmail = (dto.email || `${cleanName.toLowerCase().replace(/[^a-z0-9]/g, '.')}@deliveryhub.io`).toLowerCase().trim();
+    const cleanEmail = (dto.email || `${cleanName.toLowerCase().replace(/[^a-z0-9]/g, '.')}@pidetelo.app`).toLowerCase().trim();
     const cleanPassword = dto.password || 'Rider123!';
     const cleanPhone = dto.phone || '+584140000000';
     const cleanNationalId = (dto as any).national_id || (dto as any).nationalId || '';

@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.deliveryhub.mobile_app"
+    namespace = "com.pidetelo.customer"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -22,7 +22,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.deliveryhub.mobile_app"
+        applicationId = "com.pidetelo.customer"
         minSdk = 23
         targetSdk = 34
         multiDexEnabled = true

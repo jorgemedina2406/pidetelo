@@ -2307,7 +2307,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
                 style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w800, color: Colors.white),
               ),
               Text(
-                rider?.email ?? 'repartidor@deliveryhub.com',
+                rider?.email ?? 'repartidor@pidetelo.app',
                 style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xFF94A3B8)),
               ),
             ],

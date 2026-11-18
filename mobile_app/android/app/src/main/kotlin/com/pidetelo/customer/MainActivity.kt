@@ -1,4 +1,4 @@
-package com.deliveryhub.mobile_app
+package com.pidetelo.customer
 
 import io.flutter.embedding.android.FlutterActivity
 

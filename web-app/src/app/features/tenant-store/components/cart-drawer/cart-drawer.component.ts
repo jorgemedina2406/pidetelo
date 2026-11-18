@@ -27,7 +27,7 @@ export class CartDrawerComponent {
           this.gpsMessage.set(null);
 
           try {
-            localStorage.setItem('deliveryhub_customer_zone', JSON.stringify({
+            localStorage.setItem('pidetelo_customer_zone', JSON.stringify({
               id: 'gps-custom',
               name: 'Mi Ubicación GPS',
               lat,

@@ -6,7 +6,7 @@ export type AppLang = 'es' | 'en';
   providedIn: 'root'
 })
 export class I18nService {
-  private readonly STORAGE_KEY = 'deliveryhub_lang';
+  private readonly STORAGE_KEY = 'pidetelo_lang';
   readonly lang = signal<AppLang>('es');
 
   private readonly translations: Record<AppLang, Record<string, string>> = {

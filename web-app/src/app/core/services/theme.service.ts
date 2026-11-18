@@ -6,15 +6,16 @@ export type AppTheme = 'dark' | 'light';
   providedIn: 'root'
 })
 export class ThemeService {
-  private readonly STORAGE_KEY = 'deliveryhub_theme_mode';
+  private readonly STORAGE_KEY = 'pidetelo_theme_mode';
   // Default theme is strictly LIGHT
   readonly theme = signal<AppTheme>('light');
 
   constructor() {
     // Clear legacy dark preference from previous sessions if present
     localStorage.removeItem('deliveryhub_theme');
+    localStorage.removeItem('pidetelo_theme');
     
-    const saved = localStorage.getItem(this.STORAGE_KEY) as AppTheme | null;
+    const saved = (localStorage.getItem(this.STORAGE_KEY) || localStorage.getItem('deliveryhub_theme_mode')) as AppTheme | null;
     if (saved === 'dark' || saved === 'light') {
       this.theme.set(saved);
     } else {

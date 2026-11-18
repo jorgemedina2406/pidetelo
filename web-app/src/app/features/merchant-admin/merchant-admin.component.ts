@@ -567,7 +567,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
 
     let cached: any = null;
     try {
-      const raw = localStorage.getItem('deliveryhub_branch_branding_' + branch.id);
+      const raw = localStorage.getItem('pidetelo_branch_branding_' + branch.id) || localStorage.getItem('deliveryhub_branch_branding_' + branch.id);
       if (raw) cached = JSON.parse(raw);
     } catch (_) { }
 
@@ -1514,6 +1514,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     this.setupAudioUnlockListeners();
     if (typeof window !== 'undefined') {
       try {
+        localStorage.removeItem('pidetelo_riders_auth');
         localStorage.removeItem('deliveryhub_riders_auth');
       } catch (_) { }
     }
@@ -1591,7 +1592,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     if (activeTenantId) {
       // 0. Intentar precargar caché local inmediato de marca y moneda
       try {
-        const cached = localStorage.getItem('deliveryhub_branding_' + activeTenantId);
+        const cached = localStorage.getItem('pidetelo_branding_' + activeTenantId) || localStorage.getItem('deliveryhub_branding_' + activeTenantId);
         if (cached) {
           const parsed = JSON.parse(cached);
           if (parsed.name && !this.currentTenant().name) this.brandingForm.name = parsed.name;
@@ -2993,6 +2994,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
 
     if (typeof window !== 'undefined') {
       try {
+        localStorage.removeItem('pidetelo_riders_auth');
         localStorage.removeItem('deliveryhub_riders_auth');
       } catch { }
     }
@@ -3324,12 +3326,12 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
 
     if (targetBranch) {
       try {
-        localStorage.setItem('deliveryhub_branch_branding_' + targetBranch.id, JSON.stringify(this.brandingForm));
+        localStorage.setItem('pidetelo_branch_branding_' + targetBranch.id, JSON.stringify(this.brandingForm));
       } catch (_) { }
     }
     if (activeTenantId && typeof window !== 'undefined') {
       try {
-        localStorage.setItem('deliveryhub_branding_' + activeTenantId, JSON.stringify(this.brandingForm));
+        localStorage.setItem('pidetelo_branding_' + activeTenantId, JSON.stringify(this.brandingForm));
       } catch (_) { }
     }
 
@@ -3490,7 +3492,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     }
 
     try {
-      const storageKey = 'deliveryhub_branding_' + (targetBranch?.id || activeTenantId);
+      const storageKey = 'pidetelo_branding_' + (targetBranch?.id || activeTenantId);
       localStorage.setItem(storageKey, JSON.stringify({
         ...branchPayload,
         openTime: this.brandingForm.openTime,

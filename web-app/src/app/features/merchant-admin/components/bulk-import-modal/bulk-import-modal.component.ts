@@ -115,7 +115,7 @@ export class BulkImportModalComponent implements OnChanges {
 
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Plantilla_Productos');
-    XLSX.writeFile(workbook, 'Plantilla_Importacion_Productos_DeliveryHub.xlsx');
+    XLSX.writeFile(workbook, 'Plantilla_Importacion_Productos_Pidetelo.xlsx');
   }
 
   handleBulkFileInput(event: Event): void {

@@ -951,7 +951,7 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                 // Clean OpenStreetMap Layer (100% Free, No Watermark, No API Key Required)
                 TileLayer(
                   urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  userAgentPackageName: 'com.deliveryhub.mobile_app',
+                  userAgentPackageName: 'com.pidetelo.customer',
                   maxZoom: 19,
                 ),
 
