@@ -421,6 +421,10 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     const plan = this.currentSubscriptionPlan();
     return plan.maxProducts !== -1 && this.products().length >= plan.maxProducts;
   });
+  readonly isPlanExpiringSoon = computed(() => {
+    const d = this.currentTenant()?.daysRemaining;
+    return d !== undefined && d <= 5;
+  });
   readonly liveExchangeRate = signal<number | null>(null);
   readonly activeExchangeRate = computed(() => this.liveExchangeRate() || this.currentTenant()?.currencySettings?.exchangeRate || this.brandingForm.exchangeRate || 54.50);
 
