@@ -95,7 +95,7 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
                 try {
                   await Supabase.instance.client.auth.resetPasswordForEmail(
                     email,
-                    redirectTo: 'https://pidetelo.app/reset-password',
+                    redirectTo: 'https://app.pidetelo.app/reset-password',
                   );
                   if (mounted) {
                     Navigator.pop(ctx);
@@ -274,22 +274,37 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
                              meta?['status'] == 'disabled' || 
                              meta?['disabled'] == true;
 
-        if (!isDeactivated) {
-          try {
-            final profRow = await supabase
-                .from('profiles')
-                .select('is_active')
-                .eq('id', userId)
-                .maybeSingle();
-            if (profRow != null && profRow['is_active'] == false) {
+        String? userRole = meta?['role']?.toString().toUpperCase();
+
+        try {
+          final profRow = await supabase
+              .from('profiles')
+              .select('role, is_active')
+              .eq('id', userId)
+              .maybeSingle();
+          if (profRow != null) {
+            if (profRow['is_active'] == false) {
               isDeactivated = true;
             }
-          } catch (_) {}
-        }
+            if (profRow['role'] != null) {
+              userRole = profRow['role'].toString().toUpperCase();
+            }
+          }
+        } catch (_) {}
 
         if (isDeactivated) {
           await supabase.auth.signOut();
           throw Exception('Tu cuenta se encuentra desactivada por la administración de la plataforma. Comunícate con soporte de Pídetelo para más información.');
+        }
+
+        if (userRole == 'RIDER') {
+          await supabase.auth.signOut();
+          throw Exception('Esta cuenta pertenece a un Repartidor (Rider). Por favor inicia sesión desde la aplicación móvil Pídetelo Rider.');
+        }
+
+        if (userRole == 'MERCHANT_OWNER' || userRole == 'SUPER_ADMIN') {
+          await supabase.auth.signOut();
+          throw Exception('Esta cuenta pertenece a la administración de comercios. Por favor accede desde el panel web de Pídetelo.');
         }
 
         if (meta != null) {

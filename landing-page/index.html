@@ -6,6 +6,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pídetelo | Plataforma Integral de Delivery, App Móvil y Panel para Comercios</title>
 
+  <!-- Redirección inmediata para rutas de la Web App (Restablecer Contraseña, etc.) -->
+  <script>
+    (function () {
+      var p = window.location.pathname;
+      var s = window.location.search;
+      var h = window.location.hash;
+      if (p.indexOf('reset-password') !== -1 || s.indexOf('code=') !== -1 || h.indexOf('type=recovery') !== -1) {
+        window.location.replace('https://app.pidetelo.app/reset-password' + s + h);
+      } else if (p.indexOf('/explorar') === 0 || p.indexOf('/login') === 0 || p.indexOf('/t/') === 0 || p.indexOf('/track') === 0 || p.indexOf('/merchant-admin') === 0 || p.indexOf('/super-admin') === 0) {
+        window.location.replace('https://app.pidetelo.app' + p + s + h);
+      }
+    })();
+  </script>
+
   <!-- SEO Meta Tags -->
   <meta name="description"
     content="Pídetelo es la plataforma de delivery y pedidos más moderna de Venezuela. App móvil para clientes (iOS/Android), panel web para comercios, bot inteligente de WhatsApp con operador y app para repartidores con GPS en vivo.">

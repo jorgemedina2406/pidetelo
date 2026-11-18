@@ -86,14 +86,63 @@ export class RidersService {
       }
     }
 
-    // 2. Si no está en disco, buscar en Supabase por name, phone o plate
+    // 2. Si no está en disco, buscar en Supabase por email, name, phone o plate
     try {
-      const { data: dbRider } = await this.supabase
-        .getClient()
-        .from('riders')
-        .select('*')
-        .or(`name.ilike.%${cleanUser.split('@')[0]}%,phone.eq.${cleanUser},vehicle_plate.ilike.${cleanUser}`)
-        .maybeSingle();
+      const client = this.supabase.getClient();
+      let dbRider: any = null;
+
+      if (cleanUser.includes('@')) {
+        const { data } = await client
+          .from('riders')
+          .select('*')
+          .ilike('email', cleanUser)
+          .maybeSingle();
+        dbRider = data;
+      }
+
+      if (!dbRider) {
+        const { data } = await client
+          .from('riders')
+          .select('*')
+          .or(`email.ilike.${cleanUser},phone.eq.${cleanUser},vehicle_plate.ilike.${cleanUser}`)
+          .maybeSingle();
+        dbRider = data;
+      }
+
+      // Si aún no está en riders, verificar si existe en la tabla profiles con role RIDER
+      if (!dbRider) {
+        const { data: prof } = await client
+          .from('profiles')
+          .select('*')
+          .or(`email.ilike.${cleanUser},phone.eq.${cleanUser}`)
+          .maybeSingle();
+
+        if (prof && prof.role === 'RIDER') {
+          dbRider = {
+            id: prof.id,
+            user_id: prof.id,
+            name: prof.full_name || cleanUser,
+            email: prof.email || cleanUser,
+            phone: prof.phone || '+584140000000',
+            vehicle_type: 'moto',
+            status: 'available',
+            is_active: prof.is_active !== false,
+            created_at: prof.created_at || new Date().toISOString()
+          };
+          try {
+            await client.from('riders').upsert({
+              id: prof.id,
+              user_id: prof.id,
+              name: dbRider.name,
+              email: dbRider.email,
+              phone: dbRider.phone,
+              status: 'available',
+              vehicle_type: 'moto',
+              is_active: true
+            });
+          } catch (_) {}
+        }
+      }
 
       if (dbRider) {
         const restoredRider = {

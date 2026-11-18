@@ -87,6 +87,7 @@ class SessionService extends ChangeNotifier {
 
     // 1. Authenticate with Supabase Cloud Auth
     bool authSuccess = false;
+    String? authUserId;
     try {
       final supabase = Supabase.instance.client;
       final authRes = await supabase.auth.signInWithPassword(
@@ -95,6 +96,7 @@ class SessionService extends ChangeNotifier {
       );
       if (authRes.user != null) {
         authSuccess = true;
+        authUserId = authRes.user!.id;
       }
     } catch (authError) {
       debugPrint('[SessionService] Supabase Auth signIn notice: $authError');
@@ -106,24 +108,95 @@ class SessionService extends ChangeNotifier {
       }
     }
 
-    // 2. Query Supabase 'riders' table for this real registered rider
+    // 2. Query Supabase 'riders' table or 'profiles' table for this registered rider
+    Map<String, dynamic>? riderData;
     try {
       final supabase = Supabase.instance.client;
-      final res = await supabase
-          .from('riders')
-          .select('*')
-          .eq('email', cleanEmail)
-          .maybeSingle();
 
-      if (res != null) {
-        final isActive = res['is_active'] ?? (res['status'] != 'inactive' && res['status'] != 'disabled');
-        if (isActive == false || res['status'] == 'inactive' || res['status'] == 'disabled') {
+      // 2.1 Intentar buscar en tabla 'riders' por email o user_id
+      try {
+        final ridersQuery = supabase.from('riders').select('*');
+        if (authUserId != null) {
+          riderData = await ridersQuery.or('email.ilike.$cleanEmail,user_id.eq.$authUserId').maybeSingle();
+        } else {
+          riderData = await ridersQuery.ilike('email', cleanEmail).maybeSingle();
+        }
+      } catch (rErr) {
+        debugPrint('[SessionService] Error buscando en tabla riders: $rErr');
+      }
+
+      // 2.2 Si no existe en 'riders', consultar la tabla 'profiles'
+      if (riderData == null) {
+        try {
+          final profQuery = supabase.from('profiles').select('*');
+          final prof = authUserId != null
+              ? await profQuery.or('id.eq.$authUserId,email.ilike.$cleanEmail').maybeSingle()
+              : await profQuery.ilike('email', cleanEmail).maybeSingle();
+
+          if (prof != null) {
+            final role = prof['role']?.toString().toUpperCase();
+            if (role != 'RIDER') {
+              _lastErrorMessage = 'Esta cuenta está registrada como Cliente ($role). Para acceder como repartidor debes registrarte en la app Pídetelo Rider.';
+              try { await supabase.auth.signOut(); } catch (_) {}
+              return false;
+            }
+
+            // El usuario tiene role = 'RIDER' en profiles (ej: Armando Repartidor)
+            // Sincronizarlo de inmediato a la tabla 'riders'
+            final newId = authUserId ?? prof['id'] ?? 'rider_${DateTime.now().millisecondsSinceEpoch}';
+            final toInsert = <String, dynamic>{
+              'id': newId,
+              'user_id': authUserId ?? prof['id'],
+              'name': prof['full_name'] ?? 'Repartidor',
+              'email': cleanEmail,
+              'phone': prof['phone'] ?? '',
+              'status': 'available',
+              'vehicle_type': 'moto',
+              'is_active': prof['is_active'] ?? true,
+              'created_at': DateTime.now().toIso8601String(),
+            };
+
+            try {
+              final inserted = await supabase.from('riders').upsert(toInsert).select().maybeSingle();
+              riderData = inserted ?? toInsert;
+            } catch (insErr) {
+              debugPrint('[SessionService] Error sincronizando perfil a riders: $insErr');
+              riderData = toInsert;
+            }
+          }
+        } catch (pErr) {
+          debugPrint('[SessionService] Error consultando profiles: $pErr');
+        }
+      }
+
+      // 2.3 Fallback a autenticación directa en el backend
+      if (riderData == null) {
+        try {
+          final bResp = await http.post(
+            Uri.parse('${AppConfig.backendBaseUrl}/riders/login'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'user': cleanEmail, 'passwordAttempt': password}),
+          ).timeout(const Duration(seconds: 5));
+
+          if (bResp.statusCode == 200) {
+            final bData = jsonDecode(bResp.body);
+            if (bData is Map<String, dynamic>) {
+              riderData = bData;
+              authSuccess = true;
+            }
+          }
+        } catch (_) {}
+      }
+
+      if (riderData != null) {
+        final isActive = riderData['is_active'] ?? (riderData['status'] != 'inactive' && riderData['status'] != 'disabled');
+        if (isActive == false || riderData['status'] == 'inactive' || riderData['status'] == 'disabled') {
           _lastErrorMessage = 'Tu cuenta de repartidor ha sido desactivada por la administración de la plataforma. Comunícate con soporte para más información.';
           try { await supabase.auth.signOut(); } catch (_) {}
           return false;
         }
 
-        final companyId = res['company_id'] ?? res['companyId'] ?? res['tenant_id'];
+        final companyId = riderData['company_id'] ?? riderData['companyId'] ?? riderData['tenant_id'];
         if (companyId != null && companyId.toString().isNotEmpty) {
           try {
             final tenantRes = await supabase
@@ -148,7 +221,7 @@ class SessionService extends ChangeNotifier {
           return false;
         }
 
-        final rider = RiderUser.fromJson(res);
+        final rider = RiderUser.fromJson(riderData);
         await saveRider(rider);
         return true;
       } else {
