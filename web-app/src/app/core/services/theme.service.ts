@@ -11,11 +11,10 @@ export class ThemeService {
   readonly theme = signal<AppTheme>('light');
 
   constructor() {
-    // Clear legacy dark preference from previous sessions if present
-    localStorage.removeItem('deliveryhub_theme');
+    // Limpieza de claves obsoletas
     localStorage.removeItem('pidetelo_theme');
     
-    const saved = (localStorage.getItem(this.STORAGE_KEY) || localStorage.getItem('deliveryhub_theme_mode')) as AppTheme | null;
+    const saved = localStorage.getItem(this.STORAGE_KEY) as AppTheme | null;
     if (saved === 'dark' || saved === 'light') {
       this.theme.set(saved);
     } else {

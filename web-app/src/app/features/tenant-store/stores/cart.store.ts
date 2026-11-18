@@ -478,7 +478,7 @@ export const CartStore = signalStore(
       let cust = store.customer();
       if ((!cust.deliveryLat || !cust.deliveryLng) && typeof window !== 'undefined') {
         try {
-          const savedZone = localStorage.getItem('pidetelo_customer_zone') || localStorage.getItem('deliveryhub_customer_zone');
+          const savedZone = localStorage.getItem('pidetelo_customer_zone');
           if (savedZone) {
             const z = JSON.parse(savedZone);
             if (z.lat && z.lng) {

@@ -196,7 +196,7 @@ export class LoginComponent {
       // 3.1 Respaldo local de motorizados registrados en navegador
       if (typeof window !== 'undefined') {
         try {
-          const localRiders = JSON.parse(localStorage.getItem('pidetelo_riders_auth') || localStorage.getItem('deliveryhub_riders_auth') || '[]');
+          const localRiders = JSON.parse(localStorage.getItem('pidetelo_riders_auth') || '[]');
           const matched = localRiders.find((r: any) => 
             (r.email && r.email.toLowerCase() === emailTrim) ||
             (r.name && r.name.toLowerCase().trim() === emailTrim) ||

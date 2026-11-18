@@ -23,7 +23,7 @@ export const DEMO_USERS: Record<string, AppUser> = {
 
 function getInitialUser(): AppUser | null {
   if (typeof window !== 'undefined') {
-    const raw = localStorage.getItem('pidetelo_user') || localStorage.getItem('deliveryhub_user');
+    const raw = localStorage.getItem('pidetelo_user');
     if (raw) {
       try {
         return JSON.parse(raw);
@@ -132,7 +132,6 @@ export const AuthStore = signalStore(
     logout(): void {
       if (typeof window !== 'undefined') {
         localStorage.removeItem('pidetelo_user');
-        localStorage.removeItem('deliveryhub_user');
       }
       patchState(store, { currentUser: null, isAuthenticated: false });
     },

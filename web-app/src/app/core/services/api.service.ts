@@ -1477,7 +1477,7 @@ export class ApiService {
     let cachedBranding: any = null;
     if (typeof localStorage !== 'undefined') {
       try {
-        const stored = localStorage.getItem('pidetelo_branding_' + row.id) || localStorage.getItem('deliveryhub_branding_' + row.id);
+        const stored = localStorage.getItem('pidetelo_branding_' + row.id);
         if (stored) cachedBranding = JSON.parse(stored);
       } catch (_) { }
     }
@@ -2393,7 +2393,7 @@ export class ApiService {
     let cachedBranding: any = null;
     if (typeof localStorage !== 'undefined') {
       try {
-        const stored = localStorage.getItem('pidetelo_branding_' + r.id) || localStorage.getItem('deliveryhub_branding_' + r.id);
+        const stored = localStorage.getItem('pidetelo_branding_' + r.id);
         if (stored) cachedBranding = JSON.parse(stored);
       } catch (_) { }
     }

@@ -567,7 +567,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
 
     let cached: any = null;
     try {
-      const raw = localStorage.getItem('pidetelo_branch_branding_' + branch.id) || localStorage.getItem('deliveryhub_branch_branding_' + branch.id);
+      const raw = localStorage.getItem('pidetelo_branch_branding_' + branch.id);
       if (raw) cached = JSON.parse(raw);
     } catch (_) { }
 
@@ -1515,7 +1515,6 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     if (typeof window !== 'undefined') {
       try {
         localStorage.removeItem('pidetelo_riders_auth');
-        localStorage.removeItem('deliveryhub_riders_auth');
       } catch (_) { }
     }
     const user = this.auth.currentUser();
@@ -1592,7 +1591,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     if (activeTenantId) {
       // 0. Intentar precargar caché local inmediato de marca y moneda
       try {
-        const cached = localStorage.getItem('pidetelo_branding_' + activeTenantId) || localStorage.getItem('deliveryhub_branding_' + activeTenantId);
+        const cached = localStorage.getItem('pidetelo_branding_' + activeTenantId);
         if (cached) {
           const parsed = JSON.parse(cached);
           if (parsed.name && !this.currentTenant().name) this.brandingForm.name = parsed.name;
@@ -2995,7 +2994,6 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     if (typeof window !== 'undefined') {
       try {
         localStorage.removeItem('pidetelo_riders_auth');
-        localStorage.removeItem('deliveryhub_riders_auth');
       } catch { }
     }
 

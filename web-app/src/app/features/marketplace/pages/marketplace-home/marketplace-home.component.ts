@@ -343,7 +343,7 @@ export class MarketplaceHomeComponent implements OnInit {
 
   ngOnInit(): void {
     try {
-      const savedZoneJson = localStorage.getItem('pidetelo_customer_zone') || localStorage.getItem('deliveryhub_customer_zone');
+      const savedZoneJson = localStorage.getItem('pidetelo_customer_zone');
       if (savedZoneJson) {
         const savedZone = JSON.parse(savedZoneJson);
         if (savedZone && savedZone.lat && savedZone.lng) {
@@ -353,7 +353,7 @@ export class MarketplaceHomeComponent implements OnInit {
     } catch {}
 
     try {
-      const activeOrderJson = localStorage.getItem('pidetelo_active_order') || localStorage.getItem('deliveryhub_active_order');
+      const activeOrderJson = localStorage.getItem('pidetelo_active_order');
       if (activeOrderJson) {
         const orderData = JSON.parse(activeOrderJson);
         if (orderData && orderData.id) {
