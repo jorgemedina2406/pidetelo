@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { SupabaseModule } from './supabase/supabase.module.js';
 import { TenantsModule } from './tenants/tenants.module.js';
@@ -19,6 +19,8 @@ import { PlansModule } from './plans/plans.module.js';
 import { SupportModule } from './support/support.module.js';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
+import { SecurityModule } from './common/security/security.module.js';
+import { RateLimiterMiddleware } from './common/security/rate-limiter.middleware.js';
 
 @Module({
   imports: [
@@ -26,6 +28,7 @@ import { AppService } from './app.service.js';
       isGlobal: true,
       envFilePath: '.env',
     }),
+    SecurityModule,
     SupabaseModule,
     PlansModule,
     TenantsModule,
@@ -47,4 +50,8 @@ import { AppService } from './app.service.js';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(RateLimiterMiddleware).forRoutes('*');
+  }
+}

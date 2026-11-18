@@ -14,6 +14,37 @@ export class OrdersService {
   ) {}
 
   async create(orderPayload: any) {
+    if (!orderPayload) {
+      throw new BadRequestException('El cuerpo de la solicitud no puede estar vacío.');
+    }
+
+    // Validación rigurosa de inputs del cliente
+    const customerName = String(orderPayload.customer_name || orderPayload.customerName || '').trim();
+    if (customerName.length < 2) {
+      throw new BadRequestException('El nombre del cliente es obligatorio (mínimo 2 caracteres).');
+    }
+
+    const customerPhone = String(orderPayload.customer_phone || orderPayload.customerPhone || '').trim();
+    if (customerPhone.length < 8) {
+      throw new BadRequestException('El número de teléfono móvil del cliente es obligatorio.');
+    }
+
+    const isDelivery = (orderPayload.fulfillment_type || orderPayload.fulfillmentType || 'delivery') === 'delivery';
+    const deliveryAddress = String(orderPayload.delivery_address || orderPayload.deliveryAddress || '').trim();
+    if (isDelivery && deliveryAddress.length < 4) {
+      throw new BadRequestException('La dirección de entrega es obligatoria para pedidos con delivery.');
+    }
+
+    const rawItems = orderPayload.items;
+    if (!Array.isArray(rawItems) || rawItems.length === 0) {
+      throw new BadRequestException('El pedido debe incluir al menos un producto.');
+    }
+
+    const rawTotal = Number(orderPayload.total || 0);
+    if (isNaN(rawTotal) || rawTotal < 0) {
+      throw new BadRequestException('El monto total del pedido es inválido o negativo.');
+    }
+
     const client = this.supabase.getClient();
 
     const isUuid = (val?: string) => Boolean(val && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val));

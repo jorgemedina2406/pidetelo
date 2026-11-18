@@ -1165,6 +1165,68 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     } catch (_) {}
   }
 
+  private triggerDesktopNotification(title: string, body: string, tag: string, playSound = true): void {
+    if (playSound) {
+      this.playKitchenBellSound();
+    }
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+      try {
+        const n = new Notification(title, {
+          body,
+          icon: '/assets/logo.png',
+          badge: '/assets/logo.png',
+          tag,
+          requireInteraction: true,
+        });
+        n.onclick = () => {
+          window.focus();
+          n.close();
+          this.activeTab.set('orders');
+        };
+      } catch (_) {}
+    }
+  }
+
+  private triggerRiderAssignedAlert(order: any, riderName?: string): void {
+    const orderNum = order?.orderNumber || order?.id || '';
+    const rider = riderName || order?.driverName || order?.riderName || 'Motorizado';
+    const customer = order?.customerName || 'Cliente';
+    this.triggerDesktopNotification(
+      `🛵 REPARTIDOR ASIGNADO #${orderNum}`,
+      `${rider} ha sido asignado para entregar el pedido de ${customer}.`,
+      `rider-assigned-${order?.id || orderNum}`,
+      false
+    );
+  }
+
+  private triggerOrderStatusAlert(order: any, status: string): void {
+    const orderNum = order?.orderNumber || order?.id || '';
+    const customer = order?.customerName || 'Cliente';
+
+    if (status === 'on_the_way') {
+      this.triggerDesktopNotification(
+        `🚀 PEDIDO EN CAMINO #${orderNum}`,
+        `El pedido #${orderNum} de ${customer} ya va en camino hacia la dirección de entrega.`,
+        `status-${order?.id || orderNum}`,
+        false
+      );
+    } else if (status === 'delivered') {
+      this.triggerDesktopNotification(
+        `✅ PEDIDO ENTREGADO #${orderNum}`,
+        `El pedido #${orderNum} de ${customer} ha sido entregado exitosamente.`,
+        `status-${order?.id || orderNum}`,
+        false
+      );
+    } else if (status === 'cancelled') {
+      this.triggerDesktopNotification(
+        `❌ PEDIDO CANCELADO #${orderNum}`,
+        `El pedido #${orderNum} de ${customer} ha sido cancelado.`,
+        `status-${order?.id || orderNum}`,
+        false
+      );
+    }
+  }
+
   private triggerNewOrderDesktopAlert(order: any): void {
     // 1. Sonido fuerte de comanda
     this.playKitchenBellSound();
@@ -1173,24 +1235,12 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     const customer = order?.customerName || 'Cliente';
     const total = order?.total ? `$${Number(order.total).toFixed(2)}` : '';
 
-    // 2. Notificación nativa del sistema operativo (Windows, macOS, Android Chrome)
-    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-      try {
-        const n = new Notification(`🛎️ ¡NUEVO PEDIDO RECIBIDO! #${orderNum}`, {
-          body: `${customer} ha realizado un pedido ${total ? '(' + total + ')' : ''}. Haz clic para gestionarlo en cocina.`,
-          icon: '/assets/logo.png',
-          badge: '/assets/logo.png',
-          tag: `order-${order?.id || orderNum}`,
-          requireInteraction: true, // Se mantiene visible en pantalla hasta que se interactúe
-        });
-
-        n.onclick = () => {
-          window.focus();
-          n.close();
-          this.activeTab.set('orders');
-        };
-      } catch (_) {}
-    }
+    this.triggerDesktopNotification(
+      `🛎️ ¡NUEVO PEDIDO RECIBIDO! #${orderNum}`,
+      `${customer} ha realizado un pedido ${total ? '(' + total + ')' : ''}. Haz clic para gestionarlo en cocina.`,
+      `order-${order?.id || orderNum}`,
+      false
+    );
 
     // 3. Efecto parpadeante en el título de la pestaña si está en segundo plano
     if (typeof document !== 'undefined' && document.hidden) {
@@ -1690,12 +1740,24 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       try {
         this.realtimeChannel = this.supabase.subscribeToOrders(activeTenantId, (payload) => {
           console.log('[MerchantAdmin] Realtime event from Supabase:', payload);
-          if (payload && payload.eventType === 'REJECTED_BY_RIDER' && payload.order) {
-            triggerRejectionAlert(payload.order.orderNumber || payload.order.id, payload.order.riderName);
-          }
-          if (payload && (payload.eventType === 'INSERT' || payload.new)) {
-            const rawNew = payload.new || payload;
-            this.triggerNewOrderDesktopAlert(rawNew);
+          if (payload) {
+            const eventType = payload.eventType || (payload.old ? 'UPDATE' : 'INSERT');
+            const newRow = payload.new || payload.order || payload;
+            const oldRow = payload.old;
+
+            if (eventType === 'INSERT') {
+              this.triggerNewOrderDesktopAlert(newRow);
+            } else if (eventType === 'UPDATE' && newRow) {
+              const driverJustAssigned = (!oldRow?.driver_id && newRow.driver_id) ||
+                                         (oldRow?.driver_id !== newRow.driver_id && newRow.driver_id);
+              if (driverJustAssigned) {
+                this.triggerRiderAssignedAlert(newRow, newRow.driver_name || newRow.driverName);
+              } else if (oldRow?.status !== newRow.status && newRow.status) {
+                this.triggerOrderStatusAlert(newRow, newRow.status);
+              }
+            } else if (eventType === 'REJECTED_BY_RIDER' && payload.order) {
+              triggerRejectionAlert(payload.order.orderNumber || payload.order.id, payload.order.riderName);
+            }
           }
           reloadOrders();
         });

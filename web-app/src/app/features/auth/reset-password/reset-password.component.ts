@@ -60,29 +60,55 @@ export class ResetPasswordComponent implements OnInit {
       return;
     }
 
+    // 1. Escuchar eventos de autenticación de Supabase (detecta PASSWORD_RECOVERY y SIGNED_IN automáticamente)
+    client.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY' || (session && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION'))) {
+        this.sessionReady.set(true);
+        this.errorMessage.set(null);
+        this.isLoading.set(false);
+      }
+    });
+
     try {
+      // 2. Comprobar si Supabase SDK ya intercambió el código e inició sesión automáticamente
+      const { data: { session: initialSession } } = await client.auth.getSession();
+      if (initialSession) {
+        this.sessionReady.set(true);
+        this.isLoading.set(false);
+        return;
+      }
+
+      // 3. Si no hay sesión y tenemos un código PKCE, intentar intercambiarlo manualmente
       if (code) {
-        // Intercambiar código de recuperación por sesión activa
         const { error } = await client.auth.exchangeCodeForSession(code);
         if (error) {
-          console.warn('[ResetPassword] Error al intercambiar código:', error);
-          this.errorMessage.set('El enlace de restablecimiento ha expirado o ya fue utilizado. Por favor solicita uno nuevo.');
+          // Volver a comprobar la sesión por si el SDK la resolvió concurrentemente
+          const { data: { session: retrySession } } = await client.auth.getSession();
+          if (retrySession) {
+            this.sessionReady.set(true);
+          } else {
+            console.warn('[ResetPassword] Error al intercambiar código:', error);
+            this.errorMessage.set('El enlace de restablecimiento ha expirado o ya fue utilizado. Por favor solicita uno nuevo desde la pantalla de login.');
+          }
         } else {
           this.sessionReady.set(true);
         }
       } else {
-        // Verificar si ya hay una sesión activa o token en hash
-        const { data: { session } } = await client.auth.getSession();
-        if (session) {
+        // 4. Si no hay código en query params, revisar fragmento hash (#access_token=... o #type=recovery)
+        const hash = window.location.hash;
+        if (hash && (hash.includes('access_token') || hash.includes('type=recovery'))) {
           this.sessionReady.set(true);
         } else {
-          // Si no hay código ni sesión, revisar si hay hash fragment
-          const hash = window.location.hash;
-          if (hash && hash.includes('access_token')) {
-            this.sessionReady.set(true);
-          } else {
-            this.errorMessage.set('No se encontró un código o token de recuperación válido. Por favor solicita un nuevo enlace desde la pantalla de inicio de sesión.');
-          }
+          // Margen para que el SDK resuelva el token de URL
+          setTimeout(async () => {
+            const { data: { session: delayedSession } } = await client.auth.getSession();
+            if (delayedSession) {
+              this.sessionReady.set(true);
+              this.errorMessage.set(null);
+            } else if (!this.sessionReady()) {
+              this.errorMessage.set('No se encontró un código o token de recuperación válido. Por favor solicita un nuevo enlace desde la pantalla de inicio de sesión.');
+            }
+          }, 1000);
         }
       }
     } catch (err: any) {

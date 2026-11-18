@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException, InternalServerErrorException, ConflictException, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, InternalServerErrorException, ConflictException, UnauthorizedException, BadRequestException, Optional } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service.js';
 import { PlansService } from '../plans/plans.service.js';
+import { LoginBruteForceService } from '../common/security/login-brute-force.service.js';
 import { randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -24,6 +25,7 @@ export class UsersService {
   constructor(
     private supabase: SupabaseService,
     private plansService: PlansService,
+    @Optional() private bruteForce?: LoginBruteForceService,
   ) {
     this.loadFromDisk();
   }
@@ -654,6 +656,10 @@ export class UsersService {
       throw new NotFoundException('Correo requerido');
     }
 
+    if (this.bruteForce) {
+      this.bruteForce.checkLocked(cleanEmail);
+    }
+
     let user: any = null;
 
     // 0. Super Administrador oficial (acceso inmediato desde local storage sin esperar a la base de datos externa)
@@ -768,6 +774,10 @@ export class UsersService {
     }
 
     if (!user) {
+      if (this.bruteForce) {
+        const warning = this.bruteForce.recordFailedAttempt(cleanEmail);
+        throw new UnauthorizedException(warning);
+      }
       throw new NotFoundException('Usuario no encontrado');
     }
 
@@ -809,7 +819,15 @@ export class UsersService {
 
     const expectedPass = user.password || user.password_hash || '123456';
     if (!password || expectedPass !== password) {
+      if (this.bruteForce) {
+        const warning = this.bruteForce.recordFailedAttempt(cleanEmail);
+        throw new UnauthorizedException(warning);
+      }
       throw new UnauthorizedException('El correo o la contraseña son incorrectos. Por favor, verifica tus datos.');
+    }
+
+    if (this.bruteForce) {
+      this.bruteForce.recordSuccessfulLogin(cleanEmail);
     }
 
     return user;

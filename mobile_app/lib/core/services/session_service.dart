@@ -88,6 +88,47 @@ class SessionService extends ChangeNotifier {
       CartService().clearOrders();
     }
 
+    // Escuchar cambios de autenticación de Supabase (ej: retorno de Google OAuth)
+    try {
+      Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
+        final AuthChangeEvent event = data.event;
+        final Session? session = data.session;
+        if ((event == AuthChangeEvent.signedIn || event == AuthChangeEvent.tokenRefreshed) && session != null) {
+          final user = session.user;
+          if (_currentUser == null || _currentUser!.id != user.id) {
+            final email = user.email ?? '';
+            final meta = user.userMetadata ?? {};
+            final fullName = meta['full_name'] ?? meta['name'] ?? (email.isNotEmpty ? email.split('@').first : 'Cliente');
+            final phone = meta['phone'] ?? user.phone ?? '';
+
+            final appUser = AppUser(
+              id: user.id,
+              name: fullName.toString(),
+              email: email,
+              phone: phone.toString(),
+              role: AppUserRole.customer,
+              deliveryAddress: 'Cabudare, Edo. Lara',
+            );
+            await saveUser(appUser);
+
+            try {
+              await Supabase.instance.client.from('profiles').upsert({
+                'id': user.id,
+                'full_name': fullName,
+                'email': email,
+                'phone': phone,
+                'role': 'CUSTOMER',
+                'is_active': true,
+                'updated_at': DateTime.now().toIso8601String(),
+              });
+            } catch (_) {}
+          }
+        }
+      });
+    } catch (e) {
+      debugPrint('[SessionService] onAuthStateChange listen error: $e');
+    }
+
     _isInitialized = true;
     notifyListeners();
   }

@@ -95,6 +95,14 @@ export class LoginComponent {
       return;
     }
 
+    // Verificar si la cuenta está bloqueada temporalmente por 3 intentos fallidos
+    try {
+      this.checkLoginLock(emailTrim);
+    } catch (lockErr: any) {
+      this.errorMessage.set(lockErr.message);
+      return;
+    }
+
     this.isSubmitting.set(true);
 
     try {
@@ -333,16 +341,65 @@ export class LoginComponent {
     } catch (err: any) {
       console.warn('[LoginComponent] Error de autenticación:', err);
       let msg = err.message || 'Error al autenticar. Verifica tu correo y contraseña.';
-      if (msg === 'Invalid login credentials' || msg.includes('Database error') || msg.includes('Timeout')) {
-        msg = 'La cuenta ingresada no existe o las credenciales son incorrectas.';
+      
+      const isLockedMsg = msg.includes('bloqueada temporalmente') || msg.includes('3 intentos');
+      const isAccountInactive = msg.includes('desactivada') || msg.includes('pausado') || msg.includes('no tiene permisos');
+
+      if (!isLockedMsg && !isAccountInactive) {
+        msg = this.handleLoginFailure(emailTrim, msg);
       }
+
       this.errorMessage.set(msg);
     } finally {
       this.isSubmitting.set(false);
     }
   }
 
+  private checkLoginLock(email: string): void {
+    if (typeof window === 'undefined') return;
+    try {
+      const data = JSON.parse(localStorage.getItem('pidetelo_login_lock_' + email.toLowerCase()) || '{}');
+      if (data.lockedUntil && Date.now() < data.lockedUntil) {
+        const remainingMin = Math.ceil((data.lockedUntil - Date.now()) / 60000);
+        throw new Error(`Cuenta bloqueada temporalmente por seguridad tras 3 intentos fallidos. Por favor espera ${remainingMin} minuto(s) o restablece tu contraseña.`);
+      }
+    } catch (e: any) {
+      if (e.message?.includes('bloqueada')) throw e;
+    }
+  }
+
+  private handleLoginFailure(email: string, rawErrorMsg?: string): string {
+    if (typeof window === 'undefined') return rawErrorMsg || 'Credenciales incorrectas.';
+    try {
+      const key = 'pidetelo_login_lock_' + email.toLowerCase();
+      const data = JSON.parse(localStorage.getItem(key) || '{"attempts": 0}');
+      data.attempts = (data.attempts || 0) + 1;
+      data.lastAttempt = Date.now();
+
+      if (data.attempts >= 3) {
+        data.lockedUntil = Date.now() + 15 * 60 * 1000; // 15 minutos
+        localStorage.setItem(key, JSON.stringify(data));
+        return 'Has superado el límite de 3 intentos fallidos consecutivos. Tu cuenta ha sido bloqueada temporalmente por 15 minutos por motivos de seguridad.';
+      }
+
+      localStorage.setItem(key, JSON.stringify(data));
+      const remaining = 3 - data.attempts;
+      const word = remaining === 1 ? 'intento' : 'intentos';
+      return `Credenciales incorrectas. Te queda solo ${remaining} ${word} antes del bloqueo temporal de tu cuenta por seguridad.`;
+    } catch {
+      return rawErrorMsg || 'Credenciales incorrectas.';
+    }
+  }
+
+  private clearLoginLock(email?: string): void {
+    if (typeof window === 'undefined' || !email) return;
+    try {
+      localStorage.removeItem('pidetelo_login_lock_' + email.toLowerCase());
+    } catch {}
+  }
+
   private redirectByRole(role?: string): void {
+    this.clearLoginLock(this.email);
     // Registrar evento de inicio de sesión para métricas y auditoría del Super Admin
     try {
       const currentUser = this.auth.currentUser();

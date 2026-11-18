@@ -3,6 +3,7 @@ import { SupabaseService } from '../supabase/supabase.service.js';
 import { BiometricVerificationService } from './biometric-verification.service.js';
 import { PlansService } from '../plans/plans.service.js';
 import { TenantsService } from '../tenants/tenants.service.js';
+import { LoginBruteForceService } from '../common/security/login-brute-force.service.js';
 
 import { randomUUID, randomBytes } from 'crypto';
 
@@ -31,6 +32,7 @@ export class RidersService implements OnModuleInit {
     private biometricVerification: BiometricVerificationService,
     @Optional() private plansService?: PlansService,
     @Optional() @Inject(forwardRef(() => TenantsService)) private tenantsService?: TenantsService,
+    @Optional() private bruteForce?: LoginBruteForceService,
   ) {
     this.loadFromDisk();
   }
@@ -137,6 +139,10 @@ export class RidersService implements OnModuleInit {
   async login(emailOrUsername: string, passwordAttempt: string) {
     const cleanUser = (emailOrUsername || '').trim().toLowerCase();
     
+    if (this.bruteForce) {
+      this.bruteForce.checkLocked(cleanUser);
+    }
+
     // 1. Buscar en riders locales
     for (const rider of this.localRiders.values()) {
       const emailMatches = rider.email && rider.email.toLowerCase() === cleanUser;
@@ -146,7 +152,14 @@ export class RidersService implements OnModuleInit {
 
       if (emailMatches || usernameMatches || plateMatches || phoneMatches) {
         if (rider.password && rider.password !== passwordAttempt) {
+          if (this.bruteForce) {
+            const warning = this.bruteForce.recordFailedAttempt(cleanUser);
+            throw new UnauthorizedException(warning);
+          }
           throw new UnauthorizedException('Contraseña incorrecta');
+        }
+        if (this.bruteForce) {
+          this.bruteForce.recordSuccessfulLogin(cleanUser);
         }
         return rider;
       }
@@ -255,10 +268,18 @@ export class RidersService implements OnModuleInit {
         };
         this.localRiders.set(restoredRider.id, restoredRider);
         this.saveToDisk();
+        if (this.bruteForce) {
+          this.bruteForce.recordSuccessfulLogin(cleanUser);
+        }
         return restoredRider;
       }
     } catch (err) {
       console.warn('[RidersService] Fallback de búsqueda en Supabase:', err);
+    }
+
+    if (this.bruteForce) {
+      const warning = this.bruteForce.recordFailedAttempt(cleanUser);
+      throw new UnauthorizedException(warning);
     }
 
     throw new UnauthorizedException('Repartidor no encontrado');

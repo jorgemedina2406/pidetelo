@@ -53,6 +53,16 @@ export class MarketplaceHomeComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
 
   readonly searchQuery = signal<string>('');
+  private searchDebounceTimer: any = null;
+
+  onSearchChange(val: string): void {
+    if (this.searchDebounceTimer) {
+      clearTimeout(this.searchDebounceTimer);
+    }
+    this.searchDebounceTimer = setTimeout(() => {
+      this.searchQuery.set(val);
+    }, 300);
+  }
   readonly selectedCategory = signal<string>('Todos');
   readonly selectedSubcategory = signal<string>('Todos');
   readonly sortBy = signal<'nearest' | 'fastest' | 'rating' | 'fee'>('nearest');

@@ -45,6 +45,18 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   List<Map<String, dynamic>> _supabaseCategories = [];
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  Timer? _searchDebounceTimer;
+
+  void _onSearchChanged(String val) {
+    _searchDebounceTimer?.cancel();
+    _searchDebounceTimer = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) {
+        setState(() {
+          _searchQuery = val.trim().toLowerCase();
+        });
+      }
+    });
+  }
 
   @override
   void initState() {
@@ -274,6 +286,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
   @override
   void dispose() {
+    _searchDebounceTimer?.cancel();
     _searchController.dispose();
     _bannerController.dispose();
     _liveOrdersSyncTimer?.cancel();
@@ -1753,11 +1766,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 // Search Bar
                 TextField(
                   controller: _searchController,
-                  onChanged: (val) {
-                    setState(() {
-                      _searchQuery = val.trim().toLowerCase();
-                    });
-                  },
+                  onChanged: _onSearchChanged,
                   decoration: InputDecoration(
                     hintText: '¿Qué te gustaría pedir hoy?',
                     prefixIcon: const Icon(Icons.search_rounded, size: 20),
