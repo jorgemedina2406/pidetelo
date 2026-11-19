@@ -9,6 +9,7 @@ import '../../../core/services/session_service.dart';
 import '../../../core/services/notification_service.dart';
 import '../widgets/animated_delivery_mascot.dart';
 import '../../customer/screens/customer_home_screen.dart';
+import 'customer_reset_password_screen.dart';
 
 class CustomerLoginScreen extends StatefulWidget {
   final SessionService sessionService;
@@ -97,15 +98,16 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
                     email,
                     redirectTo: 'pidetelo://login-callback',
                   );
-                  if (mounted) {
-                    Navigator.pop(ctx);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Enlace enviado a ' + email + '. Revisa tu correo o spam.'),
-                        backgroundColor: const Color(0xFF10B981),
+                  if (!mounted) return;
+                  Navigator.pop(ctx);
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => CustomerResetPasswordScreen(
+                        sessionService: widget.sessionService,
+                        initialEmail: email,
                       ),
-                    );
-                  }
+                    ),
+                  );
                 } catch (e) {
                   setDlgState(() => isSending = false);
                   if (mounted) {

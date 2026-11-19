@@ -7,6 +7,7 @@ import '../../../core/constants/legal_terms.dart';
 import '../../../core/services/session_service.dart';
 import '../widgets/animated_delivery_mascot.dart';
 import '../../rider/screens/rider_home_screen.dart';
+import 'rider_reset_password_screen.dart';
 
 class RiderLoginScreen extends StatefulWidget {
   final SessionService sessionService;
@@ -106,15 +107,16 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
                     email,
                     redirectTo: 'pidetelo-rider://login-callback',
                   );
-                  if (mounted) {
-                    Navigator.pop(ctx);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Enlace enviado a ' + email + '. Revisa tu correo o spam.'),
-                        backgroundColor: const Color(0xFF10B981),
+                  if (!mounted) return;
+                  Navigator.pop(ctx);
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => RiderResetPasswordScreen(
+                        sessionService: widget.sessionService,
+                        initialEmail: email,
                       ),
-                    );
-                  }
+                    ),
+                  );
                 } catch (e) {
                   setDlgState(() => isSending = false);
                   if (mounted) {

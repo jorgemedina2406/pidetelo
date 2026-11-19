@@ -18,6 +18,8 @@ export class ResetPasswordComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   readonly theme = inject(ThemeService);
 
+  email = '';
+  otpCode = '';
   newPassword = '';
   confirmPassword = '';
   showNewPassword = false;
@@ -38,12 +40,13 @@ export class ResetPasswordComponent implements OnInit {
   readonly hasUppercase = computed(() => /[A-Z]/.test(this.newPassword));
   readonly hasSpecialChar = computed(() => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]/.test(this.newPassword));
   readonly passwordsMatch = computed(() => this.newPassword.length > 0 && this.newPassword === this.confirmPassword);
-  readonly isFormValid = computed(() => 
-    this.hasMinLength() && 
-    this.hasUppercase() && 
-    this.hasSpecialChar() && 
-    this.passwordsMatch()
-  );
+  readonly isFormValid = computed(() => {
+    const passOk = this.hasMinLength() && this.hasUppercase() && this.hasSpecialChar() && this.passwordsMatch();
+    if (!this.sessionReady()) {
+      return passOk && this.email.trim().length > 3 && this.otpCode.trim().length === 6;
+    }
+    return passOk;
+  });
 
   async ngOnInit(): Promise<void> {
     this.isMobileDevice.set(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
@@ -52,6 +55,10 @@ export class ResetPasswordComponent implements OnInit {
     const hash = window.location.hash || '';
     const appParam = (queryParams['app'] || '').toLowerCase();
 
+    if (queryParams['email']) {
+      this.email = queryParams['email'];
+    }
+
     if (appParam === 'rider' || hash.includes('app=rider')) {
       this.targetApp.set('rider');
     } else if (appParam === 'cliente' || appParam === 'customer' || hash.includes('app=cliente')) {
@@ -59,7 +66,6 @@ export class ResetPasswordComponent implements OnInit {
     }
 
     const errorDesc = queryParams['error_description'] || queryParams['error'];
-    
     if (errorDesc) {
       this.errorMessage.set(`El enlace de recuperación es inválido o ha expirado: ${decodeURIComponent(errorDesc)}`);
       this.isLoading.set(false);
@@ -75,7 +81,7 @@ export class ResetPasswordComponent implements OnInit {
       return;
     }
 
-    // 1. Escuchar eventos de autenticación de Supabase (detecta PASSWORD_RECOVERY y SIGNED_IN automáticamente)
+    // 1. Escuchar eventos de autenticación de Supabase (PASSWORD_RECOVERY o SIGNED_IN)
     client.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY' || (session && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION'))) {
         this.sessionReady.set(true);
@@ -85,7 +91,7 @@ export class ResetPasswordComponent implements OnInit {
     });
 
     try {
-      // 2. Comprobar si Supabase SDK ya intercambió el código e inició sesión automáticamente
+      // 2. Comprobar si ya existe una sesión previa válida
       const { data: { session: initialSession } } = await client.auth.getSession();
       if (initialSession) {
         this.sessionReady.set(true);
@@ -97,48 +103,45 @@ export class ResetPasswordComponent implements OnInit {
       if (code) {
         this.recoveryCode.set(code);
 
-        // Si fue originado por Rider App, transferir a la app móvil donde reside el code_verifier
-        if (this.targetApp() === 'rider') {
-          this.isTransferring.set(true);
-          this.isLoading.set(false);
-          const riderDeepLink = `pidetelo-rider://login-callback?code=${encodeURIComponent(code)}`;
+        // Si fue originado por Rider App o Cliente App:
+        if (this.targetApp() === 'rider' || this.targetApp() === 'cliente') {
+          // Si está en dispositivo móvil, transferir directamente a la app nativa donde reside el PKCE code_verifier
           if (this.isMobileDevice()) {
-            window.location.href = riderDeepLink;
+            this.isTransferring.set(true);
+            this.isLoading.set(false);
+            const deepLink = this.targetApp() === 'rider'
+              ? `pidetelo-rider://login-callback?code=${encodeURIComponent(code)}`
+              : `pidetelo://login-callback?code=${encodeURIComponent(code)}`;
+            window.location.href = deepLink;
+            return;
+          } else {
+            // Si está en Computadora / Escritorio: no redirigir a un deep link de móvil inexistente.
+            // Mostrar formulario OTP para que pueda cambiar su contraseña aquí mismo con el código de 6 dígitos.
+            this.isLoading.set(false);
+            return;
           }
-          return;
         }
 
-        // Si fue originado por Cliente App, transferir a la app móvil donde reside el code_verifier
-        if (this.targetApp() === 'cliente') {
-          this.isTransferring.set(true);
-          this.isLoading.set(false);
-          const clienteDeepLink = `pidetelo://login-callback?code=${encodeURIComponent(code)}`;
-          if (this.isMobileDevice()) {
-            window.location.href = clienteDeepLink;
-          }
-          return;
-        }
-
-        // Si es web, intercambiar código localmente
+        // Si es web pura, intentar intercambiar código localmente
         const { error } = await client.auth.exchangeCodeForSession(code);
         if (error) {
-          // Volver a comprobar la sesión por si el SDK la resolvió concurrentemente
           const { data: { session: retrySession } } = await client.auth.getSession();
           if (retrySession) {
             this.sessionReady.set(true);
           } else {
-            console.warn('[ResetPassword] Error al intercambiar código:', error);
-            this.errorMessage.set('El enlace de restablecimiento ha expirado o ya fue utilizado. Por favor solicita uno nuevo desde la pantalla de login.');
+            console.warn('[ResetPassword] exchangeCodeForSession falló (típico si se solicitó en otro dispositivo):', error);
+            // En vez de bloquear al usuario con error fatal, le permitimos usar el código OTP de 6 dígitos
+            this.sessionReady.set(false);
           }
         } else {
           this.sessionReady.set(true);
         }
       } else {
-        // 4. Si no hay código en query params, revisar fragmento hash (#access_token=... o #type=recovery)
-        const hash = window.location.hash;
-        if (hash && (hash.includes('access_token') || hash.includes('type=recovery'))) {
+        // 4. Si no hay código en query params, revisar fragmento hash
+        const currentHash = window.location.hash;
+        if (currentHash && (currentHash.includes('access_token') || currentHash.includes('type=recovery'))) {
           try {
-            const hashParams = new URLSearchParams(hash.startsWith('#') ? hash.substring(1) : hash);
+            const hashParams = new URLSearchParams(currentHash.startsWith('#') ? currentHash.substring(1) : currentHash);
             const accessToken = hashParams.get('access_token');
             const refreshToken = hashParams.get('refresh_token');
             if (accessToken && refreshToken) {
@@ -147,21 +150,10 @@ export class ResetPasswordComponent implements OnInit {
           } catch (_) {}
           this.sessionReady.set(true);
           this.errorMessage.set(null);
-        } else {
-          // Margen para que el SDK resuelva el token de URL
-          setTimeout(async () => {
-            const { data: { session: delayedSession } } = await client.auth.getSession();
-            if (delayedSession) {
-              this.sessionReady.set(true);
-              this.errorMessage.set(null);
-            } else if (!this.sessionReady()) {
-              this.errorMessage.set('No se encontró un código o token de recuperación válido. Por favor solicita un nuevo enlace desde la pantalla de inicio de sesión.');
-            }
-          }, 1000);
         }
       }
     } catch (err: any) {
-      this.errorMessage.set(err?.message || 'Error validando el enlace de recuperación.');
+      console.warn('[ResetPassword] Nota durante verificación inicial:', err);
     } finally {
       this.isLoading.set(false);
     }
@@ -182,21 +174,56 @@ export class ResetPasswordComponent implements OnInit {
     }
 
     try {
-      const { error } = await client.auth.updateUser({
+      // Si la sesión no está lista (ej. se abrió en PC tras solicitarse en app móvil), validar con verifyOtp
+      if (!this.sessionReady()) {
+        const cleanEmail = this.email.trim();
+        const cleanOtp = this.otpCode.trim();
+
+        if (!cleanEmail || !cleanEmail.includes('@')) {
+          this.errorMessage.set('Por favor ingresa un correo electrónico válido.');
+          this.isSubmitting.set(false);
+          return;
+        }
+
+        if (cleanOtp.length !== 6) {
+          this.errorMessage.set('Por favor ingresa el código de 6 dígitos enviado a tu correo.');
+          this.isSubmitting.set(false);
+          return;
+        }
+
+        const { data, error: otpError } = await client.auth.verifyOtp({
+          email: cleanEmail,
+          token: cleanOtp,
+          type: 'recovery',
+        });
+
+        if (otpError) {
+          throw otpError;
+        }
+
+        this.sessionReady.set(true);
+      }
+
+      // Con la sesión activa, actualizar la contraseña
+      const { error: updateError } = await client.auth.updateUser({
         password: this.newPassword
       });
 
-      if (error) {
-        throw error;
+      if (updateError) {
+        throw updateError;
       }
 
       this.isSuccess.set(true);
     } catch (err: any) {
       console.error('[ResetPassword] Error actualizando contraseña:', err);
-      this.errorMessage.set(err?.message || 'Ocurrió un error al actualizar tu contraseña. Intenta nuevamente.');
+      this.errorMessage.set(err?.message || 'Ocurrió un error al actualizar tu contraseña. Verifica los datos e intenta nuevamente.');
     } finally {
       this.isSubmitting.set(false);
     }
+  }
+
+  cancelTransferAndUseWeb(): void {
+    this.isTransferring.set(false);
   }
 
   openInMobileApp(): void {
@@ -216,4 +243,3 @@ export class ResetPasswordComponent implements OnInit {
     this.router.navigate(['/login']);
   }
 }
-

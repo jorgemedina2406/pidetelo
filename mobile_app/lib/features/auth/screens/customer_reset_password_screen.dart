@@ -7,32 +7,115 @@ import '../../customer/screens/customer_home_screen.dart';
 
 class CustomerResetPasswordScreen extends StatefulWidget {
   final SessionService sessionService;
+  final String? initialEmail;
 
-  const CustomerResetPasswordScreen({super.key, required this.sessionService});
+  const CustomerResetPasswordScreen({
+    super.key,
+    required this.sessionService,
+    this.initialEmail,
+  });
 
   @override
   State<CustomerResetPasswordScreen> createState() => _CustomerResetPasswordScreenState();
 }
 
 class _CustomerResetPasswordScreenState extends State<CustomerResetPasswordScreen> {
+  late final TextEditingController _emailController;
+  final _otpController = TextEditingController();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
   bool _obscureNew = true;
   bool _obscureConfirm = true;
   bool _isLoading = false;
+  bool _isResending = false;
   String? _errorMessage;
+  String? _successBanner;
+
+  bool get _hasSession => Supabase.instance.client.auth.currentSession != null;
+
+  @override
+  void initState() {
+    super.initState();
+    _emailController = TextEditingController(text: widget.initialEmail ?? '');
+
+    // Escuchar si Supabase activa la sesión por deep link
+    Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      if (mounted && data.event == AuthChangeEvent.passwordRecovery) {
+        setState(() {
+          _errorMessage = null;
+        });
+      }
+    });
+  }
 
   @override
   void dispose() {
+    _emailController.dispose();
+    _otpController.dispose();
     _newPasswordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
   }
 
+  Future<void> _resendCode() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty || !email.contains('@')) {
+      setState(() => _errorMessage = 'Ingresa un correo electrónico válido para reenviar.');
+      return;
+    }
+
+    setState(() {
+      _isResending = true;
+      _errorMessage = null;
+      _successBanner = null;
+    });
+
+    try {
+      await Supabase.instance.client.auth.resetPasswordForEmail(
+        email,
+        redirectTo: 'pidetelo://login-callback',
+      );
+      if (mounted) {
+        setState(() {
+          _successBanner = 'Nuevo código de 6 dígitos enviado a $email';
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Error al reenviar código: ${e.toString().replaceAll("Exception:", "").trim()}';
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isResending = false);
+      }
+    }
+  }
+
   Future<void> _updatePassword() async {
+    final email = _emailController.text.trim();
+    final otp = _otpController.text.trim();
     final newPass = _newPasswordController.text.trim();
     final confirmPass = _confirmPasswordController.text.trim();
+
+    // Si no hay sesión iniciada vía deep link, se exige correo y código de 6 dígitos
+    if (!_hasSession) {
+      if (email.isEmpty || !email.contains('@')) {
+        setState(() {
+          _errorMessage = 'Por favor ingresa un correo electrónico válido.';
+        });
+        return;
+      }
+
+      if (otp.length != 6) {
+        setState(() {
+          _errorMessage = 'Por favor ingresa el código de 6 dígitos que llegó a tu correo.';
+        });
+        return;
+      }
+    }
 
     if (newPass.length < 6) {
       setState(() {
@@ -51,9 +134,24 @@ class _CustomerResetPasswordScreenState extends State<CustomerResetPasswordScree
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _successBanner = null;
     });
 
     try {
+      // 1. Si no hay sesión previa, verificar el OTP de recuperación
+      if (!_hasSession) {
+        final authRes = await Supabase.instance.client.auth.verifyOTP(
+          email: email,
+          token: otp,
+          type: OtpType.recovery,
+        );
+
+        if (authRes.session == null && authRes.user == null) {
+          throw Exception('El código de 6 dígitos es incorrecto o ha expirado.');
+        }
+      }
+
+      // 2. Con la sesión autenticada, actualizar la contraseña
       await Supabase.instance.client.auth.updateUser(
         UserAttributes(password: newPass),
       );
@@ -124,7 +222,7 @@ class _CustomerResetPasswordScreenState extends State<CustomerResetPasswordScree
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = 'Error al actualizar: ${e.toString().replaceAll("Exception:", "").trim()}';
+          _errorMessage = 'Error: ${e.toString().replaceAll("Exception:", "").trim()}';
         });
       }
     } finally {
@@ -151,20 +249,20 @@ class _CustomerResetPasswordScreenState extends State<CustomerResetPasswordScree
                 // Header Icon
                 Center(
                   child: Container(
-                    width: 76,
-                    height: 76,
+                    width: 72,
+                    height: 72,
                     decoration: BoxDecoration(
                       color: const Color(0xFFF97316).withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(24),
+                      borderRadius: BorderRadius.circular(22),
                       border: Border.all(color: const Color(0xFFF97316).withOpacity(0.3), width: 1.5),
                     ),
-                    child: const Icon(Icons.lock_reset_rounded, size: 38, color: Color(0xFFEA580C)),
+                    child: const Icon(Icons.lock_reset_rounded, size: 36, color: Color(0xFFF97316)),
                   ),
                 ),
                 const SizedBox(height: 20),
 
                 Text(
-                  'Nueva Contraseña',
+                  'Restablecer Contraseña',
                   style: GoogleFonts.outfit(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -175,11 +273,38 @@ class _CustomerResetPasswordScreenState extends State<CustomerResetPasswordScree
                 const SizedBox(height: 8),
 
                 Text(
-                  'Crea una nueva contraseña segura para tu cuenta de Pídetelo.',
+                  _hasSession
+                      ? 'Ingresa tu nueva contraseña para tu cuenta de Pídetelo.'
+                      : 'Ingresa el código de 6 dígitos que llegó a tu correo y tu nueva contraseña.',
                   style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xFF64748B)),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 24),
+
+                // Success Banner
+                if (_successBanner != null) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFF10B981).withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.check_circle_outline_rounded, color: Color(0xFF10B981), size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            _successBanner!,
+                            style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFF065F46), fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                ],
 
                 // Error Banner
                 if (_errorMessage != null) ...[
@@ -197,10 +322,74 @@ class _CustomerResetPasswordScreenState extends State<CustomerResetPasswordScree
                         Expanded(
                           child: Text(
                             _errorMessage!,
-                            style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFFB91C1C), fontWeight: FontWeight.w500),
+                            style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFF991B1B), fontWeight: FontWeight.w500),
                           ),
                         ),
                       ],
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                ],
+
+                // Si no hay sesión iniciada vía deep link, pedir Correo y Código de 6 dígitos
+                if (!_hasSession) ...[
+                  Text(
+                    'CORREO ELECTRÓNICO',
+                    style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF64748B), letterSpacing: 0.5),
+                  ),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontSize: 14),
+                    decoration: InputDecoration(
+                      hintText: 'ejemplo@correo.com',
+                      hintStyle: GoogleFonts.outfit(color: const Color(0xFF94A3B8)),
+                      filled: true,
+                      fillColor: const Color(0xFFF8FAFC),
+                      prefixIcon: const Icon(Icons.email_outlined, color: Color(0xFF64748B), size: 20),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFF97316), width: 1.5)),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'CÓDIGO DE 6 DÍGITOS',
+                        style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF64748B), letterSpacing: 0.5),
+                      ),
+                      InkWell(
+                        onTap: _isResending ? null : _resendCode,
+                        child: Text(
+                          _isResending ? 'Enviando...' : 'Reenviar código',
+                          style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFFF97316)),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: _otpController,
+                    keyboardType: TextInputType.number,
+                    maxLength: 6,
+                    style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontSize: 20, letterSpacing: 8, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                    decoration: InputDecoration(
+                      counterText: '',
+                      hintText: '000000',
+                      hintStyle: GoogleFonts.outfit(color: const Color(0xFFCBD5E1), letterSpacing: 8),
+                      filled: true,
+                      fillColor: const Color(0xFFF8FAFC),
+                      prefixIcon: const Icon(Icons.pin_outlined, color: Color(0xFF64748B), size: 20),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFF97316), width: 1.5)),
                     ),
                   ),
                   const SizedBox(height: 18),
@@ -221,9 +410,9 @@ class _CustomerResetPasswordScreenState extends State<CustomerResetPasswordScree
                     hintStyle: GoogleFonts.outfit(color: const Color(0xFF94A3B8)),
                     filled: true,
                     fillColor: const Color(0xFFF8FAFC),
-                    prefixIcon: const Icon(Icons.lock_outline_rounded, color: Color(0xFF94A3B8), size: 20),
+                    prefixIcon: const Icon(Icons.lock_outline_rounded, color: Color(0xFF64748B), size: 20),
                     suffixIcon: IconButton(
-                      icon: Icon(_obscureNew ? Icons.visibility_outlined : Icons.visibility_off_outlined, color: const Color(0xFF94A3B8), size: 20),
+                      icon: Icon(_obscureNew ? Icons.visibility_outlined : Icons.visibility_off_outlined, color: const Color(0xFF64748B), size: 20),
                       onPressed: () => setState(() => _obscureNew = !_obscureNew),
                     ),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -249,9 +438,9 @@ class _CustomerResetPasswordScreenState extends State<CustomerResetPasswordScree
                     hintStyle: GoogleFonts.outfit(color: const Color(0xFF94A3B8)),
                     filled: true,
                     fillColor: const Color(0xFFF8FAFC),
-                    prefixIcon: const Icon(Icons.lock_clock_outlined, color: Color(0xFF94A3B8), size: 20),
+                    prefixIcon: const Icon(Icons.lock_clock_outlined, color: Color(0xFF64748B), size: 20),
                     suffixIcon: IconButton(
-                      icon: Icon(_obscureConfirm ? Icons.visibility_outlined : Icons.visibility_off_outlined, color: const Color(0xFF94A3B8), size: 20),
+                      icon: Icon(_obscureConfirm ? Icons.visibility_outlined : Icons.visibility_off_outlined, color: const Color(0xFF64748B), size: 20),
                       onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
                     ),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
