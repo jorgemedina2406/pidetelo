@@ -101,7 +101,7 @@
       "Comida Rápida"
     ],
     "tagline": "",
-    "exchange_rate": 896.12,
+    "exchange_rate": 45.5,
     "base_currency": "USD",
     "display_mode": "usd_and_bs",
     "delivery_tiers": [
@@ -133,8 +133,8 @@
     "currency_settings": {
       "baseCurrency": "USD",
       "displayMode": "usd_and_bs",
-      "exchangeRate": 896.12,
-      "lastRateUpdate": "2026-11-17T13:12:19.473Z",
+      "exchangeRate": 45.5,
+      "lastRateUpdate": "2026-11-19T20:19:15.400Z",
       "acceptedPaymentMethods": [
         "cash_usd",
         "mobile_transfer",
@@ -159,46 +159,46 @@
       "isOpenToday": true,
       "scheduleDays": [
         {
+          "to": "23:00",
           "day": "Lunes",
-          "open": true,
           "from": "11:00",
-          "to": "23:00"
+          "open": true
         },
         {
+          "to": "23:00",
           "day": "Martes",
-          "open": true,
           "from": "11:00",
-          "to": "23:00"
+          "open": true
         },
         {
+          "to": "23:00",
           "day": "Miércoles",
-          "open": true,
           "from": "08:00",
-          "to": "23:00"
+          "open": true
         },
         {
+          "to": "23:00",
           "day": "Jueves",
-          "open": true,
           "from": "11:00",
-          "to": "23:00"
+          "open": true
         },
         {
+          "to": "23:30",
           "day": "Viernes",
-          "open": true,
           "from": "11:00",
-          "to": "23:30"
+          "open": true
         },
         {
+          "to": "23:30",
           "day": "Sábado",
-          "open": true,
           "from": "11:00",
-          "to": "23:30"
+          "open": true
         },
         {
+          "to": "22:30",
           "day": "Domingo",
-          "open": true,
           "from": "11:00",
-          "to": "22:30"
+          "open": true
         }
       ]
     },

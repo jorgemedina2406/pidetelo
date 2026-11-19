@@ -4,14 +4,14 @@
     "accent_color": "#e11d48",
     "logo_url": "https://rivssielrsjarjwmoycp.supabase.co/storage/v1/object/public/merchant-assets/logo-burger_logo-1794921104234-0e0b902b.webp",
     "banner_url": "https://rivssielrsjarjwmoycp.supabase.co/storage/v1/object/public/merchant-assets/banner-portada_burger-1794921136290-85e3836b.webp",
-    "exchange_rate": 896.12,
+    "exchange_rate": 45.5,
     "base_currency": "USD",
     "display_mode": "usd_and_bs",
     "currency_settings": {
       "baseCurrency": "USD",
       "displayMode": "usd_and_bs",
-      "exchangeRate": 896.12,
-      "lastRateUpdate": "2026-11-17T13:12:19.472Z"
+      "exchangeRate": 45.5,
+      "lastRateUpdate": "2026-11-19T20:19:15.400Z"
     },
     "delivery_tiers": [
       {
@@ -45,46 +45,46 @@
       "isOpenToday": true,
       "scheduleDays": [
         {
+          "to": "23:00",
           "day": "Lunes",
-          "open": true,
           "from": "11:00",
-          "to": "23:00"
+          "open": true
         },
         {
+          "to": "23:00",
           "day": "Martes",
-          "open": true,
           "from": "11:00",
-          "to": "23:00"
+          "open": true
         },
         {
+          "to": "23:00",
           "day": "Miércoles",
-          "open": true,
           "from": "08:00",
-          "to": "23:00"
+          "open": true
         },
         {
+          "to": "23:00",
           "day": "Jueves",
-          "open": true,
           "from": "11:00",
-          "to": "23:00"
+          "open": true
         },
         {
+          "to": "23:30",
           "day": "Viernes",
-          "open": true,
           "from": "11:00",
-          "to": "23:30"
+          "open": true
         },
         {
+          "to": "23:30",
           "day": "Sábado",
-          "open": true,
           "from": "11:00",
-          "to": "23:30"
+          "open": true
         },
         {
+          "to": "22:30",
           "day": "Domingo",
-          "open": true,
           "from": "11:00",
-          "to": "22:30"
+          "open": true
         }
       ]
     },
