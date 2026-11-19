@@ -1,5 +1,5 @@
-name: Build Android APKs
-# Release build trigger: v1.1.0 Plans & Rider Commission Model
+name: Build Android APKs & AABs
+# Release build trigger: v1.1.0 Android App Bundle (Google Play) & APK (Direct)
 
 on:
   workflow_dispatch:
@@ -13,7 +13,7 @@ on:
 
 jobs:
   build-customer-app:
-    name: Build Customer App APK
+    name: Build Customer App (APK & AAB)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -36,11 +36,13 @@ jobs:
         working-directory: mobile_app
         run: flutter pub get
 
-      - name: Build APK
+      - name: Build APK and AAB
         working-directory: mobile_app
         run: |
           flutter build apk --release
+          flutter build appbundle --release
           cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/Pidetelo-Cliente.apk
+          cp build/app/outputs/bundle/release/app-release.aab build/app/outputs/bundle/release/Pidetelo-Cliente.aab
 
       - name: Upload Customer APK
         uses: actions/upload-artifact@v4
@@ -49,8 +51,15 @@ jobs:
           path: mobile_app/build/app/outputs/flutter-apk/Pidetelo-Cliente.apk
           retention-days: 7
 
+      - name: Upload Customer AAB (Google Play)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Pidetelo-Cliente-GooglePlay-aab
+          path: mobile_app/build/app/outputs/bundle/release/Pidetelo-Cliente.aab
+          retention-days: 7
+
   build-rider-app:
-    name: Build Rider App APK
+    name: Build Rider App (APK & AAB)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -73,15 +82,24 @@ jobs:
         working-directory: rider_app
         run: flutter pub get
 
-      - name: Build APK
+      - name: Build APK and AAB
         working-directory: rider_app
         run: |
           flutter build apk --release
+          flutter build appbundle --release
           cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/Pidetelo-Rider.apk
+          cp build/app/outputs/bundle/release/app-release.aab build/app/outputs/bundle/release/Pidetelo-Rider.aab
 
       - name: Upload Rider APK
         uses: actions/upload-artifact@v4
         with:
           name: Pidetelo-Rider-Android-apk
           path: rider_app/build/app/outputs/flutter-apk/Pidetelo-Rider.apk
+          retention-days: 7
+
+      - name: Upload Rider AAB (Google Play)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Pidetelo-Rider-GooglePlay-aab
+          path: rider_app/build/app/outputs/bundle/release/Pidetelo-Rider.aab
           retention-days: 7
