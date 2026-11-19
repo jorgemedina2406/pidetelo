@@ -28,6 +28,8 @@ export class ResetPasswordComponent implements OnInit {
   readonly errorMessage = signal<string | null>(null);
   readonly isSuccess = signal(false);
   readonly sessionReady = signal(false);
+  readonly targetApp = signal<'rider' | 'cliente' | 'web'>('web');
+  readonly isMobileDevice = signal(false);
 
   // Validaciones de seguridad de contraseña
   readonly hasMinLength = computed(() => this.newPassword.length >= 8);
@@ -42,7 +44,18 @@ export class ResetPasswordComponent implements OnInit {
   );
 
   async ngOnInit(): Promise<void> {
+    this.isMobileDevice.set(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
+
     const queryParams = this.route.snapshot.queryParams;
+    const hash = window.location.hash || '';
+    const appParam = (queryParams['app'] || '').toLowerCase();
+
+    if (appParam === 'rider' || hash.includes('app=rider')) {
+      this.targetApp.set('rider');
+    } else if (appParam === 'cliente' || appParam === 'customer' || hash.includes('app=cliente')) {
+      this.targetApp.set('cliente');
+    }
+
     const errorDesc = queryParams['error_description'] || queryParams['error'];
     
     if (errorDesc) {
@@ -156,6 +169,16 @@ export class ResetPasswordComponent implements OnInit {
       this.errorMessage.set(err?.message || 'Ocurrió un error al actualizar tu contraseña. Intenta nuevamente.');
     } finally {
       this.isSubmitting.set(false);
+    }
+  }
+
+  openInMobileApp(): void {
+    const s = window.location.search || '';
+    const h = window.location.hash || '';
+    if (this.targetApp() === 'rider') {
+      window.location.href = 'pidetelo-rider://reset-password' + s + h;
+    } else if (this.targetApp() === 'cliente') {
+      window.location.href = 'pidetelo://reset-password' + s + h;
     }
   }
 

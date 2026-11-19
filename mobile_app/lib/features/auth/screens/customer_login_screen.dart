@@ -95,7 +95,7 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
                 try {
                   await Supabase.instance.client.auth.resetPasswordForEmail(
                     email,
-                    redirectTo: 'https://pidetelo.app/reset-password?app=cliente',
+                    redirectTo: 'https://app.pidetelo.app/reset-password?app=cliente',
                   );
                   if (mounted) {
                     Navigator.pop(ctx);
