@@ -23,11 +23,11 @@ android {
 
     defaultConfig {
         applicationId = "com.pidetelo.customer"
-        minSdk = 23
+        minSdk = 24
         targetSdk = 34
         multiDexEnabled = true
-        versionCode = 2
-        versionName = "1.1.0"
+        versionCode = 3
+        versionName = "1.1.1"
         ndk {
             abiFilters 'armeabi-v7a', 'arm64-v8a'
         }
