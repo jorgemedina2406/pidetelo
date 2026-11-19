@@ -296,11 +296,15 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
   }
 
   isRealPagoMovil(cred?: any): boolean {
-    if (!cred || !cred.pagoMovilPhone || !cred.pagoMovilBank) return false;
-    const cleanPhone = String(cred.pagoMovilPhone || '').replace(/\D/g, '');
-    const cleanId = String(cred.pagoMovilIdNumber || '').replace(/\D/g, '');
-    if (cleanPhone === '04121234567' || cleanPhone === '04140000000' || cleanPhone.includes('1234567')) return false;
-    if (cleanId.includes('50123456') || cleanId.includes('12345678') || cleanId === '00000000') return false;
+    if (!cred) return false;
+    const pm = cred.pago_movil || cred;
+    const bank = String(pm.bank_name || cred.pagoMovilBank || cred.pago_movil_bank || '').trim();
+    const phone = String(pm.phone || cred.pagoMovilPhone || cred.pago_movil_phone || '').replace(/\D/g, '');
+    const idNum = String(pm.id_number || cred.pagoMovilIdNumber || cred.pago_movil_id_number || '').replace(/\D/g, '');
+
+    if (bank.length < 2 || phone.length < 10 || idNum.length < 5) return false;
+    if (phone === '04121234567' || phone === '04140000000' || phone.includes('1234567')) return false;
+    if (idNum.includes('50123456') || idNum.includes('12345678') || idNum === '00000000') return false;
     return true;
   }
 
