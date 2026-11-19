@@ -815,13 +815,13 @@ export class BranchesService {
         account_name: zAccount,
       } : undefined;
 
-      const credUpdate: any = { updated_at: new Date().toISOString() };
+      const credUpdate: any = { branch_id: id, updated_at: new Date().toISOString() };
       if (pm) credUpdate.pago_movil = pm;
       if (zelle) credUpdate.zelle = zelle;
 
       await client
         .from('branch_payment_credentials')
-        .upsert({ branch_id: id, ...credUpdate });
+        .upsert(credUpdate, { onConflict: 'branch_id' });
     }
 
     // Si la sucursal editada es la Sede Principal, sincronizar con la tabla tenants
