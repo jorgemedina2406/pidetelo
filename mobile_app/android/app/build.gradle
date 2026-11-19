@@ -8,7 +8,7 @@ plugins {
 
 android {
     namespace = "com.pidetelo.customer"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 35
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -24,10 +24,10 @@ android {
     defaultConfig {
         applicationId = "com.pidetelo.customer"
         minSdk = 24
-        targetSdk = 34
+        targetSdk = 35
         multiDexEnabled = true
-        versionCode = 3
-        versionName = "1.1.1"
+        versionCode = 4
+        versionName = "1.1.2"
         ndk {
             abiFilters 'armeabi-v7a', 'arm64-v8a'
         }

@@ -8,7 +8,7 @@ plugins {
 
 android {
     namespace = "com.pidetelo.rider"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 35
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -24,9 +24,9 @@ android {
     defaultConfig {
         applicationId = "com.pidetelo.rider"
         minSdk = 24
-        targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
+        targetSdk = 35
+        versionCode = 4
+        versionName = "1.1.2"
         multiDexEnabled = true
         ndk {
             abiFilters 'armeabi-v7a', 'arm64-v8a'
