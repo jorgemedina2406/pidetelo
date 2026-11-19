@@ -67,32 +67,57 @@ void main() async {
     debugPrint('[Main] NotificationService init error: $e');
   }
 
+  // Variable para asegurar navegación incluso en arranque en frío (Cold Start)
+  bool pendingCustomerPasswordRecovery = false;
+
+  void navigateToCustomerPasswordRecovery() {
+    if (customerNavigatorKey.currentState != null) {
+      debugPrint('[CustomerApp] 🔐 Navegando a CustomerResetPasswordScreen');
+      customerNavigatorKey.currentState?.push(
+        MaterialPageRoute(
+          builder: (_) => CustomerResetPasswordScreen(sessionService: sessionService),
+        ),
+      );
+      pendingCustomerPasswordRecovery = false;
+    } else {
+      debugPrint('[CustomerApp] ⏳ Navigator no listo, guardando pendingCustomerPasswordRecovery = true');
+      pendingCustomerPasswordRecovery = true;
+    }
+  }
+
   // Escuchar eventos de restablecimiento de contraseña en Cliente App
   try {
     Supabase.instance.client.auth.onAuthStateChange.listen((data) {
       if (data.event == AuthChangeEvent.passwordRecovery) {
         debugPrint('[CustomerApp] 🔐 Detectado evento passwordRecovery en Cliente App');
-        customerNavigatorKey.currentState?.push(
-          MaterialPageRoute(
-            builder: (_) => CustomerResetPasswordScreen(sessionService: sessionService),
-          ),
-        );
+        navigateToCustomerPasswordRecovery();
       }
     });
   } catch (e) {
     debugPrint('[CustomerApp] Error escuchando onAuthStateChange: $e');
   }
 
-  runApp(DeliveryApp(sessionService: sessionService));
+  runApp(DeliveryApp(
+    sessionService: sessionService,
+    onMounted: () {
+      if (pendingCustomerPasswordRecovery) {
+        navigateToCustomerPasswordRecovery();
+      }
+    },
+  ));
 }
 
 class DeliveryApp extends StatelessWidget {
   final SessionService sessionService;
+  final VoidCallback? onMounted;
 
-  const DeliveryApp({super.key, required this.sessionService});
+  const DeliveryApp({super.key, required this.sessionService, this.onMounted});
 
   @override
   Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      onMounted?.call();
+    });
     return AnimatedBuilder(
       animation: sessionService,
       builder: (context, _) {

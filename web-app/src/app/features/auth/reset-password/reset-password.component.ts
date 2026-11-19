@@ -30,6 +30,8 @@ export class ResetPasswordComponent implements OnInit {
   readonly sessionReady = signal(false);
   readonly targetApp = signal<'rider' | 'cliente' | 'web'>('web');
   readonly isMobileDevice = signal(false);
+  readonly isTransferring = signal(false);
+  readonly recoveryCode = signal<string | null>(null);
 
   // Validaciones de seguridad de contraseña
   readonly hasMinLength = computed(() => this.newPassword.length >= 8);
@@ -91,8 +93,33 @@ export class ResetPasswordComponent implements OnInit {
         return;
       }
 
-      // 3. Si no hay sesión y tenemos un código PKCE, intentar intercambiarlo manualmente
+      // 3. Manejo de código PKCE
       if (code) {
+        this.recoveryCode.set(code);
+
+        // Si fue originado por Rider App, transferir a la app móvil donde reside el code_verifier
+        if (this.targetApp() === 'rider') {
+          this.isTransferring.set(true);
+          this.isLoading.set(false);
+          const riderDeepLink = `pidetelo-rider://login-callback?code=${encodeURIComponent(code)}`;
+          if (this.isMobileDevice()) {
+            window.location.href = riderDeepLink;
+          }
+          return;
+        }
+
+        // Si fue originado por Cliente App, transferir a la app móvil donde reside el code_verifier
+        if (this.targetApp() === 'cliente') {
+          this.isTransferring.set(true);
+          this.isLoading.set(false);
+          const clienteDeepLink = `pidetelo://login-callback?code=${encodeURIComponent(code)}`;
+          if (this.isMobileDevice()) {
+            window.location.href = clienteDeepLink;
+          }
+          return;
+        }
+
+        // Si es web, intercambiar código localmente
         const { error } = await client.auth.exchangeCodeForSession(code);
         if (error) {
           // Volver a comprobar la sesión por si el SDK la resolvió concurrentemente
@@ -173,12 +200,15 @@ export class ResetPasswordComponent implements OnInit {
   }
 
   openInMobileApp(): void {
+    const code = this.recoveryCode();
     const s = window.location.search || '';
     const h = window.location.hash || '';
+    const query = code ? `?code=${encodeURIComponent(code)}` : (s + h);
+
     if (this.targetApp() === 'rider') {
-      window.location.href = 'pidetelo-rider://reset-password' + s + h;
+      window.location.href = `pidetelo-rider://login-callback${query}`;
     } else if (this.targetApp() === 'cliente') {
-      window.location.href = 'pidetelo://reset-password' + s + h;
+      window.location.href = `pidetelo://login-callback${query}`;
     }
   }
 

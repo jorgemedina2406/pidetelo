@@ -63,32 +63,57 @@ void main() async {
     debugPrint('[RiderApp] BackgroundOrderService error: $e');
   });
 
+  // Variable para asegurar navegación incluso en arranque en frío (Cold Start)
+  bool pendingPasswordRecovery = false;
+
+  void navigateToPasswordRecovery() {
+    if (riderNavigatorKey.currentState != null) {
+      debugPrint('[RiderApp] 🔐 Navegando a RiderResetPasswordScreen');
+      riderNavigatorKey.currentState?.push(
+        MaterialPageRoute(
+          builder: (_) => RiderResetPasswordScreen(sessionService: sessionService),
+        ),
+      );
+      pendingPasswordRecovery = false;
+    } else {
+      debugPrint('[RiderApp] ⏳ Navigator no listo, guardando pendingPasswordRecovery = true');
+      pendingPasswordRecovery = true;
+    }
+  }
+
   // Escuchar eventos de restablecimiento de contraseña en Rider App
   try {
     Supabase.instance.client.auth.onAuthStateChange.listen((data) {
       if (data.event == AuthChangeEvent.passwordRecovery) {
         debugPrint('[RiderApp] 🔐 Detectado evento passwordRecovery en Rider App');
-        riderNavigatorKey.currentState?.push(
-          MaterialPageRoute(
-            builder: (_) => RiderResetPasswordScreen(sessionService: sessionService),
-          ),
-        );
+        navigateToPasswordRecovery();
       }
     });
   } catch (e) {
     debugPrint('[RiderApp] Error escuchando onAuthStateChange: $e');
   }
 
-  runApp(RiderApp(sessionService: sessionService));
+  runApp(RiderApp(
+    sessionService: sessionService,
+    onMounted: () {
+      if (pendingPasswordRecovery) {
+        navigateToPasswordRecovery();
+      }
+    },
+  ));
 }
 
 class RiderApp extends StatelessWidget {
   final SessionService sessionService;
+  final VoidCallback? onMounted;
 
-  const RiderApp({super.key, required this.sessionService});
+  const RiderApp({super.key, required this.sessionService, this.onMounted});
 
   @override
   Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      onMounted?.call();
+    });
     return ListenableBuilder(
       listenable: sessionService,
       builder: (context, _) {
