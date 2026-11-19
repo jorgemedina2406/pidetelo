@@ -499,7 +499,7 @@ class ApiService {
       final supabase = Supabase.instance.client;
       final data = await supabase
           .from('tenants')
-          .select('*, branches(*)')
+          .select('*, branches(*, branch_payment_credentials(*))')
           .eq('is_active', true)
           .timeout(const Duration(seconds: 4));
       if (data.isNotEmpty) {
