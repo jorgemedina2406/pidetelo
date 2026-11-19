@@ -32,17 +32,19 @@ class _CustomerResetPasswordScreenState extends State<CustomerResetPasswordScree
   String? _errorMessage;
   String? _successBanner;
 
-  bool get _hasSession => Supabase.instance.client.auth.currentSession != null;
+  bool _isSessionVerifiedByDeepLink = false;
+  bool get _requiresOtp => !_isSessionVerifiedByDeepLink;
 
   @override
   void initState() {
     super.initState();
     _emailController = TextEditingController(text: widget.initialEmail ?? '');
 
-    // Escuchar si Supabase activa la sesión por deep link
+    // Solo se omite el OTP si Supabase confirma explícitamente el evento passwordRecovery vía Deep Link
     Supabase.instance.client.auth.onAuthStateChange.listen((data) {
       if (mounted && data.event == AuthChangeEvent.passwordRecovery) {
         setState(() {
+          _isSessionVerifiedByDeepLink = true;
           _errorMessage = null;
         });
       }
@@ -100,8 +102,8 @@ class _CustomerResetPasswordScreenState extends State<CustomerResetPasswordScree
     final newPass = _newPasswordController.text.trim();
     final confirmPass = _confirmPasswordController.text.trim();
 
-    // Si no hay sesión iniciada vía enlace deep link, se exige correo y código de verificación
-    if (!_hasSession) {
+    // Si no se validó previamente vía enlace deep link, se exige correo y código de verificación
+    if (_requiresOtp) {
       if (email.isEmpty || !email.contains('@')) {
         setState(() {
           _errorMessage = 'Por favor ingresa un correo electrónico válido.';
@@ -138,8 +140,8 @@ class _CustomerResetPasswordScreenState extends State<CustomerResetPasswordScree
     });
 
     try {
-      // 1. Si no hay sesión previa, verificar el OTP de recuperación
-      if (!_hasSession) {
+      // 1. Si se requiere OTP, verificar el código de recuperación
+      if (_requiresOtp) {
         final authRes = await Supabase.instance.client.auth.verifyOTP(
           email: email,
           token: otp,
@@ -273,7 +275,7 @@ class _CustomerResetPasswordScreenState extends State<CustomerResetPasswordScree
                 const SizedBox(height: 8),
 
                 Text(
-                  _hasSession
+                  !_requiresOtp
                       ? 'Ingresa tu nueva contraseña para tu cuenta de Pídetelo.'
                       : 'Ingresa el código que llegó a tu correo y tu nueva contraseña.',
                   style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xFF64748B)),
@@ -331,8 +333,8 @@ class _CustomerResetPasswordScreenState extends State<CustomerResetPasswordScree
                   const SizedBox(height: 18),
                 ],
 
-                // Si no hay sesión iniciada vía deep link, pedir Correo y Código de 6 dígitos
-                if (!_hasSession) ...[
+                // Si se requiere OTP, pedir Correo y Código de Seguridad
+                if (_requiresOtp) ...[
                   Text(
                     'CORREO ELECTRÓNICO',
                     style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF64748B), letterSpacing: 0.5),
