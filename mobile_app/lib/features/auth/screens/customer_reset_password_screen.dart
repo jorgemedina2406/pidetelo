@@ -78,7 +78,7 @@ class _CustomerResetPasswordScreenState extends State<CustomerResetPasswordScree
       );
       if (mounted) {
         setState(() {
-          _successBanner = 'Nuevo código de 6 dígitos enviado a $email';
+          _successBanner = 'Nuevo código de seguridad enviado a $email';
         });
       }
     } catch (e) {
@@ -96,11 +96,11 @@ class _CustomerResetPasswordScreenState extends State<CustomerResetPasswordScree
 
   Future<void> _updatePassword() async {
     final email = _emailController.text.trim();
-    final otp = _otpController.text.trim();
+    final otp = _otpController.text.replaceAll(RegExp(r'[\s\-]'), '').trim();
     final newPass = _newPasswordController.text.trim();
     final confirmPass = _confirmPasswordController.text.trim();
 
-    // Si no hay sesión iniciada vía deep link, se exige correo y código de 6 dígitos
+    // Si no hay sesión iniciada vía enlace deep link, se exige correo y código de verificación
     if (!_hasSession) {
       if (email.isEmpty || !email.contains('@')) {
         setState(() {
@@ -109,9 +109,9 @@ class _CustomerResetPasswordScreenState extends State<CustomerResetPasswordScree
         return;
       }
 
-      if (otp.length != 6) {
+      if (otp.length < 6 || otp.length > 10) {
         setState(() {
-          _errorMessage = 'Por favor ingresa el código de 6 dígitos que llegó a tu correo.';
+          _errorMessage = 'Por favor ingresa el código de seguridad que llegó a tu correo.';
         });
         return;
       }
@@ -147,7 +147,7 @@ class _CustomerResetPasswordScreenState extends State<CustomerResetPasswordScree
         );
 
         if (authRes.session == null && authRes.user == null) {
-          throw Exception('El código de 6 dígitos es incorrecto o ha expirado.');
+          throw Exception('El código de seguridad es incorrecto o ha expirado.');
         }
       }
 
@@ -275,7 +275,7 @@ class _CustomerResetPasswordScreenState extends State<CustomerResetPasswordScree
                 Text(
                   _hasSession
                       ? 'Ingresa tu nueva contraseña para tu cuenta de Pídetelo.'
-                      : 'Ingresa el código de 6 dígitos que llegó a tu correo y tu nueva contraseña.',
+                      : 'Ingresa el código que llegó a tu correo y tu nueva contraseña.',
                   style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xFF64748B)),
                   textAlign: TextAlign.center,
                 ),
@@ -360,7 +360,7 @@ class _CustomerResetPasswordScreenState extends State<CustomerResetPasswordScree
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'CÓDIGO DE 6 DÍGITOS',
+                        'CÓDIGO DE SEGURIDAD',
                         style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF64748B), letterSpacing: 0.5),
                       ),
                       InkWell(
@@ -375,14 +375,14 @@ class _CustomerResetPasswordScreenState extends State<CustomerResetPasswordScree
                   const SizedBox(height: 6),
                   TextField(
                     controller: _otpController,
-                    keyboardType: TextInputType.number,
-                    maxLength: 6,
-                    style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontSize: 20, letterSpacing: 8, fontWeight: FontWeight.bold),
+                    keyboardType: TextInputType.text,
+                    maxLength: 10,
+                    style: GoogleFonts.outfit(color: const Color(0xFF0F172A), fontSize: 18, letterSpacing: 4, fontWeight: FontWeight.bold),
                     textAlign: TextAlign.center,
                     decoration: InputDecoration(
                       counterText: '',
-                      hintText: '000000',
-                      hintStyle: GoogleFonts.outfit(color: const Color(0xFFCBD5E1), letterSpacing: 8),
+                      hintText: 'Código del correo',
+                      hintStyle: GoogleFonts.outfit(color: const Color(0xFFCBD5E1), letterSpacing: 1),
                       filled: true,
                       fillColor: const Color(0xFFF8FAFC),
                       prefixIcon: const Icon(Icons.pin_outlined, color: Color(0xFF64748B), size: 20),

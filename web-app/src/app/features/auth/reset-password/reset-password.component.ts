@@ -43,7 +43,8 @@ export class ResetPasswordComponent implements OnInit {
   readonly isFormValid = computed(() => {
     const passOk = this.hasMinLength() && this.hasUppercase() && this.hasSpecialChar() && this.passwordsMatch();
     if (!this.sessionReady()) {
-      return passOk && this.email.trim().length > 3 && this.otpCode.trim().length === 6;
+      const cleanOtp = this.otpCode.replace(/[\s\-]/g, '').trim();
+      return passOk && this.email.trim().length > 3 && cleanOtp.length >= 6 && cleanOtp.length <= 10;
     }
     return passOk;
   });
@@ -177,7 +178,7 @@ export class ResetPasswordComponent implements OnInit {
       // Si la sesión no está lista (ej. se abrió en PC tras solicitarse en app móvil), validar con verifyOtp
       if (!this.sessionReady()) {
         const cleanEmail = this.email.trim();
-        const cleanOtp = this.otpCode.trim();
+        const cleanOtp = this.otpCode.replace(/[\s\-]/g, '').trim();
 
         if (!cleanEmail || !cleanEmail.includes('@')) {
           this.errorMessage.set('Por favor ingresa un correo electrónico válido.');
@@ -185,8 +186,8 @@ export class ResetPasswordComponent implements OnInit {
           return;
         }
 
-        if (cleanOtp.length !== 6) {
-          this.errorMessage.set('Por favor ingresa el código de 6 dígitos enviado a tu correo.');
+        if (cleanOtp.length < 6 || cleanOtp.length > 10) {
+          this.errorMessage.set('Por favor ingresa el código de seguridad enviado a tu correo.');
           this.isSubmitting.set(false);
           return;
         }
