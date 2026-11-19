@@ -2239,9 +2239,42 @@ export class ApiService {
           if (branchData.business_hours || branchData.businessHours) {
             updateData.business_hours = branchData.business_hours || branchData.businessHours;
           }
+          if (branchData.accepted_payment_methods || branchData.acceptedPaymentMethods) {
+            updateData.accepted_payment_methods = branchData.accepted_payment_methods || branchData.acceptedPaymentMethods;
+          }
 
           const { data, error } = await client.from('branches').update(updateData).eq('id', branchId).select().single();
           if (!error && data) {
+            const payCreds = branchData.paymentCredentials || branchData.payment_credentials;
+            if (payCreds) {
+              const pmBank = payCreds.pagoMovilBank || payCreds.pago_movil_bank || branchData.pagoMovilBank || branchData.pago_movil_bank;
+              const pmPhone = payCreds.pagoMovilPhone || payCreds.pago_movil_phone || branchData.pagoMovilPhone || branchData.pago_movil_phone;
+              const pmId = payCreds.pagoMovilIdNumber || payCreds.pago_movil_id_number || branchData.pagoMovilIdNumber || branchData.pago_movil_id_number;
+              const pmName = payCreds.pagoMovilAccountName || payCreds.pago_movil_account_name || branchData.pagoMovilAccountName || branchData.pago_movil_account_name;
+
+              const credUpdate: any = { updated_at: new Date().toISOString() };
+              if (pmBank || pmPhone) {
+                credUpdate.pago_movil = {
+                  enabled: true,
+                  bank_name: pmBank || '',
+                  phone: pmPhone || '',
+                  id_number: pmId || '',
+                  account_name: pmName || ''
+                };
+              }
+              const zEmail = payCreds.zelleEmail || payCreds.zelle_email || branchData.zelleEmail || branchData.zelle_email;
+              const zName = payCreds.zelleAccountName || payCreds.zelle_account_name || branchData.zelleAccountName || branchData.zelle_account_name;
+              if (zEmail) {
+                credUpdate.zelle = {
+                  enabled: true,
+                  email: zEmail,
+                  account_name: zName || ''
+                };
+              }
+              try {
+                await client.from('branch_payment_credentials').upsert({ branch_id: branchId, ...credUpdate });
+              } catch (_) { }
+            }
             if (branchData.managerEmail || branchData.managerPassword) {
               try {
                 const collabUpdate: any = {};

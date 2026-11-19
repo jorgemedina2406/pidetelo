@@ -793,18 +793,26 @@ export class BranchesService {
     // Actualizar credenciales de pago si vienen incluidas
     const credentials = branchPayload.paymentCredentials || branchPayload.payment_credentials;
     if (credentials) {
-      const pm = (credentials.pagoMovilBank || branchPayload.pagoMovilBank) ? {
+      const pmBank = credentials.pagoMovilBank || credentials.pago_movil_bank || branchPayload.pagoMovilBank || branchPayload.pago_movil_bank;
+      const pmPhone = credentials.pagoMovilPhone || credentials.pago_movil_phone || branchPayload.pagoMovilPhone || branchPayload.pago_movil_phone;
+      const pmIdNumber = credentials.pagoMovilIdNumber || credentials.pago_movil_id_number || branchPayload.pagoMovilIdNumber || branchPayload.pago_movil_id_number;
+      const pmAccountName = credentials.pagoMovilAccountName || credentials.pago_movil_account_name || branchPayload.pagoMovilAccountName || branchPayload.pago_movil_account_name;
+
+      const pm = (pmBank || pmPhone) ? {
         enabled: true,
-        bank_name: credentials.pagoMovilBank || branchPayload.pagoMovilBank,
-        phone: credentials.pagoMovilPhone || branchPayload.pagoMovilPhone,
-        id_number: credentials.pagoMovilIdNumber || branchPayload.pagoMovilIdNumber,
-        account_name: credentials.pagoMovilAccountName || branchPayload.pagoMovilAccountName,
+        bank_name: pmBank || '',
+        phone: pmPhone || '',
+        id_number: pmIdNumber || '',
+        account_name: pmAccountName || '',
       } : undefined;
 
-      const zelle = (credentials.zelleEmail || branchPayload.zelleEmail) ? {
+      const zEmail = credentials.zelleEmail || credentials.zelle_email || branchPayload.zelleEmail || branchPayload.zelle_email;
+      const zAccount = credentials.zelleAccountName || credentials.zelle_account_name || branchPayload.zelleAccountName || branchPayload.zelle_account_name || '';
+
+      const zelle = zEmail ? {
         enabled: true,
-        email: credentials.zelleEmail || branchPayload.zelleEmail,
-        account_name: credentials.zelleAccountName || branchPayload.zelleAccountName || '',
+        email: zEmail,
+        account_name: zAccount,
       } : undefined;
 
       const credUpdate: any = { updated_at: new Date().toISOString() };

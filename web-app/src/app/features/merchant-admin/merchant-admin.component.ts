@@ -603,6 +603,30 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     this.brandingForm.exchangeRate = Number(branch.exchangeRate ?? curr?.exchangeRate ?? cached?.exchangeRate ?? tenant.currencySettings?.exchangeRate ?? 45.50);
     this.brandingForm.baseCurrency = (branch.baseCurrency || curr?.baseCurrency || cached?.baseCurrency || tenant.currencySettings?.baseCurrency || 'USD') as 'USD' | 'VES';
     this.brandingForm.displayMode = (branch.displayMode || curr?.displayMode || cached?.displayMode || tenant.currencySettings?.displayMode || 'usd_and_bs') as CurrencyDisplayMode;
+
+    const rawMethods = branch.acceptedPaymentMethods ?? (branch as any).accepted_payment_methods ?? cached?.acceptedPaymentMethods;
+    if (Array.isArray(rawMethods) && rawMethods.length > 0) {
+      this.brandingForm.acceptedPaymentMethods = [...rawMethods];
+    }
+
+    const payCreds: any = branch.paymentCredentials || (branch as any).payment_credentials || (branch as any).branch_payment_credentials;
+    if (payCreds) {
+      const pm = payCreds.pago_movil || payCreds;
+      this.brandingForm.pagoMovilBank = pm.bank_name || payCreds.pagoMovilBank || payCreds.pago_movil_bank || cached?.pagoMovilBank || this.brandingForm.pagoMovilBank;
+      this.brandingForm.pagoMovilPhone = pm.phone || payCreds.pagoMovilPhone || payCreds.pago_movil_phone || cached?.pagoMovilPhone || this.brandingForm.pagoMovilPhone;
+      this.brandingForm.pagoMovilIdNumber = pm.id_number || payCreds.pagoMovilIdNumber || payCreds.pago_movil_id_number || cached?.pagoMovilIdNumber || this.brandingForm.pagoMovilIdNumber;
+      this.brandingForm.pagoMovilAccountName = pm.account_name || payCreds.pagoMovilAccountName || payCreds.pago_movil_account_name || cached?.pagoMovilAccountName || this.brandingForm.pagoMovilAccountName;
+
+      const z = payCreds.zelle || payCreds;
+      this.brandingForm.zelleEmail = z.email || payCreds.zelleEmail || payCreds.zelle_email || cached?.zelleEmail || this.brandingForm.zelleEmail;
+    } else if (cached) {
+      if (cached.pagoMovilBank) this.brandingForm.pagoMovilBank = cached.pagoMovilBank;
+      if (cached.pagoMovilPhone) this.brandingForm.pagoMovilPhone = cached.pagoMovilPhone;
+      if (cached.pagoMovilIdNumber) this.brandingForm.pagoMovilIdNumber = cached.pagoMovilIdNumber;
+      if (cached.pagoMovilAccountName) this.brandingForm.pagoMovilAccountName = cached.pagoMovilAccountName;
+      if (cached.zelleEmail) this.brandingForm.zelleEmail = cached.zelleEmail;
+    }
+
     this.brandingForm.openTime = branch.businessHours?.open || branch.openTime || (branch as any).open_time || (branch as any).openTime || cached?.openTime || '11:00';
     this.brandingForm.closeTime = branch.businessHours?.close || branch.closeTime || (branch as any).close_time || (branch as any).closeTime || cached?.closeTime || '23:00';
     const bh = branch.businessHours as any;
@@ -3435,8 +3459,18 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         pago_movil_phone: this.brandingForm.pagoMovilPhone,
         pago_movil_id_number: this.brandingForm.pagoMovilIdNumber,
         pago_movil_account_name: this.brandingForm.pagoMovilAccountName,
+        pagoMovilBank: this.brandingForm.pagoMovilBank,
+        pagoMovilPhone: this.brandingForm.pagoMovilPhone,
+        pagoMovilIdNumber: this.brandingForm.pagoMovilIdNumber,
+        pagoMovilAccountName: this.brandingForm.pagoMovilAccountName,
         zelle_email: this.brandingForm.zelleEmail,
+        zelleEmail: this.brandingForm.zelleEmail,
       },
+      pagoMovilBank: this.brandingForm.pagoMovilBank,
+      pagoMovilPhone: this.brandingForm.pagoMovilPhone,
+      pagoMovilIdNumber: this.brandingForm.pagoMovilIdNumber,
+      pagoMovilAccountName: this.brandingForm.pagoMovilAccountName,
+      zelleEmail: this.brandingForm.zelleEmail,
       openTime: this.brandingForm.openTime,
       closeTime: this.brandingForm.closeTime,
       businessHours: {
@@ -3475,6 +3509,15 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
             deliveryRadiusKm: Number(this.brandingForm.deliveryRadiusKm),
             baseDeliveryFee: Number(this.brandingForm.baseDeliveryFee),
             deliveryTiers: this.brandingForm.deliveryTiers,
+            paymentCredentials: {
+              pagoMovilBank: this.brandingForm.pagoMovilBank,
+              pagoMovilPhone: this.brandingForm.pagoMovilPhone,
+              pagoMovilIdNumber: this.brandingForm.pagoMovilIdNumber,
+              pagoMovilAccountName: this.brandingForm.pagoMovilAccountName,
+              zelleEmail: this.brandingForm.zelleEmail,
+              zelleAccountName: '',
+              isActive: true
+            },
             branding: {
               accentColor: this.brandingForm.accentColor,
               logoUrl: this.brandingForm.logoUrl,
