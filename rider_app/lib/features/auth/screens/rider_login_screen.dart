@@ -104,7 +104,7 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
                 try {
                   await Supabase.instance.client.auth.resetPasswordForEmail(
                     email,
-                    redirectTo: 'https://app.pidetelo.app/reset-password',
+                    redirectTo: 'https://pidetelo.app/reset-password?app=rider',
                   );
                   if (mounted) {
                     Navigator.pop(ctx);

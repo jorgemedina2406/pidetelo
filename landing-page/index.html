@@ -6,33 +6,53 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pídetelo | Plataforma Integral de Delivery, App Móvil y Panel para Comercios</title>
 
-  <!-- Redirección inmediata para rutas de la Web App (Restablecer Contraseña, etc.) -->
+  <!-- Redirección inteligente para rutas de la Web App y Deep Links Móviles -->
   <script>
     (function () {
       var p = window.location.pathname;
       var s = window.location.search;
       var h = window.location.hash;
 
-      // 1. PRIORIDAD MÁXIMA: Restablecer Contraseña (NUNCA interceptar por deep link nativo pidetelo://)
-      // Debe ejecutarse siempre en el navegador en la Web App (app.pidetelo.app/reset-password)
+      // 1. GESTIÓN DE RESTABLECIMIENTO DE CONTRASEÑA (Rider vs Cliente vs Web)
       var isRecovery = p.indexOf('reset-password') !== -1 ||
                        h.indexOf('type=recovery') !== -1 ||
                        s.indexOf('type=recovery') !== -1;
 
       if (isRecovery) {
+        var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        var isRider = s.indexOf('app=rider') !== -1 || h.indexOf('app=rider') !== -1;
+        var isCliente = s.indexOf('app=cliente') !== -1 || s.indexOf('app=customer') !== -1;
+
+        if (isMobile) {
+          if (isRider) {
+            // Abrir EXCLUSIVAMENTE la app del RIDER en su pantalla de cambio de clave
+            window.location.href = 'pidetelo-rider://reset-password' + s + h;
+            setTimeout(function () {
+              window.location.replace('https://app.pidetelo.app/reset-password' + s + h);
+            }, 2500);
+            return;
+          } else if (isCliente) {
+            // Abrir EXCLUSIVAMENTE la app del CLIENTE en su pantalla de cambio de clave
+            window.location.href = 'pidetelo://reset-password' + s + h;
+            setTimeout(function () {
+              window.location.replace('https://app.pidetelo.app/reset-password' + s + h);
+            }, 2500);
+            return;
+          }
+        }
+        // Si es PC o no especifica app, abrir formulario web seguro
         window.location.replace('https://app.pidetelo.app/reset-password' + s + h);
         return;
       }
 
-      // 2. Si la URL es explícitamente para abrir la app móvil por OAuth (ej: login-callback de Google)
+      // 2. Retorno de Google/Apple OAuth para App Móvil
       if (p.indexOf('login-callback') !== -1 || s.indexOf('pidetelo://') !== -1) {
         window.location.href = 'pidetelo://login-callback' + s + h;
         return;
       }
 
-      // Si es dispositivo móvil y viene de Google OAuth (NO recovery ni reset-password)
       var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-      if (isMobile && !isRecovery && (p.indexOf('oauth') !== -1 || (h.indexOf('access_token=') !== -1 && h.indexOf('type=') === -1))) {
+      if (isMobile && (p.indexOf('oauth') !== -1 || (h.indexOf('access_token=') !== -1 && h.indexOf('type=') === -1))) {
         window.location.href = 'pidetelo://login-callback' + s + h;
         return;
       }

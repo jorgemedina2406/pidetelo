@@ -8,8 +8,11 @@ import 'core/services/background_order_service.dart';
 import 'core/services/dolar_api_service.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/screens/rider_login_screen.dart';
+import 'features/auth/screens/rider_reset_password_screen.dart';
 import 'features/auth/screens/splash_screen.dart';
 import 'features/rider/screens/rider_home_screen.dart';
+
+final GlobalKey<NavigatorState> riderNavigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -60,6 +63,22 @@ void main() async {
     debugPrint('[RiderApp] BackgroundOrderService error: $e');
   });
 
+  // Escuchar eventos de restablecimiento de contraseña en Rider App
+  try {
+    Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      if (data.event == AuthChangeEvent.passwordRecovery) {
+        debugPrint('[RiderApp] 🔐 Detectado evento passwordRecovery en Rider App');
+        riderNavigatorKey.currentState?.push(
+          MaterialPageRoute(
+            builder: (_) => RiderResetPasswordScreen(sessionService: sessionService),
+          ),
+        );
+      }
+    });
+  } catch (e) {
+    debugPrint('[RiderApp] Error escuchando onAuthStateChange: $e');
+  }
+
   runApp(RiderApp(sessionService: sessionService));
 }
 
@@ -74,6 +93,7 @@ class RiderApp extends StatelessWidget {
       listenable: sessionService,
       builder: (context, _) {
         return MaterialApp(
+          navigatorKey: riderNavigatorKey,
           title: 'Pídetelo Riders',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,

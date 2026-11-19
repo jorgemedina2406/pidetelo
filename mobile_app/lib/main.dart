@@ -8,8 +8,11 @@ import 'core/services/dolar_api_service.dart';
 import 'core/services/notification_service.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/screens/customer_login_screen.dart';
+import 'features/auth/screens/customer_reset_password_screen.dart';
 import 'features/auth/screens/splash_screen.dart';
 import 'features/customer/screens/customer_home_screen.dart';
+
+final GlobalKey<NavigatorState> customerNavigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -64,6 +67,22 @@ void main() async {
     debugPrint('[Main] NotificationService init error: $e');
   }
 
+  // Escuchar eventos de restablecimiento de contraseña en Cliente App
+  try {
+    Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      if (data.event == AuthChangeEvent.passwordRecovery) {
+        debugPrint('[CustomerApp] 🔐 Detectado evento passwordRecovery en Cliente App');
+        customerNavigatorKey.currentState?.push(
+          MaterialPageRoute(
+            builder: (_) => CustomerResetPasswordScreen(sessionService: sessionService),
+          ),
+        );
+      }
+    });
+  } catch (e) {
+    debugPrint('[CustomerApp] Error escuchando onAuthStateChange: $e');
+  }
+
   runApp(DeliveryApp(sessionService: sessionService));
 }
 
@@ -78,6 +97,7 @@ class DeliveryApp extends StatelessWidget {
       animation: sessionService,
       builder: (context, _) {
         return MaterialApp(
+          navigatorKey: customerNavigatorKey,
           title: AppConfig.appName,
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
