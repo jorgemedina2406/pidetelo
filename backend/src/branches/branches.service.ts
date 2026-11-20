@@ -822,6 +822,13 @@ export class BranchesService {
       await client
         .from('branch_payment_credentials')
         .upsert(credUpdate, { onConflict: 'branch_id' });
+
+      try {
+        await client
+          .from('branches')
+          .update({ payment_credentials: credUpdate })
+          .eq('id', id);
+      } catch (_) {}
     }
 
     // Si la sucursal editada es la Sede Principal, sincronizar con la tabla tenants

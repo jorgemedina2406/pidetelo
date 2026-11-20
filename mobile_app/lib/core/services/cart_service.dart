@@ -265,6 +265,9 @@ class CartService extends ChangeNotifier {
       } else if (_savedAddresses.isNotEmpty) {
         _selectedAddress = _savedAddresses.first;
       }
+
+      // Sync addresses with cloud if authenticated
+      syncAddressesWithCloud();
     } catch (e) {
       debugPrint('[CartService] Init error: $e');
     }
@@ -342,6 +345,7 @@ class CartService extends ChangeNotifier {
     if (searchTarget.trim().isNotEmpty) {
       await syncOrdersWithCloud(searchTarget);
     }
+    await syncAddressesWithCloud();
 
     notifyListeners();
   }
@@ -793,6 +797,138 @@ class CartService extends ChangeNotifier {
     }
   }
 
+  Future<void> _pushAddressesToCloud() async {
+    try {
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) return;
+
+      final addrJson = _savedAddresses.map((a) => a.toJson()).toList();
+      final selJson = _selectedAddress.toJson();
+
+      // 1. Update Supabase Auth user metadata
+      try {
+        await Supabase.instance.client.auth.updateUser(
+          UserAttributes(data: {
+            'saved_addresses': addrJson,
+            'selected_address': selJson,
+          }),
+        );
+      } catch (e) {
+        debugPrint('[CartService] Error updating user metadata addresses: $e');
+      }
+
+      // 2. Update customer_carts metadata in Supabase
+      try {
+        await Supabase.instance.client.from('customer_carts').update({
+          'metadata': {
+            'saved_addresses': addrJson,
+            'selected_address': selJson,
+          }
+        }).eq('user_id', user.id);
+      } catch (e) {
+        debugPrint('[CartService] Error updating customer_carts metadata: $e');
+      }
+    } catch (e) {
+      debugPrint('[CartService] _pushAddressesToCloud error: $e');
+    }
+  }
+
+  Future<void> syncAddressesWithCloud() async {
+    try {
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) return;
+
+      bool hasChanges = false;
+      final List<DeliveryAddress> cloudAddrs = [];
+      DeliveryAddress? cloudSelected;
+
+      // 1. Fetch from user metadata
+      final meta = user.userMetadata;
+      if (meta != null && meta['saved_addresses'] != null) {
+        try {
+          final dynamic raw = meta['saved_addresses'];
+          final List list = raw is String ? jsonDecode(raw) : (raw as List);
+          for (final a in list) {
+            cloudAddrs.add(DeliveryAddress.fromJson(Map<String, dynamic>.from(a)));
+          }
+        } catch (e) {
+          debugPrint('[CartService] Error parsing metadata saved_addresses: $e');
+        }
+      }
+
+      if (meta != null && meta['selected_address'] != null) {
+        try {
+          final dynamic raw = meta['selected_address'];
+          final Map<String, dynamic> selData = raw is String ? jsonDecode(raw) : Map<String, dynamic>.from(raw);
+          cloudSelected = DeliveryAddress.fromJson(selData);
+        } catch (_) {}
+      }
+
+      // 2. Fetch from customer_carts metadata
+      try {
+        final cartRes = await Supabase.instance.client
+            .from('customer_carts')
+            .select('metadata')
+            .eq('user_id', user.id)
+            .maybeSingle();
+        if (cartRes != null && cartRes['metadata'] != null) {
+          final cartMeta = cartRes['metadata'];
+          if (cartMeta['saved_addresses'] != null) {
+            final dynamic raw = cartMeta['saved_addresses'];
+            final List list = raw is String ? jsonDecode(raw) : (raw as List);
+            for (final a in list) {
+              final parsed = DeliveryAddress.fromJson(Map<String, dynamic>.from(a));
+              if (!cloudAddrs.any((x) => x.id == parsed.id)) {
+                cloudAddrs.add(parsed);
+              }
+            }
+          }
+          if (cloudSelected == null && cartMeta['selected_address'] != null) {
+            final dynamic raw = cartMeta['selected_address'];
+            final Map<String, dynamic> selData = raw is String ? jsonDecode(raw) : Map<String, dynamic>.from(raw);
+            cloudSelected = DeliveryAddress.fromJson(selData);
+          }
+        }
+      } catch (e) {
+        debugPrint('[CartService] Error fetching customer_carts metadata: $e');
+      }
+
+      // Merge cloud addresses with local
+      if (cloudAddrs.isNotEmpty) {
+        for (final ca in cloudAddrs) {
+          final idx = _savedAddresses.indexWhere((a) => a.id == ca.id);
+          if (idx == -1) {
+            _savedAddresses.add(ca);
+            hasChanges = true;
+          } else {
+            _savedAddresses[idx] = ca;
+            hasChanges = true;
+          }
+        }
+      }
+
+      if (cloudSelected != null && cloudSelected.id.isNotEmpty) {
+        _selectedAddress = cloudSelected;
+        hasChanges = true;
+      } else if (!hasValidDeliveryAddress && _savedAddresses.isNotEmpty) {
+        _selectedAddress = _savedAddresses.first;
+        hasChanges = true;
+      }
+
+      // If local had addresses that cloud didn't have, push them to cloud
+      if (_savedAddresses.isNotEmpty && (cloudAddrs.length < _savedAddresses.length)) {
+        await _pushAddressesToCloud();
+      }
+
+      if (hasChanges) {
+        await _saveAddresses();
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('[CartService] syncAddressesWithCloud error: $e');
+    }
+  }
+
   void selectAddress(DeliveryAddress address) {
     _selectedAddress = address;
     if (hasValidDeliveryAddress) {
@@ -804,6 +940,7 @@ class CartService extends ChangeNotifier {
       }
     }
     _saveAddresses();
+    _pushAddressesToCloud();
     notifyListeners();
   }
 
@@ -816,6 +953,7 @@ class CartService extends ChangeNotifier {
     }
     _selectedAddress = address;
     await _saveAddresses();
+    await _pushAddressesToCloud();
     notifyListeners();
   }
 
@@ -827,6 +965,7 @@ class CartService extends ChangeNotifier {
         _selectedAddress = address;
       }
       await _saveAddresses();
+      await _pushAddressesToCloud();
       notifyListeners();
     }
   }
@@ -837,6 +976,7 @@ class CartService extends ChangeNotifier {
       _selectedAddress = _savedAddresses.first;
     }
     await _saveAddresses();
+    await _pushAddressesToCloud();
     notifyListeners();
   }
 

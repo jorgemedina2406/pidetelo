@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/models/order_model.dart';
+import '../../../core/services/api_service.dart';
 import '../../../core/services/cart_service.dart';
 import '../../../core/services/session_service.dart';
 import '../../../core/theme/app_theme.dart';
@@ -26,6 +27,7 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
   void initState() {
     super.initState();
     _refreshBranchCredentials();
+    CartService().syncAddressesWithCloud();
   }
 
   void _refreshBranchCredentials() {

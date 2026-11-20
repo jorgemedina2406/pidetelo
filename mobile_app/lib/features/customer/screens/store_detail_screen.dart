@@ -78,11 +78,14 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
     }
 
     final tenantId = widget.storeData['id']?.toString() ?? '';
-    final needsRefresh = list.isEmpty || list.any((b) => b.paymentCredentials.pagoMovilPhone.isEmpty);
-    if (needsRefresh && tenantId.isNotEmpty) {
-      final fetched = await ApiService().fetchBranchesForCompany(tenantId);
-      if (fetched.isNotEmpty) {
-        list = fetched;
+    if (tenantId.isNotEmpty) {
+      try {
+        final fetched = await ApiService().fetchBranchesForCompany(tenantId);
+        if (fetched.isNotEmpty) {
+          list = fetched;
+        }
+      } catch (e) {
+        debugPrint('[StoreDetail] Error refreshing branches: $e');
       }
     }
 

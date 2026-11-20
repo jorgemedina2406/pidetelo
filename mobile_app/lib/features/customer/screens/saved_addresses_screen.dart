@@ -13,6 +13,14 @@ class SavedAddressesScreen extends StatefulWidget {
 }
 
 class _SavedAddressesScreenState extends State<SavedAddressesScreen> {
+  @override
+  void initState() {
+    super.initState();
+    CartService().syncAddressesWithCloud().then((_) {
+      if (mounted) setState(() {});
+    });
+  }
+
   void _openMapPicker([DeliveryAddress? addressToEdit]) async {
     final result = await Navigator.push<DeliveryAddress>(
       context,
