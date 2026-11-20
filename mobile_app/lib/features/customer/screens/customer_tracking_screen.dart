@@ -71,12 +71,14 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
   Timer? _smoothGlideTimer;
   RealtimeChannel? _telemetryChannel;
   String? _subscribedOrderUuid;
+  final Set<String> _healedPinOrderIds = {};
 
   // Calificación del motorizado
   bool _hasRatedRider = false;
   double _selectedRiderRating = 5.0;
   bool _isSubmittingRating = false;
-  final TextEditingController _ratingCommentController = TextEditingController();
+  final TextEditingController _ratingCommentController =
+      TextEditingController();
 
   Future<void> _submitRiderRating() async {
     final riderId = _order.riderId;
@@ -107,7 +109,8 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
   bool _hasRatedStore = false;
   double _selectedStoreRating = 5.0;
   bool _isSubmittingStoreRating = false;
-  final TextEditingController _storeRatingCommentController = TextEditingController();
+  final TextEditingController _storeRatingCommentController =
+      TextEditingController();
 
   Future<void> _submitStoreRating() async {
     final tenantId = _order.tenantId;
@@ -120,7 +123,8 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
       branchId: _order.branchId,
       branchName: _order.branchName,
       comment: _storeRatingCommentController.text.trim(),
-      customerName: _order.customerName.isNotEmpty ? _order.customerName : 'Cliente',
+      customerName:
+          _order.customerName.isNotEmpty ? _order.customerName : 'Cliente',
       customerPhone: _order.customerPhone,
     );
     if (!mounted) return;
@@ -131,7 +135,8 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
     if (res != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('¡Gracias por calificar a ${_order.tenantName.isNotEmpty ? _order.tenantName : "tu comercio"}! ⭐'),
+          content: Text(
+              '¡Gracias por calificar a ${_order.tenantName.isNotEmpty ? _order.tenantName : "tu comercio"}! ⭐'),
           backgroundColor: const Color(0xFF10B981),
         ),
       );
@@ -175,7 +180,8 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
       double minDistance = double.infinity;
       for (int i = 0; i < _routePoints.length; i++) {
         final pt = _routePoints[i];
-        final d = math.pow(pt.latitude - lat, 2) + math.pow(pt.longitude - lng, 2);
+        final d =
+            math.pow(pt.latitude - lat, 2) + math.pow(pt.longitude - lng, 2);
         if (d < minDistance) {
           minDistance = d.toDouble();
           closestIdx = i;
@@ -184,7 +190,8 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
       newProg = closestIdx / (_routePoints.length - 1);
     }
 
-    final remKm = _haversineKm(lat, lng, _order.customerLat, _order.customerLng);
+    final remKm =
+        _haversineKm(lat, lng, _order.customerLat, _order.customerLng);
     final coordChanged = _liveRiderCoord == null ||
         (_liveRiderCoord!.latitude - lat).abs() > 0.000003 ||
         (_liveRiderCoord!.longitude - lng).abs() > 0.000003;
@@ -203,7 +210,8 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
       // Recalcular ruta óptima en vivo desde la moto al cliente cuando avanza más de 35 metros
       if (_order.status == OrderDeliveryStatus.onTheWay && !_isFetchingRoute) {
         final movedKm = _lastRoutedRiderCoord != null
-            ? _haversineKm(lat, lng, _lastRoutedRiderCoord!.latitude, _lastRoutedRiderCoord!.longitude)
+            ? _haversineKm(lat, lng, _lastRoutedRiderCoord!.latitude,
+                _lastRoutedRiderCoord!.longitude)
             : 999.0;
         if (movedKm > 0.035) {
           _loadDynamicFastestRoute(fromLat: lat, fromLng: lng);
@@ -234,7 +242,8 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
               final lat = row['latitude'] ?? row['lat'];
               final lng = row['longitude'] ?? row['lng'];
               if (lat != null && lng != null) {
-                _updateProgressFromCoord((lat as num).toDouble(), (lng as num).toDouble());
+                _updateProgressFromCoord(
+                    (lat as num).toDouble(), (lng as num).toDouble());
               }
             },
           )
@@ -244,7 +253,8 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
               final lat = payload['latitude'] ?? payload['lat'];
               final lng = payload['longitude'] ?? payload['lng'];
               if (lat != null && lng != null) {
-                _updateProgressFromCoord((lat as num).toDouble(), (lng as num).toDouble());
+                _updateProgressFromCoord(
+                    (lat as num).toDouble(), (lng as num).toDouble());
               }
             },
           )
@@ -313,7 +323,8 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
               value: _order.orderNumber,
             ),
             callback: (payload) {
-              debugPrint('[Tracking] Realtime order event: ${payload.eventType}');
+              debugPrint(
+                  '[Tracking] Realtime order event: ${payload.eventType}');
               _refreshOrderStatus();
             },
           )
@@ -335,18 +346,23 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
 
   List<_ParsedOrderAddition> _parseOrderAdditions(String notes) {
     if (notes.trim().isEmpty) return [];
-    final matches = RegExp(r'\[(?:ADICIONAL|Adición en app)[^\]]*\]', caseSensitive: false)
-        .allMatches(notes)
-        .toList();
+    final matches =
+        RegExp(r'\[(?:ADICIONAL|Adición en app)[^\]]*\]', caseSensitive: false)
+            .allMatches(notes)
+            .toList();
     final List<_ParsedOrderAddition> result = [];
     for (int idx = 0; idx < matches.length; idx++) {
       final raw = matches[idx].group(0)!;
       final inner = raw
-          .replaceFirst(RegExp(r'^\[(?:ADICIONAL|Adición en app):\s*', caseSensitive: false), '')
+          .replaceFirst(
+              RegExp(r'^\[(?:ADICIONAL|Adición en app):\s*',
+                  caseSensitive: false),
+              '')
           .replaceFirst(RegExp(r'\]$'), '')
           .trim();
       final parts = inner.split('|').map((s) => s.trim()).toList();
-      final itemsSummary = parts.isNotEmpty ? parts[0] : 'Productos adicionales';
+      final itemsSummary =
+          parts.isNotEmpty ? parts[0] : 'Productos adicionales';
 
       double amountUsd = 0.0;
       double? amountBs;
@@ -360,7 +376,9 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
         final usdMatch = RegExp(r'\+?\$\s*(\d+(?:\.\d+)?)').firstMatch(seg);
         if (usdMatch != null) {
           amountUsd = double.tryParse(usdMatch.group(1)!) ?? amountUsd;
-          final bsMatch = RegExp(r'Bs\.?\s*(\d+(?:\.\d+)?)', caseSensitive: false).firstMatch(seg);
+          final bsMatch =
+              RegExp(r'Bs\.?\s*(\d+(?:\.\d+)?)', caseSensitive: false)
+                  .firstMatch(seg);
           if (bsMatch != null) {
             amountBs = double.tryParse(bsMatch.group(1)!);
           }
@@ -368,16 +386,25 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
         }
         final segLower = seg.toLowerCase();
         if (segLower.startsWith('método:') || segLower.startsWith('metodo:')) {
-          method = (segLower.contains('pago m') || segLower.contains('transfer'))
-              ? 'mobile_transfer'
-              : 'cash';
+          method =
+              (segLower.contains('pago m') || segLower.contains('transfer'))
+                  ? 'mobile_transfer'
+                  : 'cash';
         } else if (segLower.startsWith('banco:')) {
-          originBank = seg.replaceFirst(RegExp(r'^Banco:\s*', caseSensitive: false), '').trim();
+          originBank = seg
+              .replaceFirst(RegExp(r'^Banco:\s*', caseSensitive: false), '')
+              .trim();
         } else if (segLower.startsWith('ref:')) {
-          reference = seg.replaceFirst(RegExp(r'^Ref:\s*', caseSensitive: false), '').trim();
+          reference = seg
+              .replaceFirst(RegExp(r'^Ref:\s*', caseSensitive: false), '')
+              .trim();
         } else if (segLower.startsWith('estado:')) {
-          final stVal = seg.replaceFirst(RegExp(r'^Estado:\s*', caseSensitive: false), '').toLowerCase();
-          if (stVal.contains('verificado') || stVal.contains('confirmado') || stVal.contains('aprobado')) {
+          final stVal = seg
+              .replaceFirst(RegExp(r'^Estado:\s*', caseSensitive: false), '')
+              .toLowerCase();
+          if (stVal.contains('verificado') ||
+              stVal.contains('confirmado') ||
+              stVal.contains('aprobado')) {
             status = 'verified';
           } else if (stVal.contains('rechazado')) {
             status = 'rejected';
@@ -390,7 +417,8 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
       if (status.isEmpty) {
         if (method == 'mobile_transfer') {
           final rawLower = raw.toLowerCase();
-          if (rawLower.contains('verificado') || rawLower.contains('aprobado')) {
+          if (rawLower.contains('verificado') ||
+              rawLower.contains('aprobado')) {
             status = 'verified';
           } else if (rawLower.contains('rechazado')) {
             status = 'rejected';
@@ -427,9 +455,12 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
           .whereType<Map>()
           .map((m) => SelectedProductModifier(
                 groupId: (m['group_id'] ?? m['groupId'] ?? '').toString(),
-                groupTitle: (m['group_title'] ?? m['groupTitle'] ?? '').toString(),
+                groupTitle:
+                    (m['group_title'] ?? m['groupTitle'] ?? '').toString(),
                 optionId: (m['option_id'] ?? m['optionId'] ?? '').toString(),
-                optionName: (m['option_name'] ?? m['optionName'] ?? m['name'] ?? '').toString(),
+                optionName:
+                    (m['option_name'] ?? m['optionName'] ?? m['name'] ?? '')
+                        .toString(),
                 priceDelta: (m['price_delta'] as num?)?.toDouble() ??
                     (m['priceDelta'] as num?)?.toDouble() ??
                     (m['price'] as num?)?.toDouble() ??
@@ -455,7 +486,8 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
     try {
       final supabase = Supabase.instance.client;
       final cleanNum = _order.orderNumber.replaceAll('#', '').trim();
-      final isUuid = RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')
+      final isUuid = RegExp(
+              r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')
           .hasMatch(_order.id);
 
       final filter = isUuid
@@ -474,19 +506,30 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
         final rawNotes = (res['notes'] ?? '').toString();
         final riderData = res['riders'] as Map<String, dynamic>?;
         OrderDeliveryStatus newStatus = _mapSupabaseStatus(statusStr);
-        final riderName = riderData != null ? (riderData['name'] ?? '') : (res['rider_name'] ?? '');
-        final riderPhone = riderData != null ? (riderData['phone'] ?? '') : (res['rider_phone'] ?? '');
-        final riderPlate = riderData != null ? (riderData['vehicle_plate'] ?? '') : '';
-        final riderVehicle = riderData != null ? (riderData['vehicle_model'] ?? riderData['vehicle_type'] ?? 'Moto') : 'Moto';
+        final riderName = riderData != null
+            ? (riderData['name'] ?? '')
+            : (res['rider_name'] ?? '');
+        final riderPhone = riderData != null
+            ? (riderData['phone'] ?? '')
+            : (res['rider_phone'] ?? '');
+        final riderPlate =
+            riderData != null ? (riderData['vehicle_plate'] ?? '') : '';
+        final riderVehicle = riderData != null
+            ? (riderData['vehicle_model'] ??
+                riderData['vehicle_type'] ??
+                'Moto')
+            : 'Moto';
 
         // Detect rider sub-status from notes & driver presence
         if (rawNotes.contains('[RIDER_AT_MERCHANT]')) {
           newStatus = OrderDeliveryStatus.atMerchant;
-        } else if (rawNotes.contains('[RIDER_ON_THE_WAY]') || statusStr == 'on_the_way') {
+        } else if (rawNotes.contains('[RIDER_ON_THE_WAY]') ||
+            statusStr == 'on_the_way') {
           newStatus = OrderDeliveryStatus.onTheWay;
         } else if (rawNotes.contains('[RIDER_PICKED_UP]')) {
           newStatus = OrderDeliveryStatus.onTheWay;
-        } else if (rawNotes.contains('[RIDER_ACCEPTED]') || (res['driver_id'] != null && riderName.isNotEmpty)) {
+        } else if (rawNotes.contains('[RIDER_ACCEPTED]') ||
+            (res['driver_id'] != null && riderName.isNotEmpty)) {
           if (newStatus == OrderDeliveryStatus.pending ||
               newStatus == OrderDeliveryStatus.confirmed ||
               newStatus == OrderDeliveryStatus.preparing) {
@@ -510,7 +553,9 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                 .order('recorded_at', ascending: false)
                 .limit(1)
                 .maybeSingle();
-            if (telem != null && telem['latitude'] != null && telem['longitude'] != null) {
+            if (telem != null &&
+                telem['latitude'] != null &&
+                telem['longitude'] != null) {
               final tLat = (telem['latitude'] as num).toDouble();
               final tLng = (telem['longitude'] as num).toDouble();
               _updateProgressFromCoord(tLat, tLng);
@@ -530,68 +575,104 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
 
         final tenantData = res['tenants'] as Map<String, dynamic>?;
         final branchData = res['branches'] as Map<String, dynamic>?;
-        final dynamicMerchantName = (branchData != null && (branchData['name'] ?? '').toString().isNotEmpty)
+        final dynamicMerchantName = (branchData != null &&
+                (branchData['name'] ?? '').toString().isNotEmpty)
             ? branchData['name'].toString()
-            : (tenantData != null && (tenantData['name'] ?? '').toString().isNotEmpty)
+            : (tenantData != null &&
+                    (tenantData['name'] ?? '').toString().isNotEmpty)
                 ? tenantData['name'].toString()
                 : _order.merchantName;
-        final dynamicMerchantAddress = (branchData != null && (branchData['address'] ?? '').toString().isNotEmpty)
+        final dynamicMerchantAddress = (branchData != null &&
+                (branchData['address'] ?? '').toString().isNotEmpty)
             ? branchData['address'].toString()
-            : (tenantData != null && (tenantData['address'] ?? '').toString().isNotEmpty)
+            : (tenantData != null &&
+                    (tenantData['address'] ?? '').toString().isNotEmpty)
                 ? tenantData['address'].toString()
                 : _order.merchantAddress;
-        final dynamicMerchantLat = (branchData != null && branchData['latitude'] != null)
-            ? (branchData['latitude'] as num).toDouble()
-            : (tenantData != null && tenantData['latitude'] != null)
-                ? (tenantData['latitude'] as num).toDouble()
-                : _order.merchantLat;
-        final dynamicMerchantLng = (branchData != null && branchData['longitude'] != null)
-            ? (branchData['longitude'] as num).toDouble()
-            : (tenantData != null && tenantData['longitude'] != null)
-                ? (tenantData['longitude'] as num).toDouble()
-                : _order.merchantLng;
-        final dynamicCustomerName = (res['customer_name'] ?? '').toString().isNotEmpty
-            ? res['customer_name'].toString()
-            : _order.customerName;
-        final dynamicCustomerAddress = (res['delivery_address'] ?? '').toString().isNotEmpty
-            ? res['delivery_address'].toString()
-            : _order.customerAddress;
+        final dynamicMerchantLat =
+            (branchData != null && branchData['latitude'] != null)
+                ? (branchData['latitude'] as num).toDouble()
+                : (tenantData != null && tenantData['latitude'] != null)
+                    ? (tenantData['latitude'] as num).toDouble()
+                    : _order.merchantLat;
+        final dynamicMerchantLng =
+            (branchData != null && branchData['longitude'] != null)
+                ? (branchData['longitude'] as num).toDouble()
+                : (tenantData != null && tenantData['longitude'] != null)
+                    ? (tenantData['longitude'] as num).toDouble()
+                    : _order.merchantLng;
+        final dynamicCustomerName =
+            (res['customer_name'] ?? '').toString().isNotEmpty
+                ? res['customer_name'].toString()
+                : _order.customerName;
+        final dynamicCustomerAddress =
+            (res['delivery_address'] ?? '').toString().isNotEmpty
+                ? res['delivery_address'].toString()
+                : _order.customerAddress;
 
         final bool merchantLocationChanged =
             (_order.merchantLat - dynamicMerchantLat).abs() > 0.0001 ||
-            (_order.merchantLng - dynamicMerchantLng).abs() > 0.0001;
+                (_order.merchantLng - dynamicMerchantLng).abs() > 0.0001;
 
-        final String newPaymentStatus = (res['payment_status'] ?? _order.paymentStatus).toString();
-        final String newPaymentReference = (res['payment_reference'] ?? _order.paymentReference).toString();
-        String originBank = (res['payment_origin_bank'] ?? _order.paymentOriginBank).toString();
+        final String newPaymentStatus =
+            (res['payment_status'] ?? _order.paymentStatus).toString();
+        final String newPaymentReference =
+            (res['payment_reference'] ?? _order.paymentReference).toString();
+        String originBank =
+            (res['payment_origin_bank'] ?? _order.paymentOriginBank).toString();
         if (originBank.isEmpty && rawNotes.contains('[PAGO_ORIGEN:')) {
           final m = RegExp(r'\[PAGO_ORIGEN:([^\]]+)\]').firstMatch(rawNotes);
           if (m != null) originBank = m.group(1)!.trim();
         }
 
         final freshItems = _parseOrderItemsFromRows(res['order_items']);
-        final double freshSubtotal = (res['subtotal'] as num?)?.toDouble() ?? _order.subtotal;
-        final double freshTotal = (res['total'] as num?)?.toDouble() ?? _order.total;
+        final double freshSubtotal =
+            (res['subtotal'] as num?)?.toDouble() ?? _order.subtotal;
+        final double freshTotal =
+            (res['total'] as num?)?.toDouble() ?? _order.total;
 
-        final String freshPin = () {
-          final explicitPin = (res['delivery_pin'] ?? '').toString().trim();
-          if (RegExp(r'^\d{4}$').hasMatch(explicitPin)) return explicitPin;
-          final m = RegExp(r'\[PIN:(\d{4})\]').firstMatch(rawNotes);
-          if (m != null) return m.group(1)!;
-          if (RegExp(r'^\d{4}$').hasMatch(_order.pin.trim()) &&
-              _order.pin.trim() != '1234' &&
-              _order.pin.trim() != '6420') {
-            return _order.pin.trim();
+        final orderNum =
+            (res['order_number'] ?? _order.orderNumber).toString();
+        final digits = orderNum.replaceAll(RegExp(r'\D'), '');
+        final orderDigits = digits.length >= 4
+            ? digits.substring(digits.length - 4)
+            : (digits.isNotEmpty ? digits.padLeft(4, '0') : '1234');
+
+        final explicitPin = (res['delivery_pin'] ?? '').toString().trim();
+        final notePinMatch = RegExp(r'\[PIN:(\d{4})\]').firstMatch(rawNotes);
+        String freshPin;
+        String effectiveRawNotes = rawNotes;
+        if (RegExp(r'^\d{4}$').hasMatch(explicitPin)) {
+          freshPin = explicitPin;
+        } else if (notePinMatch != null) {
+          freshPin = notePinMatch.group(1)!;
+        } else {
+          final currentLocalPin = _order.pin.trim();
+          final isDistinctLocalPin =
+              RegExp(r'^\d{4}$').hasMatch(currentLocalPin) &&
+                  currentLocalPin != orderDigits &&
+                  currentLocalPin != '1234' &&
+                  currentLocalPin != '0000';
+          if (isDistinctLocalPin && !_healedPinOrderIds.contains(freshId)) {
+            _healedPinOrderIds.add(freshId);
+            final healedNotes = rawNotes.trim().isEmpty
+                ? '[PIN:$currentLocalPin]'
+                : '[PIN:$currentLocalPin] ${rawNotes.trim()}';
+            bool healed = false;
+            try {
+              await Supabase.instance.client.from('orders').update({
+                'notes': healedNotes,
+                'updated_at': DateTime.now().toIso8601String(),
+              }).eq('id', freshId);
+              healed = true;
+              effectiveRawNotes = healedNotes;
+            } catch (_) {}
+            freshPin = healed ? currentLocalPin : orderDigits;
+          } else {
+            freshPin = orderDigits;
           }
-          final orderNum = (res['order_number'] ?? _order.orderNumber).toString();
-          final digits = orderNum.replaceAll(RegExp(r'\D'), '');
-          if (digits.length >= 4) {
-            return digits.substring(digits.length - 4);
-          } else if (digits.isNotEmpty) {
-            return digits.padLeft(4, '0');
-          }
-          return '1234';
-        }();
+        }
+        CartService().updateOrderPin(_order.orderNumber, freshPin);
 
         final bool hasChanges = newStatus != _order.status ||
             newPaymentStatus != _order.paymentStatus ||
@@ -600,9 +681,10 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
             riderPlate != _order.riderPlate ||
             dynamicMerchantName != _order.merchantName ||
             merchantLocationChanged ||
-            rawNotes != (_order.notes ?? '') ||
+            effectiveRawNotes != (_order.notes ?? '') ||
             (freshTotal - _order.total).abs() > 0.001 ||
-            (freshItems.isNotEmpty && freshItems.length != _order.items.length) ||
+            (freshItems.isNotEmpty &&
+                freshItems.length != _order.items.length) ||
             freshId != _order.id ||
             freshPin != _order.pin;
 
@@ -636,7 +718,8 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
               status: newStatus,
               items: freshItems.isNotEmpty ? freshItems : _order.items,
               subtotal: freshSubtotal,
-              deliveryFee: (res['delivery_fee'] as num?)?.toDouble() ?? _order.deliveryFee,
+              deliveryFee: (res['delivery_fee'] as num?)?.toDouble() ??
+                  _order.deliveryFee,
               total: freshTotal,
               paymentMethod: _order.paymentMethod,
               paymentStatus: newPaymentStatus,
@@ -645,7 +728,7 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
               createdAt: _order.createdAt,
               branchId: _order.branchId,
               companyId: _order.companyId,
-              notes: rawNotes.isNotEmpty ? rawNotes : _order.notes,
+              notes: effectiveRawNotes.isNotEmpty ? effectiveRawNotes : _order.notes,
             );
           });
           CartService().updateOrderStatus(newStatus, orderId: _order.id);
@@ -684,19 +767,22 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
     }
   }
 
-  Future<void> _loadDynamicFastestRoute({double? fromLat, double? fromLng}) async {
+  Future<void> _loadDynamicFastestRoute(
+      {double? fromLat, double? fromLng}) async {
     if (_isFetchingRoute) return;
     _isFetchingRoute = true;
     try {
       final bool useRiderOrigin = fromLat != null && fromLng != null;
       final originLat = useRiderOrigin
           ? fromLat
-          : (_order.status == OrderDeliveryStatus.onTheWay && _liveRiderCoord != null
+          : (_order.status == OrderDeliveryStatus.onTheWay &&
+                  _liveRiderCoord != null
               ? _liveRiderCoord!.latitude
               : _order.merchantLat);
       final originLng = useRiderOrigin
           ? fromLng
-          : (_order.status == OrderDeliveryStatus.onTheWay && _liveRiderCoord != null
+          : (_order.status == OrderDeliveryStatus.onTheWay &&
+                  _liveRiderCoord != null
               ? _liveRiderCoord!.longitude
               : _order.merchantLng);
 
@@ -711,11 +797,13 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
         destLng: _order.customerLng,
       );
       if (!mounted) return;
-      if (route['waypoints'] != null && (route['waypoints'] as List).isNotEmpty) {
+      if (route['waypoints'] != null &&
+          (route['waypoints'] as List).isNotEmpty) {
         final List raw = route['waypoints'];
         setState(() {
           _routePoints = raw
-              .map<ll.LatLng>((pt) => ll.LatLng((pt[0] as num).toDouble(), (pt[1] as num).toDouble()))
+              .map<ll.LatLng>((pt) => ll.LatLng(
+                  (pt[0] as num).toDouble(), (pt[1] as num).toDouble()))
               .toList();
           _estimatedMinutes = route['durationMinutes'] ?? 7;
           _distanceKm = (route['distanceKm'] as num?)?.toDouble() ?? 4.29;
@@ -754,16 +842,19 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
     if (_routePoints.isEmpty) {
       return ll.LatLng(_order.merchantLat, _order.merchantLng);
     }
-    final targetIdx = (_riderProgress.clamp(0.0, 1.0) * (_routePoints.length - 1)).round();
+    final targetIdx =
+        (_riderProgress.clamp(0.0, 1.0) * (_routePoints.length - 1)).round();
     return _routePoints[targetIdx];
   }
 
   List<ll.LatLng> get _traversedPoints {
     if (_routePoints.isEmpty || !_hasRider) return [];
-    if (_order.status != OrderDeliveryStatus.onTheWay && _order.status != OrderDeliveryStatus.delivered) {
+    if (_order.status != OrderDeliveryStatus.onTheWay &&
+        _order.status != OrderDeliveryStatus.delivered) {
       return [];
     }
-    final targetIdx = (_riderProgress.clamp(0.0, 1.0) * (_routePoints.length - 1)).round();
+    final targetIdx =
+        (_riderProgress.clamp(0.0, 1.0) * (_routePoints.length - 1)).round();
     if (targetIdx <= 0) return [];
     return _routePoints.sublist(0, targetIdx + 1);
   }
@@ -780,12 +871,14 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
 
   void _zoomIn() {
     final currentZoom = _mapController.camera.zoom;
-    _mapController.move(_mapController.camera.center, (currentZoom + 1).clamp(11.0, 18.0));
+    _mapController.move(
+        _mapController.camera.center, (currentZoom + 1).clamp(11.0, 18.0));
   }
 
   void _zoomOut() {
     final currentZoom = _mapController.camera.zoom;
-    _mapController.move(_mapController.camera.center, (currentZoom - 1).clamp(11.0, 18.0));
+    _mapController.move(
+        _mapController.camera.center, (currentZoom - 1).clamp(11.0, 18.0));
   }
 
   Future<void> _launchWhatsAppRider() async {
@@ -841,7 +934,8 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
   Future<void> _launchWhatsAppPaymentIssue() async {
     final phone = _order.merchantPhone.replaceAll('+', '').replaceAll(' ', '');
     final cleanPhone = phone.isNotEmpty ? phone : '584245065032';
-    final ref = _order.paymentReference.isNotEmpty ? _order.paymentReference : 'N/A';
+    final ref =
+        _order.paymentReference.isNotEmpty ? _order.paymentReference : 'N/A';
     final msg = Uri.encodeComponent(
       '¡Hola ${_order.merchantName}! Soy ${_order.customerName}, cliente del pedido ${_order.orderNumber}. '
       'Vi en la app que mi pago móvil (Ref: $ref) requiere validación. Aquí te adjunto el capture del comprobante bancario:',
@@ -867,10 +961,12 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           backgroundColor: const Color(0xFF1E293B),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: Text(
             'Corregir Referencia de Pago',
-            style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+            style: GoogleFonts.outfit(
+                color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -878,21 +974,29 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
             children: [
               Text(
                 'Ingresa los dígitos correctos del comprobante bancario emitido a ${_order.merchantName}:',
-                style: GoogleFonts.outfit(color: const Color(0xFF94A3B8), fontSize: 12),
+                style: GoogleFonts.outfit(
+                    color: const Color(0xFF94A3B8), fontSize: 12),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: textCtrl,
                 keyboardType: TextInputType.number,
-                style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.w600),
+                style: GoogleFonts.outfit(
+                    color: Colors.white, fontWeight: FontWeight.w600),
                 decoration: InputDecoration(
                   hintText: 'Ej: 987654',
                   hintStyle: GoogleFonts.outfit(color: Colors.white38),
                   filled: true,
                   fillColor: const Color(0xFF0F172A),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.white24)),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.white24)),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppTheme.primary)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Colors.white24)),
+                  enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Colors.white24)),
+                  focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppTheme.primary)),
                 ),
               ),
             ],
@@ -900,7 +1004,8 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text('Cancelar', style: GoogleFonts.outfit(color: Colors.white54)),
+              child: Text('Cancelar',
+                  style: GoogleFonts.outfit(color: Colors.white54)),
             ),
             ElevatedButton(
               onPressed: isSaving
@@ -910,20 +1015,18 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                       if (newRef.isEmpty) return;
                       setDialogState(() => isSaving = true);
                       try {
-                        final cleanNum = _order.orderNumber.replaceAll('#', '').trim();
+                        final cleanNum =
+                            _order.orderNumber.replaceAll('#', '').trim();
                         final isUuid = RegExp(
                           r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
                         ).hasMatch(_order.id);
                         final filter = isUuid
                             ? 'id.eq.${_order.id},order_number.eq.$cleanNum,order_number.eq.#$cleanNum'
                             : 'order_number.eq.$cleanNum,order_number.eq.#$cleanNum';
-                        await Supabase.instance.client
-                            .from('orders')
-                            .update({
-                              'payment_reference': newRef,
-                              'payment_status': 'pending',
-                            })
-                            .or(filter);
+                        await Supabase.instance.client.from('orders').update({
+                          'payment_reference': newRef,
+                          'payment_status': 'pending',
+                        }).or(filter);
 
                         if (mounted) {
                           setState(() {
@@ -935,7 +1038,8 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                           Navigator.pop(ctx);
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text('¡Referencia actualizada! El comercio la validará en breve.'),
+                              content: Text(
+                                  '¡Referencia actualizada! El comercio la validará en breve.'),
                               backgroundColor: Color(0xFF10B981),
                             ),
                           );
@@ -943,18 +1047,26 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                       } catch (e) {
                         setDialogState(() => isSaving = false);
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Error al actualizar: $e'), backgroundColor: Colors.red),
+                          SnackBar(
+                              content: Text('Error al actualizar: $e'),
+                              backgroundColor: Colors.red),
                         );
                       }
                     },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primary,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
               ),
               child: isSaving
-                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : Text('Guardar y Notificar', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white))
+                  : Text('Guardar y Notificar',
+                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -972,10 +1084,12 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           backgroundColor: const Color(0xFF1E293B),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: Text(
             'Corregir Referencia • Adición #${addition.index}',
-            style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+            style: GoogleFonts.outfit(
+                color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -983,23 +1097,32 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
             children: [
               Text(
                 '${addition.itemsSummary} (+\$${addition.amountUsd.toStringAsFixed(2)}${addition.amountBs != null ? " / Bs. ${addition.amountBs!.toStringAsFixed(2)}" : ""})',
-                style: GoogleFonts.outfit(color: const Color(0xFF94A3B8), fontSize: 12),
+                style: GoogleFonts.outfit(
+                    color: const Color(0xFF94A3B8), fontSize: 12),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: refCtrl,
                 keyboardType: TextInputType.number,
-                style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.w600),
+                style: GoogleFonts.outfit(
+                    color: Colors.white, fontWeight: FontWeight.w600),
                 decoration: InputDecoration(
                   labelText: 'Nueva Referencia (mín. 4 dígitos)',
-                  labelStyle: GoogleFonts.outfit(color: Colors.white60, fontSize: 12),
+                  labelStyle:
+                      GoogleFonts.outfit(color: Colors.white60, fontSize: 12),
                   hintText: 'Ej: 987654',
                   hintStyle: GoogleFonts.outfit(color: Colors.white38),
                   filled: true,
                   fillColor: const Color(0xFF0F172A),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.white24)),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.white24)),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppTheme.primary)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Colors.white24)),
+                  enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Colors.white24)),
+                  focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppTheme.primary)),
                 ),
               ),
               const SizedBox(height: 10),
@@ -1008,14 +1131,21 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                 style: GoogleFonts.outfit(color: Colors.white, fontSize: 13),
                 decoration: InputDecoration(
                   labelText: 'Banco Emisor (opcional)',
-                  labelStyle: GoogleFonts.outfit(color: Colors.white60, fontSize: 12),
+                  labelStyle:
+                      GoogleFonts.outfit(color: Colors.white60, fontSize: 12),
                   hintText: 'Ej: Banesco, BDV, Mercantil',
                   hintStyle: GoogleFonts.outfit(color: Colors.white38),
                   filled: true,
                   fillColor: const Color(0xFF0F172A),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.white24)),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.white24)),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppTheme.primary)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Colors.white24)),
+                  enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Colors.white24)),
+                  focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppTheme.primary)),
                 ),
               ),
             ],
@@ -1023,7 +1153,8 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text('Cancelar', style: GoogleFonts.outfit(color: Colors.white54)),
+              child: Text('Cancelar',
+                  style: GoogleFonts.outfit(color: Colors.white54)),
             ),
             ElevatedButton(
               onPressed: isSaving
@@ -1033,14 +1164,16 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                       if (newRef.length < 4) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('Ingresa una referencia válida de al menos 4 dígitos.'),
+                            content: Text(
+                                'Ingresa una referencia válida de al menos 4 dígitos.'),
                             backgroundColor: Colors.amber,
                           ),
                         );
                         return;
                       }
                       setDialogState(() => isSaving = true);
-                      final ok = await ApiService().resendAdditionPaymentReference(
+                      final ok =
+                          await ApiService().resendAdditionPaymentReference(
                         orderIdOrNumber: _order.id,
                         orderNumber: _order.orderNumber,
                         additionRaw: addition.raw,
@@ -1052,7 +1185,8 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                         Navigator.pop(ctx);
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('¡Referencia de adicional reenviada! El comercio la verificará en breve.'),
+                            content: Text(
+                                '¡Referencia de adicional reenviada! El comercio la verificará en breve.'),
                             backgroundColor: Color(0xFF10B981),
                           ),
                         );
@@ -1061,7 +1195,8 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                         setDialogState(() => isSaving = false);
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('No se pudo actualizar la referencia. Intenta de nuevo.'),
+                            content: Text(
+                                'No se pudo actualizar la referencia. Intenta de nuevo.'),
                             backgroundColor: Colors.redAccent,
                           ),
                         );
@@ -1070,11 +1205,17 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primary,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
               ),
               child: isSaving
-                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : Text('Reenviar Referencia', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white))
+                  : Text('Reenviar Referencia',
+                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -1082,20 +1223,18 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
     );
   }
 
-
-
   void _showToast(String msg) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(msg, style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+        content:
+            Text(msg, style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
         backgroundColor: const Color(0xFF1E293B),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
-
 
   void _showAppendItemsSheet(BuildContext context) {
     showModalBottomSheet(
@@ -1109,7 +1248,8 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
         order: _order,
         onItemsAdded: (addedItems, extraAmount) {
           setState(() {
-            final updatedItems = List<CartItem>.from(_order.items)..addAll(addedItems);
+            final updatedItems = List<CartItem>.from(_order.items)
+              ..addAll(addedItems);
             _order = _order.copyWith(
               items: updatedItems,
               subtotal: _order.subtotal + extraAmount,
@@ -1129,9 +1269,13 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                 label: 'Avisar WhatsApp',
                 textColor: Colors.white,
                 onPressed: () {
-                  final phone = _order.merchantPhone.replaceAll('+', '').replaceAll(' ', '');
+                  final phone = _order.merchantPhone
+                      .replaceAll('+', '')
+                      .replaceAll(' ', '');
                   final cleanPhone = phone.isNotEmpty ? phone : '584245065032';
-                  final itemsStr = addedItems.map((i) => '${i.quantity}x ${i.product.name}').join(', ');
+                  final itemsStr = addedItems
+                      .map((i) => '${i.quantity}x ${i.product.name}')
+                      .join(', ');
                   final msg = Uri.encodeComponent(
                     'Hola ${_order.merchantName}, acabo de adicionar a mi pedido #${_order.orderNumber} desde la app:\n'
                     '$itemsStr\n'
@@ -1248,14 +1392,16 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                 CircleAvatar(
                   backgroundColor: const Color(0xFF1E293B).withOpacity(0.92),
                   child: IconButton(
-                    icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                    icon: const Icon(Icons.arrow_back_rounded,
+                        color: Colors.white),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 10),
                     decoration: BoxDecoration(
                       color: const Color(0xFF1E293B).withOpacity(0.92),
                       borderRadius: BorderRadius.circular(16),
@@ -1288,17 +1434,29 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                                   ? 'Comanda en pausa • Pago no verificado'
                                   : _order.status == OrderDeliveryStatus.pending
                                       ? 'Esperando confirmación del comercio'
-                                      : _order.status == OrderDeliveryStatus.confirmed
+                                      : _order.status ==
+                                              OrderDeliveryStatus.confirmed
                                           ? 'Comercio confirmó tu pedido'
-                                          : _order.status == OrderDeliveryStatus.preparing && !_hasRider
+                                          : _order.status ==
+                                                      OrderDeliveryStatus
+                                                          .preparing &&
+                                                  !_hasRider
                                               ? 'En preparación en cocina'
-                                              : _order.status == OrderDeliveryStatus.atMerchant
+                                              : _order.status ==
+                                                      OrderDeliveryStatus
+                                                          .atMerchant
                                                   ? '¡El repartidor ${_order.riderName.isNotEmpty ? _order.riderName : ""} llegó al local!'
-                                                  : _order.status == OrderDeliveryStatus.assigned
+                                                  : _order.status ==
+                                                          OrderDeliveryStatus
+                                                              .assigned
                                                       ? 'Repartidor ${_order.riderName.isNotEmpty ? _order.riderName : ""} asignado • Yendo al local'
-                                                      : _order.status == OrderDeliveryStatus.onTheWay
+                                                      : _order.status ==
+                                                              OrderDeliveryStatus
+                                                                  .onTheWay
                                                           ? 'En camino a tu ubicación • ~$_estimatedMinutes min'
-                                                          : _order.status == OrderDeliveryStatus.delivered
+                                                          : _order.status ==
+                                                                  OrderDeliveryStatus
+                                                                      .delivered
                                                               ? '¡Pedido entregado con éxito!'
                                                               : _hasRider
                                                                   ? 'Repartidor asignado: ${_order.riderName}'
@@ -1308,9 +1466,11 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                                 fontWeight: FontWeight.w600,
                                 color: _order.paymentStatus == 'rejected'
                                     ? const Color(0xFFF43F5E)
-                                    : _order.status == OrderDeliveryStatus.atMerchant
+                                    : _order.status ==
+                                            OrderDeliveryStatus.atMerchant
                                         ? const Color(0xFF38BDF8)
-                                        : _order.status == OrderDeliveryStatus.onTheWay
+                                        : _order.status ==
+                                                OrderDeliveryStatus.onTheWay
                                             ? AppTheme.primary
                                             : _hasRider
                                                 ? AppTheme.primary
@@ -1320,7 +1480,8 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                           ],
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
                             color: AppTheme.riderAccent.withOpacity(0.2),
                             borderRadius: BorderRadius.circular(8),
@@ -1366,7 +1527,9 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                 const SizedBox(height: 8),
                 // Toggle Map Theme (Calles vs Oscuro)
                 _buildMapToolButton(
-                  icon: _isDarkMap ? Icons.map_outlined : Icons.dark_mode_outlined,
+                  icon: _isDarkMap
+                      ? Icons.map_outlined
+                      : Icons.dark_mode_outlined,
                   tooltip: _isDarkMap ? 'Modo Calles' : 'Modo Nocturno',
                   color: Colors.white,
                   onTap: () {
@@ -1404,7 +1567,8 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
               padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
               decoration: BoxDecoration(
                 color: const Color(0xFF0F172A).withOpacity(0.97),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(26)),
                 border: Border.all(color: Colors.white12),
                 boxShadow: [
                   BoxShadow(
@@ -1444,7 +1608,8 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                       decoration: BoxDecoration(
                         color: const Color(0xFF881337).withOpacity(0.92),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFFF43F5E).withOpacity(0.4)),
+                        border: Border.all(
+                            color: const Color(0xFFF43F5E).withOpacity(0.4)),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1457,7 +1622,8 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                                   color: Color(0xFFE11D48),
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 16),
+                                child: const Icon(Icons.warning_amber_rounded,
+                                    color: Colors.white, size: 16),
                               ),
                               const SizedBox(width: 8),
                               Expanded(
@@ -1487,14 +1653,20 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                               Expanded(
                                 child: ElevatedButton.icon(
                                   onPressed: _launchWhatsAppPaymentIssue,
-                                  icon: const Icon(Icons.chat_rounded, size: 15),
+                                  icon:
+                                      const Icon(Icons.chat_rounded, size: 15),
                                   label: const Text('Enviar Capture WhatsApp'),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: const Color(0xFF22C55E),
                                     foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(vertical: 8),
-                                    textStyle: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.bold),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    padding:
+                                        const EdgeInsets.symmetric(vertical: 8),
+                                    textStyle: GoogleFonts.outfit(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold),
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(10)),
                                   ),
                                 ),
                               ),
@@ -1506,9 +1678,13 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: Colors.white,
                                   side: const BorderSide(color: Colors.white30),
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                                  textStyle: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.bold),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 8),
+                                  textStyle: GoogleFonts.outfit(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10)),
                                 ),
                               ),
                             ],
@@ -1527,14 +1703,17 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                             decoration: BoxDecoration(
                               color: const Color(0xFF881337).withOpacity(0.92),
                               borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: const Color(0xFFF43F5E).withOpacity(0.45)),
+                              border: Border.all(
+                                  color: const Color(0xFFF43F5E)
+                                      .withOpacity(0.45)),
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
                                   children: [
-                                    const Icon(Icons.error_outline_rounded, color: Colors.white, size: 18),
+                                    const Icon(Icons.error_outline_rounded,
+                                        color: Colors.white, size: 18),
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
@@ -1551,21 +1730,31 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                                 const SizedBox(height: 6),
                                 Text(
                                   '${rejectedAdd.itemsSummary} (+\$${rejectedAdd.amountUsd.toStringAsFixed(2)}${rejectedAdd.amountBs != null ? " / Bs. ${rejectedAdd.amountBs!.toStringAsFixed(2)}" : ""}) • Ref: ${rejectedAdd.reference.isNotEmpty ? rejectedAdd.reference : "N/A"}',
-                                  style: GoogleFonts.outfit(fontSize: 11.5, color: const Color(0xFFFECDD3)),
+                                  style: GoogleFonts.outfit(
+                                      fontSize: 11.5,
+                                      color: const Color(0xFFFECDD3)),
                                 ),
                                 const SizedBox(height: 10),
                                 SizedBox(
                                   width: double.infinity,
                                   child: ElevatedButton.icon(
-                                    onPressed: () => _showEditAdditionRefDialog(rejectedAdd),
-                                    icon: const Icon(Icons.edit_rounded, size: 15),
-                                    label: const Text('Corregir referencia del adicional'),
+                                    onPressed: () =>
+                                        _showEditAdditionRefDialog(rejectedAdd),
+                                    icon: const Icon(Icons.edit_rounded,
+                                        size: 15),
+                                    label: const Text(
+                                        'Corregir referencia del adicional'),
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: AppTheme.primary,
                                       foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(vertical: 9),
-                                      textStyle: GoogleFonts.outfit(fontSize: 11.5, fontWeight: FontWeight.bold),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 9),
+                                      textStyle: GoogleFonts.outfit(
+                                          fontSize: 11.5,
+                                          fontWeight: FontWeight.bold),
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10)),
                                     ),
                                   ),
                                 ),
@@ -1584,12 +1773,26 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
 
                       return Row(
                         children: [
-                          _buildStepNode('Confirmado', s0, isCurrent: step == 0),
-                          Expanded(child: Container(height: 2, color: s1 ? AppTheme.primary : Colors.white24)),
-                          _buildStepNode('En Cocina', s1, isCurrent: step == 1 || step == 2),
-                          Expanded(child: Container(height: 2, color: s2 ? AppTheme.primary : Colors.white24)),
+                          _buildStepNode('Confirmado', s0,
+                              isCurrent: step == 0),
+                          Expanded(
+                              child: Container(
+                                  height: 2,
+                                  color:
+                                      s1 ? AppTheme.primary : Colors.white24)),
+                          _buildStepNode('En Cocina', s1,
+                              isCurrent: step == 1 || step == 2),
+                          Expanded(
+                              child: Container(
+                                  height: 2,
+                                  color:
+                                      s2 ? AppTheme.primary : Colors.white24)),
                           _buildStepNode('En Camino', s2, isCurrent: step == 3),
-                          Expanded(child: Container(height: 2, color: s3 ? AppTheme.primary : Colors.white24)),
+                          Expanded(
+                              child: Container(
+                                  height: 2,
+                                  color:
+                                      s3 ? AppTheme.primary : Colors.white24)),
                           _buildStepNode('Entregado', s3, isCurrent: step == 4),
                         ],
                       );
@@ -1643,7 +1846,9 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                                   _order.status == OrderDeliveryStatus.pending
                                       ? 'El restaurante está revisando tu orden'
                                       : 'Asignando el motorizado disponible más rápido',
-                                  style: GoogleFonts.outfit(fontSize: 11, color: const Color(0xFF94A3B8)),
+                                  style: GoogleFonts.outfit(
+                                      fontSize: 11,
+                                      color: const Color(0xFF94A3B8)),
                                 ),
                               ],
                             ),
@@ -1651,7 +1856,8 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                           IconButton.filledTonal(
                             tooltip: 'Contactar Comercio',
                             onPressed: _launchWhatsAppMerchant,
-                            icon: const Icon(Icons.storefront_rounded, size: 20, color: AppTheme.primary),
+                            icon: const Icon(Icons.storefront_rounded,
+                                size: 20, color: AppTheme.primary),
                             style: IconButton.styleFrom(
                               backgroundColor: const Color(0xFF334155),
                             ),
@@ -1690,19 +1896,23 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                                   ),
                                 ),
                                 Text(
-                                  _order.status == OrderDeliveryStatus.atMerchant
+                                  _order.status ==
+                                          OrderDeliveryStatus.atMerchant
                                       ? '¡Llegó al local! Retirando tu pedido • ${_order.riderVehicle}'
-                                      : _order.status == OrderDeliveryStatus.onTheWay
+                                      : _order.status ==
+                                              OrderDeliveryStatus.onTheWay
                                           ? 'En ruta hacia ti • ${_order.riderVehicle} • ${_order.riderPlate}'
                                           : 'Rumbo al comercio • ${_order.riderVehicle} • ${_order.riderPlate}',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: GoogleFonts.outfit(
                                     fontSize: 11,
-                                    color: _order.status == OrderDeliveryStatus.atMerchant
+                                    color: _order.status ==
+                                            OrderDeliveryStatus.atMerchant
                                         ? const Color(0xFF38BDF8)
                                         : const Color(0xFF94A3B8),
-                                    fontWeight: _order.status == OrderDeliveryStatus.atMerchant
+                                    fontWeight: _order.status ==
+                                            OrderDeliveryStatus.atMerchant
                                         ? FontWeight.w700
                                         : FontWeight.normal,
                                   ),
@@ -1712,7 +1922,8 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                           ),
                           IconButton.filled(
                             onPressed: _launchWhatsAppRider,
-                            icon: const Icon(Icons.chat_bubble_rounded, size: 18),
+                            icon:
+                                const Icon(Icons.chat_bubble_rounded, size: 18),
                             style: IconButton.styleFrom(
                               backgroundColor: const Color(0xFF22C55E),
                               foregroundColor: Colors.white,
@@ -1731,7 +1942,6 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                       ),
                     ),
 
-                  
                   // Banner Adicionar Productos antes del Despacho
                   if (_order.status == OrderDeliveryStatus.pending ||
                       _order.status == OrderDeliveryStatus.confirmed ||
@@ -1740,11 +1950,13 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                       _order.status == OrderDeliveryStatus.atMerchant) ...[
                     Container(
                       margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 10),
                       decoration: BoxDecoration(
                         color: AppTheme.primary.withOpacity(0.12),
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppTheme.primary.withOpacity(0.35)),
+                        border: Border.all(
+                            color: AppTheme.primary.withOpacity(0.35)),
                       ),
                       child: Row(
                         children: [
@@ -1754,7 +1966,8 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                               color: AppTheme.primary.withOpacity(0.2),
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: const Icon(Icons.add_shopping_cart_rounded, size: 18, color: AppTheme.primary),
+                            child: const Icon(Icons.add_shopping_cart_rounded,
+                                size: 18, color: AppTheme.primary),
                           ),
                           const SizedBox(width: 10),
                           Expanded(
@@ -1787,9 +2000,12 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppTheme.primary,
                               foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                              textStyle: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w700),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 8),
+                              textStyle: GoogleFonts.outfit(
+                                  fontSize: 12, fontWeight: FontWeight.w700),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10)),
                             ),
                           ),
                         ],
@@ -1815,7 +2031,8 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                       child: _hasRatedRider
                           ? Row(
                               children: [
-                                const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 24),
+                                const Icon(Icons.check_circle_rounded,
+                                    color: Color(0xFF10B981), size: 24),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Text(
@@ -1834,7 +2051,8 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                               children: [
                                 Row(
                                   children: [
-                                    const Icon(Icons.star_rounded, color: AppTheme.amberAccent, size: 22),
+                                    const Icon(Icons.star_rounded,
+                                        color: AppTheme.amberAccent, size: 22),
                                     const SizedBox(width: 8),
                                     Text(
                                       'Califica el servicio de entrega',
@@ -1861,7 +2079,8 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                                     final starValue = (index + 1).toDouble();
                                     return IconButton(
                                       onPressed: () {
-                                        setState(() => _selectedRiderRating = starValue);
+                                        setState(() =>
+                                            _selectedRiderRating = starValue);
                                       },
                                       icon: Icon(
                                         starValue <= _selectedRiderRating
@@ -1876,14 +2095,25 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                                 const SizedBox(height: 6),
                                 TextField(
                                   controller: _ratingCommentController,
-                                  style: GoogleFonts.outfit(fontSize: 12.5, color: isDark ? Colors.white : Colors.black87),
+                                  style: GoogleFonts.outfit(
+                                      fontSize: 12.5,
+                                      color: isDark
+                                          ? Colors.white
+                                          : Colors.black87),
                                   decoration: InputDecoration(
-                                    hintText: 'Escribe un comentario sobre el servicio del repartidor (opcional)...',
-                                    hintStyle: GoogleFonts.outfit(fontSize: 12, color: Colors.grey),
+                                    hintText:
+                                        'Escribe un comentario sobre el servicio del repartidor (opcional)...',
+                                    hintStyle: GoogleFonts.outfit(
+                                        fontSize: 12, color: Colors.grey),
                                     filled: true,
-                                    fillColor: isDark ? const Color(0xFF0F172A) : Colors.white,
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                    fillColor: isDark
+                                        ? const Color(0xFF0F172A)
+                                        : Colors.white,
+                                    border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: BorderSide.none),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 14, vertical: 10),
                                   ),
                                 ),
                                 const SizedBox(height: 10),
@@ -1891,7 +2121,9 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                                   width: double.infinity,
                                   height: 44,
                                   child: ElevatedButton(
-                                    onPressed: _isSubmittingRating ? null : _submitRiderRating,
+                                    onPressed: _isSubmittingRating
+                                        ? null
+                                        : _submitRiderRating,
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: AppTheme.amberAccent,
                                       foregroundColor: const Color(0xFF0F172A),
@@ -1924,20 +2156,26 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                   ],
 
                   // Calificar al comercio / tienda
-                  if (_order.status == OrderDeliveryStatus.delivered && (_order.tenantId != null && _order.tenantId!.isNotEmpty)) ...[
+                  if (_order.status == OrderDeliveryStatus.delivered &&
+                      (_order.tenantId != null &&
+                          _order.tenantId!.isNotEmpty)) ...[
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                        color: isDark
+                            ? const Color(0xFF1E293B)
+                            : const Color(0xFFF8FAFC),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+                          color:
+                              isDark ? Colors.white10 : const Color(0xFFE2E8F0),
                         ),
                       ),
                       child: _hasRatedStore
                           ? Row(
                               children: [
-                                const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 24),
+                                const Icon(Icons.check_circle_rounded,
+                                    color: Color(0xFF10B981), size: 24),
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: Text(
@@ -1956,7 +2194,8 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                               children: [
                                 Row(
                                   children: [
-                                    const Text('🏪', style: TextStyle(fontSize: 18)),
+                                    const Text('🏪',
+                                        style: TextStyle(fontSize: 18)),
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
@@ -1964,7 +2203,9 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                                         style: GoogleFonts.outfit(
                                           fontWeight: FontWeight.w800,
                                           fontSize: 14,
-                                          color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                          color: isDark
+                                              ? Colors.white
+                                              : const Color(0xFF0F172A),
                                         ),
                                       ),
                                     ),
@@ -1985,7 +2226,8 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                                     final starValue = (index + 1).toDouble();
                                     return IconButton(
                                       onPressed: () {
-                                        setState(() => _selectedStoreRating = starValue);
+                                        setState(() =>
+                                            _selectedStoreRating = starValue);
                                       },
                                       icon: Icon(
                                         starValue <= _selectedStoreRating
@@ -2000,14 +2242,25 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                                 const SizedBox(height: 6),
                                 TextField(
                                   controller: _storeRatingCommentController,
-                                  style: GoogleFonts.outfit(fontSize: 12.5, color: isDark ? Colors.white : Colors.black87),
+                                  style: GoogleFonts.outfit(
+                                      fontSize: 12.5,
+                                      color: isDark
+                                          ? Colors.white
+                                          : Colors.black87),
                                   decoration: InputDecoration(
-                                    hintText: 'Escribe un comentario sobre tu comida (opcional)...',
-                                    hintStyle: GoogleFonts.outfit(fontSize: 12, color: Colors.grey),
+                                    hintText:
+                                        'Escribe un comentario sobre tu comida (opcional)...',
+                                    hintStyle: GoogleFonts.outfit(
+                                        fontSize: 12, color: Colors.grey),
                                     filled: true,
-                                    fillColor: isDark ? const Color(0xFF0F172A) : Colors.white,
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                    fillColor: isDark
+                                        ? const Color(0xFF0F172A)
+                                        : Colors.white,
+                                    border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: BorderSide.none),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 14, vertical: 10),
                                   ),
                                 ),
                                 const SizedBox(height: 10),
@@ -2015,7 +2268,9 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                                   width: double.infinity,
                                   height: 42,
                                   child: ElevatedButton(
-                                    onPressed: _isSubmittingStoreRating ? null : _submitStoreRating,
+                                    onPressed: _isSubmittingStoreRating
+                                        ? null
+                                        : _submitStoreRating,
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: AppTheme.primary,
                                       foregroundColor: Colors.white,
@@ -2053,15 +2308,18 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                       // PIN
                       Expanded(
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 10),
                           decoration: BoxDecoration(
                             color: AppTheme.amberAccent.withOpacity(0.12),
                             borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: AppTheme.amberAccent.withOpacity(0.3)),
+                            border: Border.all(
+                                color: AppTheme.amberAccent.withOpacity(0.3)),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.shield_rounded, color: AppTheme.amberAccent, size: 20),
+                              const Icon(Icons.shield_rounded,
+                                  color: AppTheme.amberAccent, size: 20),
                               const SizedBox(width: 10),
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -2094,7 +2352,8 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                       // Expand / Collapse details button
                       OutlinedButton.icon(
                         onPressed: () {
-                          setState(() => _isDetailsExpanded = !_isDetailsExpanded);
+                          setState(
+                              () => _isDetailsExpanded = !_isDetailsExpanded);
                         },
                         icon: Icon(
                           _isDetailsExpanded
@@ -2102,12 +2361,15 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                               : Icons.keyboard_arrow_up_rounded,
                           size: 18,
                         ),
-                        label: Text(_isDetailsExpanded ? 'Ocultar' : 'Detalles'),
+                        label:
+                            Text(_isDetailsExpanded ? 'Ocultar' : 'Detalles'),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.white,
                           side: const BorderSide(color: Colors.white24),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14)),
                         ),
                       ),
                     ],
@@ -2129,7 +2391,8 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.storefront_rounded, color: AppTheme.amberAccent, size: 20),
+                              const Icon(Icons.storefront_rounded,
+                                  color: AppTheme.amberAccent, size: 20),
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Column(
@@ -2163,7 +2426,8 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                           ),
                           Row(
                             children: [
-                              const Icon(Icons.location_on_rounded, color: AppTheme.riderAccent, size: 20),
+                              const Icon(Icons.location_on_rounded,
+                                  color: AppTheme.riderAccent, size: 20),
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Column(
@@ -2200,9 +2464,13 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                     // Items and Total
                     Builder(
                       builder: (_) {
-                        final baseItems = _order.items.where((i) => !_isAdditionItem(i)).toList();
-                        final additionItems = _order.items.where(_isAdditionItem).toList();
-                        final additions = _parseOrderAdditions(_order.notes ?? '');
+                        final baseItems = _order.items
+                            .where((i) => !_isAdditionItem(i))
+                            .toList();
+                        final additionItems =
+                            _order.items.where(_isAdditionItem).toList();
+                        final additions =
+                            _parseOrderAdditions(_order.notes ?? '');
 
                         return Container(
                           padding: const EdgeInsets.all(12),
@@ -2230,7 +2498,8 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                               ...baseItems.map((item) => Padding(
                                     padding: const EdgeInsets.only(bottom: 6),
                                     child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
                                       children: [
                                         Expanded(
                                           child: Text(
@@ -2254,7 +2523,8 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                                     ),
                                   )),
                               if (additionItems.isNotEmpty) ...[
-                                const Divider(color: Colors.white10, height: 14),
+                                const Divider(
+                                    color: Colors.white10, height: 14),
                                 Padding(
                                   padding: const EdgeInsets.only(bottom: 6),
                                   child: Text(
@@ -2269,7 +2539,10 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                                 ),
                                 ...additionItems.map((item) {
                                   final cleanName = item.product.name
-                                      .replaceFirst(RegExp(r'\s*\(Adici[oó]n\)\s*$', caseSensitive: false), '')
+                                      .replaceFirst(
+                                          RegExp(r'\s*\(Adici[oó]n\)\s*$',
+                                              caseSensitive: false),
+                                          '')
                                       .trim();
                                   return Padding(
                                     padding: const EdgeInsets.only(bottom: 6),
@@ -2290,11 +2563,19 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                                               ),
                                               const SizedBox(width: 6),
                                               Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 6,
+                                                        vertical: 2),
                                                 decoration: BoxDecoration(
-                                                  color: AppTheme.amberAccent.withOpacity(0.18),
-                                                  borderRadius: BorderRadius.circular(6),
-                                                  border: Border.all(color: AppTheme.amberAccent.withOpacity(0.45)),
+                                                  color: AppTheme.amberAccent
+                                                      .withOpacity(0.18),
+                                                  borderRadius:
+                                                      BorderRadius.circular(6),
+                                                  border: Border.all(
+                                                      color: AppTheme
+                                                          .amberAccent
+                                                          .withOpacity(0.45)),
                                                 ),
                                                 child: Text(
                                                   'ADICIÓN',
@@ -2323,21 +2604,26 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                               ],
                               const Divider(color: Colors.white10, height: 12),
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
                                     'Costo de Envío:',
-                                    style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFF94A3B8)),
+                                    style: GoogleFonts.outfit(
+                                        fontSize: 12,
+                                        color: const Color(0xFF94A3B8)),
                                   ),
                                   Text(
                                     '\$${_order.deliveryFee.toStringAsFixed(2)}',
-                                    style: GoogleFonts.outfit(fontSize: 12, color: Colors.white70),
+                                    style: GoogleFonts.outfit(
+                                        fontSize: 12, color: Colors.white70),
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 4),
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
                                     'Total Consolidado:',
@@ -2382,13 +2668,16 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                                     decoration: BoxDecoration(
                                       color: badgeColor.withOpacity(0.10),
                                       borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(color: badgeColor.withOpacity(0.35)),
+                                      border: Border.all(
+                                          color: badgeColor.withOpacity(0.35)),
                                     ),
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
                                           children: [
                                             Text(
                                               'Adición #${add.index}',
@@ -2399,10 +2688,15 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                                               ),
                                             ),
                                             Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 7,
+                                                      vertical: 2),
                                               decoration: BoxDecoration(
-                                                color: badgeColor.withOpacity(0.18),
-                                                borderRadius: BorderRadius.circular(8),
+                                                color: badgeColor
+                                                    .withOpacity(0.18),
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
                                               ),
                                               child: Text(
                                                 badgeText,
@@ -2418,7 +2712,9 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                                         const SizedBox(height: 4),
                                         Text(
                                           add.itemsSummary,
-                                          style: GoogleFonts.outfit(fontSize: 11, color: Colors.white70),
+                                          style: GoogleFonts.outfit(
+                                              fontSize: 11,
+                                              color: Colors.white70),
                                         ),
                                         const SizedBox(height: 3),
                                         Text(
@@ -2438,15 +2734,29 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                                           SizedBox(
                                             width: double.infinity,
                                             child: ElevatedButton.icon(
-                                              onPressed: () => _showEditAdditionRefDialog(add),
-                                              icon: const Icon(Icons.edit_rounded, size: 14),
-                                              label: const Text('Corregir referencia del adicional'),
+                                              onPressed: () =>
+                                                  _showEditAdditionRefDialog(
+                                                      add),
+                                              icon: const Icon(
+                                                  Icons.edit_rounded,
+                                                  size: 14),
+                                              label: const Text(
+                                                  'Corregir referencia del adicional'),
                                               style: ElevatedButton.styleFrom(
-                                                backgroundColor: AppTheme.primary,
+                                                backgroundColor:
+                                                    AppTheme.primary,
                                                 foregroundColor: Colors.white,
-                                                padding: const EdgeInsets.symmetric(vertical: 8),
-                                                textStyle: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.bold),
-                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        vertical: 8),
+                                                textStyle: GoogleFonts.outfit(
+                                                    fontSize: 11,
+                                                    fontWeight:
+                                                        FontWeight.bold),
+                                                shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            8)),
                                               ),
                                             ),
                                           ),
@@ -2505,7 +2815,8 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
             ),
           ),
         ),
-        const Icon(Icons.location_on_rounded, color: AppTheme.amberAccent, size: 34),
+        const Icon(Icons.location_on_rounded,
+            color: AppTheme.amberAccent, size: 34),
       ],
     );
   }
@@ -2542,7 +2853,8 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
             ),
           ),
         ),
-        const Icon(Icons.location_on_rounded, color: Color(0xFF10B981), size: 34),
+        const Icon(Icons.location_on_rounded,
+            color: Color(0xFF10B981), size: 34),
       ],
     );
   }
@@ -2605,7 +2917,8 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                     border: Border.all(color: AppTheme.riderAccent, width: 2.5),
                   ),
                   child: const Center(
-                    child: Icon(Icons.two_wheeler_rounded, color: AppTheme.riderAccent, size: 18),
+                    child: Icon(Icons.two_wheeler_rounded,
+                        color: AppTheme.riderAccent, size: 18),
                   ),
                 ),
               ],
@@ -2625,11 +2938,13 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
           decoration: BoxDecoration(
             color: done ? AppTheme.primary : const Color(0xFF334155),
             shape: BoxShape.circle,
-            border: isCurrent ? Border.all(color: Colors.white, width: 2) : null,
+            border:
+                isCurrent ? Border.all(color: Colors.white, width: 2) : null,
           ),
           child: Center(
             child: isCurrent
-                ? const Icon(Icons.two_wheeler_rounded, size: 12, color: Colors.white)
+                ? const Icon(Icons.two_wheeler_rounded,
+                    size: 12, color: Colors.white)
                 : const Icon(Icons.check, size: 12, color: Colors.white),
           ),
         ),
@@ -2747,7 +3062,8 @@ class _AppendItemsModalState extends State<_AppendItemsModal> {
           if (tenantId.isEmpty && row['tenant_id'] != null) {
             tenantId = row['tenant_id'].toString().trim();
           }
-          if ((branchId == null || branchId.isEmpty) && row['branch_id'] != null) {
+          if ((branchId == null || branchId.isEmpty) &&
+              row['branch_id'] != null) {
             branchId = row['branch_id'].toString().trim();
           }
         }
@@ -2769,10 +3085,12 @@ class _AppendItemsModalState extends State<_AppendItemsModal> {
 
     List<Product> list = [];
     if (tenantId.isNotEmpty) {
-      list = await ApiService().fetchProductsByTenant(tenantId, branchId: branchId);
+      list = await ApiService()
+          .fetchProductsByTenant(tenantId, branchId: branchId);
     }
     if (list.isEmpty && branchId != null && branchId.isNotEmpty) {
-      list = await ApiService().fetchProductsByTenant(branchId, branchId: branchId);
+      list = await ApiService()
+          .fetchProductsByTenant(branchId, branchId: branchId);
     }
     if (list.isEmpty && tenantId.isNotEmpty) {
       try {
@@ -2786,15 +3104,18 @@ class _AppendItemsModalState extends State<_AppendItemsModal> {
         }
         final rows = await q.order('sort_order', ascending: true);
         if (rows.isNotEmpty) {
-          list = rows.map((item) => Product(
-                id: item['id']?.toString() ?? '',
-                name: item['name']?.toString() ?? '',
-                description: item['description']?.toString() ?? '',
-                price: (item['price'] as num?)?.toDouble() ?? 0.0,
-                imageUrl: item['image_url']?.toString() ?? '',
-                category: item['categories']?['name']?.toString() ?? 'General',
-                branchId: item['branch_id']?.toString(),
-              )).toList();
+          list = rows
+              .map((item) => Product(
+                    id: item['id']?.toString() ?? '',
+                    name: item['name']?.toString() ?? '',
+                    description: item['description']?.toString() ?? '',
+                    price: (item['price'] as num?)?.toDouble() ?? 0.0,
+                    imageUrl: item['image_url']?.toString() ?? '',
+                    category:
+                        item['categories']?['name']?.toString() ?? 'General',
+                    branchId: item['branch_id']?.toString(),
+                  ))
+              .toList();
         }
       } catch (_) {}
     }
@@ -2815,7 +3136,8 @@ class _AppendItemsModalState extends State<_AppendItemsModal> {
       } catch (_) {}
     }
     if (_exchangeRate == null || _exchangeRate! <= 1) {
-      final fxMatch = RegExp(r'\[FX:rate=([0-9.]+)').firstMatch(widget.order.notes ?? '');
+      final fxMatch =
+          RegExp(r'\[FX:rate=([0-9.]+)').firstMatch(widget.order.notes ?? '');
       if (fxMatch != null) {
         final parsed = double.tryParse(fxMatch.group(1)!);
         if (parsed != null && parsed > 1) {
@@ -2843,13 +3165,19 @@ class _AppendItemsModalState extends State<_AppendItemsModal> {
     if (creds == null) return false;
     final phone = creds.pagoMovilPhone.trim();
     if (phone.isEmpty) return false;
-    return !phone.contains('1234567') && phone != '04140000000' && phone != '04121234567';
+    return !phone.contains('1234567') &&
+        phone != '04140000000' &&
+        phone != '04121234567';
   }
 
   bool get _acceptsCash {
     if (_acceptedPaymentMethods.isEmpty) return true;
     return _acceptedPaymentMethods.any(
-      (m) => m == 'cash_usd' || m == 'cash_local' || m == 'efectivo' || m == 'cash',
+      (m) =>
+          m == 'cash_usd' ||
+          m == 'cash_local' ||
+          m == 'efectivo' ||
+          m == 'cash',
     );
   }
 
@@ -2872,7 +3200,9 @@ class _AppendItemsModalState extends State<_AppendItemsModal> {
     return sum;
   }
 
-  double? get _extraBs => (_exchangeRate != null && _exchangeRate! > 1) ? (_extraTotal * _exchangeRate!) : null;
+  double? get _extraBs => (_exchangeRate != null && _exchangeRate! > 1)
+      ? (_extraTotal * _exchangeRate!)
+      : null;
 
   int get _totalCount {
     return _selectedQuantities.values.fold(0, (a, b) => a + b);
@@ -2896,16 +3226,19 @@ class _AppendItemsModalState extends State<_AppendItemsModal> {
 
     if (addedItems.isEmpty) return;
 
+    final cleanRefDigits = _refController.text.replaceAll(RegExp(r'\D'), '');
     if (_paymentMethod == 'mobile_transfer') {
       if (!_hasConfiguredPagoMovil) {
         setState(() {
-          _errorMessage = 'Este comercio no tiene datos de Pago Móvil configurados. Selecciona Efectivo al Recibir.';
+          _errorMessage =
+              'Este comercio no tiene datos de Pago Móvil configurados. Selecciona Efectivo al Recibir.';
         });
         return;
       }
-      if (_refController.text.trim().length < 4) {
+      if (cleanRefDigits.length < 4) {
         setState(() {
-          _errorMessage = 'Debes ingresar el número de referencia del Pago Móvil (mínimo 4 dígitos).';
+          _errorMessage =
+              'Debes ingresar el número de referencia del Pago Móvil (mínimo 4 dígitos).';
         });
         return;
       }
@@ -2931,22 +3264,29 @@ class _AppendItemsModalState extends State<_AppendItemsModal> {
       newItems: addedItems,
       extraSubtotal: _extraTotal,
       paymentMethod: _paymentMethod,
-      paymentReference: _refController.text.trim(),
+      paymentReference: _paymentMethod == 'mobile_transfer' ? cleanRefDigits : '',
       paymentOriginBank: _bankController.text.trim(),
     );
 
     if (mounted) {
       setState(() => _isSubmitting = false);
       if (res['success'] == true) {
-        final itemDetails = addedItems.map((i) => '${i.quantity}x ${i.product.name}').join(', ');
-        final bsSeg = _extraBs != null ? ' (Bs. ${_extraBs!.toStringAsFixed(2)})' : '';
-        final bankSeg = _bankController.text.trim().isNotEmpty ? ' | Banco: ${_bankController.text.trim()}' : '';
+        final itemDetails = addedItems
+            .map((i) => '${i.quantity}x ${i.product.name}')
+            .join(', ');
+        final bsSeg =
+            _extraBs != null ? ' (Bs. ${_extraBs!.toStringAsFixed(2)})' : '';
+        final bankSeg = _bankController.text.trim().isNotEmpty
+            ? ' | Banco: ${_bankController.text.trim()}'
+            : '';
         final localTag = _paymentMethod == 'mobile_transfer'
-            ? '[ADICIONAL: $itemDetails | +\$${_extraTotal.toStringAsFixed(2)}$bsSeg | Método: Pago Móvil$bankSeg | Ref: ${_refController.text.trim()} | Estado: Pendiente de Verificación]'
+            ? '[ADICIONAL: $itemDetails | +\$${_extraTotal.toStringAsFixed(2)}$bsSeg | Método: Pago Móvil$bankSeg | Ref: $cleanRefDigits | Estado: Pendiente de Verificación]'
             : '[ADICIONAL: $itemDetails | +\$${_extraTotal.toStringAsFixed(2)}$bsSeg | Método: Efectivo al Recibir]';
 
         CartService().appendItemsToActiveOrder(
-          effectiveOrderId.isNotEmpty ? effectiveOrderId : widget.order.orderNumber,
+          effectiveOrderId.isNotEmpty
+              ? effectiveOrderId
+              : widget.order.orderNumber,
           addedItems,
           _extraTotal,
           appendedNote: localTag,
@@ -2955,7 +3295,9 @@ class _AppendItemsModalState extends State<_AppendItemsModal> {
         Navigator.pop(context);
       } else {
         setState(() {
-          _errorMessage = (res['error'] ?? 'No se pudo actualizar en el servidor. Verifica tu conexión o el estado del pedido.').toString();
+          _errorMessage = (res['error'] ??
+                  'No se pudo actualizar en el servidor. Verifica tu conexión o el estado del pedido.')
+              .toString();
         });
       }
     }
@@ -2979,481 +3321,566 @@ class _AppendItemsModalState extends State<_AppendItemsModal> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-          // Drag handle
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.white24,
-                borderRadius: BorderRadius.circular(10),
+            // Drag handle
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 16),
+            const SizedBox(height: 16),
 
-          // Header
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppTheme.primary.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(12),
+            // Header
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primary.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.add_shopping_cart_rounded,
+                      color: AppTheme.primary, size: 22),
                 ),
-                child: const Icon(Icons.add_shopping_cart_rounded, color: AppTheme.primary, size: 22),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Adicionar a Orden ${widget.order.orderNumber}',
-                      style: GoogleFonts.outfit(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                      ),
-                    ),
-                    Text(
-                      '${widget.order.merchantName} • En Preparación',
-                      style: GoogleFonts.outfit(
-                        fontSize: 11.5,
-                        color: const Color(0xFF10B981),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              IconButton(
-                onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.close_rounded, color: Colors.white54, size: 22),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Selecciona los productos que deseas agregar antes de que el repartidor salga del local.',
-            style: GoogleFonts.outfit(fontSize: 12, color: Colors.white60),
-          ),
-          const Divider(color: Colors.white12, height: 24),
-
-          // Product list or Loading
-          Expanded(
-            child: _isLoading
-                ? const Center(
-                    child: CircularProgressIndicator(color: AppTheme.primary),
-                  )
-                : _products.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.inventory_2_outlined, size: 48, color: Colors.white24),
-                            const SizedBox(height: 12),
-                            Text(
-                              'No se encontraron productos disponibles para este comercio.',
-                              textAlign: TextAlign.center,
-                              style: GoogleFonts.outfit(color: Colors.white70, fontSize: 13),
-                            ),
-                          ],
-                        ),
-                      )
-                    : ListView.separated(
-                        shrinkWrap: true,
-                        itemCount: _products.length,
-                        separatorBuilder: (_, __) => const Divider(color: Colors.white10, height: 16),
-                        itemBuilder: (context, idx) {
-                          final p = _products[idx];
-                          final q = _selectedQuantities[p.id] ?? 0;
-                          return Row(
-                            children: [
-                              // Image or placeholder
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(10),
-                                child: Container(
-                                  width: 50,
-                                  height: 50,
-                                  color: const Color(0xFF1E293B),
-                                  child: p.imageUrl.isNotEmpty
-                                      ? Image.network(
-                                          p.imageUrl,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (_, __, ___) => const Icon(
-                                            Icons.fastfood_rounded,
-                                            color: Colors.white38,
-                                            size: 24,
-                                          ),
-                                        )
-                                      : const Icon(Icons.fastfood_rounded, color: Colors.white38, size: 24),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              // Info
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      p.name,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: GoogleFonts.outfit(
-                                        fontSize: 13.5,
-                                        fontWeight: FontWeight.w700,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      '\$${p.price.toStringAsFixed(2)}',
-                                      style: GoogleFonts.outfit(
-                                        fontSize: 12.5,
-                                        fontWeight: FontWeight.w800,
-                                        color: AppTheme.primary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              // Counter
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF1E293B),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(color: q > 0 ? AppTheme.primary : Colors.white12),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    if (q > 0) ...[
-                                      IconButton(
-                                        icon: const Icon(Icons.remove_rounded, size: 16, color: Colors.white70),
-                                        padding: const EdgeInsets.all(4),
-                                        constraints: const BoxConstraints(),
-                                        onPressed: () {
-                                          setState(() {
-                                            if (q > 1) {
-                                              _selectedQuantities[p.id] = q - 1;
-                                            } else {
-                                              _selectedQuantities.remove(p.id);
-                                            }
-                                          });
-                                        },
-                                      ),
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6),
-                                        child: Text(
-                                          '$q',
-                                          style: GoogleFonts.outfit(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w700,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                    IconButton(
-                                      icon: Icon(
-                                        Icons.add_rounded,
-                                        size: 16,
-                                        color: q > 0 ? AppTheme.primary : Colors.white70,
-                                      ),
-                                      padding: const EdgeInsets.all(4),
-                                      constraints: const BoxConstraints(),
-                                      onPressed: () {
-                                        setState(() {
-                                          _selectedQuantities[p.id] = q + 1;
-                                        });
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          );
-                        },
-                      ),
-          ),
-
-          // Bottom confirmation bar & Payment Method selector (scrollable when keyboard opens)
-          if (_totalCount > 0) ...[
-            const SizedBox(height: 10),
-            Flexible(
-              flex: 0,
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.44,
-                ),
-                child: SingleChildScrollView(
+                const SizedBox(width: 12),
+                Expanded(
                   child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1E293B),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: Colors.white12),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Text(
-                              '¿Cómo pagarás este adicional de +\$${_extraTotal.toStringAsFixed(2)}?',
-                              style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white),
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                if (_acceptsCash)
-                                  Expanded(
-                                    child: InkWell(
-                                      onTap: () => setState(() {
-                                        _paymentMethod = 'cash';
-                                        _errorMessage = null;
-                                      }),
-                                      borderRadius: BorderRadius.circular(10),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-                                        decoration: BoxDecoration(
-                                          color: _paymentMethod == 'cash'
-                                              ? AppTheme.primary.withOpacity(0.18)
-                                              : Colors.white.withOpacity(0.04),
-                                          borderRadius: BorderRadius.circular(10),
-                                          border: Border.all(
-                                            color: _paymentMethod == 'cash' ? AppTheme.primary : Colors.white12,
-                                          ),
-                                        ),
-                                        child: Row(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            const Text('💵 ', style: TextStyle(fontSize: 14)),
-                                            Text(
-                                              'Efectivo al Recibir',
-                                              style: GoogleFonts.outfit(
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w700,
-                                                color: _paymentMethod == 'cash' ? Colors.white : Colors.white60,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                if (_acceptsCash && _acceptsPagoMovil) const SizedBox(width: 8),
-                                if (_acceptsPagoMovil)
-                                  Expanded(
-                                    child: InkWell(
-                                      onTap: () => setState(() {
-                                        _paymentMethod = 'mobile_transfer';
-                                        _errorMessage = null;
-                                      }),
-                                      borderRadius: BorderRadius.circular(10),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-                                        decoration: BoxDecoration(
-                                          color: _paymentMethod == 'mobile_transfer'
-                                              ? AppTheme.primary.withOpacity(0.18)
-                                              : Colors.white.withOpacity(0.04),
-                                          borderRadius: BorderRadius.circular(10),
-                                          border: Border.all(
-                                            color: _paymentMethod == 'mobile_transfer' ? AppTheme.primary : Colors.white12,
-                                          ),
-                                        ),
-                                        child: Row(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            const Text('📲 ', style: TextStyle(fontSize: 14)),
-                                            Text(
-                                              'Pago Móvil',
-                                              style: GoogleFonts.outfit(
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w700,
-                                                color: _paymentMethod == 'mobile_transfer' ? Colors.white : Colors.white60,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                            if (_paymentMethod == 'cash') ...[
-                              const SizedBox(height: 8),
-                              Text(
-                                'ℹ️ Le pagarás la diferencia de \$${_extraTotal.toStringAsFixed(2)}${_extraBs != null ? " (Bs. ${_extraBs!.toStringAsFixed(2)})" : ""} en efectivo al repartidor al recibir.',
-                                style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.amberAccent),
-                              ),
-                            ] else ...[
-                              const SizedBox(height: 10),
-                              if (_hasConfiguredPagoMovil) ...[
-                                Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF0F172A),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: Colors.white10),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Datos de la tienda: ${_paymentCredentials!.pagoMovilBank} • ${_paymentCredentials!.pagoMovilPhone} • ${_paymentCredentials!.pagoMovilIdNumber}',
-                                        style: GoogleFonts.outfit(fontSize: 10.5, color: Colors.white70),
-                                      ),
-                                      if (_paymentCredentials!.pagoMovilAccountName.isNotEmpty)
-                                        Text(
-                                          'Titular: ${_paymentCredentials!.pagoMovilAccountName}',
-                                          style: GoogleFonts.outfit(fontSize: 10.5, color: Colors.white60),
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              ] else ...[
-                                Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.amber.withOpacity(0.12),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: Colors.amber.withOpacity(0.35)),
-                                  ),
-                                  child: Text(
-                                    'El comercio no tiene datos de Pago Móvil configurados.',
-                                    style: GoogleFonts.outfit(fontSize: 10.5, color: AppTheme.amberAccent, fontWeight: FontWeight.w600),
-                                  ),
-                                ),
-                              ],
-                              const SizedBox(height: 8),
-                              TextField(
-                                controller: _bankController,
-                                style: GoogleFonts.outfit(color: Colors.white, fontSize: 12),
-                                decoration: InputDecoration(
-                                  hintText: 'Banco Emisor (ej: Banesco, BDV, Mercantil)',
-                                  hintStyle: GoogleFonts.outfit(color: Colors.white38, fontSize: 11),
-                                  filled: true,
-                                  fillColor: const Color(0xFF0F172A),
-                                  isDense: true,
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              TextField(
-                                controller: _refController,
-                                keyboardType: TextInputType.number,
-                                onChanged: (_) {
-                                  if (_errorMessage != null) {
-                                    setState(() => _errorMessage = null);
-                                  }
-                                },
-                                style: GoogleFonts.outfit(color: Colors.white, fontSize: 12),
-                                decoration: InputDecoration(
-                                  hintText: 'Ref. Pago Móvil * (Obligatorio, mín. 4 dígitos)',
-                                  hintStyle: GoogleFonts.outfit(color: Colors.white38, fontSize: 11),
-                                  filled: true,
-                                  fillColor: const Color(0xFF0F172A),
-                                  isDense: true,
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
-                                ),
-                              ),
-                            ],
-                          ],
+                      Text(
+                        'Adicionar a Orden ${widget.order.orderNumber}',
+                        style: GoogleFonts.outfit(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
                         ),
                       ),
-                      if (_errorMessage != null) ...[
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF7F1D1D).withOpacity(0.9),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: const Color(0xFFEF4444)),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.error_outline_rounded, color: Colors.white, size: 16),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  _errorMessage!,
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 11.5,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 10),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1E293B),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: AppTheme.primary.withOpacity(0.4)),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    '$_totalCount producto(s) seleccionado(s)',
-                                    style: GoogleFonts.outfit(fontSize: 11.5, color: Colors.white70),
-                                  ),
-                                  Text(
-                                    'Adicional: +\$${_extraTotal.toStringAsFixed(2)}${_extraBs != null ? " (Bs. ${_extraBs!.toStringAsFixed(2)})" : ""}',
-                                    style: GoogleFonts.outfit(
-                                      fontSize: 14.5,
-                                      fontWeight: FontWeight.w800,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            ElevatedButton(
-                              onPressed: _isSubmitting ? null : _submitAdditions,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.primary,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              ),
-                              child: _isSubmitting
-                                  ? const SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                                    )
-                                  : Text(
-                                      'Confirmar Adición',
-                                      style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.w700),
-                                    ),
-                            ),
-                          ],
+                      Text(
+                        '${widget.order.merchantName} • En Preparación',
+                        style: GoogleFonts.outfit(
+                          fontSize: 11.5,
+                          color: const Color(0xFF10B981),
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
                   ),
                 ),
-              ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close_rounded,
+                      color: Colors.white54, size: 22),
+                ),
+              ],
             ),
+            const SizedBox(height: 8),
+            Text(
+              'Selecciona los productos que deseas agregar antes de que el repartidor salga del local.',
+              style: GoogleFonts.outfit(fontSize: 12, color: Colors.white60),
+            ),
+            const Divider(color: Colors.white12, height: 24),
+
+            // Product list or Loading
+            Expanded(
+              child: _isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(color: AppTheme.primary),
+                    )
+                  : _products.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.inventory_2_outlined,
+                                  size: 48, color: Colors.white24),
+                              const SizedBox(height: 12),
+                              Text(
+                                'No se encontraron productos disponibles para este comercio.',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.outfit(
+                                    color: Colors.white70, fontSize: 13),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.separated(
+                          shrinkWrap: true,
+                          itemCount: _products.length,
+                          separatorBuilder: (_, __) =>
+                              const Divider(color: Colors.white10, height: 16),
+                          itemBuilder: (context, idx) {
+                            final p = _products[idx];
+                            final q = _selectedQuantities[p.id] ?? 0;
+                            return Row(
+                              children: [
+                                // Image or placeholder
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: Container(
+                                    width: 50,
+                                    height: 50,
+                                    color: const Color(0xFF1E293B),
+                                    child: p.imageUrl.isNotEmpty
+                                        ? Image.network(
+                                            p.imageUrl,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (_, __, ___) =>
+                                                const Icon(
+                                              Icons.fastfood_rounded,
+                                              color: Colors.white38,
+                                              size: 24,
+                                            ),
+                                          )
+                                        : const Icon(Icons.fastfood_rounded,
+                                            color: Colors.white38, size: 24),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                // Info
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        p.name,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: GoogleFonts.outfit(
+                                          fontSize: 13.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '\$${p.price.toStringAsFixed(2)}',
+                                        style: GoogleFonts.outfit(
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w800,
+                                          color: AppTheme.primary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                // Counter
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF1E293B),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                        color: q > 0
+                                            ? AppTheme.primary
+                                            : Colors.white12),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (q > 0) ...[
+                                        IconButton(
+                                          icon: const Icon(Icons.remove_rounded,
+                                              size: 16, color: Colors.white70),
+                                          padding: const EdgeInsets.all(4),
+                                          constraints: const BoxConstraints(),
+                                          onPressed: () {
+                                            setState(() {
+                                              if (q > 1) {
+                                                _selectedQuantities[p.id] =
+                                                    q - 1;
+                                              } else {
+                                                _selectedQuantities
+                                                    .remove(p.id);
+                                              }
+                                            });
+                                          },
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 6),
+                                          child: Text(
+                                            '$q',
+                                            style: GoogleFonts.outfit(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w700,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                      IconButton(
+                                        icon: Icon(
+                                          Icons.add_rounded,
+                                          size: 16,
+                                          color: q > 0
+                                              ? AppTheme.primary
+                                              : Colors.white70,
+                                        ),
+                                        padding: const EdgeInsets.all(4),
+                                        constraints: const BoxConstraints(),
+                                        onPressed: () {
+                                          setState(() {
+                                            _selectedQuantities[p.id] = q + 1;
+                                          });
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+            ),
+
+            // Bottom confirmation bar & Payment Method selector (scrollable when keyboard opens)
+            if (_totalCount > 0) ...[
+              const SizedBox(height: 10),
+              Flexible(
+                flex: 0,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.44,
+                  ),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1E293B),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: Colors.white12),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text(
+                                '¿Cómo pagarás este adicional de +\$${_extraTotal.toStringAsFixed(2)}?',
+                                style: GoogleFonts.outfit(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white),
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  if (_acceptsCash)
+                                    Expanded(
+                                      child: InkWell(
+                                        onTap: () => setState(() {
+                                          _paymentMethod = 'cash';
+                                          _errorMessage = null;
+                                        }),
+                                        borderRadius: BorderRadius.circular(10),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 8, horizontal: 10),
+                                          decoration: BoxDecoration(
+                                            color: _paymentMethod == 'cash'
+                                                ? AppTheme.primary
+                                                    .withOpacity(0.18)
+                                                : Colors.white
+                                                    .withOpacity(0.04),
+                                            borderRadius:
+                                                BorderRadius.circular(10),
+                                            border: Border.all(
+                                              color: _paymentMethod == 'cash'
+                                                  ? AppTheme.primary
+                                                  : Colors.white12,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              const Text('💵 ',
+                                                  style:
+                                                      TextStyle(fontSize: 14)),
+                                              Text(
+                                                'Efectivo al Recibir',
+                                                style: GoogleFonts.outfit(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w700,
+                                                  color:
+                                                      _paymentMethod == 'cash'
+                                                          ? Colors.white
+                                                          : Colors.white60,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  if (_acceptsCash && _acceptsPagoMovil)
+                                    const SizedBox(width: 8),
+                                  if (_acceptsPagoMovil)
+                                    Expanded(
+                                      child: InkWell(
+                                        onTap: () => setState(() {
+                                          _paymentMethod = 'mobile_transfer';
+                                          _errorMessage = null;
+                                        }),
+                                        borderRadius: BorderRadius.circular(10),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 8, horizontal: 10),
+                                          decoration: BoxDecoration(
+                                            color: _paymentMethod ==
+                                                    'mobile_transfer'
+                                                ? AppTheme.primary
+                                                    .withOpacity(0.18)
+                                                : Colors.white
+                                                    .withOpacity(0.04),
+                                            borderRadius:
+                                                BorderRadius.circular(10),
+                                            border: Border.all(
+                                              color: _paymentMethod ==
+                                                      'mobile_transfer'
+                                                  ? AppTheme.primary
+                                                  : Colors.white12,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              const Text('📲 ',
+                                                  style:
+                                                      TextStyle(fontSize: 14)),
+                                              Text(
+                                                'Pago Móvil',
+                                                style: GoogleFonts.outfit(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: _paymentMethod ==
+                                                          'mobile_transfer'
+                                                      ? Colors.white
+                                                      : Colors.white60,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              if (_paymentMethod == 'cash') ...[
+                                const SizedBox(height: 8),
+                                Text(
+                                  'ℹ️ Le pagarás la diferencia de \$${_extraTotal.toStringAsFixed(2)}${_extraBs != null ? " (Bs. ${_extraBs!.toStringAsFixed(2)})" : ""} en efectivo al repartidor al recibir.',
+                                  style: GoogleFonts.outfit(
+                                      fontSize: 11,
+                                      color: AppTheme.amberAccent),
+                                ),
+                              ] else ...[
+                                const SizedBox(height: 10),
+                                if (_hasConfiguredPagoMovil) ...[
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF0F172A),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: Colors.white10),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Datos de la tienda: ${_paymentCredentials!.pagoMovilBank} • ${_paymentCredentials!.pagoMovilPhone} • ${_paymentCredentials!.pagoMovilIdNumber}',
+                                          style: GoogleFonts.outfit(
+                                              fontSize: 10.5,
+                                              color: Colors.white70),
+                                        ),
+                                        if (_paymentCredentials!
+                                            .pagoMovilAccountName.isNotEmpty)
+                                          Text(
+                                            'Titular: ${_paymentCredentials!.pagoMovilAccountName}',
+                                            style: GoogleFonts.outfit(
+                                                fontSize: 10.5,
+                                                color: Colors.white60),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                ] else ...[
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.amber.withOpacity(0.12),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                          color:
+                                              Colors.amber.withOpacity(0.35)),
+                                    ),
+                                    child: Text(
+                                      'El comercio no tiene datos de Pago Móvil configurados.',
+                                      style: GoogleFonts.outfit(
+                                          fontSize: 10.5,
+                                          color: AppTheme.amberAccent,
+                                          fontWeight: FontWeight.w600),
+                                    ),
+                                  ),
+                                ],
+                                const SizedBox(height: 8),
+                                TextField(
+                                  controller: _bankController,
+                                  style: GoogleFonts.outfit(
+                                      color: Colors.white, fontSize: 12),
+                                  decoration: InputDecoration(
+                                    hintText:
+                                        'Banco Emisor (ej: Banesco, BDV, Mercantil)',
+                                    hintStyle: GoogleFonts.outfit(
+                                        color: Colors.white38, fontSize: 11),
+                                    filled: true,
+                                    fillColor: const Color(0xFF0F172A),
+                                    isDense: true,
+                                    contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 10),
+                                    border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: BorderSide.none),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                TextField(
+                                  controller: _refController,
+                                  keyboardType: TextInputType.number,
+                                  onChanged: (_) {
+                                    if (_errorMessage != null) {
+                                      setState(() => _errorMessage = null);
+                                    }
+                                  },
+                                  style: GoogleFonts.outfit(
+                                      color: Colors.white, fontSize: 12),
+                                  decoration: InputDecoration(
+                                    hintText:
+                                        'Ref. Pago Móvil * (Obligatorio, mín. 4 dígitos)',
+                                    hintStyle: GoogleFonts.outfit(
+                                        color: Colors.white38, fontSize: 11),
+                                    filled: true,
+                                    fillColor: const Color(0xFF0F172A),
+                                    isDense: true,
+                                    contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 10),
+                                    border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: BorderSide.none),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        if (_errorMessage != null) ...[
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 9),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF7F1D1D).withOpacity(0.9),
+                              borderRadius: BorderRadius.circular(10),
+                              border:
+                                  Border.all(color: const Color(0xFFEF4444)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.error_outline_rounded,
+                                    color: Colors.white, size: 16),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    _errorMessage!,
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 10),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1E293B),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                                color: AppTheme.primary.withOpacity(0.4)),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '$_totalCount producto(s) seleccionado(s)',
+                                      style: GoogleFonts.outfit(
+                                          fontSize: 11.5,
+                                          color: Colors.white70),
+                                    ),
+                                    Text(
+                                      'Adicional: +\$${_extraTotal.toStringAsFixed(2)}${_extraBs != null ? " (Bs. ${_extraBs!.toStringAsFixed(2)})" : ""}',
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 14.5,
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              ElevatedButton(
+                                onPressed:
+                                    _isSubmitting ? null : _submitAdditions,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.primary,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12)),
+                                ),
+                                child: _isSubmitting
+                                    ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                            color: Colors.white,
+                                            strokeWidth: 2),
+                                      )
+                                    : Text(
+                                        'Confirmar Adición',
+                                        style: GoogleFonts.outfit(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w700),
+                                      ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
-    ),
     );
   }
 }

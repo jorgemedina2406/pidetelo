@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/models/order_model.dart';
 import '../../../core/services/api_service.dart';
@@ -23,7 +24,15 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
   final TextEditingController _pagoMovilRefController = TextEditingController();
   final TextEditingController _zelleRefController = TextEditingController();
   final FocusNode _pagoMovilRefFocus = FocusNode();
+  final GlobalKey _pagoMovilSectionKey = GlobalKey();
   bool _showPagoMovilRefError = false;
+  String? _checkoutInlineError;
+
+  bool get _isPagoMovilSelected =>
+      _selectedPayment == 'pago_movil' || _selectedPayment == 'mobile_transfer';
+  String get _cleanPagoMovilRef =>
+      _pagoMovilRefController.text.replaceAll(RegExp(r'\D'), '');
+  bool get _hasValidPagoMovilRef => _cleanPagoMovilRef.length >= 4;
 
   @override
   void initState() {
@@ -227,7 +236,7 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
         'icon': Icons.payment_rounded,
       };
     }
-    if (_selectedPayment == 'pago_movil' && _pagoMovilRefController.text.trim().length < 4) {
+    if (_isPagoMovilSelected && !_hasValidPagoMovilRef) {
       return {
         'canOrder': false,
         'text': 'Ingresa Referencia Pago Móvil',
@@ -251,8 +260,10 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
     if (cart.items.isEmpty) return;
 
     final validation = _getValidationStatus(cart);
-    if (!validation['canOrder']) {
-      final action = validation['action'];
+    if (!validation['canOrder'] || (_isPagoMovilSelected && !_hasValidPagoMovilRef)) {
+      final action = (_isPagoMovilSelected && !_hasValidPagoMovilRef)
+          ? 'payment_ref_missing'
+          : validation['action'];
       if (action == 'address') {
         _showAddressPicker(context, cart);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -267,65 +278,52 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
           ),
         );
       } else if (action == 'closed') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'El comercio está cerrado en este momento (${cart.currentBranch?.scheduleStatusMessage ?? "Fuera de horario"}). No es posible procesar pedidos ahora.',
-              style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
-            ),
-            backgroundColor: const Color(0xFFEF4444),
-            duration: const Duration(seconds: 4),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        setState(() {
+          _checkoutInlineError =
+              'El comercio está cerrado en este momento (${cart.currentBranch?.scheduleStatusMessage ?? "Fuera de horario"}). No es posible procesar pedidos ahora.';
+        });
       } else if (action == 'coverage') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Tu dirección actual (${cart.distanceToCurrentBranchKm ?? 0} km) supera la cobertura del local (${cart.currentBranch?.deliveryRadiusKm ?? 0} km).',
-              style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
-            ),
-            backgroundColor: const Color(0xFFEF4444),
-            duration: const Duration(seconds: 4),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        setState(() {
+          _checkoutInlineError =
+              'Tu dirección actual (${cart.distanceToCurrentBranchKm ?? 0} km) supera la cobertura del local (${cart.currentBranch?.deliveryRadiusKm ?? 0} km).';
+        });
       } else if (action == 'payment_select' || action == 'payment_invalid') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              action == 'payment_select'
-                  ? 'Por favor selecciona un método de pago antes de confirmar.'
-                  : 'El comercio no tiene métodos de pago válidos configurados y no puede recibir pedidos en este momento.',
-              style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
-            ),
-            backgroundColor: const Color(0xFFF59E0B),
-            duration: const Duration(seconds: 3),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        setState(() {
+          _checkoutInlineError = action == 'payment_select'
+              ? 'Por favor selecciona un método de pago antes de confirmar.'
+              : 'El comercio no tiene métodos de pago válidos configurados y no puede recibir pedidos en este momento.';
+        });
       } else if (action == 'payment_ref_missing') {
-        setState(() => _showPagoMovilRefError = true);
+        setState(() {
+          _showPagoMovilRefError = true;
+          _checkoutInlineError =
+              'Debes ingresar el número de referencia del Pago Móvil (mínimo 4 dígitos) para continuar.';
+        });
+        final sectionCtx = _pagoMovilSectionKey.currentContext;
+        if (sectionCtx != null) {
+          Scrollable.ensureVisible(
+            sectionCtx,
+            duration: const Duration(milliseconds: 280),
+            curve: Curves.easeOut,
+            alignment: 0.3,
+          );
+        }
         _pagoMovilRefFocus.requestFocus();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Debes ingresar el número de referencia del Pago Móvil (mínimo 4 dígitos) para continuar.',
-              style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
-            ),
-            backgroundColor: const Color(0xFFEF4444),
-            duration: const Duration(seconds: 3),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
       }
       return;
     }
 
+    if (_checkoutInlineError != null || _showPagoMovilRefError) {
+      setState(() {
+        _checkoutInlineError = null;
+        _showPagoMovilRefError = false;
+      });
+    }
+
     String paymentLabel = 'Pago Móvil';
-    if (_selectedPayment == 'pago_movil') {
-      paymentLabel = _pagoMovilRefController.text.isNotEmpty
-          ? 'Pago Móvil (Ref: ${_pagoMovilRefController.text.trim()})'
+    if (_isPagoMovilSelected) {
+      paymentLabel = _cleanPagoMovilRef.isNotEmpty
+          ? 'Pago Móvil (Ref: $_cleanPagoMovilRef)'
           : 'Pago Móvil';
     } else if (_selectedPayment == 'cash_usd') {
       paymentLabel = _cashAmountController.text.isNotEmpty
@@ -353,26 +351,46 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
   }
 
   Future<void> _executeFinalOrder(BuildContext context, CartService cart, String paymentLabel) async {
-    final String refToSave = _selectedPayment == 'pago_movil'
-        ? _pagoMovilRefController.text.trim()
+    if (_isPagoMovilSelected && !_hasValidPagoMovilRef) {
+      if (mounted) {
+        setState(() {
+          _showPagoMovilRefError = true;
+          _checkoutInlineError =
+              'Debes ingresar el número de referencia del Pago Móvil (mínimo 4 dígitos) para continuar.';
+        });
+        _pagoMovilRefFocus.requestFocus();
+      }
+      return;
+    }
+
+    final String refToSave = _isPagoMovilSelected
+        ? _cleanPagoMovilRef
         : (_selectedPayment == 'zelle' ? _zelleRefController.text.trim() : '');
 
-    final createdOrder = await cart.createOrderFromCartAsync(
-      paymentMethod: paymentLabel,
-      user: SessionService().currentUser,
-      notes: _notesController.text.isNotEmpty ? _notesController.text : null,
-      paymentReference: refToSave,
-    );
+    try {
+      final createdOrder = await cart.createOrderFromCartAsync(
+        paymentMethod: paymentLabel,
+        user: SessionService().currentUser,
+        notes: _notesController.text.isNotEmpty ? _notesController.text : null,
+        paymentReference: refToSave,
+      );
 
-    if (!context.mounted) return;
-    Navigator.pop(context); // Close checkout sheet
+      if (!context.mounted) return;
+      Navigator.pop(context); // Close checkout sheet
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => OrderSuccessScreen(order: createdOrder),
-      ),
-    );
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => OrderSuccessScreen(order: createdOrder),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _showPagoMovilRefError = _isPagoMovilSelected && !_hasValidPagoMovilRef;
+        _checkoutInlineError = e.toString().replaceFirst('Exception: ', '');
+      });
+    }
   }
 
   void _showOrderConfirmationDialog(BuildContext context, CartService cart, String paymentLabel) {
@@ -1365,9 +1383,10 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                             },
                           ),
 
-                          if (_selectedPayment == 'pago_movil') ...[
+                          if (_isPagoMovilSelected) ...[
                             const SizedBox(height: 12),
                             Container(
+                              key: _pagoMovilSectionKey,
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
                                 color: darkBoxBg,
@@ -1435,10 +1454,15 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                                     controller: _pagoMovilRefController,
                                     focusNode: _pagoMovilRefFocus,
                                     keyboardType: TextInputType.number,
+                                    inputFormatters: [
+                                      FilteringTextInputFormatter.digitsOnly,
+                                      LengthLimitingTextInputFormatter(20),
+                                    ],
                                     onChanged: (_) {
-                                      if (_showPagoMovilRefError) {
-                                        setState(() => _showPagoMovilRefError = false);
-                                      }
+                                      setState(() {
+                                        _showPagoMovilRefError = false;
+                                        _checkoutInlineError = null;
+                                      });
                                     },
                                     style: TextStyle(
                                         color: textColor,
@@ -1838,7 +1862,27 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          if (subtext.isNotEmpty && !canOrder)
+                          if (_checkoutInlineError != null && _checkoutInlineError!.isNotEmpty)
+                            Container(
+                              width: double.infinity,
+                              margin: const EdgeInsets.only(bottom: 8),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEF4444).withOpacity(0.14),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: const Color(0xFFEF4444).withOpacity(0.5)),
+                              ),
+                              child: Text(
+                                _checkoutInlineError!,
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.outfit(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFFEF4444),
+                                ),
+                              ),
+                            )
+                          else if (subtext.isNotEmpty && !canOrder)
                             Padding(
                               padding: const EdgeInsets.only(bottom: 6),
                               child: Text(
@@ -1916,7 +1960,11 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
     final subtextColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
 
     return GestureDetector(
-      onTap: () => setState(() => _selectedPayment = id),
+      onTap: () => setState(() {
+        _selectedPayment = id;
+        _showPagoMovilRefError = false;
+        _checkoutInlineError = null;
+      }),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         width: 135,

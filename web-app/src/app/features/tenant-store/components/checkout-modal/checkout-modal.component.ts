@@ -305,6 +305,12 @@ export class CheckoutModalComponent {
       }).subscribe({
         next: saved => {
           console.log('[CheckoutModal] Pedido guardado en backend con éxito:', saved);
+          const savedNotesPin = saved?.notes ? String(saved.notes).match(/\[PIN:(\d{4})\]/)?.[1] : undefined;
+          const savedExplicitPin = saved?.delivery_pin ? String(saved.delivery_pin).trim() : undefined;
+          const resolvedPin = savedExplicitPin && /^\d{4}$/.test(savedExplicitPin) ? savedExplicitPin : savedNotesPin;
+          if (resolvedPin && /^\d{4}$/.test(resolvedPin)) {
+            this.cart.syncCompletedOrderPin(resolvedPin);
+          }
           if (typeof window !== 'undefined' && saved) {
             try {
               const savedOrdNum = String(saved.order_number || order.orderNumber);

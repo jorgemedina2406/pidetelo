@@ -1029,6 +1029,25 @@ class CartService extends ChangeNotifier {
     }
   }
 
+  void updateOrderPin(String orderNumber, String pin) {
+    final cleanPin = pin.trim();
+    if (!RegExp(r'^\d{4}$').hasMatch(cleanPin)) return;
+    bool changed = false;
+    final idx = _orderHistory.indexWhere((o) => o.orderNumber == orderNumber);
+    if (idx != -1 && _orderHistory[idx].pin != cleanPin) {
+      _orderHistory[idx] = _orderHistory[idx].copyWith(pin: cleanPin);
+      changed = true;
+    }
+    if (_activeOrder?.orderNumber == orderNumber && _activeOrder?.pin != cleanPin) {
+      _activeOrder = _activeOrder!.copyWith(pin: cleanPin);
+      changed = true;
+    }
+    if (changed) {
+      _saveOrders();
+      notifyListeners();
+    }
+  }
+
   void updateOrderCloudId(String orderNumber, String realUuid) {
     if (realUuid.isEmpty) return;
     bool changed = false;
@@ -1185,11 +1204,21 @@ class CartService extends ChangeNotifier {
     String? paymentReference,
     String? paymentOriginBank,
   }) async {
+    final lowerMethod = paymentMethod.toLowerCase();
+    final isCash = lowerMethod.contains('efectivo') || lowerMethod.contains('cash');
+    final isZelle = lowerMethod.contains('zelle');
+    final isPos = lowerMethod.contains('punto') || lowerMethod.contains('pos') || lowerMethod.contains('tarjeta');
+    final isPagoMovil = !isCash && !isZelle && !isPos;
+    final cleanRefDigits = (paymentReference ?? '').replaceAll(RegExp(r'\D'), '');
+    if (isPagoMovil && cleanRefDigits.length < 4) {
+      throw Exception('Debes ingresar el número de referencia del Pago Móvil (mínimo 4 dígitos).');
+    }
+
     final created = _buildAndQueueOrder(
       paymentMethod: paymentMethod,
       user: user,
       notes: notes,
-      paymentReference: paymentReference,
+      paymentReference: isPagoMovil ? cleanRefDigits : paymentReference,
       paymentOriginBank: paymentOriginBank,
     );
     await _pendingOrderSync;

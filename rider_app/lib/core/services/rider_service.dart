@@ -716,32 +716,49 @@ class RiderService extends ChangeNotifier {
     try {
       final supabase = Supabase.instance.client;
 
-      // Preserve existing customer instructions and append [RIDER_ACCEPTED]
-      String notes = '';
+      // Preserve existing customer instructions and PIN tag; never overwrite notes if read fails
+      String? updatedNotes;
+      String? fetchedTenantId;
+      String? fetchedBranchId;
+      String fetchedOrderNum = order.orderNumber;
+      String fetchedCustomerName = order.customerName;
       try {
         final currentOrder = await supabase
             .from('orders')
-            .select('notes')
+            .select('notes, tenant_id, branch_id, order_number, customer_name')
             .eq('id', order.id)
             .maybeSingle();
-        notes = (currentOrder?['notes'] ?? '').toString();
-        notes = notes
-            .replaceAll(RegExp(r'\[RIDER_[A-Z_]+(?::[^\]]*)?\]\s*'), '')
-            .trim();
+        if (currentOrder != null) {
+          fetchedTenantId = currentOrder['tenant_id']?.toString();
+          fetchedBranchId = currentOrder['branch_id']?.toString();
+          fetchedOrderNum =
+              (currentOrder['order_number'] ?? fetchedOrderNum).toString();
+          fetchedCustomerName =
+              (currentOrder['customer_name'] ?? fetchedCustomerName).toString();
+          final cleanedNotes = (currentOrder['notes'] ?? '')
+              .toString()
+              .replaceAll(RegExp(r'\[RIDER_[A-Z_]+(?::[^\]]*)?\]\s*'), '')
+              .trim();
+          updatedNotes = cleanedNotes.isEmpty
+              ? '[RIDER_ACCEPTED]'
+              : '[RIDER_ACCEPTED] $cleanedNotes';
+        }
       } catch (_) {}
-      final updatedNotes =
-          notes.isEmpty ? '[RIDER_ACCEPTED]' : '[RIDER_ACCEPTED] $notes';
 
       final cleanDriverId =
           (rider.id.isNotEmpty && !rider.id.startsWith('r_')) ? rider.id : null;
 
-      // Al aceptar, permanece en Cocina ('in_kitchen') para ir al local a buscarlo
-      await supabase.from('orders').update({
+      final updateMap = <String, dynamic>{
         'driver_id': cleanDriverId,
         'status': 'in_kitchen',
-        'notes': updatedNotes,
         'updated_at': DateTime.now().toIso8601String(),
-      }).eq('id', order.id);
+      };
+      if (updatedNotes != null) {
+        updateMap['notes'] = updatedNotes;
+      }
+
+      // Al aceptar, permanece en Cocina ('in_kitchen') para ir al local a buscarlo
+      await supabase.from('orders').update(updateMap).eq('id', order.id);
 
       order.status = OrderDeliveryStatus.assigned;
       final assignedOrder = DeliveryOrder(
@@ -770,7 +787,7 @@ class RiderService extends ChangeNotifier {
         paymentMethod: order.paymentMethod,
         createdAt: order.createdAt,
         branchId: order.branchId,
-        companyId: order.companyId,
+        companyId: order.companyId ?? fetchedTenantId,
         driverId: cleanDriverId,
       );
 
@@ -784,27 +801,26 @@ class RiderService extends ChangeNotifier {
       await prefs.setString(_keyAcceptedOrder, assignedOrder.id);
 
       // Notificar al portal web del comercio en tiempo real
-      try {
-        final tenantRow = await supabase
-            .from('orders')
-            .select('tenant_id')
-            .eq('id', order.id)
-            .maybeSingle();
-        final tenantId =
-            tenantRow?['tenant_id'] ?? 'dac59429-fd6f-4d3e-8b2e-ab0e23828c1f';
-        final channel = supabase.channel('orders:$tenantId');
-        await channel.sendBroadcastMessage(
-          event: 'order_status_updated',
-          payload: {
-            'id': order.id,
-            'status': 'in_kitchen',
-            'notes': updatedNotes,
-            'riderTag': '[RIDER_ACCEPTED]',
-            'driverId': cleanDriverId,
-            'driverName': rider.name,
-          },
-        );
-      } catch (_) {}
+      final tenantId = (fetchedTenantId ?? order.companyId ?? '').trim();
+      if (tenantId.isNotEmpty) {
+        try {
+          final channel = supabase.channel('orders:$tenantId');
+          await channel.sendBroadcastMessage(
+            event: 'order_status_updated',
+            payload: {
+              'id': order.id,
+              'order_number': fetchedOrderNum,
+              'branch_id': fetchedBranchId ?? order.branchId,
+              'customer_name': fetchedCustomerName,
+              'status': 'in_kitchen',
+              if (updatedNotes != null) 'notes': updatedNotes,
+              'riderTag': '[RIDER_ACCEPTED]',
+              'driver_id': cleanDriverId,
+              'driver_name': rider.name,
+            },
+          );
+        } catch (_) {}
+      }
 
       notifyListeners();
       return true;
@@ -818,54 +834,82 @@ class RiderService extends ChangeNotifier {
     if (_activeOrder == null) return;
     _isAcceptedByRider = true;
     _activeOrder!.status = OrderDeliveryStatus.assigned;
-    final orderId = _activeOrder!.id;
+    final currentActive = _activeOrder!;
+    final orderId = currentActive.id;
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_keyAcceptedOrder, orderId);
       await prefs.setString(
-          _keyActiveOrder, jsonEncode(_activeOrder!.toJson()));
+          _keyActiveOrder, jsonEncode(currentActive.toJson()));
 
       final supabase = Supabase.instance.client;
-      final currentOrder = await supabase
-          .from('orders')
-          .select('notes')
-          .eq('id', orderId)
-          .maybeSingle();
+      String? updatedNotes;
+      String? fetchedTenantId;
+      String? fetchedBranchId;
+      String fetchedOrderNum = currentActive.orderNumber;
+      String fetchedCustomerName = currentActive.customerName;
+      String? fetchedDriverId = currentActive.driverId ?? _currentRiderId;
 
-      String notes = (currentOrder?['notes'] ?? '').toString();
-      notes = notes
-          .replaceAll(RegExp(r'\[RIDER_[A-Z_]+(?::[^\]]*)?\]\s*'), '')
-          .trim();
-      final updatedNotes =
-          notes.isEmpty ? '[RIDER_ACCEPTED]' : '[RIDER_ACCEPTED] $notes';
-
-      // Al aceptar la asignación, se mantiene en cocina con la etiqueta [RIDER_ACCEPTED]
-      await supabase.from('orders').update({
-        'status': 'in_kitchen',
-        'notes': updatedNotes,
-        'updated_at': DateTime.now().toIso8601String(),
-      }).eq('id', orderId);
-
-      // Notificar al comercio
       try {
-        final tenantRow = await supabase
+        final currentOrder = await supabase
             .from('orders')
-            .select('tenant_id')
+            .select(
+                'notes, tenant_id, branch_id, order_number, customer_name, driver_id')
             .eq('id', orderId)
             .maybeSingle();
-        final tenantId =
-            tenantRow?['tenant_id'] ?? 'dac59429-fd6f-4d3e-8b2e-ab0e23828c1f';
-        final channel = supabase.channel('orders:$tenantId');
-        await channel.sendBroadcastMessage(
-          event: 'order_status_updated',
-          payload: {
-            'id': orderId,
-            'status': 'in_kitchen',
-            'notes': updatedNotes,
-            'riderTag': '[RIDER_ACCEPTED]',
-          },
-        );
+
+        if (currentOrder != null) {
+          fetchedTenantId = currentOrder['tenant_id']?.toString();
+          fetchedBranchId = currentOrder['branch_id']?.toString();
+          fetchedOrderNum =
+              (currentOrder['order_number'] ?? fetchedOrderNum).toString();
+          fetchedCustomerName =
+              (currentOrder['customer_name'] ?? fetchedCustomerName).toString();
+          fetchedDriverId =
+              currentOrder['driver_id']?.toString() ?? fetchedDriverId;
+
+          final cleanedNotes = (currentOrder['notes'] ?? '')
+              .toString()
+              .replaceAll(RegExp(r'\[RIDER_[A-Z_]+(?::[^\]]*)?\]\s*'), '')
+              .trim();
+          updatedNotes = cleanedNotes.isEmpty
+              ? '[RIDER_ACCEPTED]'
+              : '[RIDER_ACCEPTED] $cleanedNotes';
+        }
       } catch (_) {}
+
+      final updateMap = <String, dynamic>{
+        'status': 'in_kitchen',
+        'updated_at': DateTime.now().toIso8601String(),
+      };
+      if (updatedNotes != null) {
+        updateMap['notes'] = updatedNotes;
+      }
+
+      // Al aceptar la asignación, se mantiene en cocina con la etiqueta [RIDER_ACCEPTED]
+      await supabase.from('orders').update(updateMap).eq('id', orderId);
+
+      // Notificar al comercio
+      final tenantId = (fetchedTenantId ?? currentActive.companyId ?? '').trim();
+      if (tenantId.isNotEmpty) {
+        try {
+          final channel = supabase.channel('orders:$tenantId');
+          await channel.sendBroadcastMessage(
+            event: 'order_status_updated',
+            payload: {
+              'id': orderId,
+              'order_number': fetchedOrderNum,
+              'branch_id': fetchedBranchId ?? currentActive.branchId,
+              'customer_name': fetchedCustomerName,
+              'driver_id': fetchedDriverId,
+              'driver_name': currentActive.riderName,
+              'status': 'in_kitchen',
+              if (updatedNotes != null) 'notes': updatedNotes,
+              'riderTag': '[RIDER_ACCEPTED]',
+            },
+          );
+        } catch (_) {}
+      }
 
       debugPrint(
           '[RiderService] Order $orderId accepted and kept in_kitchen in Supabase');
@@ -896,51 +940,55 @@ class RiderService extends ChangeNotifier {
       }
       if (riderName.isEmpty) riderName = 'Repartidor';
 
-      // 2. Fetch existing notes to preserve customer instructions
-      String notes = '';
+      // 2. Fetch existing notes and metadata without ever overwriting notes on read failure
+      String? rejectedNotes;
+      String? fetchedTenantId;
       try {
         final currentOrder = await supabase
             .from('orders')
-            .select('notes')
+            .select('notes, tenant_id')
             .eq('id', orderId)
             .maybeSingle();
-        notes = (currentOrder?['notes'] ?? '').toString();
-        notes = notes
-            .replaceAll(RegExp(r'\[RIDER_[A-Z_]+(?::[^\]]*)?\]\s*'), '')
-            .trim();
+        if (currentOrder != null) {
+          fetchedTenantId = currentOrder['tenant_id']?.toString();
+          final notes = (currentOrder['notes'] ?? '')
+              .toString()
+              .replaceAll(RegExp(r'\[RIDER_[A-Z_]+(?::[^\]]*)?\]\s*'), '')
+              .trim();
+          rejectedNotes = notes.isEmpty
+              ? '[RIDER_REJECTED:$riderName]'
+              : '[RIDER_REJECTED:$riderName] $notes';
+        }
       } catch (_) {}
-      final rejectedNotes = notes.isEmpty
-          ? '[RIDER_REJECTED:$riderName]'
-          : '[RIDER_REJECTED:$riderName] $notes';
+
+      final updateMap = <String, dynamic>{
+        'driver_id': null,
+        'updated_at': DateTime.now().toIso8601String(),
+      };
+      if (rejectedNotes != null) {
+        updateMap['notes'] = rejectedNotes;
+      }
 
       // 3. Unassign driver so order returns to available state in database
-      await supabase.from('orders').update({
-        'driver_id': null,
-        'notes': rejectedNotes,
-        'updated_at': DateTime.now().toIso8601String(),
-      }).eq('id', orderId);
+      await supabase.from('orders').update(updateMap).eq('id', orderId);
 
       // 4. Broadcast explicit rejection to merchant portal
-      try {
-        final orderRow = await supabase
-            .from('orders')
-            .select('tenant_id')
-            .eq('id', orderId)
-            .maybeSingle();
-        final tenantId =
-            orderRow?['tenant_id'] ?? 'a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d';
-        final channel = supabase.channel('orders:$tenantId');
-        await channel.sendBroadcastMessage(
-          event: 'order_rejected',
-          payload: {
-            'id': order.id,
-            'orderNumber': order.orderNumber,
-            'riderName': riderName,
-          },
-        );
-      } catch (broadcastErr) {
-        debugPrint(
-            '[RiderService] Notice broadcasting rejection: $broadcastErr');
+      final tenantId = (fetchedTenantId ?? order.companyId ?? '').trim();
+      if (tenantId.isNotEmpty) {
+        try {
+          final channel = supabase.channel('orders:$tenantId');
+          await channel.sendBroadcastMessage(
+            event: 'order_rejected',
+            payload: {
+              'id': order.id,
+              'orderNumber': order.orderNumber,
+              'riderName': riderName,
+            },
+          );
+        } catch (broadcastErr) {
+          debugPrint(
+              '[RiderService] Notice broadcasting rejection: $broadcastErr');
+        }
       }
 
       _activeOrder = null;
@@ -962,7 +1010,8 @@ class RiderService extends ChangeNotifier {
   Future<void> updateOrderStatus(OrderDeliveryStatus newStatus) async {
     if (_activeOrder == null) return;
     _activeOrder!.status = newStatus;
-    final orderId = _activeOrder!.id;
+    final currentActive = _activeOrder!;
+    final orderId = currentActive.id;
 
     final dbStatus = _statusToDb(newStatus);
     String riderTag = '';
@@ -978,40 +1027,71 @@ class RiderService extends ChangeNotifier {
 
     try {
       final supabase = Supabase.instance.client;
-      final currentOrder = await supabase
-          .from('orders')
-          .select('notes, tenant_id')
-          .eq('id', orderId)
-          .maybeSingle();
-      String notes = (currentOrder?['notes'] ?? '').toString();
-      notes = notes
-          .replaceAll(RegExp(r'\[RIDER_[A-Z_]+(?::[^\]]*)?\]\s*'), '')
-          .trim();
-      final updatedNotes = riderTag.isEmpty
-          ? (notes.isEmpty ? null : notes)
-          : (notes.isEmpty ? riderTag : '$riderTag $notes');
+      String? updatedNotes;
+      String? fetchedTenantId;
+      String? fetchedBranchId;
+      String fetchedOrderNum = currentActive.orderNumber;
+      String fetchedCustomerName = currentActive.customerName;
+      String? fetchedDriverId = currentActive.driverId ?? _currentRiderId;
 
-      await supabase.from('orders').update({
+      try {
+        final currentOrder = await supabase
+            .from('orders')
+            .select(
+                'notes, tenant_id, branch_id, order_number, customer_name, driver_id')
+            .eq('id', orderId)
+            .maybeSingle();
+        if (currentOrder != null) {
+          fetchedTenantId = currentOrder['tenant_id']?.toString();
+          fetchedBranchId = currentOrder['branch_id']?.toString();
+          fetchedOrderNum =
+              (currentOrder['order_number'] ?? fetchedOrderNum).toString();
+          fetchedCustomerName =
+              (currentOrder['customer_name'] ?? fetchedCustomerName).toString();
+          fetchedDriverId =
+              currentOrder['driver_id']?.toString() ?? fetchedDriverId;
+
+          final cleanedNotes = (currentOrder['notes'] ?? '')
+              .toString()
+              .replaceAll(RegExp(r'\[RIDER_[A-Z_]+(?::[^\]]*)?\]\s*'), '')
+              .trim();
+          updatedNotes = riderTag.isEmpty
+              ? (cleanedNotes.isEmpty ? null : cleanedNotes)
+              : (cleanedNotes.isEmpty ? riderTag : '$riderTag $cleanedNotes');
+        }
+      } catch (_) {}
+
+      final updateMap = <String, dynamic>{
         'status': dbStatus,
-        'notes': updatedNotes,
         'updated_at': DateTime.now().toIso8601String(),
-      }).eq('id', orderId);
+      };
+      if (updatedNotes != null) {
+        updateMap['notes'] = updatedNotes;
+      }
+
+      await supabase.from('orders').update(updateMap).eq('id', orderId);
 
       // Broadcast update to merchant channel
-      try {
-        final tenantId = currentOrder?['tenant_id'] ??
-            'a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d';
-        final channel = supabase.channel('orders:$tenantId');
-        await channel.sendBroadcastMessage(
-          event: 'order_status_updated',
-          payload: {
-            'id': orderId,
-            'status': dbStatus,
-            'notes': updatedNotes,
-            'riderTag': riderTag,
-          },
-        );
-      } catch (_) {}
+      final tenantId = (fetchedTenantId ?? currentActive.companyId ?? '').trim();
+      if (tenantId.isNotEmpty) {
+        try {
+          final channel = supabase.channel('orders:$tenantId');
+          await channel.sendBroadcastMessage(
+            event: 'order_status_updated',
+            payload: {
+              'id': orderId,
+              'order_number': fetchedOrderNum,
+              'branch_id': fetchedBranchId ?? currentActive.branchId,
+              'customer_name': fetchedCustomerName,
+              'driver_id': fetchedDriverId,
+              'driver_name': currentActive.riderName,
+              'status': dbStatus,
+              if (updatedNotes != null) 'notes': updatedNotes,
+              'riderTag': riderTag,
+            },
+          );
+        } catch (_) {}
+      }
     } catch (e) {
       debugPrint('[RiderService] Error updating status in Supabase: $e');
     }

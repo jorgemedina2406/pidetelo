@@ -751,6 +751,16 @@ export const CartStore = signalStore(
       patchState(store, { isSuccessModalOpen: false });
     },
 
+    syncCompletedOrderPin(pin: string): void {
+      const cleanPin = (pin || '').trim();
+      const cur = store.completedOrder();
+      if (cur && /^\d{4}$/.test(cleanPin) && cur.deliveryPin !== cleanPin) {
+        patchState(store, {
+          completedOrder: { ...cur, deliveryPin: cleanPin }
+        });
+      }
+    },
+
     submitOrder(): Order {
       const tenant = store.activeTenant();
       const branch = store.selectedBranch();

@@ -291,6 +291,7 @@ export class RiderAppComponent implements OnInit, OnDestroy {
   private countdownTimer: any = null;
 
   readonly completingJob = signal<RiderDeliveryJob | null>(null);
+  readonly pinError = signal<string>('');
   enteredPin: string = '';
 
   ngOnInit(): void {
@@ -686,13 +687,63 @@ export class RiderAppComponent implements OnInit, OnDestroy {
 
   openCompletionModal(job: RiderDeliveryJob): void {
     this.completingJob.set(job);
+    this.pinError.set('');
     this.enteredPin = '';
   }
 
-  finalizeDelivery(): void {
+  async finalizeDelivery(): Promise<void> {
     const job = this.completingJob();
     if (!job) return;
 
+    const entered = (this.enteredPin || '').replace(/\D/g, '').trim();
+    if (entered.length < 4) {
+      this.pinError.set('Por favor ingresa los 4 dígitos del PIN');
+      return;
+    }
+
+    const rawDigits = (job.orderNumber || '').replace(/\D/g, '');
+    const orderDigits = rawDigits.length >= 4
+      ? rawDigits.slice(-4)
+      : (rawDigits ? rawDigits.padStart(4, '0') : '');
+
+    const realPins = new Set<string>();
+    let fetchedRow = false;
+    if (this.supabase.rawClient && job.orderId) {
+      try {
+        const { data } = await this.supabase.rawClient
+          .from('orders')
+          .select('notes')
+          .eq('id', job.orderId)
+          .maybeSingle();
+        if (data) {
+          fetchedRow = true;
+          const m = (data.notes || '').toString().match(/\[PIN:(\d{4})\]/);
+          if (m) realPins.add(m[1]);
+        }
+      } catch (_) {}
+    }
+
+    const localPin = (job.customerPin || '').trim();
+    if (/^\d{4}$/.test(localPin) && localPin !== '1234' && localPin !== '0000' && (localPin !== orderDigits || !fetchedRow)) {
+      realPins.add(localPin);
+    }
+
+    let isValid = false;
+    if (realPins.size > 0) {
+      isValid = realPins.has(entered);
+    } else {
+      const legacy = new Set<string>();
+      if (orderDigits) legacy.add(orderDigits);
+      if (localPin) legacy.add(localPin);
+      isValid = legacy.has(entered);
+    }
+
+    if (!isValid) {
+      this.pinError.set('PIN incorrecto. Solicítale al cliente su código PIN de entrega de 4 dígitos.');
+      return;
+    }
+
+    this.pinError.set('');
     this.api.updateOrderStatus(job.orderId, 'delivered').subscribe({
       next: () => console.log(`[RiderApp] Pedido ${job.orderId} entregado exitosamente`),
       error: (err) => console.warn('[RiderApp] Error finalizando entrega:', err)

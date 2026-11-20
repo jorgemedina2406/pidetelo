@@ -529,13 +529,7 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
 
     this.isSubmittingPaymentRef.set(true);
 
-    // Actualizar directamente en Supabase para reflejo inmediato en tiempo real
-    this.supabase.verifyOrderPayment(ord.id, {
-      status: 'pending',
-      reference: ref
-    }).catch(e => console.warn('[Tracking] Supabase resend error:', e));
-
-    // Sincronizar API Backend
+    // Sincronizar API Backend primero; solo usar Supabase directo como fallback (evita sobrescritura concurrente de notas/PIN)
     this.api.verifyOrderPayment(ord.id, {
       status: 'pending',
       reference: ref
@@ -552,15 +546,21 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
         setTimeout(() => this.paymentRefUpdatedSuccess.set(false), 5000);
       },
       error: (err) => {
-        console.warn('[Tracking] Error reenviando referencia a API:', err);
-        this.isSubmittingPaymentRef.set(false);
-        this.order.update(curr => curr ? {
-          ...curr,
-          paymentStatus: 'pending',
-          paymentReference: ref
-        } : null);
-        this.paymentRefUpdatedSuccess.set(true);
-        this.newPaymentRefInput.set('');
+        console.warn('[Tracking] Error reenviando referencia a API, usando fallback Supabase:', err);
+        this.supabase.verifyOrderPayment(ord.id, {
+          status: 'pending',
+          reference: ref
+        }).finally(() => {
+          this.isSubmittingPaymentRef.set(false);
+          this.order.update(curr => curr ? {
+            ...curr,
+            paymentStatus: 'pending',
+            paymentReference: ref
+          } : null);
+          this.paymentRefUpdatedSuccess.set(true);
+          this.newPaymentRefInput.set('');
+          setTimeout(() => this.paymentRefUpdatedSuccess.set(false), 5000);
+        });
       }
     });
   }
@@ -1132,12 +1132,13 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
 
   getDeliveryPin(ord: Order | null): string {
     if (!ord) return '----';
-    if (ord.deliveryPin && ord.deliveryPin.trim().length === 4) {
-      return ord.deliveryPin.trim();
-    }
     const notes = (ord.notes || '').toString();
     const pinMatch = notes.match(/\[PIN:(\d{4})\]/);
     if (pinMatch) return pinMatch[1];
+
+    if (ord.deliveryPin && /^\d{4}$/.test(ord.deliveryPin.trim())) {
+      return ord.deliveryPin.trim();
+    }
 
     const digits = (ord.orderNumber || '').replace(/\D/g, '');
     if (digits.length >= 4) return digits.slice(-4);

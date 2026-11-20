@@ -157,15 +157,20 @@ export class SupabaseService {
   async verifyOrderPayment(orderId: string, payload: { status: 'verified' | 'rejected' | 'pending'; reference?: string; originBank?: string; orderStatus?: OrderStatus }): Promise<boolean> {
     if (!this.client) return false;
     try {
-      const { data: currentOrder } = await this.client
+      const { data: currentOrder, error: fetchError } = await this.client
         .from('orders')
-        .select('notes, payment_origin_bank')
+        .select('notes')
         .eq('id', orderId)
         .maybeSingle();
 
-      const existingNotes = (currentOrder?.notes || '').toString();
-      let cleanNotes = existingNotes.replace(/\[PAGO_[A-Z_]+(?::[^\]]*)?\]\s*/g, '').trim();
-      const originBank = payload.originBank || currentOrder?.payment_origin_bank || existingNotes.match(/\[PAGO_ORIGEN:([^\]]+)\]/)?.[1];
+      if (fetchError || !currentOrder) {
+        console.warn('[SupabaseService] verifyOrderPayment aborted: no se pudieron leer las notas actuales para preservar PIN/tags:', fetchError);
+        return false;
+      }
+
+      const existingNotes = (currentOrder.notes || '').toString();
+      const cleanNotes = existingNotes.replace(/\[PAGO_[A-Z_]+(?::[^\]]*)?\]\s*/g, '').trim();
+      const originBank = payload.originBank || existingNotes.match(/\[PAGO_ORIGEN:([^\]]+)\]/)?.[1];
       const originTag = originBank ? `[PAGO_ORIGEN:${originBank}]` : '';
 
       let notesToSave: string | null = null;
@@ -186,7 +191,6 @@ export class SupabaseService {
       };
       if (payload.reference) updateData.payment_reference = payload.reference.trim();
       if (payload.orderStatus) updateData.status = payload.orderStatus;
-      if (originBank) updateData.payment_origin_bank = originBank;
 
       const { error } = await this.client
         .from('orders')
@@ -207,20 +211,24 @@ export class SupabaseService {
   async assignRider(orderId: string, riderId: string | null): Promise<boolean> {
     if (!this.client) return false;
     try {
-      const { data: currentOrder } = await this.client
+      const { data: currentOrder, error: fetchError } = await this.client
         .from('orders')
         .select('notes')
         .eq('id', orderId)
         .maybeSingle();
 
-      let cleanNotes = (currentOrder?.notes || '').toString();
-      cleanNotes = cleanNotes.replace(/\[RIDER_[A-Z_]+(?::[^\]]*)?\]\s*/g, '').trim();
-
       const payload: any = {
         driver_id: riderId,
-        notes: cleanNotes.length > 0 ? cleanNotes : null,
         updated_at: new Date().toISOString()
       };
+
+      if (!fetchError && currentOrder) {
+        const cleanNotes = (currentOrder.notes || '')
+          .toString()
+          .replace(/\[RIDER_[A-Z_]+(?::[^\]]*)?\]\s*/g, '')
+          .trim();
+        payload.notes = cleanNotes.length > 0 ? cleanNotes : null;
+      }
 
       const { error } = await this.client
         .from('orders')
@@ -243,14 +251,18 @@ export class SupabaseService {
     if (!this.client) return null;
 
     try {
-      const channelId = `orders:${tenantId}:${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-      return this.client
-        .channel(channelId)
+      const pgChannelId = `orders_pg:${tenantId}:${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const pgChannel = this.client
+        .channel(pgChannelId)
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'orders', filter: `tenant_id=eq.${tenantId}` },
           onChange
         )
+        .subscribe();
+
+      const bcChannel = this.client
+        .channel(`orders:${tenantId}`)
         .on(
           'broadcast',
           { event: 'order_rejected' },
@@ -265,11 +277,22 @@ export class SupabaseService {
           { event: 'order_status_updated' },
           (eventPayload: any) => {
             if (eventPayload && eventPayload['payload']) {
-              onChange({ eventType: 'UPDATE', new: eventPayload['payload'] });
+              onChange({ eventType: 'UPDATE', new: eventPayload['payload'], source: 'broadcast' });
             }
           }
         )
         .subscribe();
+
+      return {
+        unsubscribe: () => {
+          try {
+            pgChannel?.unsubscribe();
+          } catch (_) {}
+          try {
+            bcChannel?.unsubscribe();
+          } catch (_) {}
+        }
+      };
     } catch (e) {
       console.warn('[SupabaseService] subscribeToOrders failed:', e);
       return null;

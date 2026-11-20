@@ -10,6 +10,17 @@ import { ThemeService } from '../../core/services/theme.service';
 import { I18nService } from '../../core/services/i18n.service';
 import { Product, ProductModifierGroup, ProductCategory } from '../../core/models/product.model';
 import { Order, OrderStatus, OrderAddition, parseOrderAdditions, updateAdditionTagInNotes } from '../../core/models/order.model';
+
+type OrderRiderPhase =
+  | 'none'
+  | 'assigned_pending'
+  | 'accepted'
+  | 'at_merchant'
+  | 'picked_up'
+  | 'on_the_way'
+  | 'delivered'
+  | 'rejected'
+  | 'cancelled';
 import { AppUser, UserRole } from '../../core/models/user.model';
 import { Tenant, CurrencyDisplayMode, DeliveryTier } from '../../core/models/tenant.model';
 import { Branch, SubscriptionPlan } from '../../core/models/branch.model';
@@ -1250,6 +1261,17 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     );
   }
 
+  playStatusChimeSound(): void {
+    // Timbre suave de estado de reparto (asignado, llegó al local, en camino, entregado)
+    this.playChimeSequence(
+      [
+        { freq: 660, delay: 0.0, duration: 0.35 },
+        { freq: 990, delay: 0.14, duration: 0.55 }
+      ],
+      [180, 80, 180]
+    );
+  }
+
   private triggerDesktopNotification(
     title: string,
     body: string,
@@ -1302,63 +1324,241 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     }
   }
 
-  private triggerRiderAssignedAlert(order: any, riderName?: string): void {
-    const orderNum = order?.orderNumber || order?.id || '';
-    const rider = riderName || order?.driverName || order?.riderName || 'Motorizado';
-    const customer = order?.customerName || 'Cliente';
-    this.triggerDesktopNotification(
-      `🛵 REPARTIDOR ASIGNADO #${orderNum}`,
-      `${rider} ha sido asignado para entregar el pedido de ${customer}.`,
-      `rider-assigned-${order?.id || orderNum}`,
-      false
-    );
+  private resolveRiderPhase(status?: string | null, notes?: string | null, driverId?: string | null): OrderRiderPhase {
+    const st = (status || '').toLowerCase().trim();
+    const n = (notes || '').toString();
+    const hasDriver = Boolean(driverId && String(driverId).trim());
+
+    if (st === 'cancelled') return 'cancelled';
+    if (st === 'delivered') return 'delivered';
+    if (n.includes('[RIDER_REJECTED') && !hasDriver) return 'rejected';
+    if (st === 'on_the_way' || n.includes('[RIDER_ON_THE_WAY]')) return 'on_the_way';
+    if (st === 'picked_up' || n.includes('[RIDER_PICKED_UP]')) return 'picked_up';
+    if (st === 'at_merchant' || n.includes('[RIDER_AT_MERCHANT]')) return 'at_merchant';
+    if (n.includes('[RIDER_ACCEPTED]')) return 'accepted';
+    if (hasDriver || st === 'assigned_driver') return 'assigned_pending';
+    return 'none';
   }
 
-  private triggerOrderStatusAlert(order: any, status: string): void {
-    const orderNum = order?.orderNumber || order?.id || '';
-    const customer = order?.customerName || 'Cliente';
+  private resolveRiderDisplayName(driverId?: string | null, fallbackName?: string | null): string {
+    const cleanId = (driverId || '').trim();
+    if (cleanId) {
+      const fromFleet = this.riders().find(r => r.id === cleanId);
+      if (fromFleet?.name) return fromFleet.name;
+      const fromNearby = this.nearbyRiders().find(r => r.id === cleanId);
+      if (fromNearby?.name) return fromNearby.name;
+    }
+    const cleanFallback = (fallbackName || '').trim();
+    return cleanFallback || 'El motorizado';
+  }
 
-    if (status === 'on_the_way') {
-      this.triggerDesktopNotification(
-        `🚀 PEDIDO EN CAMINO #${orderNum}`,
-        `El pedido #${orderNum} de ${customer} ya va en camino hacia la dirección de entrega.`,
-        `status-${order?.id || orderNum}`,
-        false
-      );
-    } else if (status === 'delivered') {
-      this.triggerDesktopNotification(
-        `✅ PEDIDO ENTREGADO #${orderNum}`,
-        `El pedido #${orderNum} de ${customer} ha sido entregado exitosamente.`,
-        `status-${order?.id || orderNum}`,
-        false
-      );
-    } else if (status === 'cancelled') {
-      this.triggerDesktopNotification(
-        `❌ PEDIDO CANCELADO #${orderNum}`,
-        `El pedido #${orderNum} de ${customer} ha sido cancelado.`,
-        `status-${order?.id || orderNum}`,
-        false
-      );
+  private clearLifecycleDedupPrefixes(orderId: string, prefixes: string[]): void {
+    for (const key of Array.from(this.alertedLifecycleKeys)) {
+      if (prefixes.some(p => key.startsWith(`${orderId}:${p}`))) {
+        this.alertedLifecycleKeys.delete(key);
+      }
+    }
+  }
+
+  private emitLifecycleNotification(
+    dedupKey: string,
+    opts: {
+      toastType: 'success' | 'info' | 'warning' | 'error';
+      title: string;
+      message: string;
+      desktopTag: string;
+      playSound?: boolean;
+      blinkTitle?: string;
+    }
+  ): void {
+    if (this.alertedLifecycleKeys.has(dedupKey)) return;
+    this.alertedLifecycleKeys.add(dedupKey);
+
+    if (opts.playSound !== false) {
+      this.playStatusChimeSound();
+    }
+    this.showToast(opts.toastType, opts.title, opts.message);
+    this.triggerDesktopNotification(opts.title, opts.message, opts.desktopTag, false);
+    if (opts.blinkTitle) {
+      this.startTabTitleBlink(opts.blinkTitle, '⚡ Pídetelo Comercio');
+    }
+  }
+
+  private triggerRiderRejectionAlert(orderNumber: string, riderName?: string): void {
+    const displayNum = this.formatOrderNumber(orderNumber);
+    this.rejectedAlert.set({
+      orderNumber: displayNum,
+      message: `El repartidor ${riderName ? riderName + ' ' : ''}rechazó la asignación de ${displayNum}. Reasigna otro repartidor disponible.`
+    });
+    this.showToast(
+      'warning',
+      `⚠️ Asignación rechazada ${displayNum}`,
+      `${riderName || 'El motorizado'} rechazó el pedido ${displayNum}. Asigna otro repartidor disponible.`
+    );
+    this.triggerDesktopNotification(
+      `⚠️ MOTORIZADO RECHAZÓ ${displayNum}`,
+      `${riderName || 'El repartidor'} rechazó el pedido ${displayNum}. Reasigna otro motorizado.`,
+      `rider-rejected-${displayNum}-${Date.now()}`,
+      false
+    );
+    try {
+      const audioCtx = this.userAudioContext || new (window.AudioContext || (window as any).webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sawtooth';
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.frequency.setValueAtTime(320, audioCtx.currentTime);
+      osc.frequency.setValueAtTime(240, audioCtx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.45);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.45);
+    } catch (_) { }
+  }
+
+  private evaluateOrderLifecycleTransition(params: {
+    id: string;
+    orderNumber: string;
+    customerName: string;
+    status: string;
+    driverId: string;
+    driverName?: string;
+    notes: string;
+    paymentStatus: string;
+  }): void {
+    if (!this.ordersBaselineInitialized || !params.id) return;
+
+    const currPhase = this.resolveRiderPhase(params.status, params.notes, params.driverId);
+    const prev = this.knownOrderLifecycleMap.get(params.id);
+
+    this.knownOrderLifecycleMap.set(params.id, {
+      status: params.status || '',
+      driverId: params.driverId || '',
+      riderPhase: currPhase,
+      paymentStatus: params.paymentStatus || ''
+    });
+
+    if (!prev) return;
+
+    const orderNum = this.formatOrderNumber(params.orderNumber || params.id);
+    const customer = params.customerName || 'Cliente';
+    const riderName = this.resolveRiderDisplayName(params.driverId, params.driverName);
+
+    if (params.driverId && prev.driverId !== params.driverId) {
+      this.clearLifecycleDedupPrefixes(params.id, ['accepted:', 'at_merchant:', 'on_the_way:', 'rejected:']);
+    }
+
+    if (
+      currPhase === 'assigned_pending' &&
+      Boolean(params.driverId) &&
+      (prev.driverId !== params.driverId || prev.riderPhase === 'none' || prev.riderPhase === 'rejected')
+    ) {
+      this.clearLifecycleDedupPrefixes(params.id, ['rejected:']);
+      this.emitLifecycleNotification(`${params.id}:assigned:${params.driverId}`, {
+        toastType: 'info',
+        title: `🛵 Motorizado asignado ${orderNum}`,
+        message: `${riderName} fue asignado al pedido de ${customer}. Esperando su confirmación.`,
+        desktopTag: `rider-assigned-${params.id}-${params.driverId}`
+      });
+    } else if (currPhase === 'accepted' && prev.riderPhase !== 'accepted') {
+      this.clearLifecycleDedupPrefixes(params.id, ['rejected:']);
+      this.emitLifecycleNotification(`${params.id}:accepted:${params.driverId || 'any'}`, {
+        toastType: 'success',
+        title: `✅ Motorizado confirmó ${orderNum}`,
+        message: `${riderName} aceptó el pedido de ${customer} y va rumbo al comercio.`,
+        desktopTag: `rider-accepted-${params.id}-${params.driverId || 'any'}`
+      });
+    } else if (currPhase === 'at_merchant' && prev.riderPhase !== 'at_merchant') {
+      this.emitLifecycleNotification(`${params.id}:at_merchant:${params.driverId || 'any'}`, {
+        toastType: 'info',
+        title: `📍 Motorizado en el local ${orderNum}`,
+        message: `${riderName} llegó al comercio para retirar el pedido de ${customer}.`,
+        desktopTag: `rider-at-merchant-${params.id}-${params.driverId || 'any'}`,
+        blinkTitle: `📍 Motorizado en local ${orderNum}`
+      });
+    } else if (
+      (currPhase === 'picked_up' || currPhase === 'on_the_way') &&
+      prev.riderPhase !== 'picked_up' &&
+      prev.riderPhase !== 'on_the_way'
+    ) {
+      this.emitLifecycleNotification(`${params.id}:on_the_way:${params.driverId || 'any'}`, {
+        toastType: 'info',
+        title: `🚀 Pedido recogido y en camino ${orderNum}`,
+        message: `${riderName} recogió el pedido ${orderNum} de ${customer} y va en camino al cliente.`,
+        desktopTag: `order-on-the-way-${params.id}`
+      });
+    } else if (currPhase === 'delivered' && prev.riderPhase !== 'delivered') {
+      this.emitLifecycleNotification(`${params.id}:delivered`, {
+        toastType: 'success',
+        title: `🎉 Pedido entregado ${orderNum}`,
+        message: `${riderName} entregó exitosamente el pedido ${orderNum} a ${customer}.`,
+        desktopTag: `order-delivered-${params.id}`
+      });
+    } else if (currPhase === 'cancelled' && prev.riderPhase !== 'cancelled') {
+      this.emitLifecycleNotification(`${params.id}:cancelled`, {
+        toastType: 'error',
+        title: `❌ Pedido cancelado ${orderNum}`,
+        message: `El pedido ${orderNum} de ${customer} fue cancelado.`,
+        desktopTag: `order-cancelled-${params.id}`
+      });
+    } else if (currPhase === 'rejected' && prev.riderPhase !== 'rejected') {
+      const rejectedName =
+        params.notes.match(/\[RIDER_REJECTED(?::([^\]]+))?\]/)?.[1] ||
+        this.resolveRiderDisplayName(prev.driverId, undefined);
+      const dedupKey = `${params.id}:rejected:${prev.driverId || rejectedName}`;
+      this.clearLifecycleDedupPrefixes(params.id, ['assigned:', 'accepted:', 'at_merchant:']);
+      if (!this.alertedLifecycleKeys.has(dedupKey)) {
+        this.alertedLifecycleKeys.add(dedupKey);
+        this.triggerRiderRejectionAlert(orderNum, rejectedName);
+      }
+    }
+  }
+
+  private evaluateOrderLifecycleList(orderList: Order[]): void {
+    for (const ord of orderList) {
+      this.evaluateOrderLifecycleTransition({
+        id: ord.id,
+        orderNumber: ord.orderNumber || ord.id,
+        customerName: ord.customer?.name || 'Cliente',
+        status: ord.status || '',
+        driverId: ord.driverId || '',
+        driverName: ord.driverName,
+        notes: ord.notes || '',
+        paymentStatus: ord.paymentStatus || ''
+      });
     }
   }
 
   private triggerNewOrderDesktopAlert(order: any): void {
+    const orderId = order?.id || '';
+    const orderNum = this.formatOrderNumber(order?.orderNumber || order?.order_number || orderId || 'Nuevo');
+    const dedupKey = `new:${orderId || orderNum}`;
+    if (this.alertedLifecycleKeys.has(dedupKey)) return;
+    this.alertedLifecycleKeys.add(dedupKey);
+
     // 1. Sonido fuerte de comanda
     this.playKitchenBellSound();
 
-    const orderNum = order?.orderNumber || order?.id || 'Nuevo';
-    const customer = order?.customerName || 'Cliente';
+    const customer = order?.customer?.name || order?.customerName || order?.customer_name || 'Cliente';
     const total = order?.total ? `$${Number(order.total).toFixed(2)}` : '';
 
+    this.showToast(
+      'info',
+      `🛎️ ¡Nuevo Pedido ${orderNum}!`,
+      `${customer} realizó un pedido ${total ? '(' + total + ')' : ''}. Revísalo en comanda.`
+    );
+
     this.triggerDesktopNotification(
-      `🛎️ ¡NUEVO PEDIDO RECIBIDO! #${orderNum}`,
+      `🛎️ ¡NUEVO PEDIDO RECIBIDO! ${orderNum}`,
       `${customer} ha realizado un pedido ${total ? '(' + total + ')' : ''}. Haz clic para gestionarlo en cocina.`,
-      `order-${order?.id || orderNum}`,
+      `order-${orderId || orderNum}`,
       false
     );
 
     // 3. Efecto parpadeante en el título de la pestaña si está en segundo plano
-    this.startTabTitleBlink(`🛎️ (1) ¡NUEVO PEDIDO! #${orderNum}`, `⚡ REVISAR COMANDA - Pídetelo`);
+    this.startTabTitleBlink(`🛎️ (1) ¡NUEVO PEDIDO! ${orderNum}`, `⚡ REVISAR COMANDA - Pídetelo`);
   }
 
   private summarizeNewAdditions(
@@ -1492,12 +1692,19 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
 
   private syncOrdersBaseline(orderList: Order[], branchId: string): void {
     this.knownOrderAdditionsMap.clear();
+    this.knownOrderLifecycleMap.clear();
     for (const o of orderList) {
       this.knownOrderAdditionsMap.set(o.id, {
         additionsCount: parseOrderAdditions(o.notes).length,
         itemsCount: o.items?.length || 0,
         total: Number(o.total || 0),
         pendingMobileSig: this.getPendingMobileSignature(o.notes)
+      });
+      this.knownOrderLifecycleMap.set(o.id, {
+        status: o.status || '',
+        driverId: o.driverId || '',
+        riderPhase: this.resolveRiderPhase(o.status, o.notes, o.driverId),
+        paymentStatus: o.paymentStatus || ''
       });
     }
     this.baselineBranchId = branchId;
@@ -1770,9 +1977,11 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
   readonly additionAlerts = signal<OrderAdditionAlert[]>([]);
   readonly highlightedAdditionOrderIds = computed(() => this.additionAlerts().map(a => a.orderId));
   private knownOrderAdditionsMap = new Map<string, { additionsCount: number; itemsCount: number; total: number; pendingMobileSig: string }>();
+  private knownOrderLifecycleMap = new Map<string, { status: string; driverId: string; riderPhase: OrderRiderPhase; paymentStatus: string }>();
   private baselineBranchId = '';
   private ordersBaselineInitialized = false;
   private alertedAdditionKeys = new Set<string>();
+  private alertedLifecycleKeys = new Set<string>();
   private realtimeTenantId = '';
 
   // GPS & Leaflet Map State (Legacy / Telemetry)
@@ -1908,29 +2117,51 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
           const newRow = payload.new || payload.order || payload;
           const oldRow = payload.old;
 
-          if (eventType === 'INSERT') {
-            this.triggerNewOrderDesktopAlert(newRow);
-          } else if (eventType === 'UPDATE' && newRow) {
-            const bFilter = this.activeBranchId();
-            const isMain = Boolean(this.activeBranch()?.isMain || this.activeBranch()?.name?.toLowerCase().includes('principal'));
+          const bFilter = this.activeBranchId();
+          const isMain = Boolean(this.activeBranch()?.isMain || this.activeBranch()?.name?.toLowerCase().includes('principal'));
+
+          if (eventType === 'INSERT' && newRow) {
             const rowBranchId = newRow.branch_id ?? newRow.branchId;
             const belongsToActiveBranch = Boolean(bFilter) && (rowBranchId === bFilter || (isMain && !rowBranchId));
+            if (belongsToActiveBranch) {
+              if (newRow.id) {
+                this.knownOrderAdditionsMap.set(newRow.id, {
+                  additionsCount: parseOrderAdditions(newRow.notes).length,
+                  itemsCount: 0,
+                  total: Number(newRow.total || 0),
+                  pendingMobileSig: this.getPendingMobileSignature(newRow.notes)
+                });
+                const initialDriverId = (newRow.driver_id ?? newRow.driverId ?? '').toString();
+                const initialStatus = (newRow.status ?? 'received').toString();
+                this.knownOrderLifecycleMap.set(newRow.id, {
+                  status: initialStatus,
+                  driverId: initialDriverId,
+                  riderPhase: this.resolveRiderPhase(initialStatus, newRow.notes, initialDriverId),
+                  paymentStatus: (newRow.payment_status ?? newRow.paymentStatus ?? '').toString()
+                });
+              }
+              this.triggerNewOrderDesktopAlert(newRow);
+            }
+          } else if (eventType === 'UPDATE' && newRow) {
+            const existingOrder = this.orders().find(o => o.id === newRow.id);
+            const rowBranchId = newRow.branch_id ?? newRow.branchId ?? existingOrder?.branchId;
+            const belongsToActiveBranch = Boolean(bFilter) && (rowBranchId === bFilter || (isMain && !rowBranchId));
 
-            let handledAddition = false;
             if (belongsToActiveBranch && this.ordersBaselineInitialized) {
-              const existingOrder = this.orders().find(o => o.id === newRow.id);
               const prev = this.knownOrderAdditionsMap.get(newRow.id);
-              const newAdditions = parseOrderAdditions(newRow.notes);
+              const rawNotes = (newRow.notes !== undefined && newRow.notes !== null)
+                ? String(newRow.notes)
+                : (existingOrder?.notes || '');
+              const newAdditions = parseOrderAdditions(rawNotes);
               const prevCount = prev
                 ? prev.additionsCount
                 : (existingOrder ? parseOrderAdditions(existingOrder.notes).length : parseOrderAdditions(oldRow?.notes).length);
-              const newPendingSig = this.getPendingMobileSignature(newRow.notes);
+              const newPendingSig = this.getPendingMobileSignature(rawNotes);
               const prevPendingSig = prev
                 ? prev.pendingMobileSig
                 : (existingOrder ? this.getPendingMobileSignature(existingOrder.notes) : '');
 
               if (newAdditions.length > prevCount) {
-                handledAddition = true;
                 const addedList = newAdditions.slice(prevCount);
                 const summary = this.summarizeNewAdditions(
                   addedList,
@@ -1951,7 +2182,6 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
                 });
                 setTimeout(() => reloadOrders(), 1500);
               } else if (newPendingSig && newPendingSig !== prevPendingSig) {
-                handledAddition = true;
                 const pendingAdditions = newAdditions.filter(
                   a => a.method === 'mobile_transfer' && a.status === 'pending'
                 );
@@ -1974,19 +2204,48 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
                 });
                 setTimeout(() => reloadOrders(), 1500);
               }
-            }
 
-            if (!handledAddition) {
-              const driverJustAssigned = (!oldRow?.driver_id && newRow.driver_id) ||
-                                         (oldRow?.driver_id !== newRow.driver_id && newRow.driver_id);
-              if (driverJustAssigned) {
-                this.triggerRiderAssignedAlert(newRow, newRow.driver_name || newRow.driverName);
-              } else if (oldRow?.status !== newRow.status && newRow.status) {
-                this.triggerOrderStatusAlert(newRow, newRow.status);
-              }
+              const resolvedDriverId = newRow.driver_id !== undefined
+                ? (newRow.driver_id || '')
+                : (newRow.driverId !== undefined ? (newRow.driverId || '') : (existingOrder?.driverId || ''));
+              const resolvedStatus = (newRow.status || existingOrder?.status || '').toString();
+              const resolvedNotes = (newRow.notes !== undefined && newRow.notes !== null)
+                ? String(newRow.notes)
+                : (existingOrder?.notes || '');
+              const resolvedOrderNum = newRow.order_number || newRow.orderNumber || existingOrder?.orderNumber || newRow.id;
+              const resolvedCustomer = newRow.customer_name || newRow.customerName || existingOrder?.customer?.name || 'Cliente';
+              const resolvedDriverName = newRow.driver_name || newRow.driverName || existingOrder?.driverName;
+
+              this.evaluateOrderLifecycleTransition({
+                id: newRow.id,
+                orderNumber: resolvedOrderNum,
+                customerName: resolvedCustomer,
+                status: resolvedStatus,
+                driverId: String(resolvedDriverId),
+                driverName: resolvedDriverName,
+                notes: resolvedNotes,
+                paymentStatus: (newRow.payment_status || newRow.paymentStatus || existingOrder?.paymentStatus || '').toString()
+              });
             }
           } else if (eventType === 'REJECTED_BY_RIDER' && payload.order) {
-            triggerRejectionAlert(payload.order.orderNumber || payload.order.id, payload.order.riderName);
+            const ordId = payload.order.id || '';
+            const ordNum = this.formatOrderNumber(payload.order.orderNumber || payload.order.order_number || ordId);
+            const rName = payload.order.riderName || 'Repartidor';
+            const prevLifecycle = ordId ? this.knownOrderLifecycleMap.get(ordId) : undefined;
+            const rejKey = ordId ? `${ordId}:rejected:${prevLifecycle?.driverId || rName}` : `rej:${ordNum}:${rName}`;
+            if (!this.alertedLifecycleKeys.has(rejKey)) {
+              this.alertedLifecycleKeys.add(rejKey);
+              if (ordId) {
+                this.clearLifecycleDedupPrefixes(ordId, ['assigned:', 'accepted:', 'at_merchant:']);
+                this.knownOrderLifecycleMap.set(ordId, {
+                  status: prevLifecycle?.status || 'in_kitchen',
+                  driverId: '',
+                  riderPhase: 'rejected',
+                  paymentStatus: prevLifecycle?.paymentStatus || ''
+                });
+              }
+              triggerRejectionAlert(ordNum, rName);
+            }
           }
         }
         reloadOrders();
@@ -2012,24 +2271,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     }
 
     const triggerRejectionAlert = (orderNumber: string, riderName?: string) => {
-      this.rejectedAlert.set({
-        orderNumber: orderNumber,
-        message: `El repartidor ${riderName ? riderName + ' ' : ''}rechazó la asignación de ${orderNumber}. Reasigna otro repartidor disponible.`
-      });
-      try {
-        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = 'sawtooth';
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.frequency.setValueAtTime(320, audioCtx.currentTime);
-        osc.frequency.setValueAtTime(240, audioCtx.currentTime + 0.15);
-        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.45);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.45);
-      } catch (_) { }
+      this.triggerRiderRejectionAlert(orderNumber, riderName);
     };
 
     const reloadOrders = () => {
@@ -2044,14 +2286,19 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
           if (isMain && !o.branchId) return true;
           return false;
         });
-        const currentCount = this.orders().length;
 
-        if (orderList.length > currentCount && currentCount > 0) {
-          const newOrders = orderList.filter(no => !this.orders().some(oo => oo.id === no.id));
-          const latestOrder = newOrders.length > 0 ? newOrders[0] : orderList[0];
-          this.triggerNewOrderDesktopAlert(latestOrder);
+        const baselineReady = this.ordersBaselineInitialized && this.baselineBranchId === bFilter;
+        if (baselineReady) {
+          const newOrders = orderList.filter(no => !this.knownOrderLifecycleMap.has(no.id));
+          for (const latestOrder of newOrders) {
+            this.triggerNewOrderDesktopAlert(latestOrder);
+          }
         }
+
         this.detectAdditionsInOrderList(orderList, bFilter);
+        if (baselineReady) {
+          this.evaluateOrderLifecycleList(orderList);
+        }
         this.orders.set(orderList);
 
         const currentDetailOrd = this.selectedOrderDetail();
@@ -3072,14 +3319,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       } : o)
     );
 
-    // Sincronizar Supabase Realtime
-    this.supabase.verifyOrderPayment(order.id, {
-      status: 'verified',
-      reference: ref,
-      orderStatus: newStatus
-    }).catch(e => console.warn('[MerchantAdmin] Supabase verify error:', e));
-
-    // Sincronizar Backend NestJS
+    // Sincronizar Backend NestJS primero; solo usar Supabase directo como fallback si el backend falla (evita sobrescritura concurrente de notas/PIN)
     this.api.verifyOrderPayment(order.id, {
       status: 'verified',
       reference: ref,
@@ -3091,9 +3331,16 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         this.closePaymentVerificationModal();
       },
       error: (err) => {
-        console.warn('[MerchantAdmin] Error sincronizando verificación en backend:', err);
-        this.isProcessingVerification.set(false);
-        this.closePaymentVerificationModal();
+        console.warn('[MerchantAdmin] Error sincronizando verificación en backend, usando fallback Supabase:', err);
+        this.supabase.verifyOrderPayment(order.id, {
+          status: 'verified',
+          reference: ref,
+          originBank: this.paymentOriginBankInput().trim() || undefined,
+          orderStatus: newStatus
+        }).finally(() => {
+          this.isProcessingVerification.set(false);
+          this.closePaymentVerificationModal();
+        });
       }
     });
   }
@@ -3320,11 +3567,6 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       } : o)
     );
 
-    this.supabase.verifyOrderPayment(order.id, {
-      status: 'rejected',
-      reference: this.paymentRefInput().trim()
-    }).catch(e => console.warn('[MerchantAdmin] Supabase reject error:', e));
-
     this.api.verifyOrderPayment(order.id, {
       status: 'rejected',
       reference: this.paymentRefInput().trim(),
@@ -3336,9 +3578,14 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         this.closePaymentVerificationModal();
       },
       error: () => {
-        this.isProcessingVerification.set(false);
-        this.isRejectPaymentConfirmOpen.set(false);
-        this.closePaymentVerificationModal();
+        this.supabase.verifyOrderPayment(order.id, {
+          status: 'rejected',
+          reference: this.paymentRefInput().trim()
+        }).finally(() => {
+          this.isProcessingVerification.set(false);
+          this.isRejectPaymentConfirmOpen.set(false);
+          this.closePaymentVerificationModal();
+        });
       }
     });
   }
@@ -3397,14 +3644,29 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         rejectedRiderName: undefined
       } : o)
     );
-    // 1. Direct Supabase update for immediate Realtime broadcast to mobile apps
-    this.supabase.assignRider(orderId, targetRiderId).then(ok => {
-      if (ok) console.log(`[MerchantAdmin] Repartidor asignado en Supabase: ${orderId} -> ${targetRiderId}`);
-    });
-    // 2. Backend update
+
+    if (currentOrder && targetRiderId) {
+      this.evaluateOrderLifecycleTransition({
+        id: orderId,
+        orderNumber: currentOrder.orderNumber || orderId,
+        customerName: currentOrder.customer?.name || 'Cliente',
+        status: 'assigned_driver',
+        driverId: targetRiderId,
+        driverName: rider?.name,
+        notes: (currentOrder.notes || '').replace(/\[RIDER_[A-Z_]+(?::[^\]]*)?\]\s*/g, '').trim(),
+        paymentStatus: currentOrder.paymentStatus || ''
+      });
+    }
+
+    // Backend primary (evita doble escritura simultánea sobre orders.notes); Supabase fallback solo si falla el backend
     this.api.assignRider(orderId, targetRiderId).subscribe({
       next: () => console.log(`[MerchantAdmin] Repartidor asignado en backend a orden ${orderId}`),
-      error: (err) => console.warn('[MerchantAdmin] Error asignando repartidor:', err)
+      error: (err) => {
+        console.warn('[MerchantAdmin] Backend assignRider falló, intentando Supabase directo:', err);
+        this.supabase.assignRider(orderId, targetRiderId).then(ok => {
+          if (ok) console.log(`[MerchantAdmin] Repartidor asignado en Supabase (fallback): ${orderId} -> ${targetRiderId}`);
+        });
+      }
     });
   }
 
@@ -4292,7 +4554,11 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
             if (isMain && !o.branchId) return true;
             return false;
           });
+          const baselineReady = this.ordersBaselineInitialized && this.baselineBranchId === bFilter;
           this.detectAdditionsInOrderList(orderList, bFilter);
+          if (baselineReady) {
+            this.evaluateOrderLifecycleList(orderList);
+          }
           this.orders.set(orderList);
         });
         this.api.getProducts(activeTenantId, bFilter).subscribe(products => {

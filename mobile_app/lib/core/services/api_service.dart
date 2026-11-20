@@ -1002,6 +1002,12 @@ class ApiService {
       }
     }
 
+    final cleanRefDigits = extractedRef.replaceAll(RegExp(r'\D'), '');
+    if (mappedMethod == 'mobile_transfer' && cleanRefDigits.length < 4) {
+      throw Exception('Debes ingresar el número de referencia del Pago Móvil (mínimo 4 dígitos).');
+    }
+    final persistedRef = mappedMethod == 'mobile_transfer' ? cleanRefDigits : extractedRef;
+
     String notesExtra = '[PIN:${order.pin}]';
 
     // 1. Primary: Save directly to Supabase Cloud PostgreSQL
@@ -1046,7 +1052,7 @@ class ApiService {
         'fulfillment_type': 'delivery',
         'payment_method': mappedMethod,
         'payment_status': mappedMethod == 'mobile_transfer' ? 'pending' : 'not_required',
-        'payment_reference': extractedRef.isNotEmpty ? extractedRef : null,
+        'payment_reference': persistedRef.isNotEmpty ? persistedRef : null,
         'customer_name': order.customerName.isNotEmpty ? order.customerName : 'Cliente',
         'customer_phone': order.customerPhone.isNotEmpty ? order.customerPhone : '04120000000',
         'delivery_address': order.customerAddress.isNotEmpty ? order.customerAddress : 'Dirección de entrega',
@@ -1104,7 +1110,7 @@ class ApiService {
       'delivery_lat': order.customerLat,
       'delivery_lng': order.customerLng,
       'payment_method': mappedMethod,
-      'payment_reference': extractedRef.isNotEmpty ? extractedRef : null,
+      'payment_reference': persistedRef.isNotEmpty ? persistedRef : null,
       'delivery_pin': order.pin,
       'notes': notesExtra,
       'subtotal': order.subtotal,

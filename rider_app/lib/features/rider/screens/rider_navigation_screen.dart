@@ -483,7 +483,7 @@ class _RiderNavigationScreenState extends State<RiderNavigationScreen>
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () async {
-                  final entered = _pinController.text.trim();
+                  final entered = _pinController.text.replaceAll(RegExp(r'\D'), '').trim();
                   if (entered.length < 4) {
                     setModalState(() {
                       pinError = 'Por favor ingresa los 4 dígitos del PIN';
@@ -508,6 +508,16 @@ class _RiderNavigationScreenState extends State<RiderNavigationScreen>
                         .select('*')
                         .eq('id', _order.id)
                         .maybeSingle();
+                    if (row == null && _order.orderNumber.trim().isNotEmpty) {
+                      final cleanNum = _order.orderNumber.replaceAll('#', '').trim();
+                      row = await supabase
+                          .from('orders')
+                          .select('*')
+                          .or('order_number.eq.$cleanNum,order_number.eq.#$cleanNum')
+                          .order('created_at', ascending: false)
+                          .limit(1)
+                          .maybeSingle();
+                    }
                     if (row != null) {
                       final explicitPin = (row['delivery_pin'] ?? '').toString().trim();
                       if (RegExp(r'^\d{4}$').hasMatch(explicitPin)) {

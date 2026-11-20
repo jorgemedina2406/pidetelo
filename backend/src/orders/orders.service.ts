@@ -447,16 +447,20 @@ export class OrdersService {
 
     if (riderTag) {
       try {
-        const { data: currentOrder } = await this.supabase
+        const { data: currentOrder, error: fetchErr } = await this.supabase
           .getClient()
           .from('orders')
           .select('notes')
           .eq('id', id)
           .maybeSingle();
 
-        let cleanNotes = (currentOrder?.notes || '').toString();
-        cleanNotes = cleanNotes.replace(/\[RIDER_[A-Z_]+(?::[^\]]*)?\]\s*/g, '').trim();
-        updatePayload.notes = cleanNotes.length > 0 ? `${riderTag} ${cleanNotes}` : riderTag;
+        if (!fetchErr && currentOrder) {
+          const cleanNotes = (currentOrder.notes || '')
+            .toString()
+            .replace(/\[RIDER_[A-Z_]+(?::[^\]]*)?\]\s*/g, '')
+            .trim();
+          updatePayload.notes = cleanNotes.length > 0 ? `${riderTag} ${cleanNotes}` : riderTag;
+        }
       } catch (_) {}
     }
 
@@ -519,13 +523,32 @@ export class OrdersService {
       }
     }
 
+    const updateObj: any = {
+      driver_id: riderId || null,
+      updated_at: new Date().toISOString(),
+    };
+
+    try {
+      const { data: currentOrder, error: fetchErr } = await this.supabase
+        .getClient()
+        .from('orders')
+        .select('notes')
+        .eq('id', orderId)
+        .maybeSingle();
+
+      if (!fetchErr && currentOrder) {
+        const cleanNotes = (currentOrder.notes || '')
+          .toString()
+          .replace(/\[RIDER_[A-Z_]+(?::[^\]]*)?\]\s*/g, '')
+          .trim();
+        updateObj.notes = cleanNotes.length > 0 ? cleanNotes : null;
+      }
+    } catch (_) {}
+
     const { data, error } = await this.supabase
       .getClient()
       .from('orders')
-      .update({
-        driver_id: riderId || null,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateObj)
       .eq('id', orderId)
       .select()
       .single();
@@ -918,26 +941,29 @@ export class OrdersService {
     }
 
     try {
-      const { data: currentOrder } = await this.supabase
+      const { data: currentOrder, error: fetchErr } = await this.supabase
         .getClient()
         .from('orders')
         .select('notes')
         .eq('id', id)
         .maybeSingle();
 
-      const existingNotes = (currentOrder?.notes || '').toString();
-      let cleanNotes = existingNotes.replace(/\[PAGO_[A-Z_]+(?::[^\]]*)?\]\s*/g, '').trim();
+      if (!fetchErr && currentOrder) {
+        const existingNotes = (currentOrder.notes || '').toString();
+        const cleanNotes = existingNotes.replace(/\[PAGO_[A-Z_]+(?::[^\]]*)?\]\s*/g, '').trim();
+        const originBank = payload.originBank || existingNotes.match(/\[PAGO_ORIGEN:([^\]]+)\]/)?.[1];
 
-      if (payload.status === 'verified') {
-        const auditTag = `[PAGO_VERIFICADO${payload.reference ? ':Ref ' + payload.reference : ''}${payload.originBank ? ' (' + payload.originBank + ')' : ''}${payload.verifiedBy ? ' por ' + payload.verifiedBy : ''}]`;
-        updateData.notes = cleanNotes.length > 0 ? `${auditTag} ${cleanNotes}` : auditTag;
-      } else if (payload.status === 'rejected') {
-        const rejectTag = `[PAGO_RECHAZADO${payload.reference ? ':Ref ' + payload.reference : ''}]`;
-        updateData.notes = cleanNotes.length > 0 ? `${rejectTag} ${cleanNotes}` : rejectTag;
-      } else if (payload.status === 'pending') {
-        const originTag = payload.originBank ? `[PAGO_ORIGEN:${payload.originBank}]` : '';
-        const combined = [originTag, cleanNotes].filter(Boolean).join(' ').trim();
-        updateData.notes = combined.length > 0 ? combined : null;
+        if (payload.status === 'verified') {
+          const auditTag = `[PAGO_VERIFICADO${payload.reference ? ':Ref ' + payload.reference : ''}${originBank ? ' (' + originBank + ')' : ''}${payload.verifiedBy ? ' por ' + payload.verifiedBy : ''}]`;
+          updateData.notes = cleanNotes.length > 0 ? `${auditTag} ${cleanNotes}` : auditTag;
+        } else if (payload.status === 'rejected') {
+          const rejectTag = `[PAGO_RECHAZADO${payload.reference ? ':Ref ' + payload.reference : ''}]`;
+          updateData.notes = cleanNotes.length > 0 ? `${rejectTag} ${cleanNotes}` : rejectTag;
+        } else if (payload.status === 'pending') {
+          const originTag = originBank ? `[PAGO_ORIGEN:${originBank}]` : '';
+          const combined = [originTag, cleanNotes].filter(Boolean).join(' ').trim();
+          updateData.notes = combined.length > 0 ? combined : null;
+        }
       }
     } catch (_) {}
 
