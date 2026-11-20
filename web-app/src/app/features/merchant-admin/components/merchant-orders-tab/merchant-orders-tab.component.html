@@ -136,6 +136,44 @@
               <span class="truncate">{{ o.customer.deliveryAddress }}</span>
             </div>
 
+            <!-- Alerta de Ítems Adicionales y Cobro -->
+            @let orderAdds1 = parseAdditions(o.notes);
+            @if (orderAdds1.length > 0) {
+            <div class="p-2 rounded-lg bg-orange-500/10 border border-orange-500/25 space-y-1">
+              <div class="flex items-center justify-between text-[10px] font-black text-orange-800 dark:text-orange-300">
+                <span class="flex items-center gap-1">
+                  <span>🍔</span>
+                  <span>¡Adicional Añadido!</span>
+                </span>
+                <span>+${{ getAdditionsTotal(orderAdds1).toFixed(2) }}</span>
+              </div>
+              @for (add of orderAdds1; track add.raw) {
+                <div class="text-[9.5px] flex items-center justify-between font-semibold">
+                  @if (add.method === 'cash') {
+                    <span class="text-blue-700 dark:text-blue-300">
+                      💵 Cobrar ${{ add.amountUsd.toFixed(2) }} en efectivo (Motorizado)
+                    </span>
+                  } @else if (add.status === 'verified') {
+                    <span class="text-emerald-700 dark:text-emerald-300 flex items-center gap-1">
+                      <app-icon name="check-circle" [size]="10"></app-icon>
+                      <span>Pago Móvil OK (Ref: {{ add.reference }})</span>
+                    </span>
+                  } @else {
+                    <div class="flex items-center justify-between w-full gap-1">
+                      <span class="text-amber-700 dark:text-amber-300 truncate">
+                        📲 Ref: {{ add.reference }} (+${{ add.amountUsd.toFixed(2) }})
+                      </span>
+                      <button (click)="verifyAdditionPayment.emit({ order: o, addition: add })"
+                              class="px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[9px] cursor-pointer shrink-0">
+                        ✓ Validar
+                      </button>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+            }
+
             <!-- Status y Auditoría de Pago Móvil (Fase 1) -->
             @if (o.paymentMethod === 'mobile_transfer' || (o.paymentMethod === 'pago_movil')) {
             @if (o.paymentStatus === 'verified') {
@@ -267,6 +305,44 @@
               }
             </div>
 
+            <!-- Alerta de Ítems Adicionales y Cobro -->
+            @let orderAdds2 = parseAdditions(o.notes);
+            @if (orderAdds2.length > 0) {
+            <div class="p-2 rounded-lg bg-orange-500/10 border border-orange-500/25 space-y-1">
+              <div class="flex items-center justify-between text-[10px] font-black text-orange-800 dark:text-orange-300">
+                <span class="flex items-center gap-1">
+                  <span>🍔</span>
+                  <span>¡Adicional Añadido!</span>
+                </span>
+                <span>+${{ getAdditionsTotal(orderAdds2).toFixed(2) }}</span>
+              </div>
+              @for (add of orderAdds2; track add.raw) {
+                <div class="text-[9.5px] flex items-center justify-between font-semibold">
+                  @if (add.method === 'cash') {
+                    <span class="text-blue-700 dark:text-blue-300">
+                      💵 Cobrar ${{ add.amountUsd.toFixed(2) }} en efectivo (Motorizado)
+                    </span>
+                  } @else if (add.status === 'verified') {
+                    <span class="text-emerald-700 dark:text-emerald-300 flex items-center gap-1">
+                      <app-icon name="check-circle" [size]="10"></app-icon>
+                      <span>Pago Móvil OK (Ref: {{ add.reference }})</span>
+                    </span>
+                  } @else {
+                    <div class="flex items-center justify-between w-full gap-1">
+                      <span class="text-amber-700 dark:text-amber-300 truncate">
+                        📲 Ref: {{ add.reference }} (+${{ add.amountUsd.toFixed(2) }})
+                      </span>
+                      <button (click)="verifyAdditionPayment.emit({ order: o, addition: add })"
+                              class="px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[9px] cursor-pointer shrink-0">
+                        ✓ Validar
+                      </button>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+            }
+
             <!-- Rider Selector (Flota Propia + Flota Libre Cercana) -->
             <div
               class="bg-slate-50 dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 space-y-1.5">
@@ -397,6 +473,38 @@
                 <span class="truncate max-w-[130px] text-right">{{ o.customer.deliveryAddress }}</span>
               </div>
             </div>
+
+            <!-- Alerta de Ítems Adicionales y Cobro -->
+            @let orderAdds3 = parseAdditions(o.notes);
+            @if (orderAdds3.length > 0) {
+            <div class="p-2 rounded-lg bg-orange-500/10 border border-orange-500/25 space-y-1">
+              <div class="flex items-center justify-between text-[10px] font-black text-orange-800 dark:text-orange-300">
+                <span class="flex items-center gap-1">
+                  <span>🍔</span>
+                  <span>¡Adicional Añadido!</span>
+                </span>
+                <span>+${{ getAdditionsTotal(orderAdds3).toFixed(2) }}</span>
+              </div>
+              @for (add of orderAdds3; track add.raw) {
+                <div class="text-[9.5px] flex items-center justify-between font-semibold">
+                  @if (add.method === 'cash') {
+                    <span class="text-blue-700 dark:text-blue-300">
+                      💵 Repartidor debe cobrar ${{ add.amountUsd.toFixed(2) }} en efectivo
+                    </span>
+                  } @else if (add.status === 'verified') {
+                    <span class="text-emerald-700 dark:text-emerald-300 flex items-center gap-1">
+                      <app-icon name="check-circle" [size]="10"></app-icon>
+                      <span>Pago Móvil OK (Ref: {{ add.reference }})</span>
+                    </span>
+                  } @else {
+                    <span class="text-amber-700 dark:text-amber-300 truncate">
+                      📲 Ref: {{ add.reference }} (+${{ add.amountUsd.toFixed(2) }}) [Por validar]
+                    </span>
+                  }
+                </div>
+              }
+            </div>
+            }
 
             <div class="flex items-center justify-between pt-1">
               <button (click)="openRoute.emit(o)"

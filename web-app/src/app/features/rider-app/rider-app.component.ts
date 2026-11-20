@@ -2,6 +2,7 @@ import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
+import { parseOrderAdditions } from '../../core/models/order.model';
 import { AuthStore } from '../../core/stores/auth.store';
 import { ThemeService } from '../../core/services/theme.service';
 import { I18nService } from '../../core/services/i18n.service';
@@ -32,6 +33,8 @@ export interface RiderDeliveryJob {
   deliveryFee: number;
   tip: number;
   paymentMethod: 'cash_usd' | 'card_online';
+  amountToCollect?: number;
+  collectionNote?: string;
   step: 'heading_to_store' | 'at_store' | 'heading_to_customer' | 'delivered';
   customerPin?: string;
 }
@@ -524,28 +527,48 @@ export class RiderAppComponent implements OnInit, OnDestroy {
 
   private processOrders(active: Order[]): void {
     if (active.length > 0) {
-      const mappedJobs: RiderDeliveryJob[] = active.map(o => ({
-        orderId: o.id,
-        orderNumber: `#${o.orderNumber.replace('#', '')}`,
-        tenantId: o.tenantId || '',
-        storeName: o.tenantName || 'Comercio',
-        storeAddress: (o as any).branches?.address || (o as any).tenants?.address || 'Comercio',
-        storePhone: (o as any).branches?.phone || (o as any).tenants?.phone || '',
-        storeColor: (o as any).tenants?.accent_color || (o.tenantName?.includes('Tokyo') ? '#dc2626' : '#f97316'),
-        storeLat: (o as any).tenants?.latitude || 10.4812,
-        storeLng: (o as any).tenants?.longitude || -66.8601,
-        customerName: o.customer.name,
-        customerPhone: o.customer.phone,
-        deliveryAddress: o.customer.deliveryAddress || 'Caracas',
-        deliveryReference: o.customer.notes || 'Entregar en puerta',
-        itemsSummary: o.items.map(i => `${i.quantity}x ${i.name}`).join(' + '),
-        orderTotal: o.total,
-        deliveryFee: o.deliveryFee || 2.50,
-        tip: 1.50,
-        paymentMethod: o.paymentMethod === 'cash_usd' ? 'cash_usd' : 'card_online',
-        step: o.status === 'on_the_way' ? 'heading_to_customer' : 'heading_to_store',
-        customerPin: o.orderNumber.replace(/\D/g, '').slice(-4) || '1234'
-      }));
+      const mappedJobs: RiderDeliveryJob[] = active.map(o => {
+        const additions = parseOrderAdditions(o.notes);
+        let amountToCollect = 0;
+        let collectionNote = '';
+
+        if (o.paymentMethod === 'cash_usd') {
+          amountToCollect = o.total;
+          collectionNote = 'Cobrar monto total en efectivo';
+        } else {
+          const cashAdds = additions.filter(a => a.method === 'cash');
+          const cashAddsTotal = cashAdds.reduce((s, a) => s + a.amountUsd, 0);
+          if (cashAddsTotal > 0) {
+            amountToCollect = Number(cashAddsTotal.toFixed(2));
+            collectionNote = `Cobrar adicional en efectivo: $${cashAddsTotal.toFixed(2)}`;
+          }
+        }
+
+        return {
+          orderId: o.id,
+          orderNumber: `#${o.orderNumber.replace('#', '')}`,
+          tenantId: o.tenantId || '',
+          storeName: o.tenantName || 'Comercio',
+          storeAddress: (o as any).branches?.address || (o as any).tenants?.address || 'Comercio',
+          storePhone: (o as any).branches?.phone || (o as any).tenants?.phone || '',
+          storeColor: (o as any).tenants?.accent_color || (o.tenantName?.includes('Tokyo') ? '#dc2626' : '#f97316'),
+          storeLat: (o as any).tenants?.latitude || 10.4812,
+          storeLng: (o as any).tenants?.longitude || -66.8601,
+          customerName: o.customer.name,
+          customerPhone: o.customer.phone,
+          deliveryAddress: o.customer.deliveryAddress || 'Caracas',
+          deliveryReference: o.customer.notes || 'Entregar en puerta',
+          itemsSummary: o.items.map(i => `${i.quantity}x ${i.name}`).join(' + '),
+          orderTotal: o.total,
+          deliveryFee: o.deliveryFee || 2.50,
+          tip: 1.50,
+          paymentMethod: o.paymentMethod === 'cash_usd' ? 'cash_usd' : 'card_online',
+          amountToCollect,
+          collectionNote,
+          step: o.status === 'on_the_way' ? 'heading_to_customer' : 'heading_to_store',
+          customerPin: o.orderNumber.replace(/\D/g, '').slice(-4) || '1234'
+        };
+      });
       this.activeJobs.set(mappedJobs);
     } else {
       this.activeJobs.set([]);

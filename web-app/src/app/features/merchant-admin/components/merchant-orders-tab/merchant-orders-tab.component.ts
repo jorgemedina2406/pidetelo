@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '../../../../shared/components/icon.component';
 import { I18nService } from '../../../../core/services/i18n.service';
-import { Order, OrderStatus } from '../../../../core/models/order.model';
+import { Order, OrderStatus, parseOrderAdditions, OrderAddition } from '../../../../core/models/order.model';
 import { Branch } from '../../../../core/models/branch.model';
 import { Rider } from '../../merchant-admin.component';
 
@@ -46,6 +46,7 @@ export class MerchantOrdersTabComponent {
   @Output() openDetail = new EventEmitter<Order>();
   @Output() openRoute = new EventEmitter<Order>();
   @Output() openPaymentVerification = new EventEmitter<Order>();
+  @Output() verifyAdditionPayment = new EventEmitter<{ order: Order; addition: OrderAddition }>();
   @Output() openDispatchConfig = new EventEmitter<void>();
   @Output() exportExcel = new EventEmitter<void>();
   @Output() dismissAlert = new EventEmitter<void>();
@@ -63,6 +64,14 @@ export class MerchantOrdersTabComponent {
       return order.totalBs.toFixed(2);
     }
     return (usd * this.activeExchangeRate).toFixed(2);
+  }
+
+  parseAdditions(notes?: string | null): OrderAddition[] {
+    return parseOrderAdditions(notes);
+  }
+
+  getAdditionsTotal(additions: OrderAddition[]): number {
+    return additions.reduce((s, a) => s + a.amountUsd, 0);
   }
 
   get averageTicketUsd(): string {

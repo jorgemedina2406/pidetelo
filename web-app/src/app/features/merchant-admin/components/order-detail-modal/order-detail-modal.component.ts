@@ -1,6 +1,6 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Order } from '../../../../core/models/order.model';
+import { Order, parseOrderAdditions, OrderAddition } from '../../../../core/models/order.model';
 import { IconComponent } from '../../../../shared/components/icon.component';
 
 @Component({
@@ -19,6 +19,29 @@ export class OrderDetailModalComponent {
 
   get effectiveRate(): number {
     return this.order?.exchangeRate || this.activeExchangeRate || 45.50;
+  }
+
+  get additions(): OrderAddition[] {
+    return parseOrderAdditions(this.order?.notes);
+  }
+
+  get additionsTotalUsd(): number {
+    return this.additions.reduce((sum, a) => sum + a.amountUsd, 0);
+  }
+
+  get initialSubtotalUsd(): number {
+    const sub = this.order?.subtotal || 0;
+    return Math.max(0, Number((sub - this.additionsTotalUsd).toFixed(2)));
+  }
+
+  isAdditionItem(item: any): boolean {
+    if (item.name?.includes('(Adición)')) return true;
+    if (item.selectedModifiers && Array.isArray(item.selectedModifiers)) {
+      return item.selectedModifiers.some((m: any) => 
+        (m.name || m.optionName || '').toLowerCase().includes('adici')
+      );
+    }
+    return false;
   }
 
   get totalBs(): number {

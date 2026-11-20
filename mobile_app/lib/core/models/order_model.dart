@@ -410,6 +410,7 @@ class DeliveryOrder {
   final DateTime createdAt;
   final String? branchId;
   final String? companyId;
+  final String? notes;
 
   String? get tenantId => companyId;
   String get tenantName => merchantName;
@@ -446,6 +447,7 @@ class DeliveryOrder {
     required this.createdAt,
     this.branchId,
     this.companyId,
+    this.notes,
   });
 
   DeliveryOrder copyWith({
@@ -479,6 +481,7 @@ class DeliveryOrder {
     DateTime? createdAt,
     String? branchId,
     String? companyId,
+    String? notes,
   }) {
     return DeliveryOrder(
       id: id ?? this.id,
@@ -511,6 +514,7 @@ class DeliveryOrder {
       createdAt: createdAt ?? this.createdAt,
       branchId: branchId ?? this.branchId,
       companyId: companyId ?? this.companyId,
+      notes: notes ?? this.notes,
     );
   }
 
@@ -545,6 +549,7 @@ class DeliveryOrder {
         'createdAt': createdAt.toIso8601String(),
         'branchId': branchId,
         'companyId': companyId,
+        'notes': notes,
       };
 
   factory DeliveryOrder.fromJson(Map<String, dynamic> json) {
@@ -599,6 +604,7 @@ class DeliveryOrder {
         createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
         branchId: json['branchId'] ?? json['branch_id'],
         companyId: json['companyId'] ?? json['tenant_id'],
+        notes: rawNotes.isNotEmpty ? rawNotes : null,
       );
   }
 }

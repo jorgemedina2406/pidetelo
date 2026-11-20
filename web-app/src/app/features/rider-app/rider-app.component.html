@@ -244,21 +244,15 @@
                   <div>
                     <div class="flex items-center gap-2">
                       <span class="text-brand-600 dark:text-brand-400 font-bold text-sm">{{ job.orderNumber }}</span>
-                      <span class="text-[10px] font-semibold px-2 py-0.5 rounded border"
-                            [class.bg-emerald-50]="job.paymentMethod === 'card_online'"
-                            [class.dark:bg-emerald-950/40]="job.paymentMethod === 'card_online'"
-                            [class.text-emerald-700]="job.paymentMethod === 'card_online'"
-                            [class.dark:text-emerald-400]="job.paymentMethod === 'card_online'"
-                            [class.border-emerald-200]="job.paymentMethod === 'card_online'"
-                            [class.dark:border-emerald-800]="job.paymentMethod === 'card_online'"
-                            [class.bg-amber-50]="job.paymentMethod === 'cash_usd'"
-                            [class.dark:bg-amber-950/40]="job.paymentMethod === 'cash_usd'"
-                            [class.text-amber-800]="job.paymentMethod === 'cash_usd'"
-                            [class.dark:text-amber-400]="job.paymentMethod === 'cash_usd'"
-                            [class.border-amber-200]="job.paymentMethod === 'cash_usd'"
-                            [class.dark:border-amber-800]="job.paymentMethod === 'cash_usd'">
-                        {{ job.paymentMethod === 'cash_usd' ? 'Cobrar Efectivo' : 'Pagado Online' }}
-                      </span>
+                      @if ((job.amountToCollect || 0) > 0) {
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded border bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-400 border-amber-200 dark:border-amber-800">
+                          💵 Cobrar ${{ (job.amountToCollect || 0).toFixed(2) }}
+                        </span>
+                      } @else {
+                        <span class="text-[10px] font-semibold px-2 py-0.5 rounded border bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800">
+                          ✓ Pagado Online
+                        </span>
+                      }
                     </div>
                     <div class="text-xs text-slate-500 dark:text-slate-400 mt-1">
                       {{ job.itemsSummary }}
@@ -380,10 +374,10 @@
                       </a>
                     </div>
 
-                    @if (job.paymentMethod === 'cash_usd') {
+                    @if ((job.amountToCollect || 0) > 0) {
                       <div class="p-2.5 rounded bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 flex items-center justify-between text-xs font-semibold text-amber-900 dark:text-amber-300">
-                        <span>Cobrar en efectivo:</span>
-                        <span class="text-sm font-bold">${{ job.orderTotal.toFixed(2) }}</span>
+                        <span>{{ job.collectionNote || 'Cobrar en efectivo:' }}</span>
+                        <span class="text-sm font-bold">${{ (job.amountToCollect || 0).toFixed(2) }}</span>
                       </div>
                     }
 
@@ -924,10 +918,10 @@
               </p>
             </div>
 
-            @if (completingJob()!.paymentMethod === 'cash_usd') {
+            @if ((completingJob()!.amountToCollect || 0) > 0) {
               <div class="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 text-center space-y-1">
-                <div class="text-xs font-semibold text-amber-900 dark:text-amber-300">Cobro en Efectivo Pendiente</div>
-                <div class="text-xl font-bold text-amber-800 dark:text-amber-400">${{ completingJob()!.orderTotal.toFixed(2) }}</div>
+                <div class="text-xs font-semibold text-amber-900 dark:text-amber-300">{{ completingJob()!.collectionNote || 'Cobro en Efectivo Pendiente' }}</div>
+                <div class="text-xl font-bold text-amber-800 dark:text-amber-400">${{ (completingJob()!.amountToCollect || 0).toFixed(2) }}</div>
               </div>
             }
 

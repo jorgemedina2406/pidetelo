@@ -658,6 +658,50 @@
               <div class="text-[11px] text-slate-500 text-right">
                 Método: <strong>{{ ord.paymentMethod === 'cash_usd' ? 'Efectivo $ al recibir' : 'Pago Online Confirmado' }}</strong>
               </div>
+
+              <!-- Desglose de cobro de adiciones posteriores -->
+              @if (orderAdditions().length > 0) {
+                <div class="mt-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 space-y-2">
+                  <div class="flex items-center justify-between text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                    <span>Desglose de Pago & Adicionales:</span>
+                    <span class="text-slate-500 font-mono">Inicial: ${{ initialTotal().toFixed(2) }}</span>
+                  </div>
+                  @for (add of orderAdditions(); track add.raw) {
+                    <div class="text-[11px] flex items-start justify-between p-2 rounded-lg border"
+                         [class.bg-blue-500/10]="add.method === 'cash'"
+                         [class.text-blue-800]="add.method === 'cash'"
+                         [class.dark:text-blue-300]="add.method === 'cash'"
+                         [class.border-blue-500/20]="add.method === 'cash'"
+                         [class.bg-emerald-500/10]="add.status === 'verified'"
+                         [class.text-emerald-800]="add.status === 'verified'"
+                         [class.dark:text-emerald-300]="add.status === 'verified'"
+                         [class.border-emerald-500/20]="add.status === 'verified'"
+                         [class.bg-amber-500/10]="add.method === 'mobile_transfer' && add.status !== 'verified'"
+                         [class.text-amber-800]="add.method === 'mobile_transfer' && add.status !== 'verified'"
+                         [class.dark:text-amber-300]="add.method === 'mobile_transfer' && add.status !== 'verified'"
+                         [class.border-amber-500/20]="add.method === 'mobile_transfer' && add.status !== 'verified'">
+                      <div>
+                        <span class="font-extrabold">+ Adición de Productos</span>
+                        @if (add.method === 'cash') {
+                          <div class="text-[10px] font-medium text-slate-600 dark:text-slate-400 mt-0.5">
+                            💵 Pagar al repartidor en efectivo al recibir
+                          </div>
+                        } @else if (add.status === 'verified') {
+                          <div class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                            ✓ Pago Móvil adicional confirmado (Ref: {{ add.reference }})
+                          </div>
+                        } @else {
+                          <div class="text-[10px] font-medium text-amber-700 dark:text-amber-300 mt-0.5">
+                            📲 Pago Móvil adicional enviado (Ref: {{ add.reference }}) • En revisión por el restaurante
+                          </div>
+                        }
+                      </div>
+                      <span class="font-black text-xs shrink-0">+${{ add.amountUsd.toFixed(2) }}</span>
+                    </div>
+                  }
+                </div>
+              }
+
               @if (ord.status === 'received' || ord.status === 'in_kitchen') {
                 <div class="mt-4 p-3.5 rounded-2xl bg-gradient-to-r from-brand-50 to-orange-50 dark:from-brand-950/30 dark:to-orange-950/20 border border-brand-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
                   <div class="flex items-start gap-2.5">
@@ -674,7 +718,7 @@
                   <button type="button" (click)="openAppendModal()"
                      class="px-4 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 active:scale-95 text-white font-extrabold text-xs shadow-sm flex items-center gap-1.5 shrink-0 transition-all cursor-pointer">
                     <app-icon name="plus" [size]="13"></app-icon>
-                    <span>+ Adicionar Productos</span>
+                    <span>Adicionar Productos</span>
                   </button>
                 </div>
               }
@@ -920,6 +964,88 @@
                   }
                 </div>
               </div>
+
+              @if (appendTotalItemsCount() > 0) {
+                <div class="pt-2 border-t border-slate-200 dark:border-slate-700 space-y-2">
+                  <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                    ¿Cómo pagarás esta diferencia de +${{ appendSubtotal().toFixed(2) }}?
+                  </label>
+                  <div class="grid grid-cols-2 gap-2">
+                    <button type="button" (click)="appendPaymentMethod.set('cash')"
+                            [class.border-brand-500]="appendPaymentMethod() === 'cash'"
+                            [class.bg-brand-500/10]="appendPaymentMethod() === 'cash'"
+                            [class.text-brand-600]="appendPaymentMethod() === 'cash'"
+                            [class.dark:text-brand-400]="appendPaymentMethod() === 'cash'"
+                            [class.border-slate-200]="appendPaymentMethod() !== 'cash'"
+                            [class.dark:border-slate-700]="appendPaymentMethod() !== 'cash'"
+                            class="p-2.5 rounded-xl border text-center transition-all cursor-pointer">
+                      <div class="text-sm mb-0.5">💵</div>
+                      <div class="font-bold text-xs">Efectivo al Recibir</div>
+                      <div class="text-[10px] text-slate-400">Pagar al repartidor</div>
+                    </button>
+
+                    <button type="button" (click)="appendPaymentMethod.set('mobile_transfer')"
+                            [class.border-brand-500]="appendPaymentMethod() === 'mobile_transfer'"
+                            [class.bg-brand-500/10]="appendPaymentMethod() === 'mobile_transfer'"
+                            [class.text-brand-600]="appendPaymentMethod() === 'mobile_transfer'"
+                            [class.dark:text-brand-400]="appendPaymentMethod() === 'mobile_transfer'"
+                            [class.border-slate-200]="appendPaymentMethod() !== 'mobile_transfer'"
+                            [class.dark:border-slate-700]="appendPaymentMethod() !== 'mobile_transfer'"
+                            class="p-2.5 rounded-xl border text-center transition-all cursor-pointer">
+                      <div class="text-sm mb-0.5">📲</div>
+                      <div class="font-bold text-xs">Pago Móvil</div>
+                      <div class="text-[10px] text-slate-400">Transferir ahora</div>
+                    </button>
+                  </div>
+
+                  @if (appendPaymentMethod() === 'cash') {
+                    <div class="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-800 dark:text-amber-300 font-medium">
+                      ℹ️ Le entregarás el adicional de <strong>${{ appendSubtotal().toFixed(2) }}</strong>
+                      @if (order()?.exchangeRate && order()!.exchangeRate! > 1) {
+                        <span> (≈ Bs. {{ (appendSubtotal() * order()!.exchangeRate!).toFixed(2) }})</span>
+                      }
+                      en efectivo al repartidor al recibir tu pedido.
+                    </div>
+                  } @else {
+                    <div class="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/40 text-xs space-y-2">
+                      <div class="font-bold text-blue-900 dark:text-blue-300 flex items-center justify-between">
+                        <span>Datos de Pago Móvil de la Tienda:</span>
+                        @if (order()?.exchangeRate && order()!.exchangeRate! > 1) {
+                          <span class="font-mono text-brand-600 dark:text-brand-400 font-extrabold">
+                            Bs. {{ (appendSubtotal() * order()!.exchangeRate!).toFixed(2) }}
+                          </span>
+                        }
+                      </div>
+
+                      @if (branchCredentials()?.pagoMovilPhone) {
+                        <div class="font-mono text-[11px] text-slate-700 dark:text-slate-300 space-y-0.5 bg-white/70 dark:bg-slate-900/50 p-2 rounded-lg border border-blue-100 dark:border-blue-900/30">
+                          <div><b>Banco:</b> {{ branchCredentials()?.pagoMovilBank || 'Banco Nacional' }}</div>
+                          <div><b>Teléfono:</b> {{ branchCredentials()?.pagoMovilPhone }}</div>
+                          <div><b>Cédula/RIF:</b> {{ branchCredentials()?.pagoMovilIdNumber }}</div>
+                          @if (branchCredentials()?.pagoMovilAccountName) {
+                            <div><b>Titular:</b> {{ branchCredentials()?.pagoMovilAccountName }}</div>
+                          }
+                        </div>
+                      } @else {
+                        <div class="text-[11px] text-slate-500">
+                          Por favor realiza la transferencia a la cuenta de Pago Móvil del restaurante por el monto de la diferencia.
+                        </div>
+                      }
+
+                      <div>
+                        <label class="block text-[10.5px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                          Ingresa los últimos dígitos de la Referencia Bancaria:
+                        </label>
+                        <input type="text"
+                               [ngModel]="appendPaymentRef()"
+                               (ngModelChange)="appendPaymentRef.set($event)"
+                               placeholder="Ej: 849201"
+                               class="w-full text-xs font-mono font-bold rounded-xl border border-blue-300 dark:border-blue-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 focus:ring-2 focus:ring-blue-500" />
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
 
               <div class="flex items-center gap-2">
                 <button (click)="closeAppendModal()" type="button"

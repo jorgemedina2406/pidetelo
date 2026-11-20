@@ -78,8 +78,13 @@
               @for (item of order.items; track item.cartItemId) {
               <div class="p-3 bg-white dark:bg-slate-900 flex items-start justify-between gap-3">
                 <div>
-                  <div class="font-bold text-slate-800 dark:text-white">
-                    {{ item.quantity }}x {{ item.name }}
+                  <div class="font-bold text-slate-800 dark:text-white flex items-center gap-1.5 flex-wrap">
+                    <span>{{ item.quantity }}x {{ item.name }}</span>
+                    @if (isAdditionItem(item)) {
+                      <span class="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-400 text-[9px] font-extrabold border border-amber-500/20">
+                        ADICIÓN
+                      </span>
+                    }
                   </div>
                   @if (getModifiersText(item.selectedModifiers)) {
                   <div class="text-[11px] text-amber-500 dark:text-amber-400 font-semibold pl-2 mt-0.5">
@@ -127,6 +132,27 @@
                 <span class="font-bold">-${{ order.discount.toFixed(2) }}</span>
                 <span class="text-[10px] text-emerald-500/80 ml-1.5">(-Bs. {{ discountBs.toFixed(2) }})</span>
               </div>
+            </div>
+            }
+
+            @if (additions.length > 0) {
+            <div class="p-2.5 rounded-xl bg-orange-500/10 border border-orange-500/25 space-y-1.5 my-2">
+              <div class="flex justify-between items-center text-xs font-bold text-orange-800 dark:text-orange-300 font-sans">
+                <span>🍔 Adicionales Agregados:</span>
+                <span class="font-mono font-black">+${{ additionsTotalUsd.toFixed(2) }} USD</span>
+              </div>
+              @for (add of additions; track add.raw) {
+                <div class="text-[10.5px] font-sans flex items-center justify-between text-slate-700 dark:text-slate-300">
+                  @if (add.method === 'cash') {
+                    <span>💵 Cobro al recibir: <b>${{ add.amountUsd.toFixed(2) }} en efectivo</b> (Repartidor)</span>
+                  } @else if (add.status === 'verified') {
+                    <span class="text-emerald-700 dark:text-emerald-400 font-semibold">✓ Pago Móvil verificado (Ref: {{ add.reference }})</span>
+                  } @else {
+                    <span class="text-amber-700 dark:text-amber-400 font-semibold">📲 Pago Móvil por verificar (Ref: {{ add.reference }})</span>
+                  }
+                  <span class="font-mono font-bold">+${{ add.amountUsd.toFixed(2) }}</span>
+                </div>
+              }
             </div>
             }
 

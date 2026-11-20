@@ -113,3 +113,53 @@ export interface Order {
   notes?: string;
   deliveryPin?: string;
 }
+
+export interface OrderAddition {
+  raw: string;
+  amountUsd: number;
+  amountBs?: number;
+  method: 'cash' | 'mobile_transfer';
+  reference?: string;
+  status: 'pending' | 'verified' | 'cash_on_delivery';
+  description?: string;
+}
+
+export function parseOrderAdditions(notes?: string | null): OrderAddition[] {
+  if (!notes) return [];
+  const results: OrderAddition[] = [];
+  const regex = /\[(?:ADICIONAL|Adición en app)[^\]]*\]/gi;
+  const matches = notes.match(regex);
+  if (!matches) return [];
+
+  for (const m of matches) {
+    const amountMatch = m.match(/\+\$(\d+(\.\d+)?)/);
+    const amountUsd = amountMatch ? parseFloat(amountMatch[1]) : 0;
+    if (amountUsd <= 0) continue;
+
+    const bsMatch = m.match(/Bs\.?\s*([\d,.]+)/i);
+    const amountBs = bsMatch ? parseFloat(bsMatch[1].replace(/,/g, '')) : undefined;
+
+    const isPagoMovil = /pago\s*m[oó]vil|mobile_transfer|ref:/i.test(m);
+    const method: 'cash' | 'mobile_transfer' = isPagoMovil ? 'mobile_transfer' : 'cash';
+
+    const refMatch = m.match(/Ref:\s*([A-Za-z0-9\-]+)/i);
+    const reference = refMatch ? refMatch[1] : undefined;
+
+    const isVerified = /verificado|confirmado/i.test(m);
+    let status: 'pending' | 'verified' | 'cash_on_delivery' = 'cash_on_delivery';
+    if (method === 'mobile_transfer') {
+      status = isVerified ? 'verified' : 'pending';
+    }
+
+    results.push({
+      raw: m,
+      amountUsd,
+      amountBs,
+      method,
+      reference,
+      status
+    });
+  }
+  return results;
+}
+

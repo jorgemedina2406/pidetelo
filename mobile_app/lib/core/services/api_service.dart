@@ -369,6 +369,24 @@ class ApiService {
   /// Default tenants list (empty by default; loaded dynamically from DB)
   static final List<Map<String, dynamic>> defaultRealTenants = [];
 
+  /// Fetch a single branch by ID with payment credentials
+  Future<Branch?> fetchBranchById(String branchId) async {
+    try {
+      final supabase = Supabase.instance.client;
+      final data = await supabase
+          .from('branches')
+          .select('*, branch_payment_credentials(*)')
+          .eq('id', branchId)
+          .maybeSingle();
+      if (data != null) {
+        return Branch.fromJson(data);
+      }
+    } catch (e) {
+      if (kDebugMode) print('[ApiService] fetchBranchById error: $e');
+    }
+    return null;
+  }
+
   /// Fetch active branches for a company
   Future<List<Branch>> fetchBranchesForCompany(String companyId) async {
     final urls = [
@@ -1071,12 +1089,14 @@ class ApiService {
     required String orderIdOrNumber,
     required List<CartItem> newItems,
     required double extraSubtotal,
+    String paymentMethod = 'cash',
+    String? paymentReference,
   }) async {
     try {
       final supabase = Supabase.instance.client;
       final query = supabase
           .from('orders')
-          .select('id, subtotal, total, notes');
+          .select('id, subtotal, total, notes, exchange_rate');
 
       final isUuid = RegExp(
               r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
@@ -1091,24 +1111,37 @@ class ApiService {
         final realId = currentOrder['id'].toString();
         final currentSub = (currentOrder['subtotal'] as num?)?.toDouble() ?? 0.0;
         final currentTot = (currentOrder['total'] as num?)?.toDouble() ?? 0.0;
+        final rate = (currentOrder['exchange_rate'] as num?)?.toDouble() ?? 1.0;
         final updatedSub = currentSub + extraSubtotal;
         final updatedTot = currentTot + extraSubtotal;
+        final extraBs = rate > 1 ? (extraSubtotal * rate) : 0.0;
 
         final existingNotes = currentOrder['notes']?.toString() ?? '';
         final itemDetails = newItems
             .map((i) =>
-                '${i.quantity}x ${i.product.name} (\$${(i.product.price * i.quantity).toStringAsFixed(2)})')
+                '${i.quantity}x ${i.product.name}')
             .join(', ');
-        final appendedNotes = existingNotes.trim().isEmpty
-            ? '[Adición en app]: $itemDetails'
-            : '$existingNotes\n[Adición en app]: $itemDetails';
 
-        await supabase.from('orders').update({
+        final additionTag = paymentMethod == 'mobile_transfer'
+            ? '[ADICIONAL: $itemDetails | +\$${extraSubtotal.toStringAsFixed(2)}${extraBs > 0 ? " (Bs. ${extraBs.toStringAsFixed(2)})" : ""} | Método: Pago Móvil | Ref: ${paymentReference ?? ""} | Estado: Pendiente de Verificación]'
+            : '[ADICIONAL: $itemDetails | +\$${extraSubtotal.toStringAsFixed(2)}${extraBs > 0 ? " (Bs. ${extraBs.toStringAsFixed(2)})" : ""} | Método: Efectivo al Recibir]';
+
+        final appendedNotes = existingNotes.trim().isEmpty
+            ? additionTag
+            : '$existingNotes\n$additionTag';
+
+        final updateData = <String, dynamic>{
           'subtotal': updatedSub,
           'total': updatedTot,
           'notes': appendedNotes,
           'updated_at': DateTime.now().toIso8601String(),
-        }).eq('id', realId);
+        };
+        if (rate > 1) {
+          updateData['total_bs'] = updatedTot * rate;
+          updateData['subtotal_bs'] = updatedSub * rate;
+        }
+
+        await supabase.from('orders').update(updateData).eq('id', realId);
 
         for (final item in newItems) {
           final itemTotal = item.product.price * item.quantity;
@@ -1116,12 +1149,13 @@ class ApiService {
             await supabase.from('order_items').insert({
               'order_id': realId,
               'product_id': item.product.id.isNotEmpty ? item.product.id : null,
-              'product_name': item.product.name,
+              'product_name': '${item.product.name} (Adición)',
               'unit_price': item.product.price,
               'quantity': item.quantity,
               'item_total': itemTotal,
-              'selected_modifiers':
-                  item.selectedModifiers.map((m) => m.toJson()).toList(),
+              'selected_modifiers': [
+                {'name': 'Adición posterior', 'price': 0}
+              ],
             });
           } catch (itemErr) {
             if (kDebugMode) print('[ApiService] Insert order_item error: $itemErr');

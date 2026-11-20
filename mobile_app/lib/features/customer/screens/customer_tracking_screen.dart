@@ -7,6 +7,7 @@ import 'package:latlong2/latlong.dart' as ll;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/models/order_model.dart';
+import '../../../core/models/branch_model.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/services/cart_service.dart';
 import '../../../core/theme/app_theme.dart';
@@ -1920,7 +1921,7 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                'Total Pagado:',
+                                'Total del Pedido:',
                                 style: GoogleFonts.outfit(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w800,
@@ -1937,6 +1938,36 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                               ),
                             ],
                           ),
+                          if ((_order.notes ?? '').contains('[ADICIONAL:') || (_order.notes ?? '').contains('[Adición')) ...[
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primary.withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: AppTheme.primary.withOpacity(0.3)),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Text('🍔 ', style: TextStyle(fontSize: 14)),
+                                  Expanded(
+                                    child: Text(
+                                      (_order.notes ?? '').contains('Pago Móvil') || (_order.notes ?? '').contains('Pago Movil')
+                                          ? ((_order.notes ?? '').contains('Verificado')
+                                              ? 'Pago Móvil de adición confirmado por el comercio.'
+                                              : 'Pago Móvil de adición enviado • Por validar por el comercio.')
+                                          : 'Diferencia de adicional a pagar en efectivo al repartidor al recibir.',
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -2173,11 +2204,20 @@ class _AppendItemsModalState extends State<_AppendItemsModal> {
   bool _isSubmitting = false;
   List<Product> _products = [];
   final Map<String, int> _selectedQuantities = {};
+  String _paymentMethod = 'cash';
+  final TextEditingController _refController = TextEditingController();
+  BranchPaymentCredentials? _paymentCredentials;
 
   @override
   void initState() {
     super.initState();
     _loadProducts();
+  }
+
+  @override
+  void dispose() {
+    _refController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadProducts() async {
@@ -2189,6 +2229,14 @@ class _AppendItemsModalState extends State<_AppendItemsModal> {
     }
     if (list.isEmpty && branchId != null && branchId.isNotEmpty) {
       list = await ApiService().fetchProductsByTenant(branchId, branchId: branchId);
+    }
+    if (branchId != null && branchId.isNotEmpty) {
+      try {
+        final b = await ApiService().fetchBranchById(branchId);
+        if (b != null) {
+          _paymentCredentials = b.paymentCredentials;
+        }
+      } catch (_) {}
     }
     if (mounted) {
       setState(() {
@@ -2229,12 +2277,27 @@ class _AppendItemsModalState extends State<_AppendItemsModal> {
 
     if (addedItems.isEmpty) return;
 
+    if (_paymentMethod == 'mobile_transfer' && _refController.text.trim().length < 4) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Por favor ingresa los últimos dígitos de la referencia de Pago Móvil.',
+            style: GoogleFonts.outfit(),
+          ),
+          backgroundColor: Colors.amber[800],
+        ),
+      );
+      return;
+    }
+
     setState(() => _isSubmitting = true);
 
     final success = await ApiService().appendItemsToOrder(
       orderIdOrNumber: widget.order.id,
       newItems: addedItems,
       extraSubtotal: _extraTotal,
+      paymentMethod: _paymentMethod,
+      paymentReference: _refController.text.trim(),
     );
 
     if (mounted) {
@@ -2471,9 +2534,144 @@ class _AppendItemsModalState extends State<_AppendItemsModal> {
                       ),
           ),
 
-          // Bottom confirmation bar
+          // Bottom confirmation bar & Payment Method selector
           if (_totalCount > 0) ...[
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E293B),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Colors.white12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    '¿Cómo pagarás este adicional de +\$${_extraTotal.toStringAsFixed(2)}?',
+                    style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: InkWell(
+                          onTap: () => setState(() => _paymentMethod = 'cash'),
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                            decoration: BoxDecoration(
+                              color: _paymentMethod == 'cash'
+                                  ? AppTheme.primary.withOpacity(0.18)
+                                  : Colors.white.withOpacity(0.04),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: _paymentMethod == 'cash' ? AppTheme.primary : Colors.white12,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Text('💵 ', style: TextStyle(fontSize: 14)),
+                                Text(
+                                  'Efectivo al Recibir',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: _paymentMethod == 'cash' ? Colors.white : Colors.white60,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: InkWell(
+                          onTap: () => setState(() => _paymentMethod = 'mobile_transfer'),
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                            decoration: BoxDecoration(
+                              color: _paymentMethod == 'mobile_transfer'
+                                  ? AppTheme.primary.withOpacity(0.18)
+                                  : Colors.white.withOpacity(0.04),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: _paymentMethod == 'mobile_transfer' ? AppTheme.primary : Colors.white12,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Text('📲 ', style: TextStyle(fontSize: 14)),
+                                Text(
+                                  'Pago Móvil',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: _paymentMethod == 'mobile_transfer' ? Colors.white : Colors.white60,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (_paymentMethod == 'cash') ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'ℹ️ Le pagarás la diferencia de \$${_extraTotal.toStringAsFixed(2)} en efectivo al repartidor al recibir.',
+                      style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.amberAccent),
+                    ),
+                  ] else ...[
+                    const SizedBox(height: 10),
+                    if (_paymentCredentials != null && _paymentCredentials!.pagoMovilPhone.isNotEmpty) ...[
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0F172A),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.white10),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Datos de la tienda: ${_paymentCredentials!.pagoMovilBank} • ${_paymentCredentials!.pagoMovilPhone} • ${_paymentCredentials!.pagoMovilIdNumber}',
+                              style: GoogleFonts.outfit(fontSize: 10.5, color: Colors.white70),
+                            ),
+                            if (_paymentCredentials!.pagoMovilAccountName.isNotEmpty)
+                              Text(
+                                'Titular: ${_paymentCredentials!.pagoMovilAccountName}',
+                                style: GoogleFonts.outfit(fontSize: 10.5, color: Colors.white60),
+                              ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                    TextField(
+                      controller: _refController,
+                      style: GoogleFonts.outfit(color: Colors.white, fontSize: 12),
+                      decoration: InputDecoration(
+                        hintText: 'Últimos dígitos de la Ref. Pago Móvil (ej: 849201)',
+                        hintStyle: GoogleFonts.outfit(color: Colors.white38, fontSize: 11),
+                        filled: true,
+                        fillColor: const Color(0xFF0F172A),
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(

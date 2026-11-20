@@ -10,7 +10,7 @@ import { SupabaseService } from '../../core/services/supabase.service';
 import { ThemeService } from '../../core/services/theme.service';
 import { I18nService } from '../../core/services/i18n.service';
 import { AuthStore } from '../../core/stores/auth.store';
-import { Order } from '../../core/models/order.model';
+import { Order, parseOrderAdditions, OrderAddition } from '../../core/models/order.model';
 import { Product } from '../../core/models/product.model';
 import { IconComponent } from '../../shared/components/icon.component';
 
@@ -76,6 +76,18 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
   readonly appendErrorMessage = signal<string>('');
   readonly appendProductSearch = signal<string>('');
   readonly appendCart = signal<Map<string, { product: Product; quantity: number }>>(new Map());
+  readonly appendPaymentMethod = signal<'cash' | 'mobile_transfer'>('cash');
+  readonly appendPaymentRef = signal<string>('');
+  readonly branchCredentials = signal<any | null>(null);
+
+  readonly orderAdditions = computed(() => parseOrderAdditions(this.order()?.notes));
+  readonly initialTotal = computed(() => {
+    const ord = this.order();
+    if (!ord) return 0;
+    const additions = this.orderAdditions();
+    const addSum = additions.reduce((s, a) => s + a.amountUsd, 0);
+    return Math.max(0, Number((ord.total - addSum).toFixed(2)));
+  });
 
   readonly filteredStoreProducts = computed(() => {
     const query = this.appendProductSearch().trim().toLowerCase();
@@ -150,11 +162,27 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
     this.appendProductSearch.set('');
     this.appendSuccessMessage.set('');
     this.appendErrorMessage.set('');
+    this.appendPaymentMethod.set('cash');
+    this.appendPaymentRef.set('');
     this.isAppendModalOpen.set(true);
+
+    const branchId = (ord as any).branchId || (ord as any).branch_id;
+    if (ord.tenantId) {
+      this.api.getBranches(ord.tenantId).subscribe({
+        next: (branches) => {
+          if (branches && branches.length > 0) {
+            const b = branchId ? branches.find(x => x.id === branchId) : branches[0];
+            if (b?.paymentCredentials) {
+              this.branchCredentials.set(b.paymentCredentials);
+            }
+          }
+        },
+        error: (err) => console.warn('[Tracking] Error cargando credenciales de pago:', err)
+      });
+    }
 
     if (this.storeProducts().length === 0 && ord.tenantId) {
       this.isLoadingProducts.set(true);
-      const branchId = (ord as any).branchId || (ord as any).branch_id;
       this.api.getProducts(ord.tenantId, branchId, true).subscribe({
         next: (prods) => {
           this.storeProducts.set(prods || []);
@@ -205,6 +233,11 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
     const items = Array.from(this.appendCart().values());
     if (!ord || items.length === 0) return;
 
+    if (this.appendPaymentMethod() === 'mobile_transfer' && this.appendPaymentRef().trim().length < 4) {
+      this.appendErrorMessage.set('Por favor ingresa los últimos dígitos de la referencia de Pago Móvil.');
+      return;
+    }
+
     this.isAppendingItems.set(true);
     this.appendErrorMessage.set('');
     this.appendSuccessMessage.set('');
@@ -226,12 +259,20 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
       const rate = Number(ord.exchangeRate) || 1.0;
       const newTotalBs = rate > 1 ? Number((newTotal * rate).toFixed(2)) : null;
       const newSubtotalBs = rate > 1 ? Number((newSubtotal * rate).toFixed(2)) : null;
+      const extraBs = rate > 1 ? Number((extraSubtotal * rate).toFixed(2)) : 0;
 
       const appendSummary = items.map(i => `${i.quantity}x ${i.product.name}`).join(', ');
+      const method = this.appendPaymentMethod();
+      const ref = this.appendPaymentRef().trim();
+
+      const additionTag = method === 'mobile_transfer'
+        ? `[ADICIONAL: ${appendSummary} | +$${extraSubtotal.toFixed(2)}${extraBs > 0 ? ` (Bs. ${extraBs.toFixed(2)})` : ''} | Método: Pago Móvil | Ref: ${ref} | Estado: Pendiente de Verificación]`
+        : `[ADICIONAL: ${appendSummary} | +$${extraSubtotal.toFixed(2)}${extraBs > 0 ? ` (Bs. ${extraBs.toFixed(2)})` : ''} | Método: Efectivo al Recibir]`;
+
       const existingNotes = ord.notes || '';
       const newNotes = existingNotes 
-        ? `${existingNotes} [ADICIONAL: ${appendSummary} (+$${extraSubtotal.toFixed(2)})]`
-        : `[ADICIONAL: ${appendSummary} (+$${extraSubtotal.toFixed(2)})]`;
+        ? `${existingNotes}\n${additionTag}`
+        : additionTag;
 
       // 1. Insertar en order_items
       for (const it of items) {
@@ -239,11 +280,11 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
         await client.from('order_items').insert({
           order_id: ord.id,
           product_id: it.product.id || null,
-          product_name: it.product.name,
+          product_name: `${it.product.name} (Adición)`,
           unit_price: it.product.price,
           quantity: it.quantity,
           item_total: itemTotal,
-          selected_modifiers: []
+          selected_modifiers: [{ name: 'Adición posterior', price: 0 }]
         });
       }
 

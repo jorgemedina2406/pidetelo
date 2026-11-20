@@ -9,7 +9,7 @@ import { AuthStore } from '../../core/stores/auth.store';
 import { ThemeService } from '../../core/services/theme.service';
 import { I18nService } from '../../core/services/i18n.service';
 import { Product, ProductModifierGroup, ProductCategory } from '../../core/models/product.model';
-import { Order, OrderStatus } from '../../core/models/order.model';
+import { Order, OrderStatus, OrderAddition } from '../../core/models/order.model';
 import { AppUser, UserRole } from '../../core/models/user.model';
 import { Tenant, CurrencyDisplayMode, DeliveryTier } from '../../core/models/tenant.model';
 import { Branch, SubscriptionPlan } from '../../core/models/branch.model';
@@ -2701,6 +2701,37 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
 
   cancelRejectPaymentConfirm(): void {
     this.isRejectPaymentConfirmOpen.set(false);
+  }
+
+  async handleVerifyAdditionPayment(event: { order: Order; addition: OrderAddition }): Promise<void> {
+    const { order, addition } = event;
+    const client = this.supabase.rawClient;
+    if (!client || !order?.notes) return;
+
+    const oldRaw = addition.raw;
+    let newRaw = oldRaw;
+    if (/Estado:\s*Pendiente/i.test(oldRaw)) {
+      newRaw = oldRaw.replace(/Estado:\s*Pendiente(?:\s*de\s*Verificación)?/i, 'Estado: Verificado');
+    } else {
+      newRaw = oldRaw.replace(/\]$/, ' | Estado: Verificado]');
+    }
+
+    const updatedNotes = order.notes.replace(oldRaw, newRaw);
+
+    try {
+      const { error } = await client.from('orders').update({
+        notes: updatedNotes,
+        updated_at: new Date().toISOString()
+      }).eq('id', order.id);
+
+      if (!error) {
+        this.orders.update(list =>
+          list.map(o => o.id === order.id ? { ...o, notes: updatedNotes } : o)
+        );
+      }
+    } catch (e) {
+      console.warn('[MerchantAdmin] Error validando pago adicional:', e);
+    }
   }
 
   executeRejectPayment(): void {
