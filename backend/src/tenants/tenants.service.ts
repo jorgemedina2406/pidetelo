@@ -356,6 +356,23 @@ export class TenantsService {
           accepted_payment_methods: bPaymentMethods,
           paymentCredentials: bCreds
         });
+        const pm = bCreds?.pago_movil || {};
+        const zelle = bCreds?.zelle || {};
+        const rawBank = pm.bank_name || bCreds?.pago_movil_bank || bCreds?.pagoMovilBank || b.pagoMovilBank || '';
+        const rawPhone = pm.phone || bCreds?.pago_movil_phone || bCreds?.pagoMovilPhone || b.pagoMovilPhone || '';
+        const rawIdNumber = pm.id_number || bCreds?.pago_movil_id_number || bCreds?.pagoMovilIdNumber || b.pagoMovilIdNumber || '';
+        const rawAccountName = pm.account_name || bCreds?.pago_movil_account_name || bCreds?.pagoMovilAccountName || b.pagoMovilAccountName || '';
+        const zelleEmail = zelle.email || bCreds?.zelle_email || bCreds?.zelleEmail || b.zelleEmail || '';
+        const zelleAccountName = zelle.account_name || bCreds?.zelle_account_name || bCreds?.zelleAccountName || b.zelleAccountName || '';
+        const mappedCreds = {
+          pagoMovilBank: rawBank,
+          pagoMovilPhone: rawPhone,
+          pagoMovilIdNumber: rawIdNumber,
+          pagoMovilAccountName: rawAccountName,
+          zelleEmail: zelleEmail,
+          zelleAccountName: zelleAccountName,
+          isActive: Boolean(pm.enabled ?? bCreds?.is_active ?? (rawPhone && rawBank))
+        };
         const bTiers = b.delivery_tiers ?? bm.delivery_tiers ?? bm.deliveryTiers ?? deliveryTiers;
         const bRate = Number(b.exchange_rate ?? bm.exchange_rate ?? bm.currency_settings?.exchangeRate ?? exchangeRate);
         const bCurrSettings = {
@@ -397,6 +414,8 @@ export class TenantsService {
           deliveryTiers: bTiers,
           accepted_payment_methods: bPaymentMethods,
           acceptedPaymentMethods: bPaymentMethods,
+          payment_credentials: mappedCreds,
+          paymentCredentials: mappedCreds,
           has_valid_payment_methods: bHasValidPayment,
           hasValidPaymentMethods: bHasValidPayment,
           currency_settings: bCurrSettings,
@@ -587,7 +606,7 @@ export class TenantsService {
   }
 
   async findAll(includeInactive = false) {
-    let query = this.supabase.getClient().from('tenants').select('*, branches(*)').order('name');
+    let query = this.supabase.getClient().from('tenants').select('*, branches(*, branch_payment_credentials(*))').order('name');
     if (!includeInactive) {
       query = query.eq('is_active', true);
     }
@@ -607,7 +626,7 @@ export class TenantsService {
     const { data, error } = await this.supabase
       .getClient()
       .from('tenants')
-      .select('*, branches(*)')
+      .select('*, branches(*, branch_payment_credentials(*))')
       .eq('slug', slug)
       .single();
 
@@ -621,7 +640,7 @@ export class TenantsService {
     const { data, error } = await this.supabase
       .getClient()
       .from('tenants')
-      .select('*, branches(*)')
+      .select('*, branches(*, branch_payment_credentials(*))')
       .eq('id', id)
       .single();
 
