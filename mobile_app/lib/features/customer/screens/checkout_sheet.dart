@@ -221,7 +221,7 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
     if (!validation['canOrder']) {
       final action = validation['action'];
       if (action == 'address') {
-        _showAddressSelector(context, cart);
+        _showAddressPicker(context, cart);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
