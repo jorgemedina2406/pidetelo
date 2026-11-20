@@ -2235,9 +2235,13 @@ export class ApiService {
           }
           if (branchData.currencySettings || branchData.currency_settings || branchData.accepted_payment_methods || branchData.acceptedPaymentMethods) {
             const rawCurr = branchData.currencySettings || branchData.currency_settings || {};
+            const methods = branchData.accepted_payment_methods || 
+                            branchData.acceptedPaymentMethods || 
+                            rawCurr.acceptedPaymentMethods || 
+                            ['cash_usd', 'mobile_transfer', 'cash_local'];
             updateData.currency_settings = {
               ...rawCurr,
-              acceptedPaymentMethods: branchData.accepted_payment_methods || branchData.acceptedPaymentMethods || rawCurr.acceptedPaymentMethods
+              acceptedPaymentMethods: methods
             };
           }
           if (branchData.business_hours || branchData.businessHours) {
@@ -2274,6 +2278,7 @@ export class ApiService {
               }
               try {
                 await client.from('branch_payment_credentials').upsert(credUpdate, { onConflict: 'branch_id' });
+                await client.from('branches').update({ payment_credentials: credUpdate }).eq('id', branchId);
               } catch (_) { }
             }
             if (branchData.managerEmail || branchData.managerPassword) {
@@ -2456,7 +2461,7 @@ export class ApiService {
       acceptedPaymentMethods = Object.keys(rawMethods).filter(k => Boolean(rawMethods[k]));
     }
 
-    const paymentCredentials = this.mapPaymentCredentials(r.branch_payment_credentials || r.paymentCredentials);
+    const paymentCredentials = this.mapPaymentCredentials(r.branch_payment_credentials || r.payment_credentials || r.paymentCredentials);
     
     let hasValidPaymentMethods = r.has_valid_payment_methods ?? r.hasValidPaymentMethods;
     if (hasValidPaymentMethods === undefined) {

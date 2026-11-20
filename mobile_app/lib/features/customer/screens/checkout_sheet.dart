@@ -143,47 +143,135 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
     );
   }
 
+  Map<String, dynamic> _getValidationStatus(CartService cart) {
+    if (cart.items.isEmpty) {
+      return {
+        'canOrder': false,
+        'text': 'Carrito Vacío',
+        'subtext': 'Agrega productos para ordenar',
+        'action': 'none',
+        'color': Colors.grey,
+        'icon': Icons.remove_shopping_cart_rounded,
+      };
+    }
+    if (cart.currentBranch != null && !cart.currentBranch!.isOpenRightNow) {
+      return {
+        'canOrder': false,
+        'text': 'Local Cerrado Actualmente',
+        'subtext': cart.currentBranch!.scheduleStatusMessage,
+        'action': 'closed',
+        'color': const Color(0xFFEF4444),
+        'icon': Icons.lock_clock_rounded,
+      };
+    }
+    if (!cart.hasValidDeliveryAddress) {
+      return {
+        'canOrder': false,
+        'text': 'Falta Dirección de Entrega',
+        'subtext': 'Toca aquí para indicar tu dirección exacta en el mapa',
+        'action': 'address',
+        'color': const Color(0xFFF59E0B),
+        'icon': Icons.add_location_alt_rounded,
+      };
+    }
+    if (cart.isOutOfCoverage) {
+      return {
+        'canOrder': false,
+        'text': 'Fuera de Cobertura',
+        'subtext': 'Tu dirección está a ${cart.distanceToCurrentBranchKm ?? 0} km (máx ${cart.currentBranch?.deliveryRadiusKm ?? 0} km)',
+        'action': 'coverage',
+        'color': const Color(0xFFEF4444),
+        'icon': Icons.location_off_rounded,
+      };
+    }
+    if (cart.currentBranch != null && !cart.currentBranch!.isPaymentValid) {
+      return {
+        'canOrder': false,
+        'text': 'Sin Métodos de Pago',
+        'subtext': 'El comercio no tiene formas de pago configuradas',
+        'action': 'payment_invalid',
+        'color': const Color(0xFFEF4444),
+        'icon': Icons.credit_card_off_rounded,
+      };
+    }
+    if (_selectedPayment.isEmpty) {
+      return {
+        'canOrder': false,
+        'text': 'Selecciona Método de Pago',
+        'subtext': 'Elige Pago Móvil, Efectivo o Zelle arriba',
+        'action': 'payment_select',
+        'color': const Color(0xFFF59E0B),
+        'icon': Icons.payment_rounded,
+      };
+    }
+    return {
+      'canOrder': true,
+      'text': 'Confirmar Pedido',
+      'subtext': '',
+      'action': 'confirm',
+      'color': AppTheme.primary,
+      'icon': Icons.check_circle_rounded,
+    };
+  }
+
   void _confirmOrder(BuildContext context, CartService cart) {
     if (cart.items.isEmpty) return;
 
-    if (cart.currentBranch != null && !cart.currentBranch!.isOpenRightNow) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'El comercio está cerrado en este momento (${cart.currentBranch!.scheduleStatusMessage}). No es posible procesar pedidos ahora.',
-            style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+    final validation = _getValidationStatus(cart);
+    if (!validation['canOrder']) {
+      final action = validation['action'];
+      if (action == 'address') {
+        _showAddressSelector(context, cart);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Por favor selecciona o agrega una dirección de entrega para continuar.',
+              style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+            ),
+            backgroundColor: const Color(0xFFF59E0B),
+            duration: const Duration(seconds: 3),
+            behavior: SnackBarBehavior.floating,
           ),
-          backgroundColor: const Color(0xFFEF4444),
-          duration: const Duration(seconds: 4),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
-
-    if (cart.isOutOfCoverage) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-              'Tu dirección está a ${cart.distanceToCurrentBranchKm ?? 0} km, fuera de la zona de cobertura.'),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
-      return;
-    }
-
-    if (cart.currentBranch != null && !cart.currentBranch!.isPaymentValid) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'El comercio no tiene métodos de pago válidos configurados y no puede recibir pedidos en este momento.',
-            style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+        );
+      } else if (action == 'closed') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'El comercio está cerrado en este momento (${cart.currentBranch?.scheduleStatusMessage ?? "Fuera de horario"}). No es posible procesar pedidos ahora.',
+              style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+            ),
+            backgroundColor: const Color(0xFFEF4444),
+            duration: const Duration(seconds: 4),
+            behavior: SnackBarBehavior.floating,
           ),
-          backgroundColor: const Color(0xFFEF4444),
-          duration: const Duration(seconds: 4),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+        );
+      } else if (action == 'coverage') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Tu dirección actual (${cart.distanceToCurrentBranchKm ?? 0} km) supera la cobertura del local (${cart.currentBranch?.deliveryRadiusKm ?? 0} km).',
+              style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+            ),
+            backgroundColor: const Color(0xFFEF4444),
+            duration: const Duration(seconds: 4),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      } else if (action == 'payment_select' || action == 'payment_invalid') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              action == 'payment_select'
+                  ? 'Por favor selecciona un método de pago antes de confirmar.'
+                  : 'El comercio no tiene métodos de pago válidos configurados y no puede recibir pedidos en este momento.',
+              style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+            ),
+            backgroundColor: const Color(0xFFF59E0B),
+            duration: const Duration(seconds: 3),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
       return;
     }
 
@@ -1647,48 +1735,77 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
               ),
 
               // Bottom Confirmation Button
-              if (cart.items.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
-                  child: ElevatedButton(
-                    onPressed: (cart.isOutOfCoverage || (cart.currentBranch != null && !cart.currentBranch!.isPaymentValid))
-                        ? null
-                        : () => _confirmOrder(context, cart),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          (cart.isOutOfCoverage || (cart.currentBranch != null && !cart.currentBranch!.isPaymentValid)) ? Colors.grey : AppTheme.primary,
-                      minimumSize: const Size(double.infinity, 54),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16)),
-                      elevation: (cart.isOutOfCoverage || (cart.currentBranch != null && !cart.currentBranch!.isPaymentValid)) ? 0 : 4,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          cart.isOutOfCoverage
-                              ? 'Fuera de Cobertura'
-                              : (cart.currentBranch != null && !cart.currentBranch!.isPaymentValid)
-                                  ? 'Sin Métodos de Pago'
-                                  : 'Confirmar Pedido',
-                          style: GoogleFonts.outfit(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
+              if (cart.items.isNotEmpty) ...[
+                Builder(
+                  builder: (_) {
+                    final validation = _getValidationStatus(cart);
+                    final canOrder = validation['canOrder'] as bool;
+                    final btnColor = validation['color'] as Color;
+                    final icon = validation['icon'] as IconData;
+                    final text = validation['text'] as String;
+                    final subtext = validation['subtext'] as String;
+
+                    return Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (subtext.isNotEmpty && !canOrder)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 6),
+                              child: Text(
+                                subtext,
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.outfit(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: btnColor,
+                                ),
+                              ),
+                            ),
+                          ElevatedButton(
+                            onPressed: () => _confirmOrder(context, cart),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: btnColor,
+                              minimumSize: const Size(double.infinity, 54),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16)),
+                              elevation: canOrder ? 4 : 1,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(icon, color: Colors.white, size: 20),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      text,
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Text(
+                                  '\$${cart.grandTotal.toStringAsFixed(2)}',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w900,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        Text(
-                          '\$${cart.grandTotal.toStringAsFixed(2)}',
-                          style: GoogleFonts.outfit(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
+              ],
             ],
           ),
         );

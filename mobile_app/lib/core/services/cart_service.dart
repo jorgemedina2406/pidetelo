@@ -104,6 +104,12 @@ class CartService extends ChangeNotifier {
           : DolarApiService().officialRate;
 
   DeliveryAddress get selectedAddress => _selectedAddress;
+  bool get hasValidDeliveryAddress =>
+      _selectedAddress.id.isNotEmpty &&
+      !_selectedAddress.title.toLowerCase().contains('sin dirección') &&
+      !_selectedAddress.address.toLowerCase().contains('selecciona una dirección') &&
+      _selectedAddress.latitude != 0.0 &&
+      _selectedAddress.longitude != 0.0;
   List<DeliveryAddress> get savedAddresses => List.unmodifiable(_savedAddresses);
   DeliveryOrder? get activeOrder => _activeOrder;
   bool get hasActiveOrder => _activeOrder != null;

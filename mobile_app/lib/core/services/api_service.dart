@@ -439,12 +439,17 @@ class ApiService {
         15.0;
 
     final primaryBranch = branchesList.isNotEmpty ? branchesList.first : null;
+    final branchBh = primaryBranch?.businessHours;
     final rawBh = item['business_hours'] is Map
         ? item['business_hours'] as Map<String, dynamic>
-        : (item['businessHours'] is Map ? item['businessHours'] as Map<String, dynamic> : null);
+        : (item['businessHours'] is Map 
+            ? item['businessHours'] as Map<String, dynamic> 
+            : branchBh);
     final openTime = item['open_time'] ?? item['openTime'] ?? rawBh?['open'] ?? primaryBranch?.openTime ?? '11:00';
     final closeTime = item['close_time'] ?? item['closeTime'] ?? rawBh?['close'] ?? primaryBranch?.closeTime ?? '23:00';
-    final isOpenNow = item['is_open_now'] ?? item['isOpenNow'] ?? rawBh?['isOpenNow'] ?? primaryBranch?.isOpenNow ?? true;
+    final isOpenNow = (primaryBranch != null)
+        ? primaryBranch.isOpenRightNow
+        : (item['is_open_now'] ?? item['isOpenNow'] ?? (rawBh?['isOpenToday'] ?? true));
     final scheduleDays = rawBh?['scheduleDays'] ?? item['scheduleDays'] ?? item['schedule_days'] ?? primaryBranch?.scheduleDays;
 
     return {

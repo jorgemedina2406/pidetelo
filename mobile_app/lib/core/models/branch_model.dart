@@ -223,7 +223,7 @@ class Branch {
       if (businessHours?['forceOpen'] == true || businessHours?['force_open'] == true) {
         return true;
       }
-      if (businessHours?['isOpenToday'] == false || !isOpenNow) {
+      if (businessHours?['isOpenToday'] == false || !isOpenNow || status != 'active') {
         return false;
       }
 
@@ -370,7 +370,12 @@ class Branch {
     }
     final oTime = (json['open_time'] ?? json['openTime'] ?? bh?['open'] ?? '11:00').toString();
     final cTime = (json['close_time'] ?? json['closeTime'] ?? bh?['close'] ?? '23:00').toString();
-    final isOp = json['is_open_now'] ?? json['isOpenNow'] ?? bh?['isOpenNow'] ?? true;
+    final isOp = json['is_open_now'] ??
+        json['isOpenNow'] ??
+        bh?['isOpenNow'] ??
+        bh?['isOpenToday'] ??
+        (json['status'] == 'active');
+    final isOpenNowBool = isOp is bool ? isOp : (isOp?.toString().toLowerCase() == 'true');
     final statusLabel = json['storeStatusLabel']?.toString() ?? bh?['label']?.toString();
 
     return Branch(
@@ -394,7 +399,7 @@ class Branch {
       whatsapp: json['whatsapp'],
       openTime: oTime,
       closeTime: cTime,
-      isOpenNow: isOp is bool ? isOp : true,
+      isOpenNow: isOpenNowBool,
       scheduleDays: parsedSDays,
       businessHours: bh,
       storeStatusLabel: statusLabel,

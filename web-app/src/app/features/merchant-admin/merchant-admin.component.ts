@@ -608,9 +608,15 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     this.brandingForm.baseCurrency = (branch.baseCurrency || curr?.baseCurrency || cached?.baseCurrency || tenant.currencySettings?.baseCurrency || 'USD') as 'USD' | 'VES';
     this.brandingForm.displayMode = (branch.displayMode || curr?.displayMode || cached?.displayMode || tenant.currencySettings?.displayMode || 'usd_and_bs') as CurrencyDisplayMode;
 
-    const rawMethods = branch.acceptedPaymentMethods ?? (branch as any).accepted_payment_methods ?? cached?.acceptedPaymentMethods;
+    const rawMethods = branch.acceptedPaymentMethods ?? 
+                       (branch as any).accepted_payment_methods ?? 
+                       curr?.acceptedPaymentMethods ?? 
+                       curr?.accepted_payment_methods ?? 
+                       cached?.acceptedPaymentMethods;
     if (Array.isArray(rawMethods) && rawMethods.length > 0) {
       this.brandingForm.acceptedPaymentMethods = [...rawMethods];
+    } else if (!this.brandingForm.acceptedPaymentMethods || this.brandingForm.acceptedPaymentMethods.length === 0) {
+      this.brandingForm.acceptedPaymentMethods = ['cash_usd', 'mobile_transfer', 'cash_local'];
     }
 
     const payCreds: any = branch.paymentCredentials || (branch as any).payment_credentials || (branch as any).branch_payment_credentials;
@@ -3493,13 +3499,19 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         baseCurrency: this.brandingForm.baseCurrency,
         displayMode: this.brandingForm.displayMode,
         exchangeRate: Number(this.brandingForm.exchangeRate),
-        lastRateUpdate: new Date().toISOString()
+        lastRateUpdate: new Date().toISOString(),
+        acceptedPaymentMethods: this.brandingForm.acceptedPaymentMethods && this.brandingForm.acceptedPaymentMethods.length > 0 
+          ? this.brandingForm.acceptedPaymentMethods 
+          : ['cash_usd', 'mobile_transfer', 'cash_local']
       },
       currency_settings: {
         baseCurrency: this.brandingForm.baseCurrency,
         displayMode: this.brandingForm.displayMode,
         exchangeRate: Number(this.brandingForm.exchangeRate),
-        lastRateUpdate: new Date().toISOString()
+        lastRateUpdate: new Date().toISOString(),
+        acceptedPaymentMethods: this.brandingForm.acceptedPaymentMethods && this.brandingForm.acceptedPaymentMethods.length > 0 
+          ? this.brandingForm.acceptedPaymentMethods 
+          : ['cash_usd', 'mobile_transfer', 'cash_local']
       }
     };
 

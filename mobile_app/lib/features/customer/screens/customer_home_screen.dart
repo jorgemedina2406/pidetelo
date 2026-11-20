@@ -379,13 +379,26 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
   bool _isStoreOpenNow(Map<String, dynamic> store) {
     try {
+      final rawBranches = store['branches'];
+      if (rawBranches is List && rawBranches.isNotEmpty) {
+        final branches = rawBranches
+            .map((b) => b is Branch ? b : Branch.fromJson(b as Map<String, dynamic>))
+            .where((b) => b.status == 'active')
+            .toList();
+        if (branches.isNotEmpty) {
+          return branches.any((b) => b.isOpenRightNow);
+        } else {
+          return false;
+        }
+      }
+
       final rawBh = store['business_hours'] is Map
           ? store['business_hours'] as Map
           : null;
       if (rawBh?['forceOpen'] == true || rawBh?['force_open'] == true) {
         return true;
       }
-      if (rawBh?['isOpenToday'] == false || store['is_open_now'] == false) {
+      if (rawBh?['isOpenToday'] == false || store['is_open_now'] == false || store['isOpenNow'] == false) {
         return false;
       }
 
@@ -469,7 +482,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
         return cur >= o || cur < c;
       }
     } catch (_) {
-      return true;
+      return false;
     }
   }
 
