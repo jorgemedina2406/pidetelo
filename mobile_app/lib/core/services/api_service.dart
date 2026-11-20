@@ -7,6 +7,7 @@ import '../config/app_config.dart';
 import '../models/order_model.dart';
 import '../models/branch_model.dart';
 import 'dolar_api_service.dart';
+import 'cart_service.dart';
 import 'session_service.dart';
 import 'notification_service.dart';
 
@@ -1152,7 +1153,7 @@ class ApiService {
   }
 
   /// Append new items to an active order (Backend API primary, direct Supabase fallback)
-  Future<bool> appendItemsToOrder({
+  Future<Map<String, dynamic>> appendItemsToOrder({
     required String orderIdOrNumber,
     String? orderNumber,
     required List<CartItem> newItems,
@@ -1164,9 +1165,24 @@ class ApiService {
     final uuidRegex = RegExp(
       r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
     );
-    final isUuid = uuidRegex.hasMatch(orderIdOrNumber);
+    String effectiveId = orderIdOrNumber.trim();
+    bool isUuid = uuidRegex.hasMatch(effectiveId);
     final cleanNum = (orderNumber ?? orderIdOrNumber).replaceAll('#', '').trim();
-    final targetKey = isUuid ? orderIdOrNumber : cleanNum;
+
+    if (!isUuid && cleanNum.isNotEmpty) {
+      final syncedId = await CartService().waitForPendingOrderSync(cleanNum);
+      if (syncedId != null && uuidRegex.hasMatch(syncedId)) {
+        effectiveId = syncedId;
+        isUuid = true;
+      } else if (CartService().activeOrder != null &&
+          CartService().activeOrder!.orderNumber.replaceAll('#', '').trim() == cleanNum &&
+          uuidRegex.hasMatch(CartService().activeOrder!.id)) {
+        effectiveId = CartService().activeOrder!.id;
+        isUuid = true;
+      }
+    }
+
+    final targetKey = isUuid ? effectiveId : cleanNum;
 
     // 1. Primary path: Backend API
     try {
@@ -1195,7 +1211,17 @@ class ApiService {
           )
           .timeout(const Duration(seconds: 8));
       if (res.statusCode == 200 || res.statusCode == 201) {
-        return true;
+        return {'success': true};
+      }
+      if (res.statusCode == 400) {
+        try {
+          final decoded = json.decode(res.body);
+          final rawMsg = decoded is Map ? decoded['message'] : null;
+          final msg = rawMsg is List ? rawMsg.join(', ') : (rawMsg?.toString() ?? '');
+          if (msg.trim().isNotEmpty) {
+            return {'success': false, 'error': msg.trim()};
+          }
+        } catch (_) {}
       }
     } catch (e) {
       if (kDebugMode) print('[ApiService] Backend append-items fallback to Supabase: $e');
@@ -1206,19 +1232,31 @@ class ApiService {
       final supabase = Supabase.instance.client;
       Map<String, dynamic>? currentOrder;
       if (isUuid) {
-        currentOrder = await supabase.from('orders').select('*').eq('id', orderIdOrNumber).maybeSingle();
+        currentOrder = await supabase.from('orders').select('*').eq('id', effectiveId).maybeSingle();
       }
-      currentOrder ??= await supabase
-          .from('orders')
-          .select('*')
-          .or('order_number.eq.$cleanNum,order_number.eq.#$cleanNum')
-          .maybeSingle();
+      if (currentOrder == null && cleanNum.isNotEmpty) {
+        currentOrder = await supabase
+            .from('orders')
+            .select('*')
+            .or('order_number.eq.$cleanNum,order_number.eq.#$cleanNum')
+            .order('created_at', ascending: false)
+            .limit(1)
+            .maybeSingle();
+      }
 
-      if (currentOrder == null) return false;
+      if (currentOrder == null) {
+        return {
+          'success': false,
+          'error': 'No se encontró la orden en el servidor. Espera unos segundos e intenta de nuevo.',
+        };
+      }
 
       final currentStatus = (currentOrder['status'] ?? '').toString().toLowerCase();
       if (['picked_up', 'on_the_way', 'delivered', 'cancelled'].contains(currentStatus)) {
-        return false;
+        return {
+          'success': false,
+          'error': 'Tu pedido ya fue despachado y no admite más adiciones.',
+        };
       }
 
       final realId = currentOrder['id'].toString();
@@ -1311,10 +1349,13 @@ class ApiService {
           'updated_at': nowIso,
         }).eq('id', realId);
       }
-      return true;
+      return {'success': true};
     } catch (e) {
       if (kDebugMode) print('[ApiService] appendItemsToOrder error: $e');
-      return false;
+      return {
+        'success': false,
+        'error': 'No se pudo guardar la adición en el servidor. Intenta nuevamente.',
+      };
     }
   }
 
@@ -1368,6 +1409,8 @@ class ApiService {
           .from('orders')
           .select('*')
           .or('order_number.eq.$cleanNum,order_number.eq.#$cleanNum')
+          .order('created_at', ascending: false)
+          .limit(1)
           .maybeSingle();
 
       if (currentOrder == null) return false;

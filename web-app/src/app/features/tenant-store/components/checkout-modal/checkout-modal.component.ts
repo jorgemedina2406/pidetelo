@@ -19,6 +19,7 @@ export class CheckoutModalComponent {
   readonly isSubmitting = signal(false);
   readonly isDetectingGps = signal(false);
   readonly gpsStatusMessage = signal<string | null>(null);
+  readonly pagoMovilRefError = signal<string | null>(null);
   readonly isConfirmPromptOpen = signal(false);
   readonly isAddressModalOpen = signal(false);
 
@@ -75,6 +76,15 @@ export class CheckoutModalComponent {
         return;
       }
     }
+
+    if (this.cart.paymentMethod() === 'mobile_transfer') {
+      const ref = (this.cart.pagoMovilReference() || '').trim();
+      if (ref.length < 4) {
+        this.pagoMovilRefError.set('Debes ingresar el número de referencia del Pago Móvil (mínimo 4 dígitos) para continuar.');
+        return;
+      }
+    }
+    this.pagoMovilRefError.set(null);
 
     if (this.cart.isCustomerValid() && !this.isSubmitting()) {
       this.isConfirmPromptOpen.set(true);
@@ -295,11 +305,41 @@ export class CheckoutModalComponent {
       }).subscribe({
         next: saved => {
           console.log('[CheckoutModal] Pedido guardado en backend con éxito:', saved);
+          if (typeof window !== 'undefined' && saved) {
+            try {
+              const savedOrdNum = String(saved.order_number || order.orderNumber);
+              const cleanNum = savedOrdNum.replace(/^#/, '');
+              const tName = order.tenantName || 'Comercio';
+              const raw = localStorage.getItem('pidetelo_recent_web_orders');
+              const list: any[] = raw ? JSON.parse(raw) : [];
+              const filtered = list.filter(x => String(x?.cleanNumber || '') !== cleanNum);
+              filtered.unshift({
+                id: saved.id,
+                orderNumber: savedOrdNum,
+                cleanNumber: cleanNum,
+                tenantSlug: this.cart.activeTenant()?.slug || '',
+                tenantName: tName,
+                branchName: order.branchName || '',
+                total: Number(saved.total ?? order.total),
+                createdAt: saved.created_at || new Date().toISOString(),
+              });
+              localStorage.setItem('pidetelo_recent_web_orders', JSON.stringify(filtered.slice(0, 8)));
+              localStorage.setItem('pidetelo_active_order', JSON.stringify({
+                id: cleanNum,
+                dbId: saved.id,
+                orderNumber: cleanNum,
+                storeName: order.branchName || tName,
+                status: saved.status || 'received',
+              }));
+            } catch (_) {}
+          }
           this.isSubmitting.set(false);
         },
         error: err => {
           console.warn('[CheckoutModal] Error al guardar en backend:', err);
+          this.api.purgeLocalCachedOrder(order.orderNumber);
           this.isSubmitting.set(false);
+          alert(err?.error?.message || 'No se pudo registrar tu pedido en el servidor. Verifica los datos e intenta nuevamente.');
         },
       });
     }

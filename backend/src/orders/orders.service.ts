@@ -17,7 +17,7 @@ export class OrdersService {
   private generateRandomPin(orderNumber: string): string {
     const orderDigits = (orderNumber || '').replace(/\D/g, '').slice(-4).padStart(4, '0');
     let pin = String(crypto.randomInt(1000, 10000));
-    while (pin === orderDigits) {
+    while (pin === orderDigits || pin === '1234' || pin === '0000') {
       pin = String(crypto.randomInt(1000, 10000));
     }
     return pin;
@@ -134,7 +134,12 @@ export class OrdersService {
     const paymentMethod = orderHeader.payment_method || 'mobile_transfer';
     const isPagoMovil = paymentMethod === 'mobile_transfer' || paymentMethod === 'pago_movil';
     const paymentStatus = orderHeader.payment_status || (isPagoMovil ? 'pending' : 'not_required');
-    const paymentReference = orderHeader.payment_reference || null;
+    const paymentReference = orderHeader.payment_reference ? String(orderHeader.payment_reference).trim() : null;
+    if (isPagoMovil && orderHeader.source !== 'merchant_manual') {
+      if (!paymentReference || paymentReference.length < 4) {
+        throw new BadRequestException('Debes ingresar el número de referencia del Pago Móvil (mínimo 4 dígitos).');
+      }
+    }
     const paymentOriginBank = orderHeader.payment_origin_bank || null;
     let finalNotes = (orderHeader.notes || '').toString();
     if (paymentOriginBank && !finalNotes.includes('[PAGO_ORIGEN:')) {
@@ -144,9 +149,9 @@ export class OrdersService {
     const explicitPin = String(orderHeader.delivery_pin || orderHeader.deliveryPin || '').trim();
     const existingPinMatch = finalNotes.match(/\[PIN:(\d{4})\]/);
     let resolvedPin = '';
-    if (/^\d{4}$/.test(explicitPin) && explicitPin !== orderDigits) {
+    if (/^\d{4}$/.test(explicitPin) && explicitPin !== orderDigits && explicitPin !== '1234' && explicitPin !== '0000') {
       resolvedPin = explicitPin;
-    } else if (existingPinMatch && existingPinMatch[1] !== orderDigits) {
+    } else if (existingPinMatch && existingPinMatch[1] !== orderDigits && existingPinMatch[1] !== '1234' && existingPinMatch[1] !== '0000') {
       resolvedPin = existingPinMatch[1];
     } else {
       resolvedPin = this.generateRandomPin(orderNumber);

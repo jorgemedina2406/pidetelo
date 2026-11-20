@@ -380,11 +380,206 @@ export class ApiService {
   getOrder(id: string): Observable<Order | null> {
     return this.http.get<any>(`${this.baseUrl}/orders/${id}`).pipe(
       map(row => (row ? this.mapOrder(row) : null)),
-      catchError(err => {
-        console.warn(`[ApiService] Error consultando pedido '${id}' del backend:`, err);
-        return of(null);
+      catchError(async () => {
+        const client = this.supabase.rawClient;
+        if (!client) return null;
+        try {
+          const clean = String(id || '').replace(/^#/, '').trim();
+          const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clean);
+          const filter = isUuid
+            ? `id.eq.${clean},order_number.eq.${clean},order_number.eq.#${clean}`
+            : `order_number.eq.${clean},order_number.eq.#${clean}`;
+          const { data } = await client
+            .from('orders')
+            .select('*, order_items(*), tenants(id, name, slug, phone, address, latitude, longitude, logo_url, accent_color), branches(id, name, slug, phone, address, latitude, longitude), riders(id, name, phone, vehicle_type, vehicle_model, vehicle_plate, avatar_url, current_lat, current_lng)')
+            .or(filter)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          return data ? this.mapOrder(data) : null;
+        } catch {
+          return null;
+        }
       })
     );
+  }
+
+  purgeLocalCachedOrder(orderIdOrNumber: string): void {
+    if (typeof window === 'undefined') return;
+    const cleanTarget = String(orderIdOrNumber || '').replace(/^#/, '').trim().toLowerCase();
+    if (!cleanTarget) return;
+
+    try {
+      const rawActive = localStorage.getItem('pidetelo_active_order');
+      if (rawActive) {
+        const parsed = JSON.parse(rawActive);
+        const candidates = [parsed?.id, parsed?.dbId, parsed?.orderNumber, parsed?.cleanNumber]
+          .map(v => String(v || '').replace(/^#/, '').trim().toLowerCase());
+        if (candidates.includes(cleanTarget)) {
+          localStorage.removeItem('pidetelo_active_order');
+        }
+      }
+    } catch {}
+
+    try {
+      const rawRecent = localStorage.getItem('pidetelo_recent_web_orders');
+      if (rawRecent) {
+        const list = JSON.parse(rawRecent);
+        if (Array.isArray(list)) {
+          const remaining = list.filter(item => {
+            const candidates = [item?.id, item?.orderNumber, item?.cleanNumber]
+              .map(v => String(v || '').replace(/^#/, '').trim().toLowerCase());
+            return !candidates.includes(cleanTarget);
+          });
+          if (remaining.length > 0) {
+            localStorage.setItem('pidetelo_recent_web_orders', JSON.stringify(remaining));
+          } else {
+            localStorage.removeItem('pidetelo_recent_web_orders');
+          }
+        }
+      }
+    } catch {}
+  }
+
+  getVerifiedLocalOrders(onlyActive: boolean = false): Observable<any[]> {
+    if (typeof window === 'undefined') return of([]);
+
+    const candidates: string[] = [];
+    const addCandidate = (val?: string) => {
+      const s = String(val || '').trim();
+      if (s && !candidates.includes(s)) candidates.push(s);
+    };
+
+    try {
+      const rawActive = localStorage.getItem('pidetelo_active_order');
+      if (rawActive) {
+        const parsed = JSON.parse(rawActive);
+        addCandidate(parsed?.dbId);
+        addCandidate(parsed?.id);
+        addCandidate(parsed?.cleanNumber);
+        addCandidate(parsed?.orderNumber);
+      }
+    } catch {}
+
+    try {
+      const rawRecent = localStorage.getItem('pidetelo_recent_web_orders');
+      if (rawRecent) {
+        const list = JSON.parse(rawRecent);
+        if (Array.isArray(list)) {
+          for (const item of list) {
+            addCandidate(item?.id);
+            addCandidate(item?.cleanNumber);
+            addCandidate(item?.orderNumber);
+          }
+        }
+      }
+    } catch {}
+
+    if (candidates.length === 0) {
+      return of([]);
+    }
+
+    return from((async () => {
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      let verifiedRows: any[] = [];
+
+      const client = this.supabase.rawClient;
+      if (client) {
+        const orFilters: string[] = [];
+        for (const c of candidates) {
+          const safe = c.replace(/[,()]/g, '').trim();
+          if (!safe) continue;
+          if (uuidRegex.test(safe)) {
+            orFilters.push(`id.eq.${safe}`);
+          } else {
+            const cleanNum = safe.replace(/^#/, '');
+            if (cleanNum) {
+              orFilters.push(`order_number.eq.${cleanNum}`);
+              orFilters.push(`order_number.eq.#${cleanNum}`);
+            }
+          }
+        }
+
+        if (orFilters.length > 0) {
+          try {
+            const { data, error } = await client
+              .from('orders')
+              .select('id, order_number, status, total, created_at, tenants(name, slug), branches(name)')
+              .or(Array.from(new Set(orFilters)).join(','))
+              .order('created_at', { ascending: false });
+
+            if (!error && Array.isArray(data)) {
+              verifiedRows = data;
+            }
+          } catch {}
+        }
+      } else {
+        const lookupKeys = Array.from(
+          new Set(candidates.map(c => c.replace(/^#/, '').trim()).filter(Boolean))
+        );
+        const results = await Promise.all(
+          lookupKeys.slice(0, 8).map(k => firstValueFrom(this.getOrder(k)).catch(() => null))
+        );
+        const seenIds = new Set<string>();
+        for (const ord of results) {
+          if (ord && ord.id && !seenIds.has(ord.id)) {
+            seenIds.add(ord.id);
+            verifiedRows.push({
+              id: ord.id,
+              order_number: ord.orderNumber,
+              status: ord.status,
+              total: ord.total,
+              created_at: ord.createdAt,
+              tenants: { name: ord.tenantName },
+              branches: ord.branchName ? { name: ord.branchName } : null,
+            });
+          }
+        }
+      }
+
+      const verifiedList = verifiedRows.map((r: any) => {
+        const rawNum = String(r.order_number || '').trim();
+        const cleanNumber = rawNum.replace(/^#/, '');
+        const tName = r.branches?.name || r.tenants?.name || 'Comercio';
+        return {
+          id: r.id,
+          orderNumber: rawNum.startsWith('#') ? rawNum : `#${rawNum}`,
+          cleanNumber,
+          status: r.status || 'received',
+          tenantName: tName,
+          storeName: tName,
+          tenantSlug: r.tenants?.slug || '',
+          branchName: r.branches?.name || '',
+          total: Number(r.total || 0),
+          createdAt: r.created_at || new Date().toISOString(),
+        };
+      });
+
+      try {
+        if (verifiedList.length > 0) {
+          localStorage.setItem('pidetelo_recent_web_orders', JSON.stringify(verifiedList.slice(0, 8)));
+        } else {
+          localStorage.removeItem('pidetelo_recent_web_orders');
+        }
+
+        const firstActive = verifiedList.find(o => o.status !== 'delivered' && o.status !== 'cancelled');
+        if (firstActive) {
+          localStorage.setItem('pidetelo_active_order', JSON.stringify({
+            id: firstActive.cleanNumber,
+            dbId: firstActive.id,
+            orderNumber: firstActive.cleanNumber,
+            storeName: firstActive.storeName,
+            status: firstActive.status,
+          }));
+        } else {
+          localStorage.removeItem('pidetelo_active_order');
+        }
+      } catch {}
+
+      return onlyActive
+        ? verifiedList.filter(o => o.status !== 'delivered' && o.status !== 'cancelled')
+        : verifiedList;
+    })());
   }
 
   getOrders(tenantId: string, status?: string, branchId?: string): Observable<Order[]> {

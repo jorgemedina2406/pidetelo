@@ -2692,12 +2692,14 @@ class _AppendItemsModal extends StatefulWidget {
 class _AppendItemsModalState extends State<_AppendItemsModal> {
   bool _isLoading = true;
   bool _isSubmitting = false;
+  String? _errorMessage;
   List<Product> _products = [];
   final Map<String, int> _selectedQuantities = {};
   String _paymentMethod = 'cash';
   final TextEditingController _refController = TextEditingController();
   final TextEditingController _bankController = TextEditingController();
   BranchPaymentCredentials? _paymentCredentials;
+  List<String> _acceptedPaymentMethods = [];
   double? _exchangeRate;
 
   @override
@@ -2714,8 +2716,57 @@ class _AppendItemsModalState extends State<_AppendItemsModal> {
   }
 
   Future<void> _loadProducts() async {
-    final tenantId = widget.order.companyId ?? '';
-    final branchId = widget.order.branchId;
+    String tenantId = (widget.order.companyId ?? '').trim();
+    String? branchId = widget.order.branchId?.trim();
+    final supabase = Supabase.instance.client;
+    final uuidRegex = RegExp(
+      r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+    );
+
+    if (tenantId.isEmpty || branchId == null || branchId.isEmpty) {
+      try {
+        Map<String, dynamic>? row;
+        if (uuidRegex.hasMatch(widget.order.id)) {
+          row = await supabase
+              .from('orders')
+              .select('tenant_id, branch_id')
+              .eq('id', widget.order.id)
+              .maybeSingle();
+        }
+        if (row == null && widget.order.orderNumber.trim().isNotEmpty) {
+          final cleanNum = widget.order.orderNumber.replaceAll('#', '').trim();
+          row = await supabase
+              .from('orders')
+              .select('tenant_id, branch_id')
+              .or('order_number.eq.$cleanNum,order_number.eq.#$cleanNum')
+              .order('created_at', ascending: false)
+              .limit(1)
+              .maybeSingle();
+        }
+        if (row != null) {
+          if (tenantId.isEmpty && row['tenant_id'] != null) {
+            tenantId = row['tenant_id'].toString().trim();
+          }
+          if ((branchId == null || branchId.isEmpty) && row['branch_id'] != null) {
+            branchId = row['branch_id'].toString().trim();
+          }
+        }
+      } catch (_) {}
+    }
+
+    if (tenantId.isEmpty && branchId != null && branchId.isNotEmpty) {
+      try {
+        final bRow = await supabase
+            .from('branches')
+            .select('company_id')
+            .eq('id', branchId)
+            .maybeSingle();
+        if (bRow != null && bRow['company_id'] != null) {
+          tenantId = bRow['company_id'].toString().trim();
+        }
+      } catch (_) {}
+    }
+
     List<Product> list = [];
     if (tenantId.isNotEmpty) {
       list = await ApiService().fetchProductsByTenant(tenantId, branchId: branchId);
@@ -2723,11 +2774,40 @@ class _AppendItemsModalState extends State<_AppendItemsModal> {
     if (list.isEmpty && branchId != null && branchId.isNotEmpty) {
       list = await ApiService().fetchProductsByTenant(branchId, branchId: branchId);
     }
+    if (list.isEmpty && tenantId.isNotEmpty) {
+      try {
+        var q = supabase
+            .from('products')
+            .select('*, categories(name)')
+            .eq('tenant_id', tenantId)
+            .or('is_available.eq.true,is_available.is.null');
+        if (branchId != null && branchId.isNotEmpty) {
+          q = q.eq('branch_id', branchId);
+        }
+        final rows = await q.order('sort_order', ascending: true);
+        if (rows.isNotEmpty) {
+          list = rows.map((item) => Product(
+                id: item['id']?.toString() ?? '',
+                name: item['name']?.toString() ?? '',
+                description: item['description']?.toString() ?? '',
+                price: (item['price'] as num?)?.toDouble() ?? 0.0,
+                imageUrl: item['image_url']?.toString() ?? '',
+                category: item['categories']?['name']?.toString() ?? 'General',
+                branchId: item['branch_id']?.toString(),
+              )).toList();
+        }
+      } catch (_) {}
+    }
+
     if (branchId != null && branchId.isNotEmpty) {
       try {
         final b = await ApiService().fetchBranchById(branchId);
         if (b != null) {
           _paymentCredentials = b.paymentCredentials;
+          _acceptedPaymentMethods = b.acceptedPaymentMethods
+              .map((m) => m.toLowerCase().trim())
+              .where((m) => m.isNotEmpty)
+              .toList();
           if (b.exchangeRate != null && b.exchangeRate! > 1) {
             _exchangeRate = b.exchangeRate;
           }
@@ -2743,6 +2823,13 @@ class _AppendItemsModalState extends State<_AppendItemsModal> {
         }
       }
     }
+
+    if (!_acceptsCash && _acceptsPagoMovil) {
+      _paymentMethod = 'mobile_transfer';
+    } else {
+      _paymentMethod = 'cash';
+    }
+
     if (mounted) {
       setState(() {
         _products = list;
@@ -2757,6 +2844,21 @@ class _AppendItemsModalState extends State<_AppendItemsModal> {
     final phone = creds.pagoMovilPhone.trim();
     if (phone.isEmpty) return false;
     return !phone.contains('1234567') && phone != '04140000000' && phone != '04121234567';
+  }
+
+  bool get _acceptsCash {
+    if (_acceptedPaymentMethods.isEmpty) return true;
+    return _acceptedPaymentMethods.any(
+      (m) => m == 'cash_usd' || m == 'cash_local' || m == 'efectivo' || m == 'cash',
+    );
+  }
+
+  bool get _acceptsPagoMovil {
+    if (!_hasConfiguredPagoMovil) return false;
+    if (_acceptedPaymentMethods.isEmpty) return true;
+    return _acceptedPaymentMethods.any(
+      (m) => m == 'pago_movil' || m == 'mobile_transfer',
+    );
   }
 
   double get _extraTotal {
@@ -2777,6 +2879,8 @@ class _AppendItemsModalState extends State<_AppendItemsModal> {
   }
 
   Future<void> _submitAdditions() async {
+    setState(() => _errorMessage = null);
+
     final addedItems = <CartItem>[];
     for (final p in _products) {
       final q = _selectedQuantities[p.id] ?? 0;
@@ -2792,23 +2896,37 @@ class _AppendItemsModalState extends State<_AppendItemsModal> {
 
     if (addedItems.isEmpty) return;
 
-    if (_paymentMethod == 'mobile_transfer' && _refController.text.trim().length < 4) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Por favor ingresa los últimos dígitos de la referencia de Pago Móvil (mínimo 4).',
-            style: GoogleFonts.outfit(),
-          ),
-          backgroundColor: Colors.amber[800],
-        ),
-      );
-      return;
+    if (_paymentMethod == 'mobile_transfer') {
+      if (!_hasConfiguredPagoMovil) {
+        setState(() {
+          _errorMessage = 'Este comercio no tiene datos de Pago Móvil configurados. Selecciona Efectivo al Recibir.';
+        });
+        return;
+      }
+      if (_refController.text.trim().length < 4) {
+        setState(() {
+          _errorMessage = 'Debes ingresar el número de referencia del Pago Móvil (mínimo 4 dígitos).';
+        });
+        return;
+      }
     }
 
     setState(() => _isSubmitting = true);
 
-    final success = await ApiService().appendItemsToOrder(
-      orderIdOrNumber: widget.order.id,
+    final uuidRegex = RegExp(
+      r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+    );
+    String effectiveOrderId = widget.order.id;
+    final active = CartService().activeOrder;
+    if (!uuidRegex.hasMatch(effectiveOrderId) &&
+        active != null &&
+        active.orderNumber == widget.order.orderNumber &&
+        uuidRegex.hasMatch(active.id)) {
+      effectiveOrderId = active.id;
+    }
+
+    final res = await ApiService().appendItemsToOrder(
+      orderIdOrNumber: effectiveOrderId,
       orderNumber: widget.order.orderNumber,
       newItems: addedItems,
       extraSubtotal: _extraTotal,
@@ -2819,7 +2937,7 @@ class _AppendItemsModalState extends State<_AppendItemsModal> {
 
     if (mounted) {
       setState(() => _isSubmitting = false);
-      if (success) {
+      if (res['success'] == true) {
         final itemDetails = addedItems.map((i) => '${i.quantity}x ${i.product.name}').join(', ');
         final bsSeg = _extraBs != null ? ' (Bs. ${_extraBs!.toStringAsFixed(2)})' : '';
         final bankSeg = _bankController.text.trim().isNotEmpty ? ' | Banco: ${_bankController.text.trim()}' : '';
@@ -2828,7 +2946,7 @@ class _AppendItemsModalState extends State<_AppendItemsModal> {
             : '[ADICIONAL: $itemDetails | +\$${_extraTotal.toStringAsFixed(2)}$bsSeg | Método: Efectivo al Recibir]';
 
         CartService().appendItemsToActiveOrder(
-          widget.order.id.isNotEmpty ? widget.order.id : widget.order.orderNumber,
+          effectiveOrderId.isNotEmpty ? effectiveOrderId : widget.order.orderNumber,
           addedItems,
           _extraTotal,
           appendedNote: localTag,
@@ -2836,34 +2954,31 @@ class _AppendItemsModalState extends State<_AppendItemsModal> {
         widget.onItemsAdded(addedItems, _extraTotal);
         Navigator.pop(context);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'No se pudo actualizar en el servidor. Verifica tu conexión o el estado del pedido.',
-              style: GoogleFonts.outfit(),
-            ),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
+        setState(() {
+          _errorMessage = (res['error'] ?? 'No se pudo actualizar en el servidor. Verifica tu conexión o el estado del pedido.').toString();
+        });
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final maxH = MediaQuery.of(context).size.height * 0.85;
+    final viewInsets = MediaQuery.of(context).viewInsets.bottom;
+    final maxH = MediaQuery.of(context).size.height * 0.90;
 
-    return Container(
-      constraints: BoxConstraints(maxHeight: maxH),
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-      decoration: const BoxDecoration(
-        color: Color(0xFF0F172A),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
+    return Padding(
+      padding: EdgeInsets.only(bottom: viewInsets),
+      child: Container(
+        constraints: BoxConstraints(maxHeight: maxH),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+        decoration: const BoxDecoration(
+          color: Color(0xFF0F172A),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
           // Drag handle
           Center(
             child: Container(
@@ -3063,225 +3178,282 @@ class _AppendItemsModalState extends State<_AppendItemsModal> {
                       ),
           ),
 
-          // Bottom confirmation bar & Payment Method selector
+          // Bottom confirmation bar & Payment Method selector (scrollable when keyboard opens)
           if (_totalCount > 0) ...[
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1E293B),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.white12),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    '¿Cómo pagarás este adicional de +\$${_extraTotal.toStringAsFixed(2)}?',
-                    style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
+            const SizedBox(height: 10),
+            Flexible(
+              flex: 0,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.44,
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Expanded(
-                        child: InkWell(
-                          onTap: () => setState(() => _paymentMethod = 'cash'),
-                          borderRadius: BorderRadius.circular(10),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-                            decoration: BoxDecoration(
-                              color: _paymentMethod == 'cash'
-                                  ? AppTheme.primary.withOpacity(0.18)
-                                  : Colors.white.withOpacity(0.04),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: _paymentMethod == 'cash' ? AppTheme.primary : Colors.white12,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Text('💵 ', style: TextStyle(fontSize: 14)),
-                                Text(
-                                  'Efectivo al Recibir',
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    color: _paymentMethod == 'cash' ? Colors.white : Colors.white60,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: InkWell(
-                          onTap: () => setState(() => _paymentMethod = 'mobile_transfer'),
-                          borderRadius: BorderRadius.circular(10),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-                            decoration: BoxDecoration(
-                              color: _paymentMethod == 'mobile_transfer'
-                                  ? AppTheme.primary.withOpacity(0.18)
-                                  : Colors.white.withOpacity(0.04),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: _paymentMethod == 'mobile_transfer' ? AppTheme.primary : Colors.white12,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Text('📲 ', style: TextStyle(fontSize: 14)),
-                                Text(
-                                  'Pago Móvil',
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    color: _paymentMethod == 'mobile_transfer' ? Colors.white : Colors.white60,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (_paymentMethod == 'cash') ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      'ℹ️ Le pagarás la diferencia de \$${_extraTotal.toStringAsFixed(2)}${_extraBs != null ? " (Bs. ${_extraBs!.toStringAsFixed(2)})" : ""} en efectivo al repartidor al recibir.',
-                      style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.amberAccent),
-                    ),
-                  ] else ...[
-                    const SizedBox(height: 10),
-                    if (_hasConfiguredPagoMovil) ...[
                       Container(
-                        padding: const EdgeInsets.all(8),
+                        padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF0F172A),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.white10),
+                          color: const Color(0xFF1E293B),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: Colors.white12),
                         ),
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             Text(
-                              'Datos de la tienda: ${_paymentCredentials!.pagoMovilBank} • ${_paymentCredentials!.pagoMovilPhone} • ${_paymentCredentials!.pagoMovilIdNumber}',
-                              style: GoogleFonts.outfit(fontSize: 10.5, color: Colors.white70),
+                              '¿Cómo pagarás este adicional de +\$${_extraTotal.toStringAsFixed(2)}?',
+                              style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white),
                             ),
-                            if (_paymentCredentials!.pagoMovilAccountName.isNotEmpty)
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                if (_acceptsCash)
+                                  Expanded(
+                                    child: InkWell(
+                                      onTap: () => setState(() {
+                                        _paymentMethod = 'cash';
+                                        _errorMessage = null;
+                                      }),
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                                        decoration: BoxDecoration(
+                                          color: _paymentMethod == 'cash'
+                                              ? AppTheme.primary.withOpacity(0.18)
+                                              : Colors.white.withOpacity(0.04),
+                                          borderRadius: BorderRadius.circular(10),
+                                          border: Border.all(
+                                            color: _paymentMethod == 'cash' ? AppTheme.primary : Colors.white12,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            const Text('💵 ', style: TextStyle(fontSize: 14)),
+                                            Text(
+                                              'Efectivo al Recibir',
+                                              style: GoogleFonts.outfit(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w700,
+                                                color: _paymentMethod == 'cash' ? Colors.white : Colors.white60,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                if (_acceptsCash && _acceptsPagoMovil) const SizedBox(width: 8),
+                                if (_acceptsPagoMovil)
+                                  Expanded(
+                                    child: InkWell(
+                                      onTap: () => setState(() {
+                                        _paymentMethod = 'mobile_transfer';
+                                        _errorMessage = null;
+                                      }),
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                                        decoration: BoxDecoration(
+                                          color: _paymentMethod == 'mobile_transfer'
+                                              ? AppTheme.primary.withOpacity(0.18)
+                                              : Colors.white.withOpacity(0.04),
+                                          borderRadius: BorderRadius.circular(10),
+                                          border: Border.all(
+                                            color: _paymentMethod == 'mobile_transfer' ? AppTheme.primary : Colors.white12,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            const Text('📲 ', style: TextStyle(fontSize: 14)),
+                                            Text(
+                                              'Pago Móvil',
+                                              style: GoogleFonts.outfit(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w700,
+                                                color: _paymentMethod == 'mobile_transfer' ? Colors.white : Colors.white60,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            if (_paymentMethod == 'cash') ...[
+                              const SizedBox(height: 8),
                               Text(
-                                'Titular: ${_paymentCredentials!.pagoMovilAccountName}',
-                                style: GoogleFonts.outfit(fontSize: 10.5, color: Colors.white60),
+                                'ℹ️ Le pagarás la diferencia de \$${_extraTotal.toStringAsFixed(2)}${_extraBs != null ? " (Bs. ${_extraBs!.toStringAsFixed(2)})" : ""} en efectivo al repartidor al recibir.',
+                                style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.amberAccent),
                               ),
+                            ] else ...[
+                              const SizedBox(height: 10),
+                              if (_hasConfiguredPagoMovil) ...[
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF0F172A),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: Colors.white10),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Datos de la tienda: ${_paymentCredentials!.pagoMovilBank} • ${_paymentCredentials!.pagoMovilPhone} • ${_paymentCredentials!.pagoMovilIdNumber}',
+                                        style: GoogleFonts.outfit(fontSize: 10.5, color: Colors.white70),
+                                      ),
+                                      if (_paymentCredentials!.pagoMovilAccountName.isNotEmpty)
+                                        Text(
+                                          'Titular: ${_paymentCredentials!.pagoMovilAccountName}',
+                                          style: GoogleFonts.outfit(fontSize: 10.5, color: Colors.white60),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ] else ...[
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.amber.withOpacity(0.12),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: Colors.amber.withOpacity(0.35)),
+                                  ),
+                                  child: Text(
+                                    'El comercio no tiene datos de Pago Móvil configurados.',
+                                    style: GoogleFonts.outfit(fontSize: 10.5, color: AppTheme.amberAccent, fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                              ],
+                              const SizedBox(height: 8),
+                              TextField(
+                                controller: _bankController,
+                                style: GoogleFonts.outfit(color: Colors.white, fontSize: 12),
+                                decoration: InputDecoration(
+                                  hintText: 'Banco Emisor (ej: Banesco, BDV, Mercantil)',
+                                  hintStyle: GoogleFonts.outfit(color: Colors.white38, fontSize: 11),
+                                  filled: true,
+                                  fillColor: const Color(0xFF0F172A),
+                                  isDense: true,
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              TextField(
+                                controller: _refController,
+                                keyboardType: TextInputType.number,
+                                onChanged: (_) {
+                                  if (_errorMessage != null) {
+                                    setState(() => _errorMessage = null);
+                                  }
+                                },
+                                style: GoogleFonts.outfit(color: Colors.white, fontSize: 12),
+                                decoration: InputDecoration(
+                                  hintText: 'Ref. Pago Móvil * (Obligatorio, mín. 4 dígitos)',
+                                  hintStyle: GoogleFonts.outfit(color: Colors.white38, fontSize: 11),
+                                  filled: true,
+                                  fillColor: const Color(0xFF0F172A),
+                                  isDense: true,
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
-                    ] else ...[
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.amber.withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.amber.withOpacity(0.35)),
-                        ),
-                        child: Text(
-                          'El comercio no tiene datos de Pago Móvil configurados.',
-                          style: GoogleFonts.outfit(fontSize: 10.5, color: AppTheme.amberAccent, fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: _bankController,
-                      style: GoogleFonts.outfit(color: Colors.white, fontSize: 12),
-                      decoration: InputDecoration(
-                        hintText: 'Banco Emisor (ej: Banesco, BDV, Mercantil)',
-                        hintStyle: GoogleFonts.outfit(color: Colors.white38, fontSize: 11),
-                        filled: true,
-                        fillColor: const Color(0xFF0F172A),
-                        isDense: true,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: _refController,
-                      keyboardType: TextInputType.number,
-                      style: GoogleFonts.outfit(color: Colors.white, fontSize: 12),
-                      decoration: InputDecoration(
-                        hintText: 'Últimos dígitos de la Ref. Pago Móvil (ej: 849201)',
-                        hintStyle: GoogleFonts.outfit(color: Colors.white38, fontSize: 11),
-                        filled: true,
-                        fillColor: const Color(0xFF0F172A),
-                        isDense: true,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1E293B),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: AppTheme.primary.withOpacity(0.4)),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '$_totalCount producto(s) seleccionado(s)',
-                          style: GoogleFonts.outfit(fontSize: 11.5, color: Colors.white70),
-                        ),
-                        Text(
-                          'Adicional: +\$${_extraTotal.toStringAsFixed(2)}${_extraBs != null ? " (Bs. ${_extraBs!.toStringAsFixed(2)})" : ""}',
-                          style: GoogleFonts.outfit(
-                            fontSize: 14.5,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
+                      if (_errorMessage != null) ...[
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF7F1D1D).withOpacity(0.9),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xFFEF4444)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.error_outline_rounded, color: Colors.white, size: 16),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _errorMessage!,
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
-                    ),
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E293B),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: AppTheme.primary.withOpacity(0.4)),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '$_totalCount producto(s) seleccionado(s)',
+                                    style: GoogleFonts.outfit(fontSize: 11.5, color: Colors.white70),
+                                  ),
+                                  Text(
+                                    'Adicional: +\$${_extraTotal.toStringAsFixed(2)}${_extraBs != null ? " (Bs. ${_extraBs!.toStringAsFixed(2)})" : ""}',
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 14.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            ElevatedButton(
+                              onPressed: _isSubmitting ? null : _submitAdditions,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.primary,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              child: _isSubmitting
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                    )
+                                  : Text(
+                                      'Confirmar Adición',
+                                      style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.w700),
+                                    ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  ElevatedButton(
-                    onPressed: _isSubmitting ? null : _submitAdditions,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: _isSubmitting
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                          )
-                        : Text(
-                            'Confirmar Adición',
-                            style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.w700),
-                          ),
-                  ),
-                ],
+                ),
               ),
             ),
           ],
         ],
       ),
+    ),
     );
   }
 }

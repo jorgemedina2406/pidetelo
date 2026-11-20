@@ -288,15 +288,18 @@ export const CartStore = signalStore(
     const isCustomerValid = computed(() => {
       const c = store.customer();
       const hasBasic = c.name.trim().length >= 2 && c.phone.trim().length >= 7;
+      if (!hasBasic) return false;
+      if (store.paymentMethod() === 'mobile_transfer' && (store.pagoMovilReference() || '').trim().length < 4) {
+        return false;
+      }
       if (store.fulfillmentType() === 'delivery') {
         return (
-          hasBasic &&
           (c.deliveryAddress?.trim().length ?? 0) >= 5 &&
           Boolean(c.deliveryLat && c.deliveryLng) &&
           !isOutOfCoverage()
         );
       }
-      return hasBasic;
+      return true;
     });
 
     const exchangeRate = computed(() => {
@@ -753,9 +756,17 @@ export const CartStore = signalStore(
       const branch = store.selectedBranch();
       const orderNumber = `ORD-${Math.floor(1000 + Math.random() * 9000)}`;
       const orderDigits = orderNumber.replace(/\D/g, '').slice(-4).padStart(4, '0');
-      let randomPin = String(Math.floor(1000 + Math.random() * 9000));
-      while (randomPin === orderDigits) {
-        randomPin = String(Math.floor(1000 + Math.random() * 9000));
+      const next4Digit = (): string => {
+        if (typeof globalThis !== 'undefined' && globalThis.crypto?.getRandomValues) {
+          const buf = new Uint32Array(1);
+          globalThis.crypto.getRandomValues(buf);
+          return String(1000 + (buf[0] % 9000));
+        }
+        return String(Math.floor(1000 + Math.random() * 9000));
+      };
+      let randomPin = next4Digit();
+      while (randomPin === orderDigits || randomPin === '1234' || randomPin === '0000') {
+        randomPin = next4Digit();
       }
 
       const rate = store.selectedBranch()?.currencySettings?.exchangeRate ||
@@ -799,23 +810,6 @@ export const CartStore = signalStore(
       };
 
       clearCartStorage();
-
-      if (typeof window !== 'undefined') {
-        try {
-          const raw = localStorage.getItem('pidetelo_recent_web_orders');
-          const list: any[] = raw ? JSON.parse(raw) : [];
-          list.unshift({
-            orderNumber: order.orderNumber,
-            cleanNumber: order.orderNumber.replace('#', ''),
-            tenantSlug: tenant?.slug,
-            tenantName: tenant?.name || branch?.companyName || 'Comercio',
-            branchName: branch?.name,
-            total: order.total,
-            createdAt: new Date().toISOString(),
-          });
-          localStorage.setItem('pidetelo_recent_web_orders', JSON.stringify(list.slice(0, 8)));
-        } catch (_) {}
-      }
 
       patchState(store, {
         completedOrder: order,

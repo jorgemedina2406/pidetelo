@@ -66,6 +66,21 @@ export class UsersController {
     return this.usersService.togglePlatformUserActive(id, body.email, body.isActive);
   }
 
+  @Get('users/:id/favorites')
+  @ApiOperation({ summary: 'Obtener comercios favoritos persistidos de un cliente' })
+  getFavorites(@Param('id') id: string) {
+    return this.usersService.getUserFavorites(id);
+  }
+
+  @Put('users/:id/favorites')
+  @ApiOperation({ summary: 'Guardar comercios favoritos persistidos de un cliente' })
+  saveFavorites(
+    @Param('id') id: string,
+    @Body() body: { favorites?: string[]; email?: string },
+  ) {
+    return this.usersService.saveUserFavorites(id, Array.isArray(body?.favorites) ? body.favorites : [], body?.email);
+  }
+
   @Get('users/:id')
   @ApiOperation({ summary: 'Obtener información de un usuario por su ID' })
   findById(@Param('id') id: string) {

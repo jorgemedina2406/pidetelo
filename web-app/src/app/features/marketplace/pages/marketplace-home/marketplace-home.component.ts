@@ -68,7 +68,7 @@ export class MarketplaceHomeComponent implements OnInit {
   readonly sortBy = signal<'nearest' | 'fastest' | 'rating' | 'fee'>('nearest');
   readonly viewMode = signal<'grid' | 'list'>('grid');
   readonly isLoading = signal<boolean>(true);
-  readonly activeOrder = signal<{ id: string; orderNumber: string; storeName: string } | null>(null);
+  readonly activeOrder = signal<{ id: string; orderNumber: string; storeName: string; status?: string } | null>(null);
   readonly banners = signal<Banner[]>([]);
   readonly businessCategories = signal<BusinessCategory[]>([]);
 
@@ -362,31 +362,19 @@ export class MarketplaceHomeComponent implements OnInit {
       }
     } catch {}
 
-    try {
-      const activeOrderJson = localStorage.getItem('pidetelo_active_order');
-      if (activeOrderJson) {
-        const orderData = JSON.parse(activeOrderJson);
-        if (orderData && orderData.id) {
-          this.activeOrder.set(orderData);
-        }
+    this.api.getVerifiedLocalOrders(true).subscribe(list => {
+      if (list && list.length > 0) {
+        const latest = list[0];
+        this.activeOrder.set({
+          id: latest.cleanNumber || latest.id,
+          orderNumber: latest.orderNumber,
+          storeName: latest.storeName,
+          status: latest.status,
+        });
       } else {
-        const rawRecent = localStorage.getItem('pidetelo_recent_web_orders');
-        if (rawRecent) {
-          const list = JSON.parse(rawRecent);
-          if (Array.isArray(list) && list.length > 0) {
-            const latest = list[0];
-            const hoursAgo = (Date.now() - new Date(latest.createdAt).getTime()) / (1000 * 60 * 60);
-            if (hoursAgo < 24) {
-              this.activeOrder.set({
-                id: latest.cleanNumber,
-                orderNumber: latest.orderNumber,
-                storeName: latest.tenantName
-              });
-            }
-          }
-        }
+        this.activeOrder.set(null);
       }
-    } catch {}
+    });
 
     this.isLoading.set(true);
     this.api.getTenants().subscribe(tenants => {
@@ -420,6 +408,22 @@ export class MarketplaceHomeComponent implements OnInit {
     this.api.getNotifications().subscribe(notifs => {
       this.notifications.set(notifs || []);
     });
+  }
+
+  getOrderStatusLabel(status?: string): string {
+    switch (status) {
+      case 'in_kitchen':
+        return 'En cocina';
+      case 'assigned_driver':
+        return 'Repartidor asignado';
+      case 'at_merchant':
+        return 'Repartidor en local';
+      case 'picked_up':
+      case 'on_the_way':
+        return 'En camino';
+      default:
+        return 'Recibido';
+    }
   }
 
   copyCouponCode(code: string): void {

@@ -465,7 +465,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   void _showFavoritesModal() async {
-    final favIds = widget.sessionService.favoriteStoreIds;
+    await widget.sessionService.syncFavoritesWithCloud();
     final allStores = await ApiService().fetchTenants();
     if (!mounted) return;
 
@@ -486,7 +486,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           final cardBg = isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9);
           final cardBorder = isDark ? Colors.white10 : const Color(0xFFCBD5E1);
           final handleColor = isDark ? Colors.white24 : const Color(0xFFCBD5E1);
-          final favStores = allStores.where((s) => favIds.contains(s['id']?.toString())).toList();
+          final favStores = allStores
+              .where((s) => widget.sessionService.isFavorite(
+                    s['id']?.toString() ?? '',
+                    slug: s['slug']?.toString(),
+                  ))
+              .toList();
 
           return Container(
             constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.75),
@@ -574,7 +579,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                             trailing: IconButton(
                               icon: const Icon(Icons.favorite_rounded, color: Color(0xFFEF4444)),
                               onPressed: () async {
-                                await widget.sessionService.toggleFavorite(store['id'].toString());
+                                await widget.sessionService.toggleFavorite(
+                                  store['id']?.toString() ?? '',
+                                  slug: store['slug']?.toString(),
+                                );
                                 setModalState(() {});
                                 setState(() {});
                               },

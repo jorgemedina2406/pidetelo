@@ -928,10 +928,11 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                       ),
                       onPressed: () async {
                         final storeId = widget.storeData['id']?.toString() ?? '';
+                        final storeSlug = widget.storeData['slug']?.toString();
                         if (widget.sessionService != null) {
-                          await widget.sessionService!.toggleFavorite(storeId);
+                          await widget.sessionService!.toggleFavorite(storeId, slug: storeSlug);
                           setState(() {
-                            _isFavorite = widget.sessionService!.isFavorite(storeId);
+                            _isFavorite = widget.sessionService!.isFavorite(storeId, slug: storeSlug);
                           });
                         } else {
                           setState(() => _isFavorite = !_isFavorite);

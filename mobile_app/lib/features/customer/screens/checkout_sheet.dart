@@ -22,6 +22,8 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
   final TextEditingController _cashBsAmountController = TextEditingController();
   final TextEditingController _pagoMovilRefController = TextEditingController();
   final TextEditingController _zelleRefController = TextEditingController();
+  final FocusNode _pagoMovilRefFocus = FocusNode();
+  bool _showPagoMovilRefError = false;
 
   @override
   void initState() {
@@ -49,6 +51,7 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
     _cashBsAmountController.dispose();
     _pagoMovilRefController.dispose();
     _zelleRefController.dispose();
+    _pagoMovilRefFocus.dispose();
     super.dispose();
   }
 
@@ -224,6 +227,16 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
         'icon': Icons.payment_rounded,
       };
     }
+    if (_selectedPayment == 'pago_movil' && _pagoMovilRefController.text.trim().length < 4) {
+      return {
+        'canOrder': false,
+        'text': 'Ingresa Referencia Pago Móvil',
+        'subtext': 'Escribe los últimos 4 a 6 dígitos del comprobante',
+        'action': 'payment_ref_missing',
+        'color': const Color(0xFFF59E0B),
+        'icon': Icons.receipt_long_rounded,
+      };
+    }
     return {
       'canOrder': true,
       'text': 'Confirmar Pedido',
@@ -291,6 +304,20 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
             behavior: SnackBarBehavior.floating,
           ),
         );
+      } else if (action == 'payment_ref_missing') {
+        setState(() => _showPagoMovilRefError = true);
+        _pagoMovilRefFocus.requestFocus();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Debes ingresar el número de referencia del Pago Móvil (mínimo 4 dígitos) para continuar.',
+              style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+            ),
+            backgroundColor: const Color(0xFFEF4444),
+            duration: const Duration(seconds: 3),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
       return;
     }
@@ -325,24 +352,27 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
     _showOrderConfirmationDialog(context, cart, paymentLabel);
   }
 
-  void _executeFinalOrder(BuildContext context, CartService cart, String paymentLabel) {
-    cart.createOrderFromCart(
+  Future<void> _executeFinalOrder(BuildContext context, CartService cart, String paymentLabel) async {
+    final String refToSave = _selectedPayment == 'pago_movil'
+        ? _pagoMovilRefController.text.trim()
+        : (_selectedPayment == 'zelle' ? _zelleRefController.text.trim() : '');
+
+    final createdOrder = await cart.createOrderFromCartAsync(
       paymentMethod: paymentLabel,
       user: SessionService().currentUser,
       notes: _notesController.text.isNotEmpty ? _notesController.text : null,
+      paymentReference: refToSave,
     );
 
+    if (!context.mounted) return;
     Navigator.pop(context); // Close checkout sheet
 
-    final newOrder = cart.activeOrder;
-    if (newOrder != null) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => OrderSuccessScreen(order: newOrder),
-        ),
-      );
-    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => OrderSuccessScreen(order: createdOrder),
+      ),
+    );
   }
 
   void _showOrderConfirmationDialog(BuildContext context, CartService cart, String paymentLabel) {
@@ -355,11 +385,13 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
 
     final address = cart.selectedAddress;
     final branchName = cart.currentBranch?.name ?? 'Comercio';
+    bool isSending = false;
 
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (dialogCtx) => Dialog(
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (dialogCtx, setDialogState) => Dialog(
         backgroundColor: dialogBg,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
@@ -657,7 +689,7 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () => Navigator.pop(dialogCtx),
+                      onPressed: isSending ? null : () => Navigator.pop(dialogCtx),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 13),
                         side: BorderSide(color: cardBorder),
@@ -676,10 +708,15 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.pop(dialogCtx);
-                        _executeFinalOrder(context, cart, paymentLabel);
-                      },
+                      onPressed: isSending
+                          ? null
+                          : () async {
+                              setDialogState(() => isSending = true);
+                              if (dialogCtx.mounted) {
+                                Navigator.pop(dialogCtx);
+                              }
+                              await _executeFinalOrder(context, cart, paymentLabel);
+                            },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF10B981),
                         foregroundColor: Colors.white,
@@ -687,13 +724,19 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                         elevation: 0,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
-                      child: Text(
-                        '✓ Sí, Enviar',
-                        style: GoogleFonts.outfit(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
+                      child: isSending
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            )
+                          : Text(
+                              '✓ Sí, Enviar',
+                              style: GoogleFonts.outfit(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
                     ),
                   ),
                 ],
@@ -702,6 +745,7 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
           ),
         ),
       ),
+    ),
     );
   }
 
@@ -1389,13 +1433,25 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                                   const SizedBox(height: 8),
                                   TextField(
                                     controller: _pagoMovilRefController,
+                                    focusNode: _pagoMovilRefFocus,
+                                    keyboardType: TextInputType.number,
+                                    onChanged: (_) {
+                                      if (_showPagoMovilRefError) {
+                                        setState(() => _showPagoMovilRefError = false);
+                                      }
+                                    },
                                     style: TextStyle(
                                         color: textColor,
                                         fontSize: 13.5,
                                         fontWeight: FontWeight.w700),
                                     decoration: InputDecoration(
-                                      hintText:
-                                          'Número de referencia (ej: 4821)',
+                                      labelText: 'Número de referencia * (Obligatorio)',
+                                      labelStyle: TextStyle(
+                                        color: _showPagoMovilRefError ? const Color(0xFFEF4444) : subtextColor,
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      hintText: 'Últimos 4 a 6 dígitos (ej: 849201)',
                                       hintStyle: TextStyle(
                                           color: subtextColor, fontSize: 12),
                                       filled: true,
@@ -1407,21 +1463,33 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                                       border: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(12),
                                         borderSide: BorderSide(
-                                            color: inputBorder),
+                                            color: _showPagoMovilRefError ? const Color(0xFFEF4444) : inputBorder),
                                       ),
                                       enabledBorder: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(12),
                                         borderSide: BorderSide(
-                                            color: inputBorder),
+                                            color: _showPagoMovilRefError ? const Color(0xFFEF4444) : inputBorder,
+                                            width: _showPagoMovilRefError ? 1.5 : 1),
                                       ),
                                       focusedBorder: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(12),
-                                        borderSide: const BorderSide(
-                                            color: AppTheme.amberAccent,
+                                        borderSide: BorderSide(
+                                            color: _showPagoMovilRefError ? const Color(0xFFEF4444) : AppTheme.amberAccent,
                                             width: 1.5),
                                       ),
                                     ),
                                   ),
+                                  if (_showPagoMovilRefError) ...[
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      '⚠️ Ingresa al menos 4 dígitos de tu referencia bancaria.',
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFFEF4444),
+                                      ),
+                                    ),
+                                  ],
                                 ],
                               ),
                             ),

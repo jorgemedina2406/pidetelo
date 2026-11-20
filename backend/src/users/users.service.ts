@@ -866,4 +866,167 @@ export class UsersService {
       user: data.user
     };
   }
+
+  async getUserFavorites(userId: string) {
+    const cleanUserId = (userId || '').trim();
+    if (!cleanUserId) {
+      return { favorites: [] };
+    }
+
+    const client = this.supabase.getClient();
+    const collected = new Set<string>();
+
+    // 1. Tabla normalizada customer_favorites (si existe)
+    try {
+      const { data: favRows, error } = await client
+        .from('customer_favorites')
+        .select('tenant_id, tenant_slug')
+        .eq('user_id', cleanUserId);
+      if (!error && Array.isArray(favRows)) {
+        for (const r of favRows) {
+          if (r?.tenant_id) collected.add(String(r.tenant_id).trim());
+          if (r?.tenant_slug) collected.add(String(r.tenant_slug).trim().toLowerCase());
+        }
+      }
+    } catch (_) {}
+
+    // 2. Metadatos en customer_carts
+    try {
+      const { data: cartRow } = await client
+        .from('customer_carts')
+        .select('metadata')
+        .eq('user_id', cleanUserId)
+        .maybeSingle();
+      const rawFavs = cartRow?.metadata?.favorite_store_ids;
+      if (Array.isArray(rawFavs)) {
+        for (const item of rawFavs) {
+          const val = String(item || '').trim();
+          if (val) collected.add(val);
+        }
+      }
+    } catch (_) {}
+
+    // 3. user_metadata en Supabase Auth
+    try {
+      const { data: authData } = await client.auth.admin.getUserById(cleanUserId);
+      const rawMetaFavs = authData?.user?.user_metadata?.favorite_store_ids;
+      if (Array.isArray(rawMetaFavs)) {
+        for (const item of rawMetaFavs) {
+          const val = String(item || '').trim();
+          if (val) collected.add(val);
+        }
+      }
+    } catch (_) {}
+
+    return { favorites: Array.from(collected) };
+  }
+
+  async saveUserFavorites(userId: string, favorites: string[], email?: string) {
+    const cleanUserId = (userId || '').trim();
+    if (!cleanUserId) {
+      throw new BadRequestException('El ID de usuario es obligatorio');
+    }
+
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const seen = new Set<string>();
+    const cleanList: string[] = [];
+    for (const raw of favorites || []) {
+      const trimmed = String(raw || '').trim();
+      if (!trimmed) continue;
+      const normKey = uuidRegex.test(trimmed) ? trimmed.toLowerCase() : trimmed.toLowerCase();
+      if (!seen.has(normKey)) {
+        seen.add(normKey);
+        cleanList.push(uuidRegex.test(trimmed) ? trimmed : normKey);
+      }
+    }
+
+    const client = this.supabase.getClient();
+
+    // 1. Sincronizar con tabla normalizada customer_favorites (si está migrada)
+    try {
+      const { data: allTenants } = await client.from('tenants').select('id, slug');
+      const tenantById = new Map<string, { id: string; slug: string }>();
+      const tenantBySlug = new Map<string, { id: string; slug: string }>();
+      for (const t of allTenants || []) {
+        if (t?.id) tenantById.set(String(t.id).toLowerCase(), { id: String(t.id), slug: String(t.slug || '').toLowerCase() });
+        if (t?.slug) tenantBySlug.set(String(t.slug).toLowerCase(), { id: String(t.id), slug: String(t.slug).toLowerCase() });
+      }
+
+      const resolvedTenants = new Map<string, { user_id: string; tenant_id: string; tenant_slug: string }>();
+      for (const val of cleanList) {
+        const match = tenantById.get(val.toLowerCase()) || tenantBySlug.get(val.toLowerCase());
+        if (match) {
+          resolvedTenants.set(match.id, {
+            user_id: cleanUserId,
+            tenant_id: match.id,
+            tenant_slug: match.slug,
+          });
+        }
+      }
+
+      const { error: delErr } = await client
+        .from('customer_favorites')
+        .delete()
+        .eq('user_id', cleanUserId);
+
+      if (!delErr && resolvedTenants.size > 0) {
+        await client
+          .from('customer_favorites')
+          .upsert(Array.from(resolvedTenants.values()), { onConflict: 'user_id,tenant_id' });
+      }
+    } catch (_) {}
+
+    // 2. Read-merge-upsert en customer_carts.metadata (preservando saved_addresses, etc.)
+    try {
+      const { data: existingCart } = await client
+        .from('customer_carts')
+        .select('metadata, user_email')
+        .eq('user_id', cleanUserId)
+        .maybeSingle();
+
+      const existingMeta =
+        existingCart?.metadata && typeof existingCart.metadata === 'object'
+          ? { ...existingCart.metadata }
+          : {};
+
+      const mergedMeta = {
+        ...existingMeta,
+        favorite_store_ids: cleanList,
+      };
+
+      await client
+        .from('customer_carts')
+        .upsert(
+          {
+            user_id: cleanUserId,
+            user_email: (email || existingCart?.user_email || null) as string | null,
+            metadata: mergedMeta,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'user_id' },
+        );
+    } catch (_) {}
+
+    // 3. Guardar también en auth.users user_metadata
+    try {
+      const { data: authData } = await client.auth.admin.getUserById(cleanUserId);
+      if (authData?.user) {
+        const existingUserMeta =
+          authData.user.user_metadata && typeof authData.user.user_metadata === 'object'
+            ? authData.user.user_metadata
+            : {};
+        await client.auth.admin.updateUserById(cleanUserId, {
+          user_metadata: {
+            ...existingUserMeta,
+            favorite_store_ids: cleanList,
+          },
+        });
+      }
+    } catch (_) {}
+
+    return {
+      success: true,
+      favorites: cleanList,
+    };
+  }
 }

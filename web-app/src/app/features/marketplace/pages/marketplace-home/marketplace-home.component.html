@@ -211,7 +211,7 @@
             <div class="flex items-center gap-2.5 truncate font-medium">
               <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
               <span class="truncate">
-                Pedido activo: <strong class="text-white">{{ ord.orderNumber }} • {{ ord.storeName }}</strong> (En camino a tu dirección)
+                Pedido activo: <strong class="text-white">{{ ord.orderNumber }} • {{ ord.storeName }}</strong> ({{ getOrderStatusLabel(ord.status) }})
               </span>
             </div>
 

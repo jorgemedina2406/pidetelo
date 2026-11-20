@@ -3876,7 +3876,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
   simulateIncomingOrder(): void {
     const num = Math.floor(1000 + Math.random() * 9000);
     let pin = String(Math.floor(1000 + Math.random() * 9000));
-    while (pin === String(num)) {
+    while (pin === String(num) || pin === '1234' || pin === '0000') {
       pin = String(Math.floor(1000 + Math.random() * 9000));
     }
     const resolvedTenantId = this.currentTenant().id || this.auth.currentUser()?.tenantId || '';
@@ -3939,6 +3939,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       status: 'received',
       fulfillment_type: 'delivery',
       payment_method: 'mobile_transfer',
+      payment_reference: `SIM-${num}`,
       customer_name: 'Cliente WhatsApp Simulado',
       customer_phone: '+584128889900',
       delivery_address: 'Av. Libertador, Edif. Centro',

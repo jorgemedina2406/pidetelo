@@ -251,13 +251,21 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div>
                     <label class="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-0.5">
-                      Número de Referencia (o últimos 4-6 dígitos):
+                      Número de Referencia * (Obligatorio, mín. 4 dígitos):
                     </label>
                     <input type="text"
                            [ngModel]="cart.pagoMovilReference()"
-                           (ngModelChange)="cart.setPagoMovilReference($event)"
+                           (ngModelChange)="cart.setPagoMovilReference($event); pagoMovilRefError.set(null)"
                            placeholder="Ej: 849201"
-                           class="w-full text-xs font-mono font-bold rounded-lg border border-orange-300 dark:border-orange-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white p-2 focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500" />
+                           [class.border-rose-500]="pagoMovilRefError()"
+                           [class.border-orange-300]="!pagoMovilRefError()"
+                           [class.dark:border-orange-800]="!pagoMovilRefError()"
+                           class="w-full text-xs font-mono font-bold rounded-lg border bg-white dark:bg-slate-900 text-slate-900 dark:text-white p-2 focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500" />
+                    @if (pagoMovilRefError()) {
+                      <p class="text-[10px] font-bold text-rose-600 dark:text-rose-400 mt-1">
+                        ⚠️ {{ pagoMovilRefError() }}
+                      </p>
+                    }
                   </div>
                   <div>
                     <label class="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-0.5">
@@ -411,6 +419,8 @@
             <span>📍 Toca para Compartir tu Ubicación GPS</span>
           } @else if (cart.fulfillmentType() === 'delivery' && cart.isOutOfCoverage()) {
             <span>🚫 Fuera de Cobertura para Delivery</span>
+          } @else if (cart.paymentMethod() === 'mobile_transfer' && (cart.pagoMovilReference() || '').trim().length < 4) {
+            <span>📲 Ingresa la Referencia de Pago Móvil</span>
           } @else {
             <span>🛍️ Confirmar y Realizar Pedido</span>
           }

@@ -4,7 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import * as L from 'leaflet';
-import { MockDataService } from '../../core/services/mock-data.service';
 import { ApiService } from '../../core/services/api.service';
 import { SupabaseService } from '../../core/services/supabase.service';
 import { ThemeService } from '../../core/services/theme.service';
@@ -22,7 +21,6 @@ import { IconComponent } from '../../shared/components/icon.component';
 })
 export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
-  private readonly mockData = inject(MockDataService);
   private readonly api = inject(ApiService);
   private readonly supabase = inject(SupabaseService);
   readonly auth = inject(AuthStore);
@@ -505,16 +503,9 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   loadRecentGuestOrders(): void {
-    if (typeof window === 'undefined') return;
-    try {
-      const raw = localStorage.getItem('pidetelo_recent_web_orders');
-      if (raw) {
-        const list = JSON.parse(raw);
-        if (Array.isArray(list)) {
-          this.recentGuestOrders.set(list);
-        }
-      }
-    } catch (_) { }
+    this.api.getVerifiedLocalOrders(false).subscribe(list => {
+      this.recentGuestOrders.set(list || []);
+    });
   }
 
   searchOrder(num?: string): void {
@@ -752,6 +743,10 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
             }
           });
         }
+      } else {
+        this.order.set(null);
+        this.api.purgeLocalCachedOrder(orderId);
+        this.loadRecentGuestOrders();
       }
     });
   }

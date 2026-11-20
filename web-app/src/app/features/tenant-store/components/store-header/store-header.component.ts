@@ -1,10 +1,11 @@
-import { Component, Input, Output, EventEmitter, inject } from '@angular/core';
+import { Component, Input, Output, EventEmitter, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { Tenant } from '../../../../core/models/tenant.model';
 import { Branch } from '../../../../core/models/branch.model';
 import { ThemeService } from '../../../../core/services/theme.service';
 import { FavoritesService } from '../../../../core/services/favorites.service';
+import { ApiService } from '../../../../core/services/api.service';
 import { IconComponent } from '../../../../shared/components/icon.component';
 
 @Component({
@@ -13,9 +14,22 @@ import { IconComponent } from '../../../../shared/components/icon.component';
   imports: [CommonModule, RouterModule, IconComponent],
   templateUrl: './store-header.component.html'
 })
-export class StoreHeaderComponent {
+export class StoreHeaderComponent implements OnInit {
   readonly theme = inject(ThemeService);
   readonly favorites = inject(FavoritesService);
+  private readonly api = inject(ApiService);
+
+  readonly activeGuestOrders = signal<any[]>([]);
+  readonly activeGuestOrder = computed(() => {
+    const list = this.activeGuestOrders();
+    return list.length > 0 ? list[0] : null;
+  });
+
+  ngOnInit(): void {
+    this.api.getVerifiedLocalOrders(true).subscribe(list => {
+      this.activeGuestOrders.set(list || []);
+    });
+  }
 
   toggleFavorite(slug: string) {
     this.favorites.toggleFavorite(slug);
@@ -70,26 +84,6 @@ export class StoreHeaderComponent {
       target.onerror = null;
       target.src = this.getFallbackBanner(name);
     }
-  }
-
-  get activeGuestOrders(): any[] {
-    if (typeof window === 'undefined') return [];
-    try {
-      const raw = localStorage.getItem('pidetelo_recent_web_orders');
-      if (!raw) return [];
-      const list = JSON.parse(raw);
-      if (!Array.isArray(list)) return [];
-      return list.filter(item => {
-        const hoursAgo = (Date.now() - new Date(item.createdAt).getTime()) / (1000 * 60 * 60);
-        return hoursAgo < 24;
-      });
-    } catch (_) {}
-    return [];
-  }
-
-  get activeGuestOrder(): any {
-    const list = this.activeGuestOrders;
-    return list.length > 0 ? list[0] : null;
   }
 }
 

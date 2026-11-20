@@ -80,6 +80,8 @@ class CartService extends ChangeNotifier {
 
   // Active delivery order (shared between customer tracking and rider dashboard)
   DeliveryOrder? _activeOrder;
+  Future<String?>? _pendingOrderSync;
+  String? _pendingOrderNumber;
 
   List<CartItem> get items => List.unmodifiable(_items);
   String? get currentStoreName => _currentStoreName;
@@ -818,14 +820,30 @@ class CartService extends ChangeNotifier {
         debugPrint('[CartService] Error updating user metadata addresses: $e');
       }
 
-      // 2. Update customer_carts metadata in Supabase
+      // 2. Read-merge-upsert customer_carts metadata in Supabase (preserves favorite_store_ids, etc.)
       try {
-        await Supabase.instance.client.from('customer_carts').update({
-          'metadata': {
-            'saved_addresses': addrJson,
-            'selected_address': selJson,
-          }
-        }).eq('user_id', user.id);
+        final existingCart = await Supabase.instance.client
+            .from('customer_carts')
+            .select('metadata, user_email')
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+        final existingMeta = (existingCart != null && existingCart['metadata'] is Map)
+            ? Map<String, dynamic>.from(existingCart['metadata'] as Map)
+            : <String, dynamic>{};
+
+        existingMeta['saved_addresses'] = addrJson;
+        existingMeta['selected_address'] = selJson;
+
+        await Supabase.instance.client.from('customer_carts').upsert(
+          {
+            'user_id': user.id,
+            'user_email': user.email ?? existingCart?['user_email'],
+            'metadata': existingMeta,
+            'updated_at': DateTime.now().toIso8601String(),
+          },
+          onConflict: 'user_id',
+        );
       } catch (e) {
         debugPrint('[CartService] Error updating customer_carts metadata: $e');
       }
@@ -1049,10 +1067,21 @@ class CartService extends ChangeNotifier {
     notifyListeners();
   }
 
-  void createOrderFromCart({
+  Future<String?> waitForPendingOrderSync(String orderNumber) async {
+    final cleanTarget = orderNumber.replaceAll('#', '').trim();
+    final cleanPending = (_pendingOrderNumber ?? '').replaceAll('#', '').trim();
+    if (_pendingOrderSync != null && cleanPending.isNotEmpty && cleanPending == cleanTarget) {
+      return await _pendingOrderSync;
+    }
+    return null;
+  }
+
+  DeliveryOrder _buildAndQueueOrder({
     required String paymentMethod,
     AppUser? user,
     String? notes,
+    String? paymentReference,
+    String? paymentOriginBank,
   }) {
     if (user != null) {
       _currentAccountKey = user.email.isNotEmpty ? user.email : user.id;
@@ -1062,7 +1091,7 @@ class CartService extends ChangeNotifier {
     final orderDigits = '${(now.millisecondsSinceEpoch % 9000) + 1000}';
     final rng = Random.secure();
     String newPin = '${1000 + rng.nextInt(9000)}';
-    while (newPin == orderDigits) {
+    while (newPin == orderDigits || newPin == '1234' || newPin == '0000') {
       newPin = '${1000 + rng.nextInt(9000)}';
     }
 
@@ -1104,6 +1133,8 @@ class CartService extends ChangeNotifier {
       deliveryFee: deliveryFee,
       total: grandTotal,
       paymentMethod: paymentMethod,
+      paymentReference: (paymentReference ?? '').trim(),
+      paymentOriginBank: (paymentOriginBank ?? '').trim(),
       createdAt: now,
       branchId: _currentBranch?.id ??
           _items
@@ -1124,20 +1155,60 @@ class CartService extends ChangeNotifier {
     _saveOrders();
     clearCart();
 
-    // Send asynchronously to backend and Supabase
-    _createBackendOrder(newOrder);
+    _pendingOrderNumber = newOrder.orderNumber;
+    _pendingOrderSync = _createBackendOrder(newOrder);
 
     notifyListeners();
+    return newOrder;
   }
 
-  Future<void> _createBackendOrder(DeliveryOrder order) async {
+  void createOrderFromCart({
+    required String paymentMethod,
+    AppUser? user,
+    String? notes,
+    String? paymentReference,
+    String? paymentOriginBank,
+  }) {
+    _buildAndQueueOrder(
+      paymentMethod: paymentMethod,
+      user: user,
+      notes: notes,
+      paymentReference: paymentReference,
+      paymentOriginBank: paymentOriginBank,
+    );
+  }
+
+  Future<DeliveryOrder> createOrderFromCartAsync({
+    required String paymentMethod,
+    AppUser? user,
+    String? notes,
+    String? paymentReference,
+    String? paymentOriginBank,
+  }) async {
+    final created = _buildAndQueueOrder(
+      paymentMethod: paymentMethod,
+      user: user,
+      notes: notes,
+      paymentReference: paymentReference,
+      paymentOriginBank: paymentOriginBank,
+    );
+    await _pendingOrderSync;
+    if (_activeOrder?.orderNumber == created.orderNumber) {
+      return _activeOrder!;
+    }
+    return created;
+  }
+
+  Future<String?> _createBackendOrder(DeliveryOrder order) async {
     try {
       final realId = await ApiService().createOrder(order);
       if (realId != null && realId.isNotEmpty) {
         updateOrderCloudId(order.orderNumber, realId);
       }
+      return realId;
     } catch (e) {
       debugPrint('[CartService] Error sync order with backend: $e');
+      return null;
     }
   }
 

@@ -2694,9 +2694,11 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
   // --- TAB 2: COMERCIOS FAVORITOS ---
   Widget _buildFavoritesTab(bool isDark) {
-    final favIds = widget.sessionService.favoriteStoreIds;
     final favoriteStores = _stores
-        .where((s) => favIds.contains(s['id']?.toString() ?? ''))
+        .where((s) => widget.sessionService.isFavorite(
+              s['id']?.toString() ?? '',
+              slug: s['slug']?.toString(),
+            ))
         .toList();
 
     return SingleChildScrollView(
@@ -2803,8 +2805,10 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                     icon: const Icon(Icons.favorite_rounded,
                         color: Color(0xFFEF4444)),
                     onPressed: () async {
-                      await widget.sessionService
-                          .toggleFavorite(store['id']?.toString() ?? '');
+                      await widget.sessionService.toggleFavorite(
+                        store['id']?.toString() ?? '',
+                        slug: store['slug']?.toString(),
+                      );
                       if (mounted) setState(() {});
                     },
                   ),
@@ -3270,8 +3274,10 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                           size: 18,
                         ),
                         onPressed: () async {
-                          await widget.sessionService
-                              .toggleFavorite(store['id']?.toString() ?? '');
+                          await widget.sessionService.toggleFavorite(
+                            store['id']?.toString() ?? '',
+                            slug: store['slug']?.toString(),
+                          );
                           if (mounted) setState(() {});
                         },
                       ),
@@ -3463,8 +3469,10 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                     size: 20,
                   ),
                   onPressed: () async {
-                    await widget.sessionService
-                        .toggleFavorite(store['id']?.toString() ?? '');
+                    await widget.sessionService.toggleFavorite(
+                      store['id']?.toString() ?? '',
+                      slug: store['slug']?.toString(),
+                    );
                     if (mounted) setState(() {});
                   },
                 ),
