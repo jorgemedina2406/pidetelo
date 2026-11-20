@@ -58,7 +58,7 @@
           "to": "23:00"
         },
         {
-          "day": "Miércoles",
+          "day": "Mi\u00e9rcoles",
           "open": true,
           "from": "08:00",
           "to": "23:00"
@@ -76,7 +76,7 @@
           "to": "23:30"
         },
         {
-          "day": "Sábado",
+          "day": "S\u00e1bado",
           "open": true,
           "from": "08:00",
           "to": "23:30"
@@ -98,7 +98,7 @@
     "category": "Restaurantes",
     "subcategories": [
       "Hamburguesas",
-      "Comida Rápida"
+      "Comida R\u00e1pida"
     ],
     "tagline": "",
     "exchange_rate": 45.5,
@@ -154,7 +154,7 @@
     "plan_code": "FRANQUICIA",
     "planCode": "FRANQUICIA",
     "business_hours": {
-      "open": "11:00",
+      "open": "08:00",
       "close": "23:00",
       "isOpenToday": true,
       "scheduleDays": [
@@ -172,7 +172,7 @@
         },
         {
           "to": "23:00",
-          "day": "Miércoles",
+          "day": "Mi\u00e9rcoles",
           "from": "08:00",
           "open": true
         },
@@ -185,12 +185,12 @@
         {
           "to": "23:30",
           "day": "Viernes",
-          "from": "11:00",
+          "from": "07:00",
           "open": true
         },
         {
           "to": "23:30",
-          "day": "Sábado",
+          "day": "S\u00e1bado",
           "from": "11:00",
           "open": true
         },
@@ -215,7 +215,7 @@
       "payoutHour": "20:00",
       "minWithdrawalAmount": 5,
       "paymentMethod": "PAGO_MOVIL",
-      "payoutNotes": "Liquidación semanal directa por Pago Móvil todos los Lunes.",
+      "payoutNotes": "Liquidaci\u00f3n semanal directa por Pago M\u00f3vil todos los Lunes.",
       "emailNotifications": true
     }
   },
@@ -223,7 +223,7 @@
     "category": "Restaurantes",
     "subcategories": [
       "Hamburguesas",
-      "Comida Rápida"
+      "Comida R\u00e1pida"
     ],
     "tagline": "La mejor pizza",
     "exchange_rate": 896.12,
@@ -294,7 +294,7 @@
           "to": "23:00"
         },
         {
-          "day": "Miércoles",
+          "day": "Mi\u00e9rcoles",
           "open": true,
           "from": "11:00",
           "to": "23:00"
@@ -312,7 +312,7 @@
           "to": "23:30"
         },
         {
-          "day": "Sábado",
+          "day": "S\u00e1bado",
           "open": true,
           "from": "11:00",
           "to": "23:30"

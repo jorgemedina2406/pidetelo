@@ -105,7 +105,7 @@ export class BranchesService {
       };
     }
 
-    if (businessHours?.isOpenToday === false || businessHours?.isOpenNow === false) {
+    if (businessHours?.isOpenToday === false) {
       return {
         isOpen: false,
         openStr: businessHours?.open || '11:00',
@@ -360,16 +360,16 @@ export class BranchesService {
       hasValidPaymentMethods: hasValidPayment,
       business_hours: {
         ...businessHours,
-        open: openTime,
-        close: closeTime,
+        open: businessHours.open,
+        close: businessHours.close,
         isOpenNow: scheduleStatus.isOpen,
         isOpenToday: scheduleStatus.isOpenToday,
         label: scheduleStatus.label
       },
       businessHours: {
         ...businessHours,
-        open: openTime,
-        close: closeTime,
+        open: businessHours.open,
+        close: businessHours.close,
         isOpenNow: scheduleStatus.isOpen,
         isOpenToday: scheduleStatus.isOpenToday,
         label: scheduleStatus.label

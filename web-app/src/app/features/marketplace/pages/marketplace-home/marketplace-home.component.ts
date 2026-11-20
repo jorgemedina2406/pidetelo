@@ -119,19 +119,11 @@ export class MarketplaceHomeComponent implements OnInit {
   readonly enrichedTenants = computed<TenantWithDistance[]>(() => {
     const zone = this.currentZone();
     return this.allTenants()
-      .filter(tenant => {
-        // Excluir comercios sin métodos de pago válidos configurados
-        if ((tenant as any).hasValidPaymentMethods === false || (tenant as any).has_valid_payment_methods === false) {
-          return false;
-        }
-        return true;
-      })
+      .filter(tenant => tenant.isActive !== false)
       .map(tenant => {
         const tenantRadius = Number(tenant.deliverySettings?.deliveryRadiusKm) || 8.0;
         const branches = (tenant.branches || []).filter((b: any) => 
-          (b.status === 'active' || (!b.status && b.name?.toLowerCase().includes('principal'))) &&
-          b.hasValidPaymentMethods !== false &&
-          b.has_valid_payment_methods !== false
+          b.status !== 'inactive' && b.status !== 'rejected'
         );
 
       let minDistance = Infinity;
@@ -482,10 +474,14 @@ export class MarketplaceHomeComponent implements OnInit {
     if (tenant.isPlanExpired || !tenant.isActive) {
       return { isOpen: false, label: tenant.isPlanExpired ? 'Pausado (Plan vencido)' : 'Pausado temporalmente' };
     }
-    const rawBh = (tenant as any).business_hours || (tenant as any).businessHours || tenant.deliverySettings?.businessHours;
-    const scheduleDays = rawBh?.scheduleDays || (tenant.branches && (tenant.branches[0] as any)?.business_hours?.scheduleDays);
-    const fallbackOpen = rawBh?.open || (tenant as any).open_time || (tenant as any).openTime || '11:00';
-    const fallbackClose = rawBh?.close || (tenant as any).close_time || (tenant as any).closeTime || '23:00';
+    const firstBranch = (tenant.branches && tenant.branches.length > 0) ? tenant.branches[0] : null;
+    const branchBh = firstBranch ? (firstBranch.business_hours || firstBranch.businessHours) : null;
+    const rawBh = branchBh || (tenant as any).business_hours || (tenant as any).businessHours || tenant.deliverySettings?.businessHours;
+    const scheduleDays = (branchBh && Array.isArray(branchBh.scheduleDays) && branchBh.scheduleDays.length > 0) 
+      ? branchBh.scheduleDays 
+      : (Array.isArray(rawBh?.scheduleDays) ? rawBh.scheduleDays : firstBranch?.scheduleDays);
+    const fallbackOpen = branchBh?.open || rawBh?.open || (tenant as any).open_time || (tenant as any).openTime || '08:00';
+    const fallbackClose = branchBh?.close || rawBh?.close || (tenant as any).close_time || (tenant as any).closeTime || '23:00';
 
     if (rawBh?.forceOpen === true || rawBh?.force_open === true) {
       return { isOpen: true, label: 'Abierto 24 Horas' };

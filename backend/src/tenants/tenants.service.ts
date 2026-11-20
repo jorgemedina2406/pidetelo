@@ -422,16 +422,16 @@ export class TenantsService {
           currencySettings: bCurrSettings,
           business_hours: {
             ...bHours,
-            open: bStatus.openStr,
-            close: bStatus.closeStr,
+            open: bHours.open,
+            close: bHours.close,
             isOpenNow: bStatus.isOpen,
             isOpenToday: bStatus.isOpenToday,
             label: bStatus.label
           },
           businessHours: {
             ...bHours,
-            open: bStatus.openStr,
-            close: bStatus.closeStr,
+            open: bHours.open,
+            close: bHours.close,
             isOpenNow: bStatus.isOpen,
             isOpenToday: bStatus.isOpenToday,
             label: bStatus.label
@@ -553,16 +553,16 @@ export class TenantsService {
       riderPayoutPolicy: meta.rider_payout_policy || meta.riderPayoutPolicy || DEFAULT_RIDER_PAYOUT_POLICY,
       business_hours: {
         ...tenantHours,
-        open: tenantScheduleStatus.openStr,
-        close: tenantScheduleStatus.closeStr,
+        open: tenantHours.open,
+        close: tenantHours.close,
         isOpenNow: tenantScheduleStatus.isOpen,
         isOpenToday: tenantScheduleStatus.isOpenToday,
         label: tenantScheduleStatus.label
       },
       businessHours: {
         ...tenantHours,
-        open: tenantScheduleStatus.openStr,
-        close: tenantScheduleStatus.closeStr,
+        open: tenantHours.open,
+        close: tenantHours.close,
         isOpenNow: tenantScheduleStatus.isOpen,
         isOpenToday: tenantScheduleStatus.isOpenToday,
         label: tenantScheduleStatus.label
@@ -579,8 +579,8 @@ export class TenantsService {
         deliveryTiers: deliveryTiers,
         businessHours: {
           ...tenantHours,
-          open: tenantScheduleStatus.openStr,
-          close: tenantScheduleStatus.closeStr,
+          open: tenantHours.open,
+          close: tenantHours.close,
           isOpenNow: tenantScheduleStatus.isOpen,
           isOpenToday: tenantScheduleStatus.isOpenToday,
           label: tenantScheduleStatus.label

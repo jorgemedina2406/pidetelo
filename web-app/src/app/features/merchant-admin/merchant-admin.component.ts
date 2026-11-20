@@ -575,23 +575,25 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       if (raw) cached = JSON.parse(raw);
     } catch (_) { }
 
-    this.brandingForm.name = branch.name || cached?.name || tenant.name || '';
-    this.brandingForm.tagline = branch.tagline || cached?.tagline || tenant.tagline || '';
-    this.brandingForm.accentColor = branch.accentColor || cached?.accentColor || tenant.branding?.accentColor || '#f97316';
-    this.brandingForm.logoUrl = branch.logoUrl || cached?.logoUrl || tenant.branding?.logoUrl || '';
+    this.brandingForm.name = branch.name || tenant.name || cached?.name || '';
+    this.brandingForm.tagline = branch.tagline || tenant.tagline || cached?.tagline || '';
+    this.brandingForm.accentColor = branch.accentColor || tenant.branding?.accentColor || cached?.accentColor || '#f97316';
+    this.brandingForm.logoUrl = branch.logoUrl || tenant.branding?.logoUrl || cached?.logoUrl || '';
     this.merchantLogoFailed = false;
-    this.brandingForm.bannerUrl = branch.bannerUrl || cached?.bannerUrl || tenant.branding?.bannerUrl || '';
-    this.brandingForm.whatsappNumber = branch.whatsapp || cached?.whatsappNumber || branch.phone || tenant.contact?.whatsappNumber || '';
-    this.brandingForm.phone = branch.phone || cached?.phone || tenant.contact?.phone || '';
-    this.brandingForm.address = branch.address || cached?.address || tenant.contact?.address || '';
-    this.brandingForm.latitude = branch.latitude ?? cached?.latitude ?? 10.077715;
-    this.brandingForm.longitude = branch.longitude ?? cached?.longitude ?? -69.2812938;
-    this.brandingForm.deliveryRadiusKm = Number(branch.deliveryRadiusKm ?? cached?.deliveryRadiusKm ?? 8.0);
-    this.brandingForm.baseDeliveryFee = Number(branch.baseDeliveryFee ?? cached?.baseDeliveryFee ?? 2.50);
+    this.brandingForm.bannerUrl = branch.bannerUrl || tenant.branding?.bannerUrl || cached?.bannerUrl || '';
+    this.brandingForm.whatsappNumber = branch.whatsapp || branch.phone || tenant.contact?.whatsappNumber || cached?.whatsappNumber || '';
+    this.brandingForm.phone = branch.phone || tenant.contact?.phone || cached?.phone || '';
+    this.brandingForm.address = branch.address || tenant.contact?.address || cached?.address || '';
+    this.brandingForm.latitude = branch.latitude ?? tenant.contact?.coordinates?.lat ?? cached?.latitude ?? 10.077715;
+    this.brandingForm.longitude = branch.longitude ?? tenant.contact?.coordinates?.lng ?? cached?.longitude ?? -69.2812938;
+    this.brandingForm.deliveryRadiusKm = Number(branch.deliveryRadiusKm ?? tenant.deliverySettings?.deliveryRadiusKm ?? cached?.deliveryRadiusKm ?? 8.0);
+    this.brandingForm.baseDeliveryFee = Number(branch.baseDeliveryFee ?? tenant.deliverySettings?.baseDeliveryFee ?? cached?.baseDeliveryFee ?? 2.50);
 
     const branchTiers = (Array.isArray(branch.deliveryTiers) && branch.deliveryTiers.length > 0)
       ? branch.deliveryTiers
-      : (Array.isArray(cached?.deliveryTiers) && cached.deliveryTiers.length > 0 ? cached.deliveryTiers : tenant.deliverySettings?.deliveryTiers);
+      : ((Array.isArray(tenant.deliverySettings?.deliveryTiers) && tenant.deliverySettings!.deliveryTiers!.length > 0) 
+          ? tenant.deliverySettings!.deliveryTiers 
+          : (Array.isArray(cached?.deliveryTiers) && cached.deliveryTiers.length > 0 ? cached.deliveryTiers : null));
 
     if (Array.isArray(branchTiers) && branchTiers.length > 0) {
       this.brandingForm.deliveryTiers = JSON.parse(JSON.stringify(branchTiers));
@@ -604,9 +606,9 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     }
 
     const curr = branch.currencySettings || (branch as any).currency_settings;
-    this.brandingForm.exchangeRate = Number(branch.exchangeRate ?? curr?.exchangeRate ?? cached?.exchangeRate ?? tenant.currencySettings?.exchangeRate ?? 45.50);
-    this.brandingForm.baseCurrency = (branch.baseCurrency || curr?.baseCurrency || cached?.baseCurrency || tenant.currencySettings?.baseCurrency || 'USD') as 'USD' | 'VES';
-    this.brandingForm.displayMode = (branch.displayMode || curr?.displayMode || cached?.displayMode || tenant.currencySettings?.displayMode || 'usd_and_bs') as CurrencyDisplayMode;
+    this.brandingForm.exchangeRate = Number(branch.exchangeRate ?? curr?.exchangeRate ?? tenant.currencySettings?.exchangeRate ?? cached?.exchangeRate ?? 45.50);
+    this.brandingForm.baseCurrency = (branch.baseCurrency || curr?.baseCurrency || tenant.currencySettings?.baseCurrency || cached?.baseCurrency || 'USD') as 'USD' | 'VES';
+    this.brandingForm.displayMode = (branch.displayMode || curr?.displayMode || tenant.currencySettings?.displayMode || cached?.displayMode || 'usd_and_bs') as CurrencyDisplayMode;
 
     const rawMethods = branch.acceptedPaymentMethods ?? 
                        (branch as any).accepted_payment_methods ?? 
@@ -637,15 +639,12 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       if (cached.zelleEmail) this.brandingForm.zelleEmail = cached.zelleEmail;
     }
 
-    this.brandingForm.openTime = branch.businessHours?.open || branch.openTime || (branch as any).open_time || (branch as any).openTime || cached?.openTime || '11:00';
-    this.brandingForm.closeTime = branch.businessHours?.close || branch.closeTime || (branch as any).close_time || (branch as any).closeTime || cached?.closeTime || '23:00';
-    const bh = branch.businessHours as any;
-    const bhRaw = (branch as any).business_hours as any;
-    if (bh?.scheduleDays && Array.isArray(bh.scheduleDays)) {
+    const bh = (branch.businessHours || (branch as any).business_hours || {}) as any;
+    this.brandingForm.openTime = bh.open || branch.openTime || (branch as any).open_time || (branch as any).openTime || '08:00';
+    this.brandingForm.closeTime = bh.close || branch.closeTime || (branch as any).close_time || (branch as any).closeTime || '23:00';
+    if (bh?.scheduleDays && Array.isArray(bh.scheduleDays) && bh.scheduleDays.length > 0) {
       this.brandingForm.scheduleDays = JSON.parse(JSON.stringify(bh.scheduleDays));
-    } else if (bhRaw?.scheduleDays && Array.isArray(bhRaw.scheduleDays)) {
-      this.brandingForm.scheduleDays = JSON.parse(JSON.stringify(bhRaw.scheduleDays));
-    } else if (cached?.scheduleDays && Array.isArray(cached.scheduleDays)) {
+    } else if (cached?.scheduleDays && Array.isArray(cached.scheduleDays) && cached.scheduleDays.length > 0) {
       this.brandingForm.scheduleDays = JSON.parse(JSON.stringify(cached.scheduleDays));
     }
   }

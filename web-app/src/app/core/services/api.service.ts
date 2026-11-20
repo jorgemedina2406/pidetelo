@@ -2431,10 +2431,12 @@ export class ApiService {
       } catch (_) { }
     }
 
-    const rawBh = cachedBranding?.business_hours || cachedBranding?.businessHours || r.business_hours || r.businessHours || {};
-    const openTime = rawBh.open || cachedBranding?.openTime || r.open_time || r.openTime || '08:00';
-    const closeTime = rawBh.close || cachedBranding?.closeTime || r.close_time || r.closeTime || '23:00';
-    const scheduleDays = rawBh.scheduleDays || cachedBranding?.scheduleDays || r.scheduleDays || [];
+    const rawBh = r.business_hours || r.businessHours || cachedBranding?.business_hours || cachedBranding?.businessHours || {};
+    const openTime = rawBh.open || r.open_time || r.openTime || cachedBranding?.openTime || '08:00';
+    const closeTime = rawBh.close || r.close_time || r.closeTime || cachedBranding?.closeTime || '23:00';
+    const scheduleDays = (Array.isArray(rawBh.scheduleDays) && rawBh.scheduleDays.length > 0)
+      ? rawBh.scheduleDays
+      : ((Array.isArray(r.scheduleDays) && r.scheduleDays.length > 0) ? r.scheduleDays : (cachedBranding?.scheduleDays || []));
 
     const branchBh = {
       open: openTime,
@@ -2449,32 +2451,20 @@ export class ApiService {
                        r.currency_settings?.acceptedPaymentMethods ?? 
                        r.currencySettings?.acceptedPaymentMethods;
     let acceptedPaymentMethods: string[] = [];
-    if (Array.isArray(rawMethods)) {
+    if (Array.isArray(rawMethods) && rawMethods.length > 0) {
       acceptedPaymentMethods = rawMethods;
     } else if (rawMethods && typeof rawMethods === 'object') {
-      acceptedPaymentMethods = Object.keys(rawMethods).filter(k => Boolean(rawMethods[k]));
+      const keys = Object.keys(rawMethods).filter(k => Boolean(rawMethods[k]));
+      acceptedPaymentMethods = keys.length > 0 ? keys : ['cash_usd', 'mobile_transfer', 'cash_local'];
+    } else {
+      acceptedPaymentMethods = ['cash_usd', 'mobile_transfer', 'cash_local'];
     }
 
     const paymentCredentials = this.mapPaymentCredentials(r.branch_payment_credentials || r.payment_credentials || r.paymentCredentials);
     
     let hasValidPaymentMethods = r.has_valid_payment_methods ?? r.hasValidPaymentMethods;
     if (hasValidPaymentMethods === undefined) {
-      const pmPhone = String(paymentCredentials.pagoMovilPhone || '').replace(/\D/g, '');
-      const pmBank = String(paymentCredentials.pagoMovilBank || '').trim();
-      const pmId = String(paymentCredentials.pagoMovilIdNumber || '').replace(/\D/g, '');
-      const isRealPm = pmBank.length >= 2 && pmPhone.length >= 10 && pmId.length >= 5 &&
-        !pmPhone.includes('1234567') && pmPhone !== '04140000000' && pmPhone !== '04121234567' &&
-        !pmId.includes('50123456') && !pmId.includes('12345678') && pmId !== '00000000';
-      const isRealZelle = Boolean(paymentCredentials.zelleEmail && paymentCredentials.zelleEmail.includes('@') && paymentCredentials.zelleEmail.length >= 5);
-      
-      const valid = acceptedPaymentMethods.filter(m => {
-        const s = String(m).toLowerCase().trim();
-        if (s === 'mobile_transfer' || s === 'pago_movil') return isRealPm;
-        if (s === 'zelle') return isRealZelle;
-        if (s === 'cash_usd' || s === 'cash_local' || s === 'card_terminal' || s === 'efectivo' || s === 'tarjeta') return true;
-        return false;
-      });
-      hasValidPaymentMethods = valid.length > 0;
+      hasValidPaymentMethods = true;
     }
 
     return {

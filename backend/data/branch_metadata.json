@@ -40,7 +40,7 @@
       }
     ],
     "business_hours": {
-      "open": "11:00",
+      "open": "08:00",
       "close": "23:00",
       "isOpenToday": true,
       "scheduleDays": [
@@ -58,7 +58,7 @@
         },
         {
           "to": "23:00",
-          "day": "Miércoles",
+          "day": "Mi\u00e9rcoles",
           "from": "08:00",
           "open": true
         },
@@ -71,12 +71,12 @@
         {
           "to": "23:30",
           "day": "Viernes",
-          "from": "11:00",
+          "from": "07:00",
           "open": true
         },
         {
           "to": "23:30",
-          "day": "Sábado",
+          "day": "S\u00e1bado",
           "from": "11:00",
           "open": true
         },
@@ -167,7 +167,7 @@
           "to": "23:00"
         },
         {
-          "day": "Miércoles",
+          "day": "Mi\u00e9rcoles",
           "open": true,
           "from": "11:00",
           "to": "23:00"
@@ -185,7 +185,7 @@
           "to": "23:30"
         },
         {
-          "day": "Sábado",
+          "day": "S\u00e1bado",
           "open": true,
           "from": "11:00",
           "to": "23:30"
