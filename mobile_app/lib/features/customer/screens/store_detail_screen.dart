@@ -78,7 +78,8 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
     }
 
     final tenantId = widget.storeData['id']?.toString() ?? '';
-    if (list.isEmpty && tenantId.isNotEmpty) {
+    final needsRefresh = list.isEmpty || list.any((b) => b.paymentCredentials.pagoMovilPhone.isEmpty);
+    if (needsRefresh && tenantId.isNotEmpty) {
       final fetched = await ApiService().fetchBranchesForCompany(tenantId);
       if (fetched.isNotEmpty) {
         list = fetched;
