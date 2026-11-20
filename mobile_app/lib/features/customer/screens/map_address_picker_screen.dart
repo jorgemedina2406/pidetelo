@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart' as ll;
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/models/order_model.dart';
+import '../../../core/services/cart_service.dart';
 import '../../../core/theme/app_theme.dart';
 
 class AddressSuggestion {
@@ -311,7 +312,7 @@ class _MapAddressPickerScreenState extends State<MapAddressPickerScreen> {
     _mapController.move(newLoc, 16.0);
   }
 
-  void _saveAddress() {
+  Future<void> _saveAddress() async {
     final title = _titleCtrl.text.trim().isEmpty ? _selectedCategory : _titleCtrl.text.trim();
     final addressText = _addressCtrl.text.trim().isEmpty ? 'Ubicación seleccionada en mapa' : _addressCtrl.text.trim();
 
@@ -325,6 +326,10 @@ class _MapAddressPickerScreenState extends State<MapAddressPickerScreen> {
       instructions: _instructionsCtrl.text.trim().isNotEmpty ? _instructionsCtrl.text.trim() : null,
     );
 
+    // Save directly into CartService so address is instantly stored & persisted
+    await CartService().addSavedAddress(result);
+
+    if (!mounted) return;
     Navigator.pop(context, result);
   }
 

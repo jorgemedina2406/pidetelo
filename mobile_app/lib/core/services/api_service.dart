@@ -414,6 +414,37 @@ class ApiService {
     return [];
   }
 
+  /// Fetch live payment credentials for a specific branch directly from database
+  Future<BranchPaymentCredentials?> fetchBranchPaymentCredentials(String branchId) async {
+    try {
+      final supabase = Supabase.instance.client;
+      final data = await supabase
+          .from('branch_payment_credentials')
+          .select('*')
+          .eq('branch_id', branchId)
+          .maybeSingle()
+          .timeout(const Duration(seconds: 3));
+      if (data != null) {
+        return BranchPaymentCredentials.fromJson(Map<String, dynamic>.from(data));
+      }
+    } catch (_) {}
+
+    try {
+      final supabase = Supabase.instance.client;
+      final data = await supabase
+          .from('branches')
+          .select('payment_credentials')
+          .eq('id', branchId)
+          .maybeSingle()
+          .timeout(const Duration(seconds: 3));
+      if (data != null && data['payment_credentials'] is Map) {
+        return BranchPaymentCredentials.fromJson(Map<String, dynamic>.from(data['payment_credentials'] as Map));
+      }
+    } catch (_) {}
+
+    return null;
+  }
+
   Map<String, dynamic> _mapTenantItem(dynamic item) {
     final rawBranches = item['branches'];
     List<Branch> branchesList = [];

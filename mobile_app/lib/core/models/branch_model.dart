@@ -313,6 +313,78 @@ class Branch {
     return '$minTime-$maxTime min';
   }
 
+  Branch copyWith({
+    String? id,
+    String? companyId,
+    String? companyName,
+    String? name,
+    String? slug,
+    String? address,
+    double? latitude,
+    double? longitude,
+    double? deliveryRadiusKm,
+    double? baseDeliveryFee,
+    List<DeliveryTier>? deliveryTiers,
+    String? status,
+    String? phone,
+    String? whatsapp,
+    String? openTime,
+    String? closeTime,
+    bool? isOpenNow,
+    List<Map<String, dynamic>>? scheduleDays,
+    Map<String, dynamic>? businessHours,
+    String? storeStatusLabel,
+    BranchPaymentCredentials? paymentCredentials,
+    String? tagline,
+    String? accentColor,
+    String? logoUrl,
+    String? bannerUrl,
+    double? exchangeRate,
+    String? baseCurrency,
+    String? displayMode,
+    bool? isFeatured,
+    String? subscriptionPlanCode,
+    bool? hasFeaturedBanners,
+    List<String>? acceptedPaymentMethods,
+    bool? hasValidPaymentMethods,
+  }) {
+    return Branch(
+      id: id ?? this.id,
+      companyId: companyId ?? this.companyId,
+      companyName: companyName ?? this.companyName,
+      name: name ?? this.name,
+      slug: slug ?? this.slug,
+      address: address ?? this.address,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      deliveryRadiusKm: deliveryRadiusKm ?? this.deliveryRadiusKm,
+      baseDeliveryFee: baseDeliveryFee ?? this.baseDeliveryFee,
+      deliveryTiers: deliveryTiers ?? this.deliveryTiers,
+      status: status ?? this.status,
+      phone: phone ?? this.phone,
+      whatsapp: whatsapp ?? this.whatsapp,
+      openTime: openTime ?? this.openTime,
+      closeTime: closeTime ?? this.closeTime,
+      isOpenNow: isOpenNow ?? this.isOpenNow,
+      scheduleDays: scheduleDays ?? this.scheduleDays,
+      businessHours: businessHours ?? this.businessHours,
+      storeStatusLabel: storeStatusLabel ?? this.storeStatusLabel,
+      paymentCredentials: paymentCredentials ?? this.paymentCredentials,
+      tagline: tagline ?? this.tagline,
+      accentColor: accentColor ?? this.accentColor,
+      logoUrl: logoUrl ?? this.logoUrl,
+      bannerUrl: bannerUrl ?? this.bannerUrl,
+      exchangeRate: exchangeRate ?? this.exchangeRate,
+      baseCurrency: baseCurrency ?? this.baseCurrency,
+      displayMode: displayMode ?? this.displayMode,
+      isFeatured: isFeatured ?? this.isFeatured,
+      subscriptionPlanCode: subscriptionPlanCode ?? this.subscriptionPlanCode,
+      hasFeaturedBanners: hasFeaturedBanners ?? this.hasFeaturedBanners,
+      acceptedPaymentMethods: acceptedPaymentMethods ?? this.acceptedPaymentMethods,
+      hasValidPaymentMethods: hasValidPaymentMethods ?? this.hasValidPaymentMethods,
+    );
+  }
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'company_id': companyId,
@@ -334,14 +406,14 @@ class Branch {
       };
 
   factory Branch.fromJson(Map<String, dynamic> json) {
-    final payData = json['payment_credentials'] ??
-        json['branch_payment_credentials'] ??
+    final payData = json['branch_payment_credentials'] ??
+        json['payment_credentials'] ??
         json['paymentCredentials'];
 
-    final credentials = payData is Map<String, dynamic>
-        ? BranchPaymentCredentials.fromJson(payData)
-        : (payData is List && payData.isNotEmpty && payData.first is Map<String, dynamic>)
-            ? BranchPaymentCredentials.fromJson(payData.first as Map<String, dynamic>)
+    final credentials = payData is Map
+        ? BranchPaymentCredentials.fromJson(Map<String, dynamic>.from(payData))
+        : (payData is List && payData.isNotEmpty && payData.first is Map)
+            ? BranchPaymentCredentials.fromJson(Map<String, dynamic>.from(payData.first as Map))
             : const BranchPaymentCredentials(
                 pagoMovilBank: '',
                 pagoMovilPhone: '',

@@ -214,6 +214,9 @@ class CartService extends ChangeNotifier {
     return bal < 0.0 ? 0.0 : bal;
   }
 
+  static const String _keyGlobalSavedAddresses = 'global_saved_delivery_addresses';
+  static const String _keyGlobalSelectedAddress = 'global_selected_delivery_address';
+
   String _getOrdersKey(String? identifier) {
     if (identifier == null || identifier.trim().isEmpty) return 'user_orders_guest';
     final sanitized = identifier.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9_]'), '_');
@@ -240,6 +243,27 @@ class CartService extends ChangeNotifier {
             debugPrint('[CartService] Error parsing payout: $e');
           }
         }
+      }
+
+      // Load saved addresses and selected address globally
+      final globalAddrsJson = prefs.getString(_keyGlobalSavedAddresses);
+      if (globalAddrsJson != null) {
+        try {
+          final List aList = jsonDecode(globalAddrsJson);
+          _savedAddresses.clear();
+          for (final a in aList) {
+            _savedAddresses.add(DeliveryAddress.fromJson(a));
+          }
+        } catch (_) {}
+      }
+
+      final globalSelJson = prefs.getString(_keyGlobalSelectedAddress);
+      if (globalSelJson != null) {
+        try {
+          _selectedAddress = DeliveryAddress.fromJson(jsonDecode(globalSelJson));
+        } catch (_) {}
+      } else if (_savedAddresses.isNotEmpty) {
+        _selectedAddress = _savedAddresses.first;
       }
     } catch (e) {
       debugPrint('[CartService] Init error: $e');
@@ -275,31 +299,42 @@ class CartService extends ChangeNotifier {
       _activeOrder = null;
     }
 
-    // Load addresses specifically for this user
-    _savedAddresses.clear();
+    // Load addresses specifically for this user, falling back to global addresses if empty
     final addrKey = _getAddressesKey(identifier);
     final addrsJson = prefs.getString(addrKey);
     if (addrsJson != null) {
       try {
         final List aList = jsonDecode(addrsJson);
-        for (final a in aList) {
-          _savedAddresses.add(DeliveryAddress.fromJson(a));
+        if (aList.isNotEmpty) {
+          _savedAddresses.clear();
+          for (final a in aList) {
+            _savedAddresses.add(DeliveryAddress.fromJson(a));
+          }
         }
       } catch (e) {
         debugPrint('[CartService] Error parsing user addresses: $e');
       }
     }
 
-    if (_savedAddresses.isNotEmpty) {
+    if (_savedAddresses.isEmpty) {
+      final globalAddrsJson = prefs.getString(_keyGlobalSavedAddresses);
+      if (globalAddrsJson != null) {
+        try {
+          final List aList = jsonDecode(globalAddrsJson);
+          for (final a in aList) {
+            _savedAddresses.add(DeliveryAddress.fromJson(a));
+          }
+        } catch (_) {}
+      }
+    }
+
+    final globalSelJson = prefs.getString(_keyGlobalSelectedAddress);
+    if (globalSelJson != null) {
+      try {
+        _selectedAddress = DeliveryAddress.fromJson(jsonDecode(globalSelJson));
+      } catch (_) {}
+    } else if (_savedAddresses.isNotEmpty) {
       _selectedAddress = _savedAddresses.first;
-    } else {
-      _selectedAddress = const DeliveryAddress(
-        id: '',
-        title: 'Sin dirección',
-        address: 'Selecciona una dirección de entrega',
-        latitude: 10.034574,
-        longitude: -69.237544,
-      );
     }
 
     // Sync from Supabase Cloud for this user's phone or identifier
@@ -428,7 +463,12 @@ class CartService extends ChangeNotifier {
 
   void setBranch(Branch? branch, {bool force = false}) {
     if (branch == null) return;
-    if (_currentBranch?.id == branch.id) return;
+    if (_currentBranch?.id == branch.id) {
+      // Even if ID matches, ALWAYS refresh live branch details (e.g. updated payment credentials, schedules)
+      _currentBranch = branch;
+      notifyListeners();
+      return;
+    }
 
     // Si el carrito ya tiene productos y no se fuerza, preservamos el carrito de la sede actual
     if (_items.isNotEmpty && !force) {
@@ -445,6 +485,15 @@ class CartService extends ChangeNotifier {
     _currentCompanyName = branch.companyName;
     notifyListeners();
     saveCartToStorage();
+  }
+
+  void updateBranchPayment(BranchPaymentCredentials credentials) {
+    if (_currentBranch != null) {
+      _currentBranch = _currentBranch!.copyWith(
+        paymentCredentials: credentials,
+      );
+      notifyListeners();
+    }
   }
 
   void setStoreMetadata({
@@ -727,9 +776,18 @@ class CartService extends ChangeNotifier {
   Future<void> _saveAddresses() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final key = _getAddressesKey(_currentAccountKey);
       final encoded = jsonEncode(_savedAddresses.map((a) => a.toJson()).toList());
-      await prefs.setString(key, encoded);
+      // 1. Always save to global key so addresses persist reliably across sessions/logins
+      await prefs.setString(_keyGlobalSavedAddresses, encoded);
+
+      // 2. Save for specific user account if signed in
+      if (_currentAccountKey != null && _currentAccountKey!.isNotEmpty) {
+        final key = _getAddressesKey(_currentAccountKey);
+        await prefs.setString(key, encoded);
+      }
+
+      // 3. Persist the currently selected address
+      await prefs.setString(_keyGlobalSelectedAddress, jsonEncode(_selectedAddress.toJson()));
     } catch (e) {
       debugPrint('[CartService] Error saving addresses: $e');
     }
@@ -737,6 +795,15 @@ class CartService extends ChangeNotifier {
 
   void selectAddress(DeliveryAddress address) {
     _selectedAddress = address;
+    if (hasValidDeliveryAddress) {
+      final idx = _savedAddresses.indexWhere((a) => a.id == address.id);
+      if (idx == -1) {
+        _savedAddresses.insert(0, address);
+      } else {
+        _savedAddresses[idx] = address;
+      }
+    }
+    _saveAddresses();
     notifyListeners();
   }
 

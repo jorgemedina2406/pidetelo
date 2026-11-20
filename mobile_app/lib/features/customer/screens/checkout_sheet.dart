@@ -23,6 +23,24 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
   final TextEditingController _zelleRefController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    _refreshBranchCredentials();
+  }
+
+  void _refreshBranchCredentials() {
+    final cart = CartService();
+    final branchId = cart.currentBranchId;
+    if (branchId != null && branchId.isNotEmpty) {
+      ApiService().fetchBranchPaymentCredentials(branchId).then((creds) {
+        if (creds != null && mounted) {
+          cart.updateBranchPayment(creds);
+        }
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _notesController.dispose();
     _cashAmountController.dispose();
