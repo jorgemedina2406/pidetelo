@@ -142,15 +142,28 @@
                 <span class="font-mono font-black">+${{ additionsTotalUsd.toFixed(2) }} USD</span>
               </div>
               @for (add of additions; track add.raw) {
-                <div class="text-[10.5px] font-sans flex items-center justify-between text-slate-700 dark:text-slate-300">
-                  @if (add.method === 'cash') {
-                    <span>💵 Cobro al recibir: <b>${{ add.amountUsd.toFixed(2) }} en efectivo</b> (Repartidor)</span>
-                  } @else if (add.status === 'verified') {
-                    <span class="text-emerald-700 dark:text-emerald-400 font-semibold">✓ Pago Móvil verificado (Ref: {{ add.reference }})</span>
-                  } @else {
-                    <span class="text-amber-700 dark:text-amber-400 font-semibold">📲 Pago Móvil por verificar (Ref: {{ add.reference }})</span>
+                <div class="text-[10.5px] font-sans space-y-0.5 text-slate-700 dark:text-slate-300">
+                  @if (add.description) {
+                  <div class="font-bold text-orange-900 dark:text-orange-200">
+                    + {{ add.description }}
+                  </div>
                   }
-                  <span class="font-mono font-bold">+${{ add.amountUsd.toFixed(2) }}</span>
+                  <div class="flex items-center justify-between gap-2">
+                    @if (add.method === 'cash') {
+                      <span>💵 Cobro al recibir: <b>${{ add.amountUsd.toFixed(2) }} en efectivo</b> (Repartidor)</span>
+                    } @else if (add.status === 'verified') {
+                      <span class="text-emerald-700 dark:text-emerald-400 font-semibold">✓ Pago Móvil verificado (Ref: {{ add.reference }})</span>
+                    } @else {
+                      <div class="flex items-center gap-2 min-w-0">
+                        <span class="text-amber-700 dark:text-amber-400 font-semibold truncate">📲 Pago Móvil por verificar (Ref: {{ add.reference }})</span>
+                        <button (click)="verifyAdditionPayment.emit({ order: order, addition: add })" type="button"
+                          class="px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[9.5px] cursor-pointer shrink-0">
+                          ✓ Validar
+                        </button>
+                      </div>
+                    }
+                    <span class="font-mono font-bold shrink-0">+${{ add.amountUsd.toFixed(2) }}</span>
+                  </div>
                 </div>
               }
             </div>

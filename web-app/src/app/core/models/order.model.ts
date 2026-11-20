@@ -132,6 +132,9 @@ export function parseOrderAdditions(notes?: string | null): OrderAddition[] {
   if (!matches) return [];
 
   for (const m of matches) {
+    const descMatch = m.match(/\[(?:ADICIONAL|Adición en app)\s*:\s*([^|\]]+)/i);
+    const description = descMatch ? descMatch[1].trim() : undefined;
+
     const amountMatch = m.match(/\+\$(\d+(\.\d+)?)/);
     const amountUsd = amountMatch ? parseFloat(amountMatch[1]) : 0;
     if (amountUsd <= 0) continue;
@@ -157,7 +160,8 @@ export function parseOrderAdditions(notes?: string | null): OrderAddition[] {
       amountBs,
       method,
       reference,
-      status
+      status,
+      description
     });
   }
   return results;

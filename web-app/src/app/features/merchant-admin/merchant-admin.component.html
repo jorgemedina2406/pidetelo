@@ -10,10 +10,12 @@
       [class.text-white]="t.type === 'success'" [class.bg-rose-600]="t.type === 'error'"
       [class.border-rose-400]="t.type === 'error'" [class.text-white]="t.type === 'error'"
       [class.bg-blue-600]="t.type === 'info'" [class.border-blue-400]="t.type === 'info'"
-      [class.text-white]="t.type === 'info'">
+      [class.text-white]="t.type === 'info'" [class.bg-orange-600]="t.type === 'warning'"
+      [class.border-orange-400]="t.type === 'warning'" [class.text-white]="t.type === 'warning'">
       <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 text-base font-black">
         @if (t.type === 'success') { ✓ }
         @else if (t.type === 'error') { ✕ }
+        @else if (t.type === 'warning') { 🔔 }
         @else { ℹ }
       </div>
       <div class="flex-1 min-w-0">
@@ -126,6 +128,63 @@
         </div>
         }
 
+        <!-- Alertas Globales de Adición en Órdenes Activas -->
+        @if (additionAlerts().length > 0) {
+        <div class="space-y-3">
+          @for (alert of additionAlerts(); track alert.id) {
+          <div
+            class="p-4 sm:p-5 rounded-2xl bg-orange-500/15 border-2 border-orange-500 text-orange-950 dark:text-orange-100 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-lg shadow-orange-500/10 ring-2 ring-orange-500/20">
+            <div class="flex items-start gap-3.5 min-w-0 flex-1">
+              <div
+                class="w-11 h-11 rounded-2xl bg-orange-500 text-white flex items-center justify-center shrink-0 shadow-md animate-pulse">
+                <app-icon name="bell" [size]="20"></app-icon>
+              </div>
+              <div class="space-y-1 min-w-0">
+                <h4 class="font-black text-sm tracking-tight text-orange-900 dark:text-orange-200">
+                  ¡ATENCIÓN! Adición en la orden {{ alert.orderNumber }} — Verificar
+                </h4>
+                <p class="text-xs font-semibold text-orange-900/90 dark:text-orange-100/90">
+                  El cliente <strong>{{ alert.customerName }}</strong> hizo una adición en la orden <strong>{{ alert.orderNumber }}</strong>. Por favor verifica la comanda.
+                </p>
+                <div class="flex flex-wrap items-center gap-2 pt-0.5 text-[11px] font-bold">
+                  @if (alert.addedSummary) {
+                  <span class="px-2 py-0.5 rounded-lg bg-white/70 dark:bg-slate-900/70 border border-orange-400/40 text-orange-950 dark:text-orange-200">
+                    🍔 {{ alert.addedSummary }}
+                  </span>
+                  }
+                  @if (alert.addedAmountUsd > 0) {
+                  <span class="px-2 py-0.5 rounded-lg bg-orange-600 text-white font-mono">
+                    +${{ alert.addedAmountUsd.toFixed(2) }}@if (alert.addedAmountBs) { (Bs. {{ alert.addedAmountBs.toFixed(2) }})}
+                  </span>
+                  }
+                  @if (alert.needsPaymentVerification) {
+                  <span class="px-2 py-0.5 rounded-lg bg-amber-500/25 border border-amber-500/50 text-amber-950 dark:text-amber-200">
+                    📲 Pago Móvil por verificar@if (alert.paymentReference) { (Ref: {{ alert.paymentReference }})}
+                  </span>
+                  } @else if (alert.paymentMethod === 'cash') {
+                  <span class="px-2 py-0.5 rounded-lg bg-blue-500/20 border border-blue-500/40 text-blue-900 dark:text-blue-200">
+                    💵 Efectivo al recibir
+                  </span>
+                  }
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 self-end md:self-center shrink-0">
+              <button (click)="inspectAdditionAlert(alert)" type="button"
+                class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95">
+                <app-icon name="eye" [size]="14"></app-icon>
+                <span>Ver y Verificar {{ alert.orderNumber }}</span>
+              </button>
+              <button (click)="dismissAdditionAlert(alert.id)" type="button"
+                class="px-3.5 py-2 bg-white/80 hover:bg-white dark:bg-slate-800 dark:hover:bg-slate-700 text-orange-900 dark:text-orange-200 border border-orange-400/50 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95">
+                Ya verifiqué
+              </button>
+            </div>
+          </div>
+          }
+        </div>
+        }
+
     <!-- ================= TAB 1: COMANDAS KANBAN ================= -->
     @if (activeTab() === 'orders') {
     <app-merchant-orders-tab
@@ -144,6 +203,7 @@
       [completedRevenueBs]="completedRevenueBs()"
       [currentSubscriptionPlan]="currentSubscriptionPlan()"
       [rejectedAlert]="rejectedAlert()"
+      [highlightedAdditionOrderIds]="highlightedAdditionOrderIds()"
       [activeExchangeRate]="activeExchangeRate()"
       [riders]="riders()"
       [getOwnRidersForOrder]="getOwnRidersForOrder.bind(this)"
@@ -159,6 +219,7 @@
       (openRoute)="openOrderRouteModal($event)"
       (openPaymentVerification)="openPaymentVerificationModal($event)"
       (verifyAdditionPayment)="handleVerifyAdditionPayment($event)"
+      (dismissAdditionHighlight)="dismissAdditionAlertsForOrder($event)"
       (openDispatchConfig)="isDispatchConfigModalOpen.set(true)"
       (exportExcel)="exportOrdersToExcel()"
       (dismissAlert)="rejectedAlert.set(null)">
@@ -417,7 +478,8 @@
 
 <!-- MODAL: DETALLE COMPLETO DE PEDIDO -->
 <app-order-detail-modal [isOpen]="isOrderDetailModalOpen()" [order]="selectedOrderDetail()"
-  [activeExchangeRate]="activeExchangeRate()" (close)="closeOrderDetail()" (viewRoute)="onViewOrderRoute($event)">
+  [activeExchangeRate]="activeExchangeRate()" (close)="closeOrderDetail()" (viewRoute)="onViewOrderRoute($event)"
+  (verifyAdditionPayment)="handleVerifyAdditionPayment($event)">
 </app-order-detail-modal>
 
 <!-- MODAL: CREAR / EDITAR COLABORADOR & CONFLICTO DE CORREO -->

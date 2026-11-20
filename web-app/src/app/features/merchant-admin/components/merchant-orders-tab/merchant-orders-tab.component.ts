@@ -31,6 +31,7 @@ export class MerchantOrdersTabComponent {
   @Input() completedRevenueBs = 0;
   @Input() currentSubscriptionPlan: any = null;
   @Input() rejectedAlert: any = null;
+  @Input() highlightedAdditionOrderIds: string[] = [];
   @Input() activeExchangeRate = 1;
   @Input() riders: Rider[] = [];
   @Input() getOwnRidersForOrder!: (order: Order) => Rider[];
@@ -47,9 +48,14 @@ export class MerchantOrdersTabComponent {
   @Output() openRoute = new EventEmitter<Order>();
   @Output() openPaymentVerification = new EventEmitter<Order>();
   @Output() verifyAdditionPayment = new EventEmitter<{ order: Order; addition: OrderAddition }>();
+  @Output() dismissAdditionHighlight = new EventEmitter<string>();
   @Output() openDispatchConfig = new EventEmitter<void>();
   @Output() exportExcel = new EventEmitter<void>();
   @Output() dismissAlert = new EventEmitter<void>();
+
+  hasUncheckedAddition(orderId: string): boolean {
+    return this.highlightedAdditionOrderIds.includes(orderId);
+  }
 
   getModifiersText(modifiers: any[]): string {
     if (!modifiers || !Array.isArray(modifiers)) return '';

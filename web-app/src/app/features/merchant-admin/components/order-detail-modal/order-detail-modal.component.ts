@@ -16,6 +16,7 @@ export class OrderDetailModalComponent {
 
   @Output() close = new EventEmitter<void>();
   @Output() viewRoute = new EventEmitter<Order>();
+  @Output() verifyAdditionPayment = new EventEmitter<{ order: Order; addition: OrderAddition }>();
 
   get effectiveRate(): number {
     return this.order?.exchangeRate || this.activeExchangeRate || 45.50;

@@ -9,7 +9,7 @@ import { AuthStore } from '../../core/stores/auth.store';
 import { ThemeService } from '../../core/services/theme.service';
 import { I18nService } from '../../core/services/i18n.service';
 import { Product, ProductModifierGroup, ProductCategory } from '../../core/models/product.model';
-import { Order, OrderStatus, OrderAddition } from '../../core/models/order.model';
+import { Order, OrderStatus, OrderAddition, parseOrderAdditions } from '../../core/models/order.model';
 import { AppUser, UserRole } from '../../core/models/user.model';
 import { Tenant, CurrencyDisplayMode, DeliveryTier } from '../../core/models/tenant.model';
 import { Branch, SubscriptionPlan } from '../../core/models/branch.model';
@@ -66,6 +66,20 @@ export interface Rider {
   totalDeliveries?: number;
   walletBalance?: number;
   tenantId?: string;
+}
+
+export interface OrderAdditionAlert {
+  id: string;
+  orderId: string;
+  orderNumber: string;
+  customerName: string;
+  addedSummary?: string;
+  addedAmountUsd: number;
+  addedAmountBs?: number;
+  paymentMethod?: 'cash' | 'mobile_transfer';
+  paymentReference?: string;
+  needsPaymentVerification: boolean;
+  timestamp: string;
 }
 
 @Component({
@@ -185,14 +199,15 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
   });
 
   // --- SISTEMA DE TOASTS LLAMATIVOS PARA COMERCIO ---
-  readonly activeToasts = signal<{ id: string; type: 'success' | 'error' | 'info'; title: string; message: string }[]>([]);
+  readonly activeToasts = signal<{ id: string; type: 'success' | 'error' | 'info' | 'warning'; title: string; message: string }[]>([]);
 
-  showToast(type: 'success' | 'error' | 'info', title: string, message: string): void {
+  showToast(type: 'success' | 'error' | 'info' | 'warning', title: string, message: string): void {
     const id = `toast_${Date.now()}_${Math.random()}`;
     this.activeToasts.update(list => [...list, { id, type, title, message }]);
+    const duration = type === 'warning' ? 9000 : 4500;
     setTimeout(() => {
       this.activeToasts.update(list => list.filter(t => t.id !== id));
-    }, 4500);
+    }, duration);
   }
 
   removeToast(id: string): void {
@@ -1165,40 +1180,76 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     });
   }
 
-  playKitchenBellSound(): void {
+  private formatOrderNumber(raw?: string | null): string {
+    const clean = (raw || '').toString().trim();
+    if (!clean) return '#ORD';
+    return clean.startsWith('#') ? clean : `#${clean}`;
+  }
+
+  private playChimeSequence(
+    notes: Array<{ freq: number; delay: number; duration: number }>,
+    vibratePattern: number[]
+  ): void {
     try {
       this.initOrResumeAudio();
       const audioCtx = this.userAudioContext || new (window.AudioContext || (window as any).webkitAudioContext)();
       if (audioCtx.state === 'suspended') {
         audioCtx.resume();
       }
-      
-      const playChime = (freq: number, startDelay: number, duration: number) => {
+
+      for (const n of notes) {
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq, audioCtx.currentTime + startDelay);
-        gain.gain.setValueAtTime(0.5, audioCtx.currentTime + startDelay);
-        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + startDelay + duration);
+        osc.frequency.setValueAtTime(n.freq, audioCtx.currentTime + n.delay);
+        gain.gain.setValueAtTime(0.5, audioCtx.currentTime + n.delay);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + n.delay + n.duration);
         osc.connect(gain);
         gain.connect(audioCtx.destination);
-        osc.start(audioCtx.currentTime + startDelay);
-        osc.stop(audioCtx.currentTime + startDelay + duration);
-      };
+        osc.start(audioCtx.currentTime + n.delay);
+        osc.stop(audioCtx.currentTime + n.delay + n.duration);
+      }
 
-      // Timbre característico de comanda de restaurante (Doblete metálico brillante)
-      playChime(880, 0.0, 0.6);   // Nota A5
-      playChime(1174, 0.12, 0.8); // Nota D6
-      playChime(1760, 0.25, 1.0); // Nota A6
-      
-      // Vibración háptica en teléfonos móviles
       if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-        navigator.vibrate([300, 150, 300, 150, 600]);
+        navigator.vibrate(vibratePattern);
       }
     } catch (_) {}
   }
 
-  private triggerDesktopNotification(title: string, body: string, tag: string, playSound = true): void {
+  playKitchenBellSound(): void {
+    // Timbre característico de comanda de restaurante (Doblete metálico brillante)
+    this.playChimeSequence(
+      [
+        { freq: 880, delay: 0.0, duration: 0.6 },   // Nota A5
+        { freq: 1174, delay: 0.12, duration: 0.8 }, // Nota D6
+        { freq: 1760, delay: 0.25, duration: 1.0 }  // Nota A6
+      ],
+      [300, 150, 300, 150, 600]
+    );
+  }
+
+  playAdditionBellSound(): void {
+    // Doble timbre urgente para diferenciar una adición en orden existente
+    this.playChimeSequence(
+      [
+        { freq: 880, delay: 0.0, duration: 0.45 },
+        { freq: 1174, delay: 0.12, duration: 0.55 },
+        { freq: 1760, delay: 0.25, duration: 0.7 },
+        { freq: 1046, delay: 0.55, duration: 0.45 },
+        { freq: 1318, delay: 0.67, duration: 0.55 },
+        { freq: 1760, delay: 0.80, duration: 0.9 }
+      ],
+      [300, 120, 300, 120, 500]
+    );
+  }
+
+  private triggerDesktopNotification(
+    title: string,
+    body: string,
+    tag: string,
+    playSound = true,
+    onClick?: () => void
+  ): void {
     if (playSound) {
       this.playKitchenBellSound();
     }
@@ -1214,9 +1265,33 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         n.onclick = () => {
           window.focus();
           n.close();
-          this.activeTab.set('orders');
+          if (onClick) {
+            onClick();
+          } else {
+            this.activeTab.set('orders');
+          }
         };
       } catch (_) {}
+    }
+  }
+
+  private startTabTitleBlink(titleA: string, titleB: string): void {
+    if (typeof document !== 'undefined' && document.hidden) {
+      if (!this.originalDocumentTitle) {
+        this.originalDocumentTitle = document.title;
+      }
+      clearInterval(this.tabBlinkInterval);
+      let isBlink = false;
+      this.tabBlinkInterval = setInterval(() => {
+        if (!document.hidden) {
+          clearInterval(this.tabBlinkInterval);
+          this.tabBlinkInterval = null;
+          if (this.originalDocumentTitle) document.title = this.originalDocumentTitle;
+          return;
+        }
+        document.title = isBlink ? titleA : titleB;
+        isBlink = !isBlink;
+      }, 1000);
     }
   }
 
@@ -1276,22 +1351,188 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     );
 
     // 3. Efecto parpadeante en el título de la pestaña si está en segundo plano
-    if (typeof document !== 'undefined' && document.hidden) {
-      if (!this.originalDocumentTitle) {
-        this.originalDocumentTitle = document.title;
+    this.startTabTitleBlink(`🛎️ (1) ¡NUEVO PEDIDO! #${orderNum}`, `⚡ REVISAR COMANDA - Pídetelo`);
+  }
+
+  private summarizeNewAdditions(
+    addedList: OrderAddition[],
+    exchangeRate?: number
+  ): {
+    addedSummary?: string;
+    addedAmountUsd: number;
+    addedAmountBs?: number;
+    paymentMethod?: 'cash' | 'mobile_transfer';
+    paymentReference?: string;
+    needsPaymentVerification: boolean;
+  } {
+    const descriptions = addedList
+      .map(a => a.description)
+      .filter((d): d is string => Boolean(d && d.trim().length > 0));
+    const addedSummary = descriptions.length > 0 ? descriptions.join(', ') : undefined;
+    const addedAmountUsd = Number(addedList.reduce((s, a) => s + (a.amountUsd || 0), 0).toFixed(2));
+    const totalBsRaw = addedList.reduce((s, a) => s + (a.amountBs || 0), 0);
+    const rate = Number(exchangeRate) || 0;
+    const addedAmountBs = totalBsRaw > 0
+      ? Number(totalBsRaw.toFixed(2))
+      : (rate > 1 && addedAmountUsd > 0 ? Number((addedAmountUsd * rate).toFixed(2)) : undefined);
+    const hasMobile = addedList.some(a => a.method === 'mobile_transfer');
+    const paymentMethod: 'cash' | 'mobile_transfer' | undefined = hasMobile
+      ? 'mobile_transfer'
+      : (addedList.length > 0 ? 'cash' : undefined);
+    const needsPaymentVerification = addedList.some(a => a.method === 'mobile_transfer' && a.status !== 'verified');
+    const pendingRef = addedList.find(a => a.method === 'mobile_transfer' && a.status !== 'verified' && a.reference)?.reference;
+    const paymentReference = pendingRef || addedList.find(a => a.reference)?.reference;
+    return {
+      addedSummary,
+      addedAmountUsd,
+      addedAmountBs,
+      paymentMethod,
+      paymentReference,
+      needsPaymentVerification
+    };
+  }
+
+  private triggerOrderAdditionAlert(params: {
+    dedupKey: string;
+    orderId: string;
+    orderNumber: string;
+    customerName: string;
+    addedSummary?: string;
+    addedAmountUsd: number;
+    addedAmountBs?: number;
+    paymentMethod?: 'cash' | 'mobile_transfer';
+    paymentReference?: string;
+    needsPaymentVerification: boolean;
+  }): void {
+    if (this.alertedAdditionKeys.has(params.dedupKey)) return;
+    this.alertedAdditionKeys.add(params.dedupKey);
+
+    const displayOrderNum = this.formatOrderNumber(params.orderNumber);
+    this.playAdditionBellSound();
+
+    const alert: OrderAdditionAlert = {
+      id: params.dedupKey,
+      orderId: params.orderId,
+      orderNumber: displayOrderNum,
+      customerName: params.customerName || 'Cliente',
+      addedSummary: params.addedSummary,
+      addedAmountUsd: params.addedAmountUsd,
+      addedAmountBs: params.addedAmountBs,
+      paymentMethod: params.paymentMethod,
+      paymentReference: params.paymentReference,
+      needsPaymentVerification: params.needsPaymentVerification,
+      timestamp: new Date().toISOString()
+    };
+
+    this.additionAlerts.update(list => [alert, ...list.filter(a => a.id !== alert.id)]);
+
+    const summaryText = params.addedSummary ? `${params.addedSummary} ` : '';
+    const amountText = params.addedAmountUsd > 0 ? `(+$${params.addedAmountUsd.toFixed(2)})` : '';
+    const verifyText = params.needsPaymentVerification
+      ? `Verifica el Pago Móvil${params.paymentReference ? ' (Ref: ' + params.paymentReference + ')' : ''} y la comanda.`
+      : 'Por favor verifica la orden en cocina.';
+
+    this.showToast(
+      'warning',
+      `¡Adición en orden ${displayOrderNum}!`,
+      `${alert.customerName} adicionó productos ${summaryText}${amountText}. ${verifyText}`
+    );
+
+    this.triggerDesktopNotification(
+      `➕ ¡ADICIÓN EN ORDEN ${displayOrderNum}!`,
+      `${alert.customerName} hizo una adición ${summaryText}${amountText}. ${verifyText}`,
+      `addition-${params.dedupKey}`,
+      false,
+      () => this.inspectAdditionAlert(alert)
+    );
+
+    this.startTabTitleBlink(`➕ ¡ADICIÓN EN ${displayOrderNum}!`, `⚠️ VERIFICAR ORDEN - Pídetelo`);
+  }
+
+  inspectAdditionAlert(alert: OrderAdditionAlert): void {
+    this.activeTab.set('orders');
+    this.ordersSubTab.set('kanban');
+    const found = this.orders().find(
+      o => o.id === alert.orderId || this.formatOrderNumber(o.orderNumber) === alert.orderNumber
+    );
+    if (found) {
+      this.openOrderDetail(found);
+    }
+    this.dismissAdditionAlert(alert.id);
+  }
+
+  dismissAdditionAlert(alertId: string): void {
+    this.additionAlerts.update(list => list.filter(a => a.id !== alertId));
+  }
+
+  dismissAdditionAlertsForOrder(orderId: string): void {
+    this.additionAlerts.update(list => list.filter(a => a.orderId !== orderId));
+  }
+
+  private syncOrdersBaseline(orderList: Order[], branchId: string): void {
+    this.knownOrderAdditionsMap.clear();
+    for (const o of orderList) {
+      this.knownOrderAdditionsMap.set(o.id, {
+        additionsCount: parseOrderAdditions(o.notes).length,
+        itemsCount: o.items?.length || 0,
+        total: Number(o.total || 0)
+      });
+    }
+    this.baselineBranchId = branchId;
+    this.ordersBaselineInitialized = true;
+  }
+
+  private detectAdditionsInOrderList(orderList: Order[], branchId: string): void {
+    if (!this.ordersBaselineInitialized || this.baselineBranchId !== branchId) {
+      this.syncOrdersBaseline(orderList, branchId);
+      return;
+    }
+
+    for (const ord of orderList) {
+      const prev = this.knownOrderAdditionsMap.get(ord.id);
+      const currentAdditions = parseOrderAdditions(ord.notes);
+      const currentItemsCount = ord.items?.length || 0;
+      const currentTotal = Number(ord.total || 0);
+
+      if (!prev) {
+        this.knownOrderAdditionsMap.set(ord.id, {
+          additionsCount: currentAdditions.length,
+          itemsCount: currentItemsCount,
+          total: currentTotal
+        });
+        continue;
       }
-      clearInterval(this.tabBlinkInterval);
-      let isBlink = false;
-      this.tabBlinkInterval = setInterval(() => {
-        if (!document.hidden) {
-          clearInterval(this.tabBlinkInterval);
-          this.tabBlinkInterval = null;
-          if (this.originalDocumentTitle) document.title = this.originalDocumentTitle;
-          return;
-        }
-        document.title = isBlink ? `🛎️ (1) ¡NUEVO PEDIDO! #${orderNum}` : `⚡ REVISAR COMANDA - Pídetelo`;
-        isBlink = !isBlink;
-      }, 1000);
+
+      if (currentAdditions.length > prev.additionsCount) {
+        const newAdditions = currentAdditions.slice(prev.additionsCount);
+        const summary = this.summarizeNewAdditions(newAdditions, ord.exchangeRate);
+        this.triggerOrderAdditionAlert({
+          dedupKey: `${ord.id}:add:${currentAdditions.length}`,
+          orderId: ord.id,
+          orderNumber: ord.orderNumber || ord.id,
+          customerName: ord.customer?.name || 'Cliente',
+          ...summary
+        });
+      } else if (currentAdditions.length === 0 && currentItemsCount > prev.itemsCount && currentTotal > prev.total) {
+        const extraItems = (ord.items || []).slice(prev.itemsCount);
+        const extraSummary = extraItems.map(i => `${i.quantity}x ${i.name}`).join(', ');
+        const delta = Number((currentTotal - prev.total).toFixed(2));
+        this.triggerOrderAdditionAlert({
+          dedupKey: `${ord.id}:items:${currentItemsCount}`,
+          orderId: ord.id,
+          orderNumber: ord.orderNumber || ord.id,
+          customerName: ord.customer?.name || 'Cliente',
+          addedSummary: extraSummary || undefined,
+          addedAmountUsd: delta,
+          needsPaymentVerification: false
+        });
+      }
+
+      this.knownOrderAdditionsMap.set(ord.id, {
+        additionsCount: Math.max(prev.additionsCount, currentAdditions.length),
+        itemsCount: currentItemsCount,
+        total: currentTotal
+      });
     }
   }
   readonly nearbyRiders = signal<Rider[]>([]);
@@ -1483,6 +1724,14 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
 
   // Alerta sonora y visual de rechazo de pedido
   readonly rejectedAlert = signal<{ orderNumber: string; message: string } | null>(null);
+
+  // Alertas sonoras y visuales de adiciones a pedidos activos
+  readonly additionAlerts = signal<OrderAdditionAlert[]>([]);
+  readonly highlightedAdditionOrderIds = computed(() => this.additionAlerts().map(a => a.orderId));
+  private knownOrderAdditionsMap = new Map<string, { additionsCount: number; itemsCount: number; total: number }>();
+  private baselineBranchId = '';
+  private ordersBaselineInitialized = false;
+  private alertedAdditionKeys = new Set<string>();
 
   // GPS & Leaflet Map State (Legacy / Telemetry)
   private riderMarker?: L.Marker;
@@ -1758,7 +2007,16 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
           const latestOrder = newOrders.length > 0 ? newOrders[0] : orderList[0];
           this.triggerNewOrderDesktopAlert(latestOrder);
         }
+        this.detectAdditionsInOrderList(orderList, bFilter);
         this.orders.set(orderList);
+
+        const currentDetailOrd = this.selectedOrderDetail();
+        if (currentDetailOrd) {
+          const refreshedDetail = orderList.find(o => o.id === currentDetailOrd.id);
+          if (refreshedDetail) {
+            this.selectedOrderDetail.set(refreshedDetail);
+          }
+        }
         const currentRouteOrd = this.selectedRouteOrder();
         if (currentRouteOrd) {
           const refreshed = orderList.find(o => o.id === currentRouteOrd.id);
@@ -1781,12 +2039,51 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
             if (eventType === 'INSERT') {
               this.triggerNewOrderDesktopAlert(newRow);
             } else if (eventType === 'UPDATE' && newRow) {
-              const driverJustAssigned = (!oldRow?.driver_id && newRow.driver_id) ||
-                                         (oldRow?.driver_id !== newRow.driver_id && newRow.driver_id);
-              if (driverJustAssigned) {
-                this.triggerRiderAssignedAlert(newRow, newRow.driver_name || newRow.driverName);
-              } else if (oldRow?.status !== newRow.status && newRow.status) {
-                this.triggerOrderStatusAlert(newRow, newRow.status);
+              const bFilter = this.activeBranchId();
+              const isMain = Boolean(this.activeBranch()?.isMain || this.activeBranch()?.name?.toLowerCase().includes('principal'));
+              const rowBranchId = newRow.branch_id ?? newRow.branchId;
+              const belongsToActiveBranch = Boolean(bFilter) && (rowBranchId === bFilter || (isMain && !rowBranchId));
+
+              let handledAddition = false;
+              if (belongsToActiveBranch && this.ordersBaselineInitialized) {
+                const existingOrder = this.orders().find(o => o.id === newRow.id);
+                const prev = this.knownOrderAdditionsMap.get(newRow.id);
+                const newAdditions = parseOrderAdditions(newRow.notes);
+                const prevCount = prev
+                  ? prev.additionsCount
+                  : (existingOrder ? parseOrderAdditions(existingOrder.notes).length : parseOrderAdditions(oldRow?.notes).length);
+
+                if (newAdditions.length > prevCount) {
+                  handledAddition = true;
+                  const addedList = newAdditions.slice(prevCount);
+                  const summary = this.summarizeNewAdditions(
+                    addedList,
+                    Number(newRow.exchange_rate ?? existingOrder?.exchangeRate ?? 0)
+                  );
+                  this.knownOrderAdditionsMap.set(newRow.id, {
+                    additionsCount: newAdditions.length,
+                    itemsCount: prev?.itemsCount ?? existingOrder?.items?.length ?? 0,
+                    total: Number(newRow.total ?? prev?.total ?? existingOrder?.total ?? 0)
+                  });
+                  this.triggerOrderAdditionAlert({
+                    dedupKey: `${newRow.id}:add:${newAdditions.length}`,
+                    orderId: newRow.id,
+                    orderNumber: newRow.order_number || newRow.orderNumber || existingOrder?.orderNumber || newRow.id,
+                    customerName: newRow.customer_name || newRow.customerName || existingOrder?.customer?.name || 'Cliente',
+                    ...summary
+                  });
+                  setTimeout(() => reloadOrders(), 1500);
+                }
+              }
+
+              if (!handledAddition) {
+                const driverJustAssigned = (!oldRow?.driver_id && newRow.driver_id) ||
+                                           (oldRow?.driver_id !== newRow.driver_id && newRow.driver_id);
+                if (driverJustAssigned) {
+                  this.triggerRiderAssignedAlert(newRow, newRow.driver_name || newRow.driverName);
+                } else if (oldRow?.status !== newRow.status && newRow.status) {
+                  this.triggerOrderStatusAlert(newRow, newRow.status);
+                }
               }
             } else if (eventType === 'REJECTED_BY_RIDER' && payload.order) {
               triggerRejectionAlert(payload.order.orderNumber || payload.order.id, payload.order.riderName);
@@ -2727,6 +3024,24 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       if (!error) {
         this.orders.update(list =>
           list.map(o => o.id === order.id ? { ...o, notes: updatedNotes } : o)
+        );
+        const currentDetail = this.selectedOrderDetail();
+        if (currentDetail && currentDetail.id === order.id) {
+          this.selectedOrderDetail.set({ ...currentDetail, notes: updatedNotes });
+        }
+        const remainingPending = parseOrderAdditions(updatedNotes).some(
+          a => a.method === 'mobile_transfer' && a.status !== 'verified'
+        );
+        this.additionAlerts.update(list => {
+          if (!remainingPending) {
+            return list.filter(a => a.orderId !== order.id);
+          }
+          return list.map(a => a.orderId === order.id ? { ...a, needsPaymentVerification: true } : a);
+        });
+        this.showToast(
+          'success',
+          'Pago Adicional Validado',
+          `Pago adicional de la orden ${this.formatOrderNumber(order.orderNumber)} verificado.`
         );
       }
     } catch (e) {
@@ -3711,6 +4026,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
             if (isMain && !o.branchId) return true;
             return false;
           });
+          this.detectAdditionsInOrderList(orderList, bFilter);
           this.orders.set(orderList);
         });
         this.api.getProducts(activeTenantId, bFilter).subscribe(products => {

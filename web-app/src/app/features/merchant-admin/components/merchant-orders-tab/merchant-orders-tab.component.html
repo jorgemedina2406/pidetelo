@@ -103,7 +103,17 @@
 
           @for (o of receivedOrders; track o.id) {
           <div
+            [ngClass]="hasUncheckedAddition(o.id) ? 'border-2 !border-orange-500 ring-2 ring-orange-500/30 shadow-lg' : ''"
             class="bg-white dark:bg-slate-850 border border-slate-200/90 dark:border-slate-750 rounded-lg p-3 shadow-xs hover:shadow-md hover:border-amber-500/50 transition-all space-y-2.5">
+            @if (hasUncheckedAddition(o.id)) {
+            <div class="px-2.5 py-1.5 rounded-lg bg-orange-600 text-white text-[10px] font-black flex items-center justify-between gap-2 animate-pulse">
+              <span class="truncate">🔔 ¡NUEVA ADICIÓN! Verificar orden {{ o.orderNumber }}</span>
+              <button (click)="openDetail.emit(o); dismissAdditionHighlight.emit(o.id)" type="button"
+                class="px-2 py-0.5 rounded bg-white text-orange-700 hover:bg-orange-50 font-black text-[9px] shrink-0 cursor-pointer">
+                Verificar
+              </button>
+            </div>
+            }
             <div class="flex items-start justify-between">
               <div>
                 <span class="text-brand-500 font-bold text-[10px] font-mono">{{ o.orderNumber }}</span>
@@ -148,27 +158,34 @@
                 <span>+${{ getAdditionsTotal(orderAdds1).toFixed(2) }}</span>
               </div>
               @for (add of orderAdds1; track add.raw) {
-                <div class="text-[9.5px] flex items-center justify-between font-semibold">
-                  @if (add.method === 'cash') {
-                    <span class="text-blue-700 dark:text-blue-300">
-                      💵 Cobrar ${{ add.amountUsd.toFixed(2) }} en efectivo (Motorizado)
-                    </span>
-                  } @else if (add.status === 'verified') {
-                    <span class="text-emerald-700 dark:text-emerald-300 flex items-center gap-1">
-                      <app-icon name="check-circle" [size]="10"></app-icon>
-                      <span>Pago Móvil OK (Ref: {{ add.reference }})</span>
-                    </span>
-                  } @else {
-                    <div class="flex items-center justify-between w-full gap-1">
-                      <span class="text-amber-700 dark:text-amber-300 truncate">
-                        📲 Ref: {{ add.reference }} (+${{ add.amountUsd.toFixed(2) }})
-                      </span>
-                      <button (click)="verifyAdditionPayment.emit({ order: o, addition: add })"
-                              class="px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[9px] cursor-pointer shrink-0">
-                        ✓ Validar
-                      </button>
-                    </div>
+                <div class="text-[9.5px] space-y-0.5">
+                  @if (add.description) {
+                  <div class="text-[10px] font-bold text-orange-900 dark:text-orange-200 truncate">
+                    + {{ add.description }}
+                  </div>
                   }
+                  <div class="flex items-center justify-between font-semibold">
+                    @if (add.method === 'cash') {
+                      <span class="text-blue-700 dark:text-blue-300">
+                        💵 Cobrar ${{ add.amountUsd.toFixed(2) }} en efectivo (Motorizado)
+                      </span>
+                    } @else if (add.status === 'verified') {
+                      <span class="text-emerald-700 dark:text-emerald-300 flex items-center gap-1">
+                        <app-icon name="check-circle" [size]="10"></app-icon>
+                        <span>Pago Móvil OK (Ref: {{ add.reference }})</span>
+                      </span>
+                    } @else {
+                      <div class="flex items-center justify-between w-full gap-1">
+                        <span class="text-amber-700 dark:text-amber-300 truncate">
+                          📲 Ref: {{ add.reference }} (+${{ add.amountUsd.toFixed(2) }})
+                        </span>
+                        <button (click)="verifyAdditionPayment.emit({ order: o, addition: add })"
+                                class="px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[9px] cursor-pointer shrink-0">
+                          ✓ Validar
+                        </button>
+                      </div>
+                    }
+                  </div>
                 </div>
               }
             </div>
@@ -272,7 +289,17 @@
 
           @for (o of kitchenOrders; track o.id) {
           <div
+            [ngClass]="hasUncheckedAddition(o.id) ? 'border-2 !border-orange-500 ring-2 ring-orange-500/30 shadow-lg' : ''"
             class="bg-white dark:bg-slate-850 border border-slate-200/90 dark:border-slate-750 rounded-lg p-3 shadow-xs hover:shadow-md hover:border-blue-500/50 transition-all space-y-2.5">
+            @if (hasUncheckedAddition(o.id)) {
+            <div class="px-2.5 py-1.5 rounded-lg bg-orange-600 text-white text-[10px] font-black flex items-center justify-between gap-2 animate-pulse">
+              <span class="truncate">🔔 ¡NUEVA ADICIÓN! Verificar orden {{ o.orderNumber }}</span>
+              <button (click)="openDetail.emit(o); dismissAdditionHighlight.emit(o.id)" type="button"
+                class="px-2 py-0.5 rounded bg-white text-orange-700 hover:bg-orange-50 font-black text-[9px] shrink-0 cursor-pointer">
+                Verificar
+              </button>
+            </div>
+            }
             <div class="flex items-start justify-between">
               <div>
                 <span class="text-brand-500 font-bold text-[10px] font-mono">{{ o.orderNumber }}</span>
@@ -317,27 +344,34 @@
                 <span>+${{ getAdditionsTotal(orderAdds2).toFixed(2) }}</span>
               </div>
               @for (add of orderAdds2; track add.raw) {
-                <div class="text-[9.5px] flex items-center justify-between font-semibold">
-                  @if (add.method === 'cash') {
-                    <span class="text-blue-700 dark:text-blue-300">
-                      💵 Cobrar ${{ add.amountUsd.toFixed(2) }} en efectivo (Motorizado)
-                    </span>
-                  } @else if (add.status === 'verified') {
-                    <span class="text-emerald-700 dark:text-emerald-300 flex items-center gap-1">
-                      <app-icon name="check-circle" [size]="10"></app-icon>
-                      <span>Pago Móvil OK (Ref: {{ add.reference }})</span>
-                    </span>
-                  } @else {
-                    <div class="flex items-center justify-between w-full gap-1">
-                      <span class="text-amber-700 dark:text-amber-300 truncate">
-                        📲 Ref: {{ add.reference }} (+${{ add.amountUsd.toFixed(2) }})
-                      </span>
-                      <button (click)="verifyAdditionPayment.emit({ order: o, addition: add })"
-                              class="px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[9px] cursor-pointer shrink-0">
-                        ✓ Validar
-                      </button>
-                    </div>
+                <div class="text-[9.5px] space-y-0.5">
+                  @if (add.description) {
+                  <div class="text-[10px] font-bold text-orange-900 dark:text-orange-200 truncate">
+                    + {{ add.description }}
+                  </div>
                   }
+                  <div class="flex items-center justify-between font-semibold">
+                    @if (add.method === 'cash') {
+                      <span class="text-blue-700 dark:text-blue-300">
+                        💵 Cobrar ${{ add.amountUsd.toFixed(2) }} en efectivo (Motorizado)
+                      </span>
+                    } @else if (add.status === 'verified') {
+                      <span class="text-emerald-700 dark:text-emerald-300 flex items-center gap-1">
+                        <app-icon name="check-circle" [size]="10"></app-icon>
+                        <span>Pago Móvil OK (Ref: {{ add.reference }})</span>
+                      </span>
+                    } @else {
+                      <div class="flex items-center justify-between w-full gap-1">
+                        <span class="text-amber-700 dark:text-amber-300 truncate">
+                          📲 Ref: {{ add.reference }} (+${{ add.amountUsd.toFixed(2) }})
+                        </span>
+                        <button (click)="verifyAdditionPayment.emit({ order: o, addition: add })"
+                                class="px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[9px] cursor-pointer shrink-0">
+                          ✓ Validar
+                        </button>
+                      </div>
+                    }
+                  </div>
                 </div>
               }
             </div>
@@ -449,7 +483,17 @@
 
           @for (o of transitOrders; track o.id) {
           <div
+            [ngClass]="hasUncheckedAddition(o.id) ? 'border-2 !border-orange-500 ring-2 ring-orange-500/30 shadow-lg' : ''"
             class="bg-white dark:bg-slate-850 border border-slate-200/90 dark:border-slate-750 rounded-lg p-3 shadow-xs hover:shadow-md hover:border-emerald-500/50 transition-all space-y-2.5">
+            @if (hasUncheckedAddition(o.id)) {
+            <div class="px-2.5 py-1.5 rounded-lg bg-orange-600 text-white text-[10px] font-black flex items-center justify-between gap-2 animate-pulse">
+              <span class="truncate">🔔 ¡NUEVA ADICIÓN! Verificar orden {{ o.orderNumber }}</span>
+              <button (click)="openDetail.emit(o); dismissAdditionHighlight.emit(o.id)" type="button"
+                class="px-2 py-0.5 rounded bg-white text-orange-700 hover:bg-orange-50 font-black text-[9px] shrink-0 cursor-pointer">
+                Verificar
+              </button>
+            </div>
+            }
             <div class="flex items-start justify-between">
               <div>
                 <span class="text-brand-500 font-bold text-[10px] font-mono">{{ o.orderNumber }}</span>
@@ -486,21 +530,28 @@
                 <span>+${{ getAdditionsTotal(orderAdds3).toFixed(2) }}</span>
               </div>
               @for (add of orderAdds3; track add.raw) {
-                <div class="text-[9.5px] flex items-center justify-between font-semibold">
-                  @if (add.method === 'cash') {
-                    <span class="text-blue-700 dark:text-blue-300">
-                      💵 Repartidor debe cobrar ${{ add.amountUsd.toFixed(2) }} en efectivo
-                    </span>
-                  } @else if (add.status === 'verified') {
-                    <span class="text-emerald-700 dark:text-emerald-300 flex items-center gap-1">
-                      <app-icon name="check-circle" [size]="10"></app-icon>
-                      <span>Pago Móvil OK (Ref: {{ add.reference }})</span>
-                    </span>
-                  } @else {
-                    <span class="text-amber-700 dark:text-amber-300 truncate">
-                      📲 Ref: {{ add.reference }} (+${{ add.amountUsd.toFixed(2) }}) [Por validar]
-                    </span>
+                <div class="text-[9.5px] space-y-0.5">
+                  @if (add.description) {
+                  <div class="text-[10px] font-bold text-orange-900 dark:text-orange-200 truncate">
+                    + {{ add.description }}
+                  </div>
                   }
+                  <div class="flex items-center justify-between font-semibold">
+                    @if (add.method === 'cash') {
+                      <span class="text-blue-700 dark:text-blue-300">
+                        💵 Repartidor debe cobrar ${{ add.amountUsd.toFixed(2) }} en efectivo
+                      </span>
+                    } @else if (add.status === 'verified') {
+                      <span class="text-emerald-700 dark:text-emerald-300 flex items-center gap-1">
+                        <app-icon name="check-circle" [size]="10"></app-icon>
+                        <span>Pago Móvil OK (Ref: {{ add.reference }})</span>
+                      </span>
+                    } @else {
+                      <span class="text-amber-700 dark:text-amber-300 truncate">
+                        📲 Ref: {{ add.reference }} (+${{ add.amountUsd.toFixed(2) }}) [Por validar]
+                      </span>
+                    }
+                  </div>
                 </div>
               }
             </div>
