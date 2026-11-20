@@ -118,16 +118,31 @@ class ApiService {
         final branch = data['branches'] as Map<String, dynamic>?;
         final rider = data['riders'] ?? {};
         final items = (data['order_items'] as List? ?? []).map((i) {
+          final rawMods = i['selected_modifiers'] as List? ?? [];
+          final mods = rawMods
+              .whereType<Map>()
+              .map((m) => SelectedProductModifier(
+                    groupId: (m['group_id'] ?? m['groupId'] ?? '').toString(),
+                    groupTitle: (m['group_title'] ?? m['groupTitle'] ?? '').toString(),
+                    optionId: (m['option_id'] ?? m['optionId'] ?? '').toString(),
+                    optionName: (m['option_name'] ?? m['optionName'] ?? m['name'] ?? '').toString(),
+                    priceDelta: (m['price_delta'] as num?)?.toDouble() ??
+                        (m['priceDelta'] as num?)?.toDouble() ??
+                        (m['price'] as num?)?.toDouble() ??
+                        0.0,
+                  ))
+              .toList();
           return CartItem(
             product: Product(
-              id: i['product_id'] ?? '',
-              name: i['product_name'] ?? 'Producto',
+              id: i['product_id']?.toString() ?? '',
+              name: i['product_name']?.toString() ?? 'Producto',
               description: '',
               price: (i['unit_price'] as num?)?.toDouble() ?? 0.0,
               imageUrl: '',
               category: 'General',
             ),
-            quantity: i['quantity'] ?? 1,
+            quantity: (i['quantity'] as num?)?.toInt() ?? 1,
+            selectedModifiers: mods,
           );
         }).toList();
 
@@ -147,12 +162,12 @@ class ApiService {
             ? (branch['longitude'] as num).toDouble()
             : ((tenant['longitude'] as num?)?.toDouble() ?? -69.2812938);
 
+        final rawNotes = (data['notes'] ?? '').toString();
         final pin = () {
-          final notes = (data['notes'] ?? '').toString();
-          if (notes.contains('[PIN:')) {
-            final m = RegExp(r'\[PIN:(\d{4})\]').firstMatch(notes);
-            if (m != null) return m.group(1)!;
-          }
+          final explicitPin = (data['delivery_pin'] ?? '').toString().trim();
+          if (RegExp(r'^\d{4}$').hasMatch(explicitPin)) return explicitPin;
+          final m = RegExp(r'\[PIN:(\d{4})\]').firstMatch(rawNotes);
+          if (m != null) return m.group(1)!;
           final orderNum = (data['order_number'] ?? '').toString();
           final digits = orderNum.replaceAll(RegExp(r'\D'), '');
           if (digits.length >= 4) {
@@ -160,8 +175,14 @@ class ApiService {
           } else if (digits.isNotEmpty) {
             return digits.padLeft(4, '0');
           }
-          return data['delivery_pin']?.toString() ?? '1234';
+          return '1234';
         }();
+
+        String originBank = (data['payment_origin_bank'] ?? '').toString();
+        if (originBank.isEmpty && rawNotes.contains('[PAGO_ORIGEN:')) {
+          final m = RegExp(r'\[PAGO_ORIGEN:([^\]]+)\]').firstMatch(rawNotes);
+          if (m != null) originBank = m.group(1)!.trim();
+        }
 
         return DeliveryOrder(
           id: data['id']?.toString() ?? '',
@@ -187,9 +208,13 @@ class ApiService {
           deliveryFee: (data['delivery_fee'] as num?)?.toDouble() ?? 2.50,
           total: (data['total'] as num?)?.toDouble() ?? 0.0,
           paymentMethod: data['payment_method'] ?? 'Pago Móvil',
+          paymentStatus: data['payment_status']?.toString() ?? 'pending',
+          paymentReference: data['payment_reference']?.toString() ?? '',
+          paymentOriginBank: originBank,
           createdAt: DateTime.tryParse(data['created_at'] ?? '') ?? DateTime.now(),
           branchId: data['branch_id']?.toString(),
           companyId: data['tenant_id']?.toString(),
+          notes: rawNotes.isNotEmpty ? rawNotes : null,
         );
       }
     } catch (e) {
@@ -942,9 +967,19 @@ class ApiService {
     return false;
   }
 
-  /// Create real order in Supabase Cloud and Backend
-  Future<bool> createOrder(DeliveryOrder order) async {
-    bool savedInSupabase = false;
+  String _mapPaymentMethodEnum(String raw) {
+    final lower = raw.toLowerCase();
+    if (lower.contains('efectivo') || lower.contains('cash')) return 'cash_usd';
+    if (lower.contains('zelle')) return 'zelle';
+    if (lower.contains('punto') || lower.contains('pos') || lower.contains('tarjeta')) {
+      return 'pos_on_delivery';
+    }
+    return 'mobile_transfer';
+  }
+
+  /// Create real order in Supabase Cloud (or Backend fallback), returning the cloud UUID if saved
+  Future<String?> createOrder(DeliveryOrder order) async {
+    String? createdOrderId;
 
     final validBranchId = (order.branchId != null &&
             order.branchId!.trim().isNotEmpty &&
@@ -956,6 +991,17 @@ class ApiService {
     String resolvedTenantId = (order.companyId != null && uuidRegex.hasMatch(order.companyId!.trim()))
         ? order.companyId!.trim()
         : '';
+
+    final mappedMethod = _mapPaymentMethodEnum(order.paymentMethod);
+    String extractedRef = order.paymentReference.trim();
+    if (extractedRef.isEmpty) {
+      final refMatch = RegExp(r'Ref(?:/Titular)?:\s*([^)]+)', caseSensitive: false).firstMatch(order.paymentMethod);
+      if (refMatch != null) {
+        extractedRef = refMatch.group(1)!.trim();
+      }
+    }
+
+    String notesExtra = '[PIN:${order.pin}]';
 
     // 1. Primary: Save directly to Supabase Cloud PostgreSQL
     try {
@@ -978,7 +1024,17 @@ class ApiService {
       }
 
       final currentUserId = supabase.auth.currentUser?.id ?? SessionService().currentUser?.id;
-      final notesExtra = currentUserId != null && currentUserId.isNotEmpty ? '[PIN:${order.pin}][UID:$currentUserId]' : '[PIN:${order.pin}]';
+      final noteParts = <String>['[PIN:${order.pin}]'];
+      if (currentUserId != null && currentUserId.isNotEmpty) {
+        noteParts.add('[UID:$currentUserId]');
+      }
+      if (order.paymentOriginBank.trim().isNotEmpty) {
+        noteParts.add('[PAGO_ORIGEN:${order.paymentOriginBank.trim()}]');
+      }
+      if ((order.notes ?? '').trim().isNotEmpty) {
+        noteParts.add(order.notes!.trim());
+      }
+      notesExtra = noteParts.join(' ');
 
       final orderInsertMap = <String, dynamic>{
         'tenant_id': resolvedTenantId,
@@ -987,7 +1043,9 @@ class ApiService {
         'source': 'mobile_app',
         'status': 'received',
         'fulfillment_type': 'delivery',
-        'payment_method': 'mobile_transfer',
+        'payment_method': mappedMethod,
+        'payment_status': mappedMethod == 'mobile_transfer' ? 'pending' : 'not_required',
+        'payment_reference': extractedRef.isNotEmpty ? extractedRef : null,
         'customer_name': order.customerName.isNotEmpty ? order.customerName : 'Cliente',
         'customer_phone': order.customerPhone.isNotEmpty ? order.customerPhone : '04120000000',
         'delivery_address': order.customerAddress.isNotEmpty ? order.customerAddress : 'Dirección de entrega',
@@ -1005,20 +1063,19 @@ class ApiService {
           .select()
           .single();
 
-      final orderId = inserted['id']?.toString();
-      if (orderId != null) {
-        // Suscribir automáticamente al cliente al topic de este pedido para notificaciones push en tiempo real
+      createdOrderId = inserted['id']?.toString();
+      if (createdOrderId != null) {
         try {
-          NotificationService().subscribeToOrder(orderId);
+          NotificationService().subscribeToOrder(createdOrderId);
           NotificationService().subscribeToOrder(order.orderNumber);
           if (order.customerPhone.isNotEmpty) {
             NotificationService().registerCustomerPhone(order.customerPhone);
           }
         } catch (_) {}
       }
-      if (orderId != null && order.items.isNotEmpty) {
+      if (createdOrderId != null && order.items.isNotEmpty) {
         final itemsPayload = order.items.map((i) => {
-          'order_id': orderId,
+          'order_id': createdOrderId,
           'product_id': uuidRegex.hasMatch(i.product.id) ? i.product.id : null,
           'product_name': i.product.name,
           'unit_price': i.product.price,
@@ -1028,23 +1085,27 @@ class ApiService {
         }).toList();
         await supabase.from('order_items').insert(itemsPayload);
       }
-      debugPrint('[ApiService] ✅ Pedido guardado exitosamente en Supabase: $orderId (Sede: $validBranchId, Tenant: $resolvedTenantId)');
-      savedInSupabase = true;
+      debugPrint('[ApiService] ✅ Pedido guardado exitosamente en Supabase: $createdOrderId (Sede: $validBranchId, Tenant: $resolvedTenantId)');
+      return createdOrderId;
     } catch (e) {
       debugPrint('[ApiService] Error guardando pedido en Supabase: $e');
     }
 
-    // 2. Secondary: Synchronize with local NestJS backend if reachable
+    // 2. Fallback: Only hit NestJS backend if Supabase insert failed (prevents duplicate orders)
     final payload = {
       'tenant_id': resolvedTenantId.isNotEmpty ? resolvedTenantId : 'dac59429-fd6f-4d3e-8b2e-ab0e23828c1f',
       'branch_id': validBranchId,
       'order_number': order.orderNumber,
+      'source': 'mobile_app',
       'customer_name': order.customerName.isNotEmpty ? order.customerName : 'Cliente',
       'customer_phone': order.customerPhone.isNotEmpty ? order.customerPhone : '04120000000',
       'delivery_address': order.customerAddress.isNotEmpty ? order.customerAddress : 'Dirección de entrega',
       'delivery_lat': order.customerLat,
       'delivery_lng': order.customerLng,
-      'payment_method': order.paymentMethod,
+      'payment_method': mappedMethod,
+      'payment_reference': extractedRef.isNotEmpty ? extractedRef : null,
+      'delivery_pin': order.pin,
+      'notes': notesExtra,
       'subtotal': order.subtotal,
       'delivery_fee': order.deliveryFee,
       'total': order.total,
@@ -1074,98 +1135,292 @@ class ApiService {
               headers: {'Content-Type': 'application/json'},
               body: json.encode(payload),
             )
-            .timeout(const Duration(seconds: 2));
+            .timeout(const Duration(seconds: 3));
         if (res.statusCode == 200 || res.statusCode == 201) {
-          return true;
+          try {
+            final decoded = json.decode(res.body);
+            if (decoded is Map && decoded['id'] != null) {
+              return decoded['id'].toString();
+            }
+          } catch (_) {}
+          return null;
         }
       } catch (_) {}
     }
 
-    return savedInSupabase;
+    return null;
   }
 
-  /// Append new items to an active order in Supabase
+  /// Append new items to an active order (Backend API primary, direct Supabase fallback)
   Future<bool> appendItemsToOrder({
     required String orderIdOrNumber,
+    String? orderNumber,
     required List<CartItem> newItems,
     required double extraSubtotal,
     String paymentMethod = 'cash',
     String? paymentReference,
+    String? paymentOriginBank,
   }) async {
+    final uuidRegex = RegExp(
+      r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+    );
+    final isUuid = uuidRegex.hasMatch(orderIdOrNumber);
+    final cleanNum = (orderNumber ?? orderIdOrNumber).replaceAll('#', '').trim();
+    final targetKey = isUuid ? orderIdOrNumber : cleanNum;
+
+    // 1. Primary path: Backend API
+    try {
+      final url = Uri.parse('${AppConfig.backendBaseUrl}/orders/$targetKey/append-items');
+      final body = {
+        'items': newItems
+            .map((i) => {
+                  'product_id': uuidRegex.hasMatch(i.product.id) ? i.product.id : null,
+                  'product_name': i.product.name,
+                  'unit_price': i.product.price,
+                  'quantity': i.quantity,
+                  'item_total': i.totalPrice,
+                  'selected_modifiers': i.selectedModifiers.map((m) => m.toJson()).toList(),
+                })
+            .toList(),
+        'paymentMethod': paymentMethod,
+        'paymentReference': (paymentReference ?? '').trim(),
+        'paymentOriginBank': (paymentOriginBank ?? '').trim(),
+        'extraSubtotal': extraSubtotal,
+      };
+      final res = await http
+          .post(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode(body),
+          )
+          .timeout(const Duration(seconds: 8));
+      if (res.statusCode == 200 || res.statusCode == 201) {
+        return true;
+      }
+    } catch (e) {
+      if (kDebugMode) print('[ApiService] Backend append-items fallback to Supabase: $e');
+    }
+
+    // 2. Fallback path: Direct Supabase
     try {
       final supabase = Supabase.instance.client;
-      final query = supabase
+      Map<String, dynamic>? currentOrder;
+      if (isUuid) {
+        currentOrder = await supabase.from('orders').select('*').eq('id', orderIdOrNumber).maybeSingle();
+      }
+      currentOrder ??= await supabase
           .from('orders')
-          .select('id, subtotal, total, notes, exchange_rate');
+          .select('*')
+          .or('order_number.eq.$cleanNum,order_number.eq.#$cleanNum')
+          .maybeSingle();
 
-      final isUuid = RegExp(
-              r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
-              caseSensitive: false)
-          .hasMatch(orderIdOrNumber);
+      if (currentOrder == null) return false;
 
-      final Map<String, dynamic>? currentOrder = isUuid
-          ? await query.eq('id', orderIdOrNumber).maybeSingle()
-          : await query.eq('order_number', orderIdOrNumber).maybeSingle();
+      final currentStatus = (currentOrder['status'] ?? '').toString().toLowerCase();
+      if (['picked_up', 'on_the_way', 'delivered', 'cancelled'].contains(currentStatus)) {
+        return false;
+      }
 
-      if (currentOrder != null) {
-        final realId = currentOrder['id'].toString();
-        final currentSub = (currentOrder['subtotal'] as num?)?.toDouble() ?? 0.0;
-        final currentTot = (currentOrder['total'] as num?)?.toDouble() ?? 0.0;
-        final rate = (currentOrder['exchange_rate'] as num?)?.toDouble() ?? 1.0;
-        final updatedSub = currentSub + extraSubtotal;
-        final updatedTot = currentTot + extraSubtotal;
-        final extraBs = rate > 1 ? (extraSubtotal * rate) : 0.0;
+      final realId = currentOrder['id'].toString();
+      final currentSub = (currentOrder['subtotal'] as num?)?.toDouble() ?? 0.0;
+      final currentTot = (currentOrder['total'] as num?)?.toDouble() ?? 0.0;
+      final deliveryFee = (currentOrder['delivery_fee'] as num?)?.toDouble() ?? 0.0;
+      final existingNotes = currentOrder['notes']?.toString() ?? '';
 
-        final existingNotes = currentOrder['notes']?.toString() ?? '';
-        final itemDetails = newItems
-            .map((i) =>
-                '${i.quantity}x ${i.product.name}')
-            .join(', ');
+      double rate = (currentOrder['exchange_rate'] as num?)?.toDouble() ?? 0.0;
+      if (rate <= 1) {
+        final fxMatch = RegExp(r'\[FX:rate=([0-9.]+)').firstMatch(existingNotes);
+        if (fxMatch != null) {
+          rate = double.tryParse(fxMatch.group(1)!) ?? 0.0;
+        }
+      }
+      if (rate <= 1 && currentOrder['branch_id'] != null) {
+        try {
+          final bRow = await supabase
+              .from('branches')
+              .select('exchange_rate')
+              .eq('id', currentOrder['branch_id'].toString())
+              .maybeSingle();
+          if (bRow != null && bRow['exchange_rate'] != null) {
+            rate = (bRow['exchange_rate'] as num).toDouble();
+          }
+        } catch (_) {}
+      }
 
-        final additionTag = paymentMethod == 'mobile_transfer'
-            ? '[ADICIONAL: $itemDetails | +\$${extraSubtotal.toStringAsFixed(2)}${extraBs > 0 ? " (Bs. ${extraBs.toStringAsFixed(2)})" : ""} | Método: Pago Móvil | Ref: ${paymentReference ?? ""} | Estado: Pendiente de Verificación]'
-            : '[ADICIONAL: $itemDetails | +\$${extraSubtotal.toStringAsFixed(2)}${extraBs > 0 ? " (Bs. ${extraBs.toStringAsFixed(2)})" : ""} | Método: Efectivo al Recibir]';
+      // Insert order_items FIRST so Realtime UPDATE on orders already sees new rows in DB
+      for (final item in newItems) {
+        final itemTotal = item.totalPrice;
+        await supabase.from('order_items').insert({
+          'order_id': realId,
+          'product_id': uuidRegex.hasMatch(item.product.id) ? item.product.id : null,
+          'product_name': '${item.product.name} (Adición)',
+          'unit_price': item.product.price,
+          'quantity': item.quantity,
+          'item_total': double.parse(itemTotal.toStringAsFixed(2)),
+          'selected_modifiers': [
+            {'name': 'Adición posterior', 'price': 0}
+          ],
+        });
+      }
 
-        final appendedNotes = existingNotes.trim().isEmpty
-            ? additionTag
-            : '$existingNotes\n$additionTag';
+      final updatedSub = double.parse((currentSub + extraSubtotal).toStringAsFixed(2));
+      final updatedTot = double.parse((currentTot + extraSubtotal).toStringAsFixed(2));
+      final extraBs = rate > 1 ? (extraSubtotal * rate) : 0.0;
+      final itemDetails = newItems.map((i) => '${i.quantity}x ${i.product.name}').join(', ');
 
-        final updateData = <String, dynamic>{
+      final bankSeg = (paymentOriginBank != null && paymentOriginBank.trim().isNotEmpty)
+          ? ' | Banco: ${paymentOriginBank.trim()}'
+          : '';
+      final bsSeg = extraBs > 0 ? ' (Bs. ${extraBs.toStringAsFixed(2)})' : '';
+      final additionTag = paymentMethod == 'mobile_transfer'
+          ? '[ADICIONAL: $itemDetails | +\$${extraSubtotal.toStringAsFixed(2)}$bsSeg | Método: Pago Móvil$bankSeg | Ref: ${(paymentReference ?? "").trim()} | Estado: Pendiente de Verificación]'
+          : '[ADICIONAL: $itemDetails | +\$${extraSubtotal.toStringAsFixed(2)}$bsSeg | Método: Efectivo al Recibir]';
+
+      String notesBase = existingNotes;
+      if (rate > 1) {
+        final fxRegex = RegExp(r'\[FX:rate=[0-9.]+\|total_bs=[0-9.]+(?:\|delivery_bs=([0-9.]+))?(?:\|subtotal_bs=[0-9.]+)?\]');
+        final existingFx = fxRegex.firstMatch(notesBase);
+        if (existingFx != null) {
+          final delivBs = existingFx.group(1) ?? (deliveryFee * rate).toStringAsFixed(2);
+          final newFxTag =
+              '[FX:rate=${rate.toStringAsFixed(2)}|total_bs=${(updatedTot * rate).toStringAsFixed(2)}|delivery_bs=$delivBs|subtotal_bs=${(updatedSub * rate).toStringAsFixed(2)}]';
+          notesBase = notesBase.replaceFirst(fxRegex, newFxTag);
+        }
+      }
+
+      final appendedNotes = notesBase.trim().isEmpty ? additionTag : '${notesBase.trim()}\n$additionTag';
+      final nowIso = DateTime.now().toIso8601String();
+      final updateData = <String, dynamic>{
+        'subtotal': updatedSub,
+        'total': updatedTot,
+        'notes': appendedNotes,
+        'updated_at': nowIso,
+      };
+      if (rate > 1) {
+        updateData['total_bs'] = double.parse((updatedTot * rate).toStringAsFixed(2));
+        updateData['subtotal_bs'] = double.parse((updatedSub * rate).toStringAsFixed(2));
+      }
+
+      try {
+        await supabase.from('orders').update(updateData).eq('id', realId);
+      } catch (_) {
+        await supabase.from('orders').update({
           'subtotal': updatedSub,
           'total': updatedTot,
           'notes': appendedNotes,
-          'updated_at': DateTime.now().toIso8601String(),
-        };
-        if (rate > 1) {
-          updateData['total_bs'] = updatedTot * rate;
-          updateData['subtotal_bs'] = updatedSub * rate;
-        }
-
-        await supabase.from('orders').update(updateData).eq('id', realId);
-
-        for (final item in newItems) {
-          final itemTotal = item.product.price * item.quantity;
-          try {
-            await supabase.from('order_items').insert({
-              'order_id': realId,
-              'product_id': item.product.id.isNotEmpty ? item.product.id : null,
-              'product_name': '${item.product.name} (Adición)',
-              'unit_price': item.product.price,
-              'quantity': item.quantity,
-              'item_total': itemTotal,
-              'selected_modifiers': [
-                {'name': 'Adición posterior', 'price': 0}
-              ],
-            });
-          } catch (itemErr) {
-            if (kDebugMode) print('[ApiService] Insert order_item error: $itemErr');
-          }
-        }
-        return true;
+          'updated_at': nowIso,
+        }).eq('id', realId);
       }
-      return false;
+      return true;
     } catch (e) {
       if (kDebugMode) print('[ApiService] appendItemsToOrder error: $e');
+      return false;
+    }
+  }
+
+  /// Resend corrected Pago Móvil reference for a rejected additional order
+  Future<bool> resendAdditionPaymentReference({
+    required String orderIdOrNumber,
+    String? orderNumber,
+    required String additionRaw,
+    required String newReference,
+    String? originBank,
+  }) async {
+    final uuidRegex = RegExp(
+      r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+    );
+    final isUuid = uuidRegex.hasMatch(orderIdOrNumber);
+    final cleanNum = (orderNumber ?? orderIdOrNumber).replaceAll('#', '').trim();
+    final targetKey = isUuid ? orderIdOrNumber : cleanNum;
+    final cleanRef = newReference.trim();
+    final cleanBank = (originBank ?? '').trim();
+
+    // 1. Primary path: Backend API
+    try {
+      final url = Uri.parse('${AppConfig.backendBaseUrl}/orders/$targetKey/verify-addition');
+      final res = await http
+          .patch(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode({
+              'additionRaw': additionRaw,
+              'status': 'pending',
+              'reference': cleanRef,
+              'originBank': cleanBank,
+            }),
+          )
+          .timeout(const Duration(seconds: 8));
+      if (res.statusCode == 200 || res.statusCode == 201) {
+        return true;
+      }
+    } catch (e) {
+      if (kDebugMode) print('[ApiService] Backend resendAddition fallback to Supabase: $e');
+    }
+
+    // 2. Fallback path: Direct Supabase
+    try {
+      final supabase = Supabase.instance.client;
+      Map<String, dynamic>? currentOrder;
+      if (isUuid) {
+        currentOrder = await supabase.from('orders').select('*').eq('id', orderIdOrNumber).maybeSingle();
+      }
+      currentOrder ??= await supabase
+          .from('orders')
+          .select('*')
+          .or('order_number.eq.$cleanNum,order_number.eq.#$cleanNum')
+          .maybeSingle();
+
+      if (currentOrder == null) return false;
+      final realId = currentOrder['id'].toString();
+      final notes = (currentOrder['notes'] ?? '').toString();
+      String targetRaw = additionRaw.trim();
+      if (targetRaw.isEmpty || !notes.contains(targetRaw)) {
+        final matches = RegExp(r'\[(?:ADICIONAL|Adición en app)[^\]]*\]', caseSensitive: false)
+            .allMatches(notes)
+            .map((m) => m.group(0)!)
+            .toList();
+        if (matches.isEmpty) return false;
+        targetRaw = matches.lastWhere(
+          (t) => RegExp(r'pago\s*m[oó]vil', caseSensitive: false).hasMatch(t),
+          orElse: () => matches.last,
+        );
+      }
+      if (!notes.contains(targetRaw)) return false;
+
+      String updatedTag = targetRaw;
+      if (cleanRef.isNotEmpty) {
+        if (RegExp(r'Ref:\s*[^|\]]+', caseSensitive: false).hasMatch(updatedTag)) {
+          updatedTag = updatedTag.replaceFirst(RegExp(r'Ref:\s*[^|\]]+', caseSensitive: false), 'Ref: $cleanRef');
+        } else {
+          updatedTag = updatedTag.replaceFirst(RegExp(r'\]$'), ' | Ref: $cleanRef]');
+        }
+      }
+      if (cleanBank.isNotEmpty) {
+        if (RegExp(r'Banco:\s*[^|\]]+', caseSensitive: false).hasMatch(updatedTag)) {
+          updatedTag = updatedTag.replaceFirst(RegExp(r'Banco:\s*[^|\]]+', caseSensitive: false), 'Banco: $cleanBank');
+        } else if (RegExp(r'Ref:', caseSensitive: false).hasMatch(updatedTag)) {
+          updatedTag = updatedTag.replaceFirst(RegExp(r'\|\s*Ref:', caseSensitive: false), '| Banco: $cleanBank | Ref:');
+        } else {
+          updatedTag = updatedTag.replaceFirst(RegExp(r'\]$'), ' | Banco: $cleanBank]');
+        }
+      }
+      if (RegExp(r'Estado:\s*[^\]]+', caseSensitive: false).hasMatch(updatedTag)) {
+        updatedTag = updatedTag.replaceFirst(
+          RegExp(r'Estado:\s*[^\]]+', caseSensitive: false),
+          'Estado: Pendiente de Verificación',
+        );
+      } else {
+        updatedTag = updatedTag.replaceFirst(RegExp(r'\]$'), ' | Estado: Pendiente de Verificación]');
+      }
+
+      final updatedNotes = notes.replaceFirst(targetRaw, updatedTag);
+      await supabase.from('orders').update({
+        'notes': updatedNotes,
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', realId);
+      return true;
+    } catch (e) {
+      if (kDebugMode) print('[ApiService] resendAdditionPaymentReference error: $e');
       return false;
     }
   }
@@ -1206,16 +1461,31 @@ class ApiService {
 
         final rawItems = row['order_items'] as List? ?? [];
         final items = rawItems.map((i) {
+          final rawMods = i['selected_modifiers'] as List? ?? [];
+          final mods = rawMods
+              .whereType<Map>()
+              .map((m) => SelectedProductModifier(
+                    groupId: (m['group_id'] ?? m['groupId'] ?? '').toString(),
+                    groupTitle: (m['group_title'] ?? m['groupTitle'] ?? '').toString(),
+                    optionId: (m['option_id'] ?? m['optionId'] ?? '').toString(),
+                    optionName: (m['option_name'] ?? m['optionName'] ?? m['name'] ?? '').toString(),
+                    priceDelta: (m['price_delta'] as num?)?.toDouble() ??
+                        (m['priceDelta'] as num?)?.toDouble() ??
+                        (m['price'] as num?)?.toDouble() ??
+                        0.0,
+                  ))
+              .toList();
           return CartItem(
             product: Product(
-              id: i['product_id'] ?? 'p1',
-              name: i['product_name'] ?? 'Producto',
+              id: i['product_id']?.toString() ?? 'p1',
+              name: i['product_name']?.toString() ?? 'Producto',
               description: '',
               price: (i['unit_price'] as num?)?.toDouble() ?? 0.0,
               imageUrl: '',
               category: 'General',
             ),
-            quantity: i['quantity'] ?? 1,
+            quantity: (i['quantity'] as num?)?.toInt() ?? 1,
+            selectedModifiers: mods,
           );
         }).toList();
 
@@ -1224,12 +1494,12 @@ class ApiService {
         final riderPhone = riderData != null ? (riderData['phone']?.toString() ?? '') : '';
         final riderVehicle = riderData != null ? (riderData['vehicle_model'] ?? riderData['vehicle_type'] ?? '') : '';
         final riderPlate = riderData != null ? (riderData['vehicle_plate']?.toString() ?? '') : '';
+        final rawNotes = (row['notes'] ?? '').toString();
         final pin = () {
-          final notes = (row['notes'] ?? '').toString();
-          if (notes.contains('[PIN:')) {
-            final m = RegExp(r'\[PIN:(\d{4})\]').firstMatch(notes);
-            if (m != null) return m.group(1)!;
-          }
+          final explicitPin = (row['delivery_pin'] ?? '').toString().trim();
+          if (RegExp(r'^\d{4}$').hasMatch(explicitPin)) return explicitPin;
+          final m = RegExp(r'\[PIN:(\d{4})\]').firstMatch(rawNotes);
+          if (m != null) return m.group(1)!;
           final orderNum = (row['order_number'] ?? '').toString();
           final digits = orderNum.replaceAll(RegExp(r'\D'), '');
           if (digits.length >= 4) {
@@ -1237,8 +1507,14 @@ class ApiService {
           } else if (digits.isNotEmpty) {
             return digits.padLeft(4, '0');
           }
-          return row['delivery_pin']?.toString() ?? '1234';
+          return '1234';
         }();
+
+        String originBank = (row['payment_origin_bank'] ?? '').toString();
+        if (originBank.isEmpty && rawNotes.contains('[PAGO_ORIGEN:')) {
+          final m = RegExp(r'\[PAGO_ORIGEN:([^\]]+)\]').firstMatch(rawNotes);
+          if (m != null) originBank = m.group(1)!.trim();
+        }
 
         final branchData = row['branches'] as Map<String, dynamic>?;
         final tenantData = row['tenants'] as Map<String, dynamic>?;
@@ -1298,9 +1574,13 @@ class ApiService {
             deliveryFee: (row['delivery_fee'] as num?)?.toDouble() ?? 0.0,
             total: (row['total'] as num?)?.toDouble() ?? 0.0,
             paymentMethod: row['payment_method'] ?? 'Pago Móvil',
+            paymentStatus: row['payment_status']?.toString() ?? 'pending',
+            paymentReference: row['payment_reference']?.toString() ?? '',
+            paymentOriginBank: originBank,
             createdAt: DateTime.tryParse(row['created_at'] ?? '') ?? DateTime.now(),
             branchId: row['branch_id']?.toString(),
             companyId: row['tenant_id']?.toString(),
+            notes: rawNotes.isNotEmpty ? rawNotes : null,
           ),
         );
       }

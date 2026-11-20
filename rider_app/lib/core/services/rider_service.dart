@@ -545,11 +545,14 @@ class RiderService extends ChangeNotifier {
       riderVehicle: '',
       riderPlate: '',
       pin: () {
-        final notes = (row['notes'] ?? '').toString();
-        if (notes.contains('[PIN:')) {
-          final m = RegExp(r'\[PIN:(\d{4})\]').firstMatch(notes);
-          if (m != null) return m.group(1)!;
+        final explicitPin = (row['delivery_pin'] ?? '').toString().trim();
+        if (RegExp(r'^\d{4}$').hasMatch(explicitPin)) {
+          return explicitPin;
         }
+        final notes = (row['notes'] ?? '').toString();
+        final m = RegExp(r'\[PIN:(\d{4})\]').firstMatch(notes);
+        if (m != null) return m.group(1)!;
+
         final orderNum = (row['order_number'] ?? '').toString();
         final digits = orderNum.replaceAll(RegExp(r'\D'), '');
         if (digits.length >= 4) {
@@ -557,7 +560,7 @@ class RiderService extends ChangeNotifier {
         } else if (digits.isNotEmpty) {
           return digits.padLeft(4, '0');
         }
-        return row['delivery_pin']?.toString() ?? '1234';
+        return '1234';
       }(),
       status: mappedStatus,
       items: items,

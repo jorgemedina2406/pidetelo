@@ -211,14 +211,14 @@
       (ordersSubTabChange)="ordersSubTab.set($event)"
       (historySearchQueryChange)="historySearchQuery.set($event)"
       (historyStatusFilterChange)="historyStatusFilter.set($event)"
-      (advanceStatus)="advanceOrderStatus($event.orderId, $event.status)"
+      (advanceStatus)="handleAdvanceOrderStatus($event)"
       (sendToKitchen)="handleSendToKitchen($event)"
       (assignRider)="assignRiderToOrder($event.orderId, $event.riderId)"
       (openNearbyRiders)="openNearbyRidersModal($event)"
       (openDetail)="openOrderDetail($event)"
       (openRoute)="openOrderRouteModal($event)"
       (openPaymentVerification)="openPaymentVerificationModal($event)"
-      (verifyAdditionPayment)="handleVerifyAdditionPayment($event)"
+      (verifyAdditionPayment)="openAdditionVerificationModal($event)"
       (dismissAdditionHighlight)="dismissAdditionAlertsForOrder($event)"
       (openDispatchConfig)="isDispatchConfigModalOpen.set(true)"
       (exportExcel)="exportOrdersToExcel()"
@@ -479,7 +479,7 @@
 <!-- MODAL: DETALLE COMPLETO DE PEDIDO -->
 <app-order-detail-modal [isOpen]="isOrderDetailModalOpen()" [order]="selectedOrderDetail()"
   [activeExchangeRate]="activeExchangeRate()" (close)="closeOrderDetail()" (viewRoute)="onViewOrderRoute($event)"
-  (verifyAdditionPayment)="handleVerifyAdditionPayment($event)">
+  (verifyAdditionPayment)="openAdditionVerificationModal($event)">
 </app-order-detail-modal>
 
 <!-- MODAL: CREAR / EDITAR COLABORADOR & CONFLICTO DE CORREO -->
@@ -578,11 +578,11 @@
         </div>
         <div class="font-mono text-[11px] text-slate-700 dark:text-slate-300 space-y-0.5">
           <div><strong>Banco:</strong> {{ selectedBranch()?.paymentCredentials?.pagoMovilBank ||
-            brandingForm.pagoMovilBank || '0102 - Banco de Venezuela' }}</div>
+            brandingForm.pagoMovilBank || 'No configurado' }}</div>
           <div><strong>Teléfono:</strong> {{ selectedBranch()?.paymentCredentials?.pagoMovilPhone ||
-            brandingForm.pagoMovilPhone || '0412-0000000' }}</div>
+            brandingForm.pagoMovilPhone || 'No configurado' }}</div>
           <div><strong>RIF/CI:</strong> {{ selectedBranch()?.paymentCredentials?.pagoMovilIdNumber ||
-            brandingForm.pagoMovilIdNumber || 'J-12345678-0' }} ({{
+            brandingForm.pagoMovilIdNumber || 'No configurado' }} ({{
             selectedBranch()?.paymentCredentials?.pagoMovilAccountName || selectedBranch()?.name ||
             brandingForm.pagoMovilAccountName }})</div>
         </div>
@@ -689,6 +689,192 @@
         class="px-4 py-2 text-xs font-black text-white bg-red-600 hover:bg-red-500 shadow-md shadow-red-600/25 rounded-xl transition cursor-pointer flex items-center gap-1.5">
         <app-icon name="x-circle" [size]="14"></app-icon>
         <span>{{ isProcessingVerification() ? 'Rechazando...' : 'Sí, Rechazar Pago' }}</span>
+      </button>
+    </div>
+  </div>
+</div>
+}
+
+<!-- MODAL: AUDITORÍA DE PAGO DE PEDIDO ADICIONAL (TRANSPARENTE EN COCINA Y KANBAN) -->
+@if (verifyingAdditionContext(); as vAdd) {
+<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-fade-in">
+  <div
+    class="bg-white dark:bg-slate-900 border-2 border-orange-500/40 rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden flex flex-col max-h-[90vh]">
+
+    <!-- Header -->
+    <div
+      class="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-gradient-to-r from-orange-500/15 via-amber-500/10 to-transparent">
+      <div class="flex items-center gap-2.5">
+        <div
+          class="w-10 h-10 rounded-xl bg-orange-500 text-white flex items-center justify-center shrink-0 shadow-sm">
+          <app-icon name="shield-check" [size]="20"></app-icon>
+        </div>
+        <div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="px-2 py-0.5 rounded-md bg-orange-600 text-white text-[10px] font-black uppercase tracking-wider">
+              ➕ Pedido Adicional
+            </span>
+            <h3 class="text-sm font-black text-slate-900 dark:text-white flex items-center gap-1.5">
+              <span>Auditoría de Pago</span>
+              <span class="font-mono text-orange-600 dark:text-orange-400">#{{ vAdd.order.orderNumber }}</span>
+            </h3>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+              {{ vAdd.order.status === 'received' ? 'Recibido' :
+                 vAdd.order.status === 'in_kitchen' ? 'En Cocina' :
+                 vAdd.order.status === 'assigned_driver' ? 'Rider Asignado' :
+                 vAdd.order.status === 'at_merchant' ? 'Rider en Local' : vAdd.order.status }}
+            </span>
+          </div>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+            Verifica únicamente el ingreso correspondiente al pedido adicional agregado por el cliente.
+          </p>
+        </div>
+      </div>
+      <button (click)="closeAdditionVerificationModal()" type="button"
+        class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg cursor-pointer">
+        <app-icon name="x" [size]="18"></app-icon>
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div class="p-5 space-y-4 overflow-y-auto text-xs">
+
+      <!-- Desglose Financiero Transparente: Inicial vs Esta Adición vs Total -->
+      <div class="grid grid-cols-3 gap-2.5 p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
+        <div>
+          <span class="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Pedido Inicial</span>
+          <span class="text-sm font-extrabold text-slate-700 dark:text-slate-200 font-mono">
+            ${{ getOrderBaseTotal(vAdd.order).toFixed(2) }}
+          </span>
+        </div>
+        <div class="text-center border-x border-slate-200 dark:border-slate-700 px-2">
+          <span class="text-[10px] uppercase font-black text-orange-600 dark:text-orange-400 block mb-0.5">Esta Adición</span>
+          <span class="text-base font-black text-orange-600 dark:text-orange-400 font-mono block leading-tight">
+            +${{ vAdd.addition.amountUsd.toFixed(2) }}
+          </span>
+          <span class="text-[10px] font-bold text-amber-600 dark:text-amber-300 font-mono">
+            Bs. {{ getAdditionBsAmount(vAdd.addition, vAdd.order).toFixed(2) }}
+          </span>
+        </div>
+        <div class="text-right">
+          <span class="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Total Orden</span>
+          <span class="text-sm font-black text-slate-900 dark:text-white font-mono">
+            ${{ vAdd.order.total.toFixed(2) }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Productos Adicionados -->
+      @if (vAdd.addition.description) {
+      <div class="p-3 rounded-xl bg-orange-500/10 border border-orange-500/30 space-y-1">
+        <div class="text-[10px] font-black uppercase text-orange-800 dark:text-orange-300">
+          🍔 Productos agregados en esta adición:
+        </div>
+        <div class="text-xs font-extrabold text-orange-950 dark:text-orange-100">
+          {{ vAdd.addition.description }}
+        </div>
+      </div>
+      }
+
+      <!-- Cuenta Receptora Real del Comercio -->
+      <div class="p-3 rounded-xl bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 space-y-1.5">
+        <div class="text-[10px] font-black uppercase text-amber-800 dark:text-amber-300 flex items-center gap-1">
+          <span>🏦</span>
+          <span>Cuenta Receptora de la Sede / Comercio:</span>
+        </div>
+        <div class="font-mono text-[11px] text-slate-700 dark:text-slate-300 space-y-0.5">
+          <div><strong>Banco:</strong> {{ selectedBranch()?.paymentCredentials?.pagoMovilBank || brandingForm.pagoMovilBank || 'No configurado' }}</div>
+          <div><strong>Teléfono:</strong> {{ selectedBranch()?.paymentCredentials?.pagoMovilPhone || brandingForm.pagoMovilPhone || 'No configurado' }}</div>
+          <div><strong>RIF/CI:</strong> {{ selectedBranch()?.paymentCredentials?.pagoMovilIdNumber || brandingForm.pagoMovilIdNumber || 'No configurado' }}</div>
+        </div>
+      </div>
+
+      <!-- Datos Reportados del Adicional -->
+      <div class="space-y-3 pt-1">
+        <div class="flex items-center justify-between text-[11px] text-slate-500">
+          <span>Cliente: <strong class="text-slate-800 dark:text-slate-200">{{ vAdd.order.customer.name }}</strong></span>
+          <span>Teléfono: <strong class="text-slate-800 dark:text-slate-200">{{ vAdd.order.customer.phone }}</strong></span>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+            Referencia Bancaria del Pago Adicional: <span class="text-red-500">*</span>
+          </label>
+          <input type="text" [ngModel]="additionRefInput()" (ngModelChange)="additionRefInput.set($event)"
+            placeholder="Ej: 849201"
+            class="w-full text-sm font-mono font-black rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 shadow-xs focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500" />
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+            <span>Banco Emisor:</span>
+            @if (vAdd.addition.originBank) {
+            <span class="text-[10px] text-brand-600 dark:text-brand-400 font-bold bg-brand-50 dark:bg-brand-950/60 px-2 py-0.5 rounded border border-brand-500/20">
+              Reportado: {{ vAdd.addition.originBank }}
+            </span>
+            }
+          </label>
+          <input type="text" [ngModel]="additionOriginBankInput()" (ngModelChange)="additionOriginBankInput.set($event)"
+            placeholder="Ej: Banesco, BDV, Mercantil, Bancamiga"
+            class="w-full text-xs font-medium rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 shadow-xs focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500" />
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div
+      class="px-5 py-3.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-850 flex flex-wrap items-center justify-between gap-2">
+      <button (click)="openRejectAdditionConfirm()" [disabled]="isProcessingAdditionVerification()" type="button"
+        class="px-3 py-2 text-xs font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition cursor-pointer flex items-center gap-1">
+        <app-icon name="alert-triangle" [size]="14"></app-icon>
+        <span>✕ Rechazar / No cayó</span>
+      </button>
+
+      <button (click)="confirmAdditionPaymentVerification()" [disabled]="isProcessingAdditionVerification()" type="button"
+        class="px-4 py-2 text-xs font-black text-white bg-emerald-600 hover:bg-emerald-500 shadow-md shadow-emerald-600/20 rounded-xl transition cursor-pointer flex items-center gap-1.5">
+        <app-icon name="check" [size]="14"></app-icon>
+        <span>{{ isProcessingAdditionVerification() ? 'Verificando...' : '✓ Confirmar Pago Adicional' }}</span>
+      </button>
+    </div>
+
+  </div>
+</div>
+}
+
+<!-- DIALOG: CONFIRMAR RECHAZO DE PAGO DE PEDIDO ADICIONAL -->
+@if (isRejectAdditionConfirmOpen()) {
+<div class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs animate-fade-in">
+  <div
+    class="bg-white dark:bg-slate-900 border-2 border-red-500/40 rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden p-5 space-y-4">
+    <div class="flex items-center gap-3">
+      <div
+        class="w-10 h-10 rounded-xl bg-red-500/20 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0">
+        <app-icon name="alert-triangle" [size]="22"></app-icon>
+      </div>
+      <div>
+        <h4 class="text-sm font-black text-slate-900 dark:text-white leading-tight">
+          ¿Rechazar Pago Adicional?
+        </h4>
+        <span class="font-mono text-xs text-red-600 dark:text-red-400 font-bold">
+          #{{ verifyingAdditionContext()?.order?.orderNumber }} (+${{ verifyingAdditionContext()?.addition?.amountUsd?.toFixed(2) }})
+        </span>
+      </div>
+    </div>
+
+    <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+      El pago de esta adición será marcado como <strong>Rechazado / No Recibido</strong>. El cliente verá la alerta en su seguimiento para corregir y reenviar su referencia bancaria.
+    </p>
+
+    <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+      <button (click)="cancelRejectAdditionConfirm()" [disabled]="isProcessingAdditionVerification()" type="button"
+        class="px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition cursor-pointer">
+        Cancelar
+      </button>
+      <button (click)="executeRejectAdditionPayment()" [disabled]="isProcessingAdditionVerification()" type="button"
+        class="px-4 py-2 text-xs font-black text-white bg-red-600 hover:bg-red-500 shadow-md shadow-red-600/25 rounded-xl transition cursor-pointer flex items-center gap-1.5">
+        <app-icon name="x" [size]="14"></app-icon>
+        <span>{{ isProcessingAdditionVerification() ? 'Rechazando...' : 'Sí, Rechazar Adicional' }}</span>
       </button>
     </div>
   </div>

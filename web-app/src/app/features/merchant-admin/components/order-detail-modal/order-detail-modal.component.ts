@@ -1,6 +1,6 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Order, parseOrderAdditions, OrderAddition } from '../../../../core/models/order.model';
+import { Order, parseOrderAdditions, OrderAddition, isOrderAdditionItem } from '../../../../core/models/order.model';
 import { IconComponent } from '../../../../shared/components/icon.component';
 
 @Component({
@@ -22,6 +22,14 @@ export class OrderDetailModalComponent {
     return this.order?.exchangeRate || this.activeExchangeRate || 45.50;
   }
 
+  get baseItems() {
+    return (this.order?.items || []).filter(i => !isOrderAdditionItem(i));
+  }
+
+  get additionItems() {
+    return (this.order?.items || []).filter(i => isOrderAdditionItem(i));
+  }
+
   get additions(): OrderAddition[] {
     return parseOrderAdditions(this.order?.notes);
   }
@@ -30,19 +38,23 @@ export class OrderDetailModalComponent {
     return this.additions.reduce((sum, a) => sum + a.amountUsd, 0);
   }
 
+  get baseOrderTotalUsd(): number {
+    const tot = this.order?.total || 0;
+    return Math.max(0, Number((tot - this.additionsTotalUsd).toFixed(2)));
+  }
+
   get initialSubtotalUsd(): number {
     const sub = this.order?.subtotal || 0;
     return Math.max(0, Number((sub - this.additionsTotalUsd).toFixed(2)));
   }
 
+  getAdditionBs(add: OrderAddition): number {
+    if (add.amountBs !== undefined && add.amountBs !== null) return add.amountBs;
+    return Number((add.amountUsd * this.effectiveRate).toFixed(2));
+  }
+
   isAdditionItem(item: any): boolean {
-    if (item.name?.includes('(Adición)')) return true;
-    if (item.selectedModifiers && Array.isArray(item.selectedModifiers)) {
-      return item.selectedModifiers.some((m: any) => 
-        (m.name || m.optionName || '').toLowerCase().includes('adici')
-      );
-    }
-    return false;
+    return isOrderAdditionItem(item);
   }
 
   get totalBs(): number {

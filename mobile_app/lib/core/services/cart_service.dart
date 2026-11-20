@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -980,20 +981,49 @@ class CartService extends ChangeNotifier {
     notifyListeners();
   }
 
-  void appendItemsToActiveOrder(String orderId, List<CartItem> newItems, double extraAmount) {
+  void appendItemsToActiveOrder(
+    String orderId,
+    List<CartItem> newItems,
+    double extraAmount, {
+    String? appendedNote,
+  }) {
     final idx = _orderHistory.indexWhere((o) => o.id == orderId || o.orderNumber == orderId);
     if (idx != -1) {
       final old = _orderHistory[idx];
       final updatedItems = List<CartItem>.from(old.items)..addAll(newItems);
+      String? updatedNotes = old.notes;
+      if (appendedNote != null && appendedNote.trim().isNotEmpty) {
+        final existing = (old.notes ?? '').trim();
+        updatedNotes = existing.isEmpty ? appendedNote.trim() : '$existing\n${appendedNote.trim()}';
+      }
       final updated = old.copyWith(
         items: updatedItems,
         subtotal: old.subtotal + extraAmount,
         total: old.total + extraAmount,
+        notes: updatedNotes,
       );
       _orderHistory[idx] = updated;
       if (_activeOrder?.id == orderId || _activeOrder?.orderNumber == orderId) {
         _activeOrder = updated;
       }
+      _saveOrders();
+      notifyListeners();
+    }
+  }
+
+  void updateOrderCloudId(String orderNumber, String realUuid) {
+    if (realUuid.isEmpty) return;
+    bool changed = false;
+    final idx = _orderHistory.indexWhere((o) => o.orderNumber == orderNumber);
+    if (idx != -1 && _orderHistory[idx].id != realUuid) {
+      _orderHistory[idx] = _orderHistory[idx].copyWith(id: realUuid);
+      changed = true;
+    }
+    if (_activeOrder?.orderNumber == orderNumber && _activeOrder?.id != realUuid) {
+      _activeOrder = _activeOrder!.copyWith(id: realUuid);
+      changed = true;
+    }
+    if (changed) {
       _saveOrders();
       notifyListeners();
     }
@@ -1030,7 +1060,11 @@ class CartService extends ChangeNotifier {
 
     final now = DateTime.now();
     final orderDigits = '${(now.millisecondsSinceEpoch % 9000) + 1000}';
-    final newPin = orderDigits;
+    final rng = Random.secure();
+    String newPin = '${1000 + rng.nextInt(9000)}';
+    while (newPin == orderDigits) {
+      newPin = '${1000 + rng.nextInt(9000)}';
+    }
 
     final String branchName = _currentBranch != null
         ? (_currentBranch!.name.toLowerCase().contains(_currentBranch!.companyName.toLowerCase())
@@ -1082,6 +1116,7 @@ class CartService extends ChangeNotifier {
       companyId: (_currentBranch?.companyId != null && _currentBranch!.companyId.trim().isNotEmpty)
           ? _currentBranch!.companyId.trim()
           : (_currentCompanyId?.trim() ?? ''),
+      notes: (notes != null && notes.trim().isNotEmpty) ? notes.trim() : null,
     );
 
     _activeOrder = newOrder;
@@ -1097,7 +1132,10 @@ class CartService extends ChangeNotifier {
 
   Future<void> _createBackendOrder(DeliveryOrder order) async {
     try {
-      await ApiService().createOrder(order);
+      final realId = await ApiService().createOrder(order);
+      if (realId != null && realId.isNotEmpty) {
+        updateOrderCloudId(order.orderNumber, realId);
+      }
     } catch (e) {
       debugPrint('[CartService] Error sync order with backend: $e');
     }

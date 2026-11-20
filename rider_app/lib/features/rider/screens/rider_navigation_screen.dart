@@ -422,10 +422,7 @@ class _RiderNavigationScreenState extends State<RiderNavigationScreen>
               ),
               const SizedBox(height: 6),
               Text(
-                'Solicita el código PIN de 4 dígitos al cliente (${_order.customerName}). El cliente lo ve en su pantalla de seguimiento' +
-                    (_order.orderNumber.replaceAll(RegExp(r'\D'), '').isNotEmpty
-                        ? ' (o usa los 4 dígitos de su orden: #${_order.orderNumber.replaceAll(RegExp(r'\D'), '').length >= 4 ? _order.orderNumber.replaceAll(RegExp(r'\D'), '').substring(_order.orderNumber.replaceAll(RegExp(r'\D'), '').length - 4) : _order.orderNumber.replaceAll(RegExp(r'\D'), '').padLeft(4, '0')}).'
-                        : '.'),
+                'Solicita el código PIN de seguridad de 4 dígitos al cliente (${_order.customerName}). El cliente lo ve en su pantalla de seguimiento.',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xFF94A3B8)),
               ),
@@ -494,65 +491,54 @@ class _RiderNavigationScreenState extends State<RiderNavigationScreen>
                     return;
                   }
 
-                  // Build set of all acceptable PIN variations for this order
-                  final validPins = <String>{};
+                  // Order number digits (only as legacy fallback if no explicit PIN tag exists)
+                  final rawOrderDigits = _order.orderNumber.replaceAll(RegExp(r'\D'), '');
+                  final orderDigits = rawOrderDigits.length >= 4
+                      ? rawOrderDigits.substring(rawOrderDigits.length - 4)
+                      : (rawOrderDigits.isNotEmpty ? rawOrderDigits.padLeft(4, '0') : '');
 
-                  if (_order.pin.trim().isNotEmpty) {
-                    validPins.add(_order.pin.trim());
-                  }
+                  final realPins = <String>{};
+                  Map<String, dynamic>? row;
 
-                  // Order number digits (e.g. ORD-5855 -> 5855)
-                  final orderDigits = _order.orderNumber.replaceAll(RegExp(r'\D'), '');
-                  if (orderDigits.length >= 4) {
-                    validPins.add(orderDigits.substring(orderDigits.length - 4));
-                    validPins.add(orderDigits.substring(0, 4));
-                  } else if (orderDigits.isNotEmpty) {
-                    validPins.add(orderDigits.padLeft(4, '0'));
-                  }
-
-                  // Fresh lookup from Supabase orders table
+                  // Fresh lookup from Supabase orders table using '*' so optional columns never fail
                   try {
                     final supabase = Supabase.instance.client;
-                    final row = await supabase
+                    row = await supabase
                         .from('orders')
-                        .select('id, notes, order_number, payment_reference, delivery_pin')
+                        .select('*')
                         .eq('id', _order.id)
                         .maybeSingle();
                     if (row != null) {
-                      if (row['delivery_pin'] != null && row['delivery_pin'].toString().trim().isNotEmpty) {
-                        validPins.add(row['delivery_pin'].toString().trim());
+                      final explicitPin = (row['delivery_pin'] ?? '').toString().trim();
+                      if (RegExp(r'^\d{4}$').hasMatch(explicitPin)) {
+                        realPins.add(explicitPin);
                       }
 
                       final notes = (row['notes'] ?? '').toString();
-                      if (notes.contains('[PIN:')) {
-                        final m = RegExp(r'\[PIN:(\d{4})\]').firstMatch(notes);
-                        if (m != null) validPins.add(m.group(1)!);
+                      final m = RegExp(r'\[PIN:(\d{4})\]').firstMatch(notes);
+                      if (m != null) {
+                        realPins.add(m.group(1)!);
                       }
-
-                      final dbOrderNum = (row['order_number'] ?? '').toString().replaceAll(RegExp(r'\D'), '');
-                      if (dbOrderNum.length >= 4) {
-                        validPins.add(dbOrderNum.substring(dbOrderNum.length - 4));
-                      } else if (dbOrderNum.isNotEmpty) {
-                        validPins.add(dbOrderNum.padLeft(4, '0'));
-                      }
-
-                      final payRef = (row['payment_reference'] ?? '').toString().replaceAll(RegExp(r'\D'), '');
-                      if (payRef.length >= 4) {
-                        validPins.add(payRef.substring(payRef.length - 4));
-                      }
-
-                      // Support legacy mobile client hashcode PIN
-                      final orderIdStr = (row['id'] ?? _order.id).toString();
-                      final legacyHashPin = '${(orderIdStr.hashCode.abs() % 9000) + 1000}';
-                      validPins.add(legacyHashPin);
                     }
                   } catch (_) {}
 
-                  // Universal demo/safety fallback PINs
-                  validPins.add('1234');
-                  validPins.add('0000');
+                  final localPin = _order.pin.trim();
+                  if (RegExp(r'^\d{4}$').hasMatch(localPin) &&
+                      localPin != '1234' &&
+                      localPin != '0000' &&
+                      (localPin != orderDigits || row == null)) {
+                    realPins.add(localPin);
+                  }
 
-                  final isValid = validPins.contains(entered);
+                  final bool isValid;
+                  if (realPins.isNotEmpty) {
+                    isValid = realPins.contains(entered);
+                  } else {
+                    final legacyFallbackPins = <String>{};
+                    if (orderDigits.isNotEmpty) legacyFallbackPins.add(orderDigits);
+                    if (localPin.isNotEmpty) legacyFallbackPins.add(localPin);
+                    isValid = legacyFallbackPins.contains(entered);
+                  }
 
                   if (isValid) {
                     if (ctx.mounted) {
@@ -561,10 +547,7 @@ class _RiderNavigationScreenState extends State<RiderNavigationScreen>
                     _completeDelivery();
                   } else {
                     setModalState(() {
-                      final hint = orderDigits.length >= 4
-                          ? orderDigits.substring(orderDigits.length - 4)
-                          : (orderDigits.isNotEmpty ? orderDigits.padLeft(4, '0') : '1234');
-                      pinError = 'PIN incorrecto. Solicita el PIN al cliente o usa los 4 dígitos de la orden ($hint).';
+                      pinError = 'PIN incorrecto. Solicítale al cliente su código PIN de entrega de 4 dígitos.';
                     });
                   }
                 },

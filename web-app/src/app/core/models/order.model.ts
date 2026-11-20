@@ -115,13 +115,27 @@ export interface Order {
 }
 
 export interface OrderAddition {
+  index: number;
   raw: string;
   amountUsd: number;
   amountBs?: number;
   method: 'cash' | 'mobile_transfer';
   reference?: string;
-  status: 'pending' | 'verified' | 'cash_on_delivery';
+  originBank?: string;
+  status: 'pending' | 'verified' | 'rejected' | 'cash_on_delivery';
   description?: string;
+}
+
+export function isOrderAdditionItem(item: any): boolean {
+  if (!item) return false;
+  if (typeof item.name === 'string' && /adici[oó]n/i.test(item.name)) return true;
+  if (typeof item.product_name === 'string' && /adici[oó]n/i.test(item.product_name)) return true;
+  if (Array.isArray(item.selectedModifiers)) {
+    return item.selectedModifiers.some((m: any) =>
+      String(m?.name || m?.optionName || m?.option_name || '').toLowerCase().includes('adici')
+    );
+  }
+  return false;
 }
 
 export function parseOrderAdditions(notes?: string | null): OrderAddition[] {
@@ -131,11 +145,12 @@ export function parseOrderAdditions(notes?: string | null): OrderAddition[] {
   const matches = notes.match(regex);
   if (!matches) return [];
 
-  for (const m of matches) {
+  for (let i = 0; i < matches.length; i++) {
+    const m = matches[i];
     const descMatch = m.match(/\[(?:ADICIONAL|Adición en app)\s*:\s*([^|\]]+)/i);
     const description = descMatch ? descMatch[1].trim() : undefined;
 
-    const amountMatch = m.match(/\+\$(\d+(\.\d+)?)/);
+    const amountMatch = m.match(/\+?\$\s*(\d+(?:\.\d+)?)/);
     const amountUsd = amountMatch ? parseFloat(amountMatch[1]) : 0;
     if (amountUsd <= 0) continue;
 
@@ -146,24 +161,80 @@ export function parseOrderAdditions(notes?: string | null): OrderAddition[] {
     const method: 'cash' | 'mobile_transfer' = isPagoMovil ? 'mobile_transfer' : 'cash';
 
     const refMatch = m.match(/Ref:\s*([A-Za-z0-9\-]+)/i);
-    const reference = refMatch ? refMatch[1] : undefined;
+    const reference = refMatch ? refMatch[1].trim() : undefined;
 
+    const bankMatch = m.match(/Banco:\s*([^|\]]+)/i);
+    const originBank = bankMatch ? bankMatch[1].trim() : undefined;
+
+    const isRejected = /rechazado/i.test(m);
     const isVerified = /verificado|confirmado/i.test(m);
-    let status: 'pending' | 'verified' | 'cash_on_delivery' = 'cash_on_delivery';
+    let status: 'pending' | 'verified' | 'rejected' | 'cash_on_delivery' = 'cash_on_delivery';
     if (method === 'mobile_transfer') {
-      status = isVerified ? 'verified' : 'pending';
+      status = isRejected ? 'rejected' : (isVerified ? 'verified' : 'pending');
     }
 
     results.push({
+      index: results.length,
       raw: m,
       amountUsd,
       amountBs,
       method,
       reference,
+      originBank,
       status,
       description
     });
   }
   return results;
+}
+
+export function updateAdditionTagInNotes(
+  notes: string,
+  targetRaw: string,
+  params: {
+    status: 'verified' | 'rejected' | 'pending';
+    reference?: string;
+    originBank?: string;
+    verifiedBy?: string;
+  }
+): string {
+  if (!notes || !targetRaw || !notes.includes(targetRaw)) return notes;
+
+  let updatedTag = targetRaw;
+
+  if (params.reference && params.reference.trim().length > 0) {
+    const cleanRef = params.reference.trim();
+    if (/Ref:\s*[^|\]]+/i.test(updatedTag)) {
+      updatedTag = updatedTag.replace(/Ref:\s*[^|\]]+/i, `Ref: ${cleanRef}`);
+    } else {
+      updatedTag = updatedTag.replace(/\]$/, ` | Ref: ${cleanRef}]`);
+    }
+  }
+
+  if (params.originBank && params.originBank.trim().length > 0) {
+    const cleanBank = params.originBank.trim();
+    if (/Banco:\s*[^|\]]+/i.test(updatedTag)) {
+      updatedTag = updatedTag.replace(/Banco:\s*[^|\]]+/i, `Banco: ${cleanBank}`);
+    } else if (/Ref:/i.test(updatedTag)) {
+      updatedTag = updatedTag.replace(/(\|\s*Ref:)/i, `| Banco: ${cleanBank} $1`);
+    } else {
+      updatedTag = updatedTag.replace(/\]$/, ` | Banco: ${cleanBank}]`);
+    }
+  }
+
+  const statusLabel =
+    params.status === 'verified'
+      ? `Verificado${params.verifiedBy ? ` por ${params.verifiedBy.trim()}` : ''}`
+      : params.status === 'rejected'
+        ? 'Rechazado'
+        : 'Pendiente de Verificación';
+
+  if (/Estado:\s*[^|\]]+/i.test(updatedTag)) {
+    updatedTag = updatedTag.replace(/Estado:\s*[^|\]]+/i, `Estado: ${statusLabel}`);
+  } else {
+    updatedTag = updatedTag.replace(/\]$/, ` | Estado: ${statusLabel}]`);
+  }
+
+  return notes.replace(targetRaw, updatedTag);
 }
 

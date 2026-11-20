@@ -278,7 +278,9 @@ export class CheckoutModalComponent {
         delivery_fee_bs: order.deliveryFeeBs,
         discount_bs: order.discountBs,
         total_bs: order.totalBs,
+        delivery_pin: order.deliveryPin,
         notes: [
+          order.deliveryPin ? `[PIN:${order.deliveryPin}]` : '',
           order.paymentOriginBank ? `[PAGO_ORIGEN:${order.paymentOriginBank}]` : '',
           order.customer.notes || ''
         ].filter(Boolean).join(' '),

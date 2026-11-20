@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '../../../../shared/components/icon.component';
 import { I18nService } from '../../../../core/services/i18n.service';
-import { Order, OrderStatus, parseOrderAdditions, OrderAddition } from '../../../../core/models/order.model';
+import { Order, OrderStatus, parseOrderAdditions, OrderAddition, isOrderAdditionItem } from '../../../../core/models/order.model';
 import { Branch } from '../../../../core/models/branch.model';
 import { Rider } from '../../merchant-admin.component';
 
@@ -78,6 +78,33 @@ export class MerchantOrdersTabComponent {
 
   getAdditionsTotal(additions: OrderAddition[]): number {
     return additions.reduce((s, a) => s + a.amountUsd, 0);
+  }
+
+  getBaseItems(order: Order) {
+    return (order.items || []).filter(i => !isOrderAdditionItem(i));
+  }
+
+  getAdditionItems(order: Order) {
+    return (order.items || []).filter(i => isOrderAdditionItem(i));
+  }
+
+  getBaseTotal(order: Order): number {
+    const addSum = this.getAdditionsTotal(this.parseAdditions(order.notes));
+    return Math.max(0, Number(((order.total || 0) - addSum).toFixed(2)));
+  }
+
+  getPendingAdditions(order: Order): OrderAddition[] {
+    return this.parseAdditions(order.notes).filter(
+      a => a.method === 'mobile_transfer' && a.status === 'pending'
+    );
+  }
+
+  getAdditionBs(add: OrderAddition, order?: Order | null): string {
+    if (add.amountBs !== undefined && add.amountBs !== null) {
+      return add.amountBs.toFixed(2);
+    }
+    const rate = order?.exchangeRate || this.activeExchangeRate || 1;
+    return (add.amountUsd * rate).toFixed(2);
   }
 
   get averageTicketUsd(): string {

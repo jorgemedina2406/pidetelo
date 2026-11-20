@@ -1832,7 +1832,9 @@ export class ApiService {
       createdAt: row.created_at || new Date().toISOString(),
       updatedAt: row.updated_at || new Date().toISOString(),
       notes: rawNotes,
-      deliveryPin: rawNotes.match(/\[PIN:(\d{4})\]/)?.[1] || (row.order_number ? row.order_number.replace(/\D/g, '').slice(-4).padStart(4, '0') : undefined),
+      deliveryPin: (row.delivery_pin && /^\d{4}$/.test(String(row.delivery_pin).trim()))
+        ? String(row.delivery_pin).trim()
+        : (rawNotes.match(/\[PIN:(\d{4})\]/)?.[1] || (row.order_number ? row.order_number.replace(/\D/g, '').slice(-4).padStart(4, '0') : undefined)),
     };
   }
 
@@ -2657,8 +2659,30 @@ export class ApiService {
   }
 
   // --- MODIFICACION Y ADICION DE ITEMS A PEDIDOS ---
-  appendOrderItems(orderId: string, items: any[]): Observable<any> {
-    return this.http.post<any>(this.baseUrl + '/orders/' + orderId + '/append-items', { items });
+  appendOrderItems(
+    orderId: string,
+    payload: {
+      items: any[];
+      paymentMethod?: 'cash' | 'mobile_transfer';
+      paymentReference?: string;
+      paymentOriginBank?: string;
+      extraSubtotal?: number;
+    }
+  ): Observable<any> {
+    return this.http.post<any>(this.baseUrl + '/orders/' + orderId + '/append-items', payload);
+  }
+
+  verifyAdditionPayment(
+    orderId: string,
+    payload: {
+      additionRaw: string;
+      status: 'verified' | 'rejected' | 'pending';
+      reference?: string;
+      originBank?: string;
+      verifiedBy?: string;
+    }
+  ): Observable<any> {
+    return this.http.patch<any>(this.baseUrl + '/orders/' + orderId + '/verify-addition', payload);
   }
 
   removeOrderItem(orderId: string, payload: { itemId: string; productId?: string; disableProduct?: boolean }): Observable<any> {

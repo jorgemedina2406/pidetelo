@@ -566,7 +566,7 @@ export class RiderAppComponent implements OnInit, OnDestroy {
           amountToCollect,
           collectionNote,
           step: o.status === 'on_the_way' ? 'heading_to_customer' : 'heading_to_store',
-          customerPin: o.orderNumber.replace(/\D/g, '').slice(-4) || '1234'
+          customerPin: o.deliveryPin || o.notes?.match(/\[PIN:(\d{4})\]/)?.[1] || o.orderNumber.replace(/\D/g, '').slice(-4) || '1234'
         };
       });
       this.activeJobs.set(mappedJobs);

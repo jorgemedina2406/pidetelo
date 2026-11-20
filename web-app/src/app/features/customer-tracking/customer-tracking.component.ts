@@ -10,7 +10,7 @@ import { SupabaseService } from '../../core/services/supabase.service';
 import { ThemeService } from '../../core/services/theme.service';
 import { I18nService } from '../../core/services/i18n.service';
 import { AuthStore } from '../../core/stores/auth.store';
-import { Order, parseOrderAdditions, OrderAddition } from '../../core/models/order.model';
+import { Order, parseOrderAdditions, OrderAddition, isOrderAdditionItem, updateAdditionTagInNotes } from '../../core/models/order.model';
 import { Product } from '../../core/models/product.model';
 import { IconComponent } from '../../shared/components/icon.component';
 
@@ -78,8 +78,14 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
   readonly appendCart = signal<Map<string, { product: Product; quantity: number }>>(new Map());
   readonly appendPaymentMethod = signal<'cash' | 'mobile_transfer'>('cash');
   readonly appendPaymentRef = signal<string>('');
+  readonly appendOriginBank = signal<string>('');
+  readonly resendAdditionRefMap = signal<Record<string, string>>({});
+  readonly isResendingAdditionRef = signal<boolean>(false);
   readonly branchCredentials = signal<any | null>(null);
 
+  readonly appendableStatuses = new Set(['received', 'in_kitchen', 'assigned_driver', 'at_merchant']);
+  readonly baseItems = computed(() => (this.order()?.items || []).filter(i => !isOrderAdditionItem(i)));
+  readonly additionItems = computed(() => (this.order()?.items || []).filter(i => isOrderAdditionItem(i)));
   readonly orderAdditions = computed(() => parseOrderAdditions(this.order()?.notes));
   readonly initialTotal = computed(() => {
     const ord = this.order();
@@ -88,6 +94,10 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
     const addSum = additions.reduce((s, a) => s + a.amountUsd, 0);
     return Math.max(0, Number((ord.total - addSum).toFixed(2)));
   });
+
+  canAppendItems(ord: Order | null): boolean {
+    return Boolean(ord && this.appendableStatuses.has(ord.status));
+  }
 
   readonly filteredStoreProducts = computed(() => {
     const query = this.appendProductSearch().trim().toLowerCase();
@@ -164,6 +174,7 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
     this.appendErrorMessage.set('');
     this.appendPaymentMethod.set('cash');
     this.appendPaymentRef.set('');
+    this.appendOriginBank.set('');
     this.isAppendModalOpen.set(true);
 
     const branchId = (ord as any).branchId || (ord as any).branch_id;
@@ -233,7 +244,11 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
     const items = Array.from(this.appendCart().values());
     if (!ord || items.length === 0) return;
 
-    if (this.appendPaymentMethod() === 'mobile_transfer' && this.appendPaymentRef().trim().length < 4) {
+    const method = this.appendPaymentMethod();
+    const ref = this.appendPaymentRef().trim();
+    const originBank = this.appendOriginBank().trim();
+
+    if (method === 'mobile_transfer' && ref.length < 4) {
       this.appendErrorMessage.set('Por favor ingresa los últimos dígitos de la referencia de Pago Móvil.');
       return;
     }
@@ -241,6 +256,46 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
     this.isAppendingItems.set(true);
     this.appendErrorMessage.set('');
     this.appendSuccessMessage.set('');
+
+    const formattedItemsForApi = items.map(it => ({
+      product_id: it.product.id || null,
+      product_name: `${it.product.name} (Adición)`,
+      unit_price: it.product.price,
+      quantity: it.quantity,
+      item_total: Number((it.product.price * it.quantity).toFixed(2)),
+      selected_modifiers: [{ name: 'Adición posterior', price: 0 }]
+    }));
+
+    const extraSubtotal = this.appendSubtotal();
+    let backendSucceeded = false;
+
+    try {
+      const targetOrderKey = ord.id || ord.orderNumber;
+      if (targetOrderKey) {
+        await firstValueFrom(
+          this.api.appendOrderItems(targetOrderKey, {
+            items: formattedItemsForApi,
+            paymentMethod: method,
+            paymentReference: ref || undefined,
+            paymentOriginBank: originBank || undefined,
+            extraSubtotal
+          })
+        );
+        backendSucceeded = true;
+      }
+    } catch (apiErr) {
+      console.warn('[Tracking] Backend appendOrderItems falló, intentando vía directa Supabase:', apiErr);
+    }
+
+    if (backendSucceeded) {
+      this.isAppendingItems.set(false);
+      this.appendSuccessMessage.set(`¡${items.length} producto(s) agregado(s) a tu orden!`);
+      setTimeout(() => {
+        this.closeAppendModal();
+        this.loadOrderDetails(ord.id || ord.orderNumber);
+      }, 900);
+      return;
+    }
 
     const client = this.supabase.rawClient;
     if (!client) {
@@ -250,73 +305,168 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
     }
 
     try {
-      const extraSubtotal = this.appendSubtotal();
-      const currentSubtotal = Number(ord.subtotal || 0);
-      const deliveryFee = Number(ord.deliveryFee || 0);
-      const newSubtotal = Number((currentSubtotal + extraSubtotal).toFixed(2));
-      const newTotal = Number((newSubtotal + deliveryFee).toFixed(2));
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(ord.id || '');
+      const cleanNum = (ord.orderNumber || '').replace('#', '').trim();
+      const { data: freshRow, error: fetchErr } = await (isUuid
+        ? client.from('orders').select('*').eq('id', ord.id).maybeSingle()
+        : client.from('orders').select('*').or(`order_number.eq.${cleanNum},order_number.eq.#${cleanNum}`).maybeSingle());
 
-      const rate = Number(ord.exchangeRate) || 1.0;
+      if (fetchErr || !freshRow) {
+        this.appendErrorMessage.set('No se encontró la orden en el servidor para adicionar productos.');
+        this.isAppendingItems.set(false);
+        return;
+      }
+
+      const realOrderId = freshRow.id;
+      const baseSubtotal = Number(freshRow.subtotal ?? ord.subtotal ?? 0);
+      const deliveryFee = Number(freshRow.delivery_fee ?? ord.deliveryFee ?? 0);
+      const discount = Number(freshRow.discount ?? ord.discount ?? 0);
+      const newSubtotal = Number((baseSubtotal + extraSubtotal).toFixed(2));
+      const newTotal = Number(Math.max(0, newSubtotal + deliveryFee - discount).toFixed(2));
+
+      const rawNotes = (freshRow.notes || ord.notes || '').toString();
+      const fxMatch = rawNotes.match(/\[FX:rate=([0-9.]+)\|total_bs=[0-9.]+(?:\|delivery_bs=([0-9.]+))?(?:\|subtotal_bs=[0-9.]+)?\]/);
+      const rate = Number(freshRow.exchange_rate ?? fxMatch?.[1] ?? ord.exchangeRate ?? 0) || 1.0;
       const newTotalBs = rate > 1 ? Number((newTotal * rate).toFixed(2)) : null;
       const newSubtotalBs = rate > 1 ? Number((newSubtotal * rate).toFixed(2)) : null;
       const extraBs = rate > 1 ? Number((extraSubtotal * rate).toFixed(2)) : 0;
 
       const appendSummary = items.map(i => `${i.quantity}x ${i.product.name}`).join(', ');
-      const method = this.appendPaymentMethod();
-      const ref = this.appendPaymentRef().trim();
-
+      const bsText = extraBs > 0 ? ` (Bs. ${extraBs.toFixed(2)})` : '';
+      const bankSegment = originBank ? ` | Banco: ${originBank}` : '';
       const additionTag = method === 'mobile_transfer'
-        ? `[ADICIONAL: ${appendSummary} | +$${extraSubtotal.toFixed(2)}${extraBs > 0 ? ` (Bs. ${extraBs.toFixed(2)})` : ''} | Método: Pago Móvil | Ref: ${ref} | Estado: Pendiente de Verificación]`
-        : `[ADICIONAL: ${appendSummary} | +$${extraSubtotal.toFixed(2)}${extraBs > 0 ? ` (Bs. ${extraBs.toFixed(2)})` : ''} | Método: Efectivo al Recibir]`;
+        ? `[ADICIONAL: ${appendSummary} | +$${extraSubtotal.toFixed(2)}${bsText} | Método: Pago Móvil${bankSegment} | Ref: ${ref} | Estado: Pendiente de Verificación]`
+        : `[ADICIONAL: ${appendSummary} | +$${extraSubtotal.toFixed(2)}${bsText} | Método: Efectivo al Recibir]`;
 
-      const existingNotes = ord.notes || '';
-      const newNotes = existingNotes 
-        ? `${existingNotes}\n${additionTag}`
+      let baseNotes = rawNotes;
+      if (fxMatch && rate > 1 && newTotalBs !== null && newSubtotalBs !== null) {
+        const delivBs = fxMatch[2] || Number((deliveryFee * rate).toFixed(2)).toFixed(2);
+        const newFxTag = `[FX:rate=${rate.toFixed(2)}|total_bs=${newTotalBs.toFixed(2)}|delivery_bs=${delivBs}|subtotal_bs=${newSubtotalBs.toFixed(2)}]`;
+        baseNotes = baseNotes.replace(fxMatch[0], newFxTag);
+      }
+      const newNotes = baseNotes.trim()
+        ? `${baseNotes.trim()}\n${additionTag}`
         : additionTag;
 
-      // 1. Insertar en order_items
-      for (const it of items) {
-        const itemTotal = Number((it.product.price * it.quantity).toFixed(2));
-        await client.from('order_items').insert({
-          order_id: ord.id,
-          product_id: it.product.id || null,
-          product_name: `${it.product.name} (Adición)`,
-          unit_price: it.product.price,
-          quantity: it.quantity,
-          item_total: itemTotal,
-          selected_modifiers: [{ name: 'Adición posterior', price: 0 }]
-        });
+      // 1. Insertar en order_items primero
+      const isUuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const itemsToInsert = items.map(it => ({
+        order_id: realOrderId,
+        product_id: isUuidRegex.test(it.product.id || '') ? it.product.id : null,
+        product_name: `${it.product.name} (Adición)`,
+        unit_price: it.product.price,
+        quantity: it.quantity,
+        item_total: Number((it.product.price * it.quantity).toFixed(2)),
+        selected_modifiers: [{ name: 'Adición posterior', price: 0 }]
+      }));
+
+      const { error: itemsErr } = await client.from('order_items').insert(itemsToInsert);
+      if (itemsErr) {
+        console.warn('[Tracking] Error insertando order_items:', itemsErr);
+        this.appendErrorMessage.set('No se pudieron guardar los productos adicionales. Intenta nuevamente.');
+        this.isAppendingItems.set(false);
+        return;
       }
 
-      // 2. Actualizar totales en la tabla orders
+      // 2. Actualizar totales y notas en orders (con reintento sin columnas *_bs si la tabla no tiene migración 027)
+      const nowIso = new Date().toISOString();
       const updatePayload: any = {
         subtotal: newSubtotal,
         total: newTotal,
         notes: newNotes,
-        updated_at: new Date().toISOString()
+        updated_at: nowIso
       };
-      if (newTotalBs !== null) {
-        updatePayload.total_bs = newTotalBs;
-      }
-      if (newSubtotalBs !== null) {
-        updatePayload.subtotal_bs = newSubtotalBs;
+      if (newTotalBs !== null) updatePayload.total_bs = newTotalBs;
+      if (newSubtotalBs !== null) updatePayload.subtotal_bs = newSubtotalBs;
+
+      let { error: updErr } = await client.from('orders').update(updatePayload).eq('id', realOrderId);
+      if (updErr) {
+        const retryPayload = {
+          subtotal: newSubtotal,
+          total: newTotal,
+          notes: newNotes,
+          updated_at: nowIso
+        };
+        const retry = await client.from('orders').update(retryPayload).eq('id', realOrderId);
+        updErr = retry.error;
       }
 
-      const { error: updErr } = await client.from('orders').update(updatePayload).eq('id', ord.id);
       if (updErr) {
         console.warn('[Tracking] Update order error:', updErr);
+        this.appendErrorMessage.set('No se pudo actualizar el pedido en el servidor. Intenta de nuevo.');
+        this.isAppendingItems.set(false);
+        return;
       }
 
       this.isAppendingItems.set(false);
       this.appendSuccessMessage.set(`¡${items.length} producto(s) agregado(s) a tu orden!`);
       setTimeout(() => {
         this.closeAppendModal();
-        this.loadOrderDetails(ord.id);
-      }, 1200);
+        this.loadOrderDetails(realOrderId);
+      }, 900);
     } catch (err: any) {
       console.error('[Tracking] Error agregando productos:', err);
       this.appendErrorMessage.set('Ocurrió un error al agregar los productos. Intenta nuevamente.');
       this.isAppendingItems.set(false);
+    }
+  }
+
+  setResendAdditionRef(raw: string, val: string): void {
+    this.resendAdditionRefMap.update(m => ({ ...m, [raw]: val }));
+  }
+
+  async resendRejectedAdditionRef(addition: OrderAddition): Promise<void> {
+    const ord = this.order();
+    if (!ord) return;
+    const newRef = (this.resendAdditionRefMap()[addition.raw] || '').trim();
+    if (newRef.length < 4) {
+      alert('Por favor ingresa una referencia bancaria válida (mínimo 4 dígitos).');
+      return;
+    }
+
+    this.isResendingAdditionRef.set(true);
+    let updated = false;
+
+    try {
+      await firstValueFrom(
+        this.api.verifyAdditionPayment(ord.id || ord.orderNumber, {
+          additionRaw: addition.raw,
+          status: 'pending',
+          reference: newRef
+        })
+      );
+      updated = true;
+    } catch (err) {
+      console.warn('[Tracking] Fallback directo Supabase al reenviar referencia adicional:', err);
+    }
+
+    if (!updated) {
+      const client = this.supabase.rawClient;
+      if (client && ord.notes) {
+        const updatedNotes = updateAdditionTagInNotes(ord.notes, addition.raw, {
+          status: 'pending',
+          reference: newRef
+        });
+        const { error } = await client
+          .from('orders')
+          .update({ notes: updatedNotes, updated_at: new Date().toISOString() })
+          .eq('id', ord.id);
+        if (!error) {
+          updated = true;
+        }
+      }
+    }
+
+    this.isResendingAdditionRef.set(false);
+    if (updated) {
+      this.resendAdditionRefMap.update(m => {
+        const next = { ...m };
+        delete next[addition.raw];
+        return next;
+      });
+      this.loadOrderDetails(ord.id || ord.orderNumber);
+    } else {
+      alert('No se pudo actualizar la referencia en este momento. Intenta nuevamente.');
     }
   }
 

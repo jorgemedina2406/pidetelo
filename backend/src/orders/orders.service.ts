@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, InternalServerErrorException, BadRequestException } from '@nestjs/common';
+import * as crypto from 'crypto';
 import { SupabaseService } from '../supabase/supabase.service.js';
 import { PlansService } from '../plans/plans.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
@@ -12,6 +13,15 @@ export class OrdersService {
     private notificationsService: NotificationsService,
     private branchesService: BranchesService,
   ) {}
+
+  private generateRandomPin(orderNumber: string): string {
+    const orderDigits = (orderNumber || '').replace(/\D/g, '').slice(-4).padStart(4, '0');
+    let pin = String(crypto.randomInt(1000, 10000));
+    while (pin === orderDigits) {
+      pin = String(crypto.randomInt(1000, 10000));
+    }
+    return pin;
+  }
 
   async create(orderPayload: any) {
     if (!orderPayload) {
@@ -130,9 +140,22 @@ export class OrdersService {
     if (paymentOriginBank && !finalNotes.includes('[PAGO_ORIGEN:')) {
       finalNotes = `[PAGO_ORIGEN:${paymentOriginBank}] ${finalNotes}`.trim();
     }
-    if (!finalNotes.includes('[PIN:')) {
-      const pinDigits = orderNumber.replace(/\D/g, '').slice(-4).padStart(4, '0');
-      finalNotes = `[PIN:${pinDigits}] ${finalNotes}`.trim();
+    const orderDigits = orderNumber.replace(/\D/g, '').slice(-4).padStart(4, '0');
+    const explicitPin = String(orderHeader.delivery_pin || orderHeader.deliveryPin || '').trim();
+    const existingPinMatch = finalNotes.match(/\[PIN:(\d{4})\]/);
+    let resolvedPin = '';
+    if (/^\d{4}$/.test(explicitPin) && explicitPin !== orderDigits) {
+      resolvedPin = explicitPin;
+    } else if (existingPinMatch && existingPinMatch[1] !== orderDigits) {
+      resolvedPin = existingPinMatch[1];
+    } else {
+      resolvedPin = this.generateRandomPin(orderNumber);
+    }
+
+    if (existingPinMatch) {
+      finalNotes = finalNotes.replace(/\[PIN:\d{4}\]/, `[PIN:${resolvedPin}]`).trim();
+    } else {
+      finalNotes = `[PIN:${resolvedPin}] ${finalNotes}`.trim();
     }
 
     // Resolver tasa de cambio oficial/referencial del momento del pedido
@@ -621,49 +644,169 @@ export class OrdersService {
       ],
     };
   }
-  async appendItems(orderId: string, newItems: any[]) {
+  async appendItems(orderId: string, bodyOrItems: any) {
+    const newItems: any[] = Array.isArray(bodyOrItems)
+      ? bodyOrItems
+      : Array.isArray(bodyOrItems?.items)
+        ? bodyOrItems.items
+        : [];
+
+    if (!Array.isArray(newItems) || newItems.length === 0) {
+      throw new BadRequestException('Debes seleccionar al menos un producto adicional.');
+    }
+
+    const paymentMethod: 'cash' | 'mobile_transfer' =
+      !Array.isArray(bodyOrItems) && bodyOrItems?.paymentMethod === 'mobile_transfer'
+        ? 'mobile_transfer'
+        : 'cash';
+    const paymentReference =
+      !Array.isArray(bodyOrItems) && bodyOrItems?.paymentReference
+        ? String(bodyOrItems.paymentReference).trim()
+        : '';
+    const paymentOriginBank =
+      !Array.isArray(bodyOrItems) && bodyOrItems?.paymentOriginBank
+        ? String(bodyOrItems.paymentOriginBank).trim()
+        : '';
+
+    if (paymentMethod === 'mobile_transfer' && paymentReference.length < 4) {
+      throw new BadRequestException('Por favor ingresa los últimos dígitos de la referencia de Pago Móvil.');
+    }
+
     const order = await this.findById(orderId);
     if (!order) throw new NotFoundException('Pedido no encontrado');
 
-    const nonModifiable = ['on_the_way', 'delivered', 'cancelled'];
+    const nonModifiable = ['picked_up', 'on_the_way', 'delivered', 'cancelled'];
     if (nonModifiable.includes(order.status)) {
-      throw new BadRequestException('No se pueden adicionar productos a un pedido que ya está en camino o finalizado.');
+      throw new BadRequestException('No se pueden adicionar productos a un pedido que ya fue recogido, está en camino o finalizado.');
     }
 
     const client = this.supabase.getClient();
+    const isUuid = (val?: string) =>
+      Boolean(val && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val));
+
+    let exchangeRate = Number(order.exchange_rate) || 0;
+    const rawNotes = (order.notes || '').toString();
+    if (!exchangeRate) {
+      const fxMatch = rawNotes.match(/\[FX:rate=([0-9.]+)/);
+      if (fxMatch) exchangeRate = Number(fxMatch[1]) || 0;
+    }
+    if (!exchangeRate && order.branch_id) {
+      try {
+        const { data: bData } = await client
+          .from('branches')
+          .select('exchange_rate')
+          .eq('id', order.branch_id)
+          .maybeSingle();
+        if (bData?.exchange_rate) exchangeRate = Number(bData.exchange_rate) || 0;
+      } catch (_) {}
+    }
+    if (!exchangeRate && order.tenant_id) {
+      try {
+        const { data: tData } = await client
+          .from('tenants')
+          .select('exchange_rate')
+          .eq('id', order.tenant_id)
+          .maybeSingle();
+        if (tData?.exchange_rate) exchangeRate = Number(tData.exchange_rate) || 0;
+      } catch (_) {}
+    }
+
     let addedSubtotal = 0;
+    const summaryParts: string[] = [];
 
     const formattedItems = newItems.map(item => {
-      const unitPrice = Number(item.unit_price || item.price || 0);
-      const qty = Number(item.quantity || 1);
-      const itemTotal = Number(item.item_total || (unitPrice * qty));
+      const unitPrice = Number(item.unit_price ?? item.price ?? 0);
+      const qty = Math.max(1, Number(item.quantity ?? 1));
+      const itemTotal = Number(item.item_total ?? unitPrice * qty);
       addedSubtotal += itemTotal;
+
+      const baseName = String(item.product_name || item.name || 'Producto adicional').trim();
+      const displayBaseName = baseName.replace(/\s*\(Adici[oó]n\)\s*$/i, '').trim();
+      summaryParts.push(`${qty}x ${displayBaseName}`);
+
+      const productNameWithTag = baseName.includes('(Adición)') ? baseName : `${baseName} (Adición)`;
+      const rawModifiers = Array.isArray(item.selected_modifiers) ? [...item.selected_modifiers] : [];
+      const hasAddMod = rawModifiers.some((m: any) =>
+        String(m?.name || m?.optionName || '').toLowerCase().includes('adici'),
+      );
+      if (!hasAddMod) {
+        rawModifiers.push({ name: 'Adición posterior', price: 0 });
+      }
+
       return {
         order_id: order.id,
-        product_id: item.product_id || null,
-        product_name: item.product_name || item.name || 'Producto adicional',
+        product_id: isUuid(item.product_id) ? item.product_id : null,
+        product_name: productNameWithTag,
         unit_price: unitPrice,
         quantity: qty,
-        item_total: itemTotal,
-        selected_modifiers: item.selected_modifiers || [],
+        item_total: Number(itemTotal.toFixed(2)),
+        selected_modifiers: rawModifiers,
       };
     });
 
+    addedSubtotal = Number(addedSubtotal.toFixed(2));
+
     const { error: insErr } = await client.from('order_items').insert(formattedItems);
     if (insErr) {
-      console.warn('[OrdersService] Error inserting appended items:', insErr.message);
+      throw new InternalServerErrorException(`Error insertando productos adicionales: ${insErr.message}`);
     }
 
-    const newSubtotal = Number(order.subtotal || 0) + addedSubtotal;
+    const newSubtotal = Number((Number(order.subtotal || 0) + addedSubtotal).toFixed(2));
     const deliveryFee = Number(order.delivery_fee || 0);
-    const newTotal = newSubtotal + deliveryFee;
+    const discount = Number(order.discount || 0);
+    const newTotal = Number(Math.max(0, newSubtotal + deliveryFee - discount).toFixed(2));
 
-    await client.from('orders').update({
+    const rate = exchangeRate > 1 ? exchangeRate : 0;
+    const extraBs = rate > 1 ? Number((addedSubtotal * rate).toFixed(2)) : 0;
+    const newSubtotalBs = rate > 1 ? Number((newSubtotal * rate).toFixed(2)) : null;
+    const newTotalBs = rate > 1 ? Number((newTotal * rate).toFixed(2)) : null;
+
+    const appendSummary = summaryParts.join(', ');
+    const bsText = extraBs > 0 ? ` (Bs. ${extraBs.toFixed(2)})` : '';
+    const bankSegment = paymentOriginBank ? ` | Banco: ${paymentOriginBank}` : '';
+    const additionTag =
+      paymentMethod === 'mobile_transfer'
+        ? `[ADICIONAL: ${appendSummary} | +$${addedSubtotal.toFixed(2)}${bsText} | Método: Pago Móvil${bankSegment} | Ref: ${paymentReference} | Estado: Pendiente de Verificación]`
+        : `[ADICIONAL: ${appendSummary} | +$${addedSubtotal.toFixed(2)}${bsText} | Método: Efectivo al Recibir]`;
+
+    let updatedNotes = rawNotes;
+    if (rate > 1 && newSubtotalBs !== null && newTotalBs !== null) {
+      const fxRegex = /\[FX:rate=[0-9.]+\|total_bs=[0-9.]+(?:\|delivery_bs=([0-9.]+))?(?:\|subtotal_bs=[0-9.]+)?\]/;
+      const existingFx = updatedNotes.match(fxRegex);
+      if (existingFx) {
+        const delivBs = existingFx[1] || Number((deliveryFee * rate).toFixed(2)).toFixed(2);
+        const newFxTag = `[FX:rate=${rate.toFixed(2)}|total_bs=${newTotalBs.toFixed(2)}|delivery_bs=${delivBs}|subtotal_bs=${newSubtotalBs.toFixed(2)}]`;
+        updatedNotes = updatedNotes.replace(fxRegex, newFxTag);
+      }
+    }
+    updatedNotes = updatedNotes.trim().length > 0 ? `${updatedNotes.trim()}\n${additionTag}` : additionTag;
+
+    const nowIso = new Date().toISOString();
+    const updatePayload: any = {
       subtotal: newSubtotal,
-      total_amount_usd: newTotal,
       total: newTotal,
-      updated_at: new Date().toISOString()
-    }).eq('id', order.id);
+      notes: updatedNotes,
+      updated_at: nowIso,
+    };
+    if (newSubtotalBs !== null) updatePayload.subtotal_bs = newSubtotalBs;
+    if (newTotalBs !== null) updatePayload.total_bs = newTotalBs;
+
+    let { error: updErr } = await client.from('orders').update(updatePayload).eq('id', order.id);
+    if (
+      updErr &&
+      (updErr.code === '42703' ||
+        updErr.message?.includes('total_bs') ||
+        updErr.message?.includes('subtotal_bs'))
+    ) {
+      delete updatePayload.subtotal_bs;
+      delete updatePayload.total_bs;
+      const retry = await client.from('orders').update(updatePayload).eq('id', order.id);
+      updErr = retry.error;
+    }
+
+    if (updErr) {
+      throw new InternalServerErrorException(`Error actualizando totales del pedido: ${updErr.message}`);
+    }
 
     return this.findById(order.id);
   }
@@ -805,5 +948,93 @@ export class OrdersService {
       throw new InternalServerErrorException(`Error verificando pago: ${error.message}`);
     }
     return data;
+  }
+
+  async verifyAdditionPayment(
+    id: string,
+    payload: {
+      additionRaw: string;
+      status: 'verified' | 'rejected' | 'pending';
+      reference?: string;
+      originBank?: string;
+      verifiedBy?: string;
+    },
+  ) {
+    const order = await this.findById(id);
+    if (!order) {
+      throw new NotFoundException(`Pedido '${id}' no encontrado`);
+    }
+
+    const notes: string = String(order.notes || '');
+    let targetRaw = payload.additionRaw ? String(payload.additionRaw).trim() : '';
+
+    if (!targetRaw || !notes.includes(targetRaw)) {
+      const tagMatches: string[] = notes.match(/\[(?:ADICIONAL|Adición en app)[^\]]*\]/gi) || [];
+      if (payload.reference) {
+        const refClean = String(payload.reference).trim();
+        targetRaw = tagMatches.find((t: string) => t.includes(refClean)) || '';
+      }
+      if (!targetRaw && tagMatches.length > 0) {
+        targetRaw =
+          tagMatches.find((t: string) => /pago\s*m[oó]vil/i.test(t) && !/verificado/i.test(t)) ||
+          tagMatches[tagMatches.length - 1];
+      }
+    }
+
+    if (!targetRaw || !notes.includes(targetRaw)) {
+      throw new NotFoundException('No se encontró el registro de adicional especificado en este pedido.');
+    }
+
+    let updatedTag = targetRaw;
+
+    if (payload.reference && payload.reference.trim().length > 0) {
+      const cleanRef = payload.reference.trim();
+      if (/Ref:\s*[^|\]]+/i.test(updatedTag)) {
+        updatedTag = updatedTag.replace(/Ref:\s*[^|\]]+/i, `Ref: ${cleanRef}`);
+      } else {
+        updatedTag = updatedTag.replace(/\]$/, ` | Ref: ${cleanRef}]`);
+      }
+    }
+
+    if (payload.originBank && payload.originBank.trim().length > 0) {
+      const cleanBank = payload.originBank.trim();
+      if (/Banco:\s*[^|\]]+/i.test(updatedTag)) {
+        updatedTag = updatedTag.replace(/Banco:\s*[^|\]]+/i, `Banco: ${cleanBank}`);
+      } else if (/Ref:/i.test(updatedTag)) {
+        updatedTag = updatedTag.replace(/(\|\s*Ref:)/i, `| Banco: ${cleanBank} $1`);
+      } else {
+        updatedTag = updatedTag.replace(/\]$/, ` | Banco: ${cleanBank}]`);
+      }
+    }
+
+    const statusLabel =
+      payload.status === 'verified'
+        ? `Verificado${payload.verifiedBy ? ` por ${payload.verifiedBy.trim()}` : ''}`
+        : payload.status === 'rejected'
+          ? 'Rechazado'
+          : 'Pendiente de Verificación';
+
+    if (/Estado:\s*[^|\]]+/i.test(updatedTag)) {
+      updatedTag = updatedTag.replace(/Estado:\s*[^|\]]+/i, `Estado: ${statusLabel}`);
+    } else {
+      updatedTag = updatedTag.replace(/\]$/, ` | Estado: ${statusLabel}]`);
+    }
+
+    const updatedNotes = notes.replace(targetRaw, updatedTag);
+
+    const { error } = await this.supabase
+      .getClient()
+      .from('orders')
+      .update({
+        notes: updatedNotes,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', order.id);
+
+    if (error) {
+      throw new InternalServerErrorException(`Error actualizando estado de adicional: ${error.message}`);
+    }
+
+    return this.findById(order.id);
   }
 }

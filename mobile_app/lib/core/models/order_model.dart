@@ -578,15 +578,19 @@ class DeliveryOrder {
         riderPhone: json['riderPhone'] ?? json['driver_phone'] ?? json['driverPhone'] ?? '',
         riderVehicle: json['riderVehicle'] ?? json['driver_vehicle'] ?? '',
         riderPlate: json['riderPlate'] ?? json['driver_plate'] ?? '',
-        pin: (json['pin'] != null && json['pin'].toString().isNotEmpty && json['pin'] != '1234')
-            ? json['pin'].toString()
-            : (() {
-                final num = (json['orderNumber'] ?? json['order_number'] ?? '').toString();
-                final d = num.replaceAll(RegExp(r'\D'), '');
-                if (d.length >= 4) return d.substring(d.length - 4);
-                if (d.isNotEmpty) return d.padLeft(4, '0');
-                return (json['pin'] ?? '1234').toString();
-              })(),
+        pin: (() {
+          final explicit = (json['delivery_pin'] ?? json['deliveryPin'] ?? '').toString().trim();
+          if (RegExp(r'^\d{4}$').hasMatch(explicit)) return explicit;
+          final noteMatch = RegExp(r'\[PIN:(\d{4})\]').firstMatch(rawNotes);
+          if (noteMatch != null) return noteMatch.group(1)!;
+          final jsonPin = (json['pin'] ?? '').toString().trim();
+          if (RegExp(r'^\d{4}$').hasMatch(jsonPin) && jsonPin != '1234') return jsonPin;
+          final num = (json['orderNumber'] ?? json['order_number'] ?? '').toString();
+          final d = num.replaceAll(RegExp(r'\D'), '');
+          if (d.length >= 4) return d.substring(d.length - 4);
+          if (d.isNotEmpty) return d.padLeft(4, '0');
+          return jsonPin.isNotEmpty ? jsonPin : '1234';
+        })(),
         status: OrderDeliveryStatus.values.firstWhere(
           (s) => s.name == json['status'],
           orElse: () => OrderDeliveryStatus.confirmed,

@@ -9,7 +9,7 @@ import { AuthStore } from '../../core/stores/auth.store';
 import { ThemeService } from '../../core/services/theme.service';
 import { I18nService } from '../../core/services/i18n.service';
 import { Product, ProductModifierGroup, ProductCategory } from '../../core/models/product.model';
-import { Order, OrderStatus, OrderAddition, parseOrderAdditions } from '../../core/models/order.model';
+import { Order, OrderStatus, OrderAddition, parseOrderAdditions, updateAdditionTagInNotes } from '../../core/models/order.model';
 import { AppUser, UserRole } from '../../core/models/user.model';
 import { Tenant, CurrencyDisplayMode, DeliveryTier } from '../../core/models/tenant.model';
 import { Branch, SubscriptionPlan } from '../../core/models/branch.model';
@@ -938,6 +938,13 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
   readonly isProcessingVerification = signal<boolean>(false);
   readonly isRejectPaymentConfirmOpen = signal<boolean>(false);
 
+  // --- VERIFICACIÓN Y AUDITORÍA DE PAGO DE PEDIDO ADICIONAL ---
+  readonly verifyingAdditionContext = signal<{ order: Order; addition: OrderAddition } | null>(null);
+  readonly additionRefInput = signal<string>('');
+  readonly additionOriginBankInput = signal<string>('');
+  readonly isProcessingAdditionVerification = signal<boolean>(false);
+  readonly isRejectAdditionConfirmOpen = signal<boolean>(false);
+
   // Modal y gestión de Colaboradores & Encargados de Sucursal
   readonly isUserModalOpen = signal(false);
   readonly isEditingUser = signal(false);
@@ -1449,6 +1456,13 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     this.startTabTitleBlink(`➕ ¡ADICIÓN EN ${displayOrderNum}!`, `⚠️ VERIFICAR ORDEN - Pídetelo`);
   }
 
+  private getPendingMobileSignature(notes?: string | null): string {
+    return parseOrderAdditions(notes)
+      .filter(a => a.method === 'mobile_transfer' && a.status === 'pending')
+      .map(a => a.raw)
+      .join('||');
+  }
+
   inspectAdditionAlert(alert: OrderAdditionAlert): void {
     this.activeTab.set('orders');
     this.ordersSubTab.set('kanban');
@@ -1456,7 +1470,14 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       o => o.id === alert.orderId || this.formatOrderNumber(o.orderNumber) === alert.orderNumber
     );
     if (found) {
-      this.openOrderDetail(found);
+      const pendingAdd = parseOrderAdditions(found.notes).find(
+        a => a.method === 'mobile_transfer' && a.status === 'pending'
+      );
+      if (pendingAdd) {
+        this.openAdditionVerificationModal({ order: found, addition: pendingAdd });
+      } else {
+        this.openOrderDetail(found);
+      }
     }
     this.dismissAdditionAlert(alert.id);
   }
@@ -1475,7 +1496,8 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       this.knownOrderAdditionsMap.set(o.id, {
         additionsCount: parseOrderAdditions(o.notes).length,
         itemsCount: o.items?.length || 0,
-        total: Number(o.total || 0)
+        total: Number(o.total || 0),
+        pendingMobileSig: this.getPendingMobileSignature(o.notes)
       });
     }
     this.baselineBranchId = branchId;
@@ -1493,12 +1515,14 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       const currentAdditions = parseOrderAdditions(ord.notes);
       const currentItemsCount = ord.items?.length || 0;
       const currentTotal = Number(ord.total || 0);
+      const pendingMobileSig = this.getPendingMobileSignature(ord.notes);
 
       if (!prev) {
         this.knownOrderAdditionsMap.set(ord.id, {
           additionsCount: currentAdditions.length,
           itemsCount: currentItemsCount,
-          total: currentTotal
+          total: currentTotal,
+          pendingMobileSig
         });
         continue;
       }
@@ -1513,10 +1537,26 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
           customerName: ord.customer?.name || 'Cliente',
           ...summary
         });
-      } else if (currentAdditions.length === 0 && currentItemsCount > prev.itemsCount && currentTotal > prev.total) {
+      } else if (pendingMobileSig && pendingMobileSig !== prev.pendingMobileSig) {
+        const pendingAdditions = currentAdditions.filter(
+          a => a.method === 'mobile_transfer' && a.status === 'pending'
+        );
+        const summary = this.summarizeNewAdditions(pendingAdditions, ord.exchangeRate);
+        this.triggerOrderAdditionAlert({
+          dedupKey: `${ord.id}:resend:${pendingMobileSig}`,
+          orderId: ord.id,
+          orderNumber: ord.orderNumber || ord.id,
+          customerName: ord.customer?.name || 'Cliente',
+          ...summary
+        });
+      } else if (currentAdditions.length === 0 && currentItemsCount > prev.itemsCount) {
         const extraItems = (ord.items || []).slice(prev.itemsCount);
         const extraSummary = extraItems.map(i => `${i.quantity}x ${i.name}`).join(', ');
-        const delta = Number((currentTotal - prev.total).toFixed(2));
+        const addedSumFromItems = extraItems.reduce((s, i) => s + Number(i.itemTotal || 0), 0);
+        const delta = Math.max(
+          Number((currentTotal - prev.total).toFixed(2)),
+          Number(addedSumFromItems.toFixed(2))
+        );
         this.triggerOrderAdditionAlert({
           dedupKey: `${ord.id}:items:${currentItemsCount}`,
           orderId: ord.id,
@@ -1531,7 +1571,8 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       this.knownOrderAdditionsMap.set(ord.id, {
         additionsCount: Math.max(prev.additionsCount, currentAdditions.length),
         itemsCount: currentItemsCount,
-        total: currentTotal
+        total: currentTotal,
+        pendingMobileSig
       });
     }
   }
@@ -1728,10 +1769,11 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
   // Alertas sonoras y visuales de adiciones a pedidos activos
   readonly additionAlerts = signal<OrderAdditionAlert[]>([]);
   readonly highlightedAdditionOrderIds = computed(() => this.additionAlerts().map(a => a.orderId));
-  private knownOrderAdditionsMap = new Map<string, { additionsCount: number; itemsCount: number; total: number }>();
+  private knownOrderAdditionsMap = new Map<string, { additionsCount: number; itemsCount: number; total: number; pendingMobileSig: string }>();
   private baselineBranchId = '';
   private ordersBaselineInitialized = false;
   private alertedAdditionKeys = new Set<string>();
+  private realtimeTenantId = '';
 
   // GPS & Leaflet Map State (Legacy / Telemetry)
   private riderMarker?: L.Marker;
@@ -1842,6 +1884,118 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     });
   }
 
+  private subscribeOrdersRealtime(
+    tenantUuid: string,
+    reloadOrders: () => void,
+    triggerRejectionAlert: (orderNumber: string, riderName?: string) => void
+  ): void {
+    const cleanId = (tenantUuid || '').trim();
+    if (!cleanId || this.realtimeTenantId === cleanId) return;
+
+    if (this.realtimeChannel && typeof this.realtimeChannel.unsubscribe === 'function') {
+      try {
+        this.realtimeChannel.unsubscribe();
+      } catch (_) {}
+      this.realtimeChannel = null;
+    }
+
+    this.realtimeTenantId = cleanId;
+    try {
+      this.realtimeChannel = this.supabase.subscribeToOrders(cleanId, (payload) => {
+        console.log('[MerchantAdmin] Realtime event from Supabase:', payload);
+        if (payload) {
+          const eventType = payload.eventType || (payload.old ? 'UPDATE' : 'INSERT');
+          const newRow = payload.new || payload.order || payload;
+          const oldRow = payload.old;
+
+          if (eventType === 'INSERT') {
+            this.triggerNewOrderDesktopAlert(newRow);
+          } else if (eventType === 'UPDATE' && newRow) {
+            const bFilter = this.activeBranchId();
+            const isMain = Boolean(this.activeBranch()?.isMain || this.activeBranch()?.name?.toLowerCase().includes('principal'));
+            const rowBranchId = newRow.branch_id ?? newRow.branchId;
+            const belongsToActiveBranch = Boolean(bFilter) && (rowBranchId === bFilter || (isMain && !rowBranchId));
+
+            let handledAddition = false;
+            if (belongsToActiveBranch && this.ordersBaselineInitialized) {
+              const existingOrder = this.orders().find(o => o.id === newRow.id);
+              const prev = this.knownOrderAdditionsMap.get(newRow.id);
+              const newAdditions = parseOrderAdditions(newRow.notes);
+              const prevCount = prev
+                ? prev.additionsCount
+                : (existingOrder ? parseOrderAdditions(existingOrder.notes).length : parseOrderAdditions(oldRow?.notes).length);
+              const newPendingSig = this.getPendingMobileSignature(newRow.notes);
+              const prevPendingSig = prev
+                ? prev.pendingMobileSig
+                : (existingOrder ? this.getPendingMobileSignature(existingOrder.notes) : '');
+
+              if (newAdditions.length > prevCount) {
+                handledAddition = true;
+                const addedList = newAdditions.slice(prevCount);
+                const summary = this.summarizeNewAdditions(
+                  addedList,
+                  Number(newRow.exchange_rate ?? existingOrder?.exchangeRate ?? 0)
+                );
+                this.knownOrderAdditionsMap.set(newRow.id, {
+                  additionsCount: newAdditions.length,
+                  itemsCount: prev?.itemsCount ?? existingOrder?.items?.length ?? 0,
+                  total: Number(newRow.total ?? prev?.total ?? existingOrder?.total ?? 0),
+                  pendingMobileSig: newPendingSig
+                });
+                this.triggerOrderAdditionAlert({
+                  dedupKey: `${newRow.id}:add:${newAdditions.length}`,
+                  orderId: newRow.id,
+                  orderNumber: newRow.order_number || newRow.orderNumber || existingOrder?.orderNumber || newRow.id,
+                  customerName: newRow.customer_name || newRow.customerName || existingOrder?.customer?.name || 'Cliente',
+                  ...summary
+                });
+                setTimeout(() => reloadOrders(), 1500);
+              } else if (newPendingSig && newPendingSig !== prevPendingSig) {
+                handledAddition = true;
+                const pendingAdditions = newAdditions.filter(
+                  a => a.method === 'mobile_transfer' && a.status === 'pending'
+                );
+                const summary = this.summarizeNewAdditions(
+                  pendingAdditions,
+                  Number(newRow.exchange_rate ?? existingOrder?.exchangeRate ?? 0)
+                );
+                this.knownOrderAdditionsMap.set(newRow.id, {
+                  additionsCount: Math.max(prevCount, newAdditions.length),
+                  itemsCount: prev?.itemsCount ?? existingOrder?.items?.length ?? 0,
+                  total: Number(newRow.total ?? prev?.total ?? existingOrder?.total ?? 0),
+                  pendingMobileSig: newPendingSig
+                });
+                this.triggerOrderAdditionAlert({
+                  dedupKey: `${newRow.id}:resend:${newPendingSig}`,
+                  orderId: newRow.id,
+                  orderNumber: newRow.order_number || newRow.orderNumber || existingOrder?.orderNumber || newRow.id,
+                  customerName: newRow.customer_name || newRow.customerName || existingOrder?.customer?.name || 'Cliente',
+                  ...summary
+                });
+                setTimeout(() => reloadOrders(), 1500);
+              }
+            }
+
+            if (!handledAddition) {
+              const driverJustAssigned = (!oldRow?.driver_id && newRow.driver_id) ||
+                                         (oldRow?.driver_id !== newRow.driver_id && newRow.driver_id);
+              if (driverJustAssigned) {
+                this.triggerRiderAssignedAlert(newRow, newRow.driver_name || newRow.driverName);
+              } else if (oldRow?.status !== newRow.status && newRow.status) {
+                this.triggerOrderStatusAlert(newRow, newRow.status);
+              }
+            }
+          } else if (eventType === 'REJECTED_BY_RIDER' && payload.order) {
+            triggerRejectionAlert(payload.order.orderNumber || payload.order.id, payload.order.riderName);
+          }
+        }
+        reloadOrders();
+      });
+    } catch (e) {
+      console.warn('[MerchantAdmin] Realtime subscribeToOrders caught error:', e);
+    }
+  }
+
   ngOnInit(): void {
     this.setupAudioUnlockListeners();
     if (typeof window !== 'undefined') {
@@ -1856,6 +2010,79 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       this.brandingForm.name = user.tenantName;
       this.currentTenant.update(t => ({ ...t, name: user.tenantName! }));
     }
+
+    const triggerRejectionAlert = (orderNumber: string, riderName?: string) => {
+      this.rejectedAlert.set({
+        orderNumber: orderNumber,
+        message: `El repartidor ${riderName ? riderName + ' ' : ''}rechazó la asignación de ${orderNumber}. Reasigna otro repartidor disponible.`
+      });
+      try {
+        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sawtooth';
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.frequency.setValueAtTime(320, audioCtx.currentTime);
+        osc.frequency.setValueAtTime(240, audioCtx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.45);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.45);
+      } catch (_) { }
+    };
+
+    const reloadOrders = () => {
+      const tid = this.currentTenant()?.id || activeTenantId;
+      if (!tid) return;
+      const bFilter = this.activeBranchId();
+      if (!bFilter) return;
+      this.api.getOrders(tid, undefined, bFilter).subscribe(orders => {
+        const isMain = Boolean(this.activeBranch()?.isMain || this.activeBranch()?.name?.toLowerCase().includes('principal'));
+        const orderList = (orders || []).filter(o => {
+          if (o.branchId === bFilter) return true;
+          if (isMain && !o.branchId) return true;
+          return false;
+        });
+        const currentCount = this.orders().length;
+
+        if (orderList.length > currentCount && currentCount > 0) {
+          const newOrders = orderList.filter(no => !this.orders().some(oo => oo.id === no.id));
+          const latestOrder = newOrders.length > 0 ? newOrders[0] : orderList[0];
+          this.triggerNewOrderDesktopAlert(latestOrder);
+        }
+        this.detectAdditionsInOrderList(orderList, bFilter);
+        this.orders.set(orderList);
+
+        const currentDetailOrd = this.selectedOrderDetail();
+        if (currentDetailOrd) {
+          const refreshedDetail = orderList.find(o => o.id === currentDetailOrd.id);
+          if (refreshedDetail) {
+            this.selectedOrderDetail.set(refreshedDetail);
+          }
+        }
+        const currentAddCtx = this.verifyingAdditionContext();
+        if (currentAddCtx) {
+          const refreshedOrder = orderList.find(o => o.id === currentAddCtx.order.id);
+          if (refreshedOrder) {
+            const refreshedAdd = parseOrderAdditions(refreshedOrder.notes).find(
+              a => a.raw === currentAddCtx.addition.raw || a.index === currentAddCtx.addition.index
+            );
+            this.verifyingAdditionContext.set({
+              order: refreshedOrder,
+              addition: refreshedAdd || currentAddCtx.addition
+            });
+          }
+        }
+        const currentRouteOrd = this.selectedRouteOrder();
+        if (currentRouteOrd) {
+          const refreshed = orderList.find(o => o.id === currentRouteOrd.id);
+          if (refreshed) {
+            this.selectedRouteOrder.set(refreshed);
+          }
+        }
+      });
+    };
 
     // 1. Cargar datos del comercio real desde la base de datos (para reflejar cualquier cambio de nombre en SuperAdmin)
     const tenantIdentifier = activeTenantId || 'burger-king';
@@ -1904,6 +2131,9 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         if (cur && cur.tenantName !== tenant.name) {
           this.auth.login({ ...cur, tenantName: tenant.name, tenantId: tenant.id });
         }
+        if (tenant.id && tenant.id !== this.realtimeTenantId) {
+          this.subscribeOrdersRealtime(tenant.id, reloadOrders, triggerRejectionAlert);
+        }
       } else {
         // Fallback: buscar en la lista general de tenants
         this.api.getTenants(true).subscribe(list => {
@@ -1914,6 +2144,9 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
             const cur = this.auth.currentUser();
             if (cur && cur.tenantName !== match.name) {
               this.auth.login({ ...cur, tenantName: match.name, tenantId: match.id });
+            }
+            if (match.id && match.id !== this.realtimeTenantId) {
+              this.subscribeOrdersRealtime(match.id, reloadOrders, triggerRejectionAlert);
             }
           }
         });
@@ -1965,135 +2198,8 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
           this.subscriptionPlans.set(plans);
         }
       });
-    }
 
-    // 7. Suscripción en Tiempo Real con Supabase WebSockets + Auto-polling continuo
-    const triggerRejectionAlert = (orderNumber: string, riderName?: string) => {
-      this.rejectedAlert.set({
-        orderNumber: orderNumber,
-        message: `El repartidor ${riderName ? riderName + ' ' : ''}rechazó la asignación de ${orderNumber}. Reasigna otro repartidor disponible.`
-      });
-      try {
-        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = 'sawtooth';
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.frequency.setValueAtTime(320, audioCtx.currentTime);
-        osc.frequency.setValueAtTime(240, audioCtx.currentTime + 0.15);
-        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.45);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.45);
-      } catch (_) { }
-    };
-
-    const reloadOrders = () => {
-      if (!activeTenantId) return;
-      const bFilter = this.activeBranchId();
-      if (!bFilter) return;
-      this.api.getOrders(activeTenantId, undefined, bFilter).subscribe(orders => {
-        const isMain = Boolean(this.activeBranch()?.isMain || this.activeBranch()?.name?.toLowerCase().includes('principal'));
-        const orderList = (orders || []).filter(o => {
-          if (o.branchId === bFilter) return true;
-          if (isMain && !o.branchId) return true;
-          return false;
-        });
-        const currentCount = this.orders().length;
-
-        if (orderList.length > currentCount && currentCount > 0) {
-          const newOrders = orderList.filter(no => !this.orders().some(oo => oo.id === no.id));
-          const latestOrder = newOrders.length > 0 ? newOrders[0] : orderList[0];
-          this.triggerNewOrderDesktopAlert(latestOrder);
-        }
-        this.detectAdditionsInOrderList(orderList, bFilter);
-        this.orders.set(orderList);
-
-        const currentDetailOrd = this.selectedOrderDetail();
-        if (currentDetailOrd) {
-          const refreshedDetail = orderList.find(o => o.id === currentDetailOrd.id);
-          if (refreshedDetail) {
-            this.selectedOrderDetail.set(refreshedDetail);
-          }
-        }
-        const currentRouteOrd = this.selectedRouteOrder();
-        if (currentRouteOrd) {
-          const refreshed = orderList.find(o => o.id === currentRouteOrd.id);
-          if (refreshed) {
-            this.selectedRouteOrder.set(refreshed);
-          }
-        }
-      });
-    };
-
-    if (activeTenantId) {
-      try {
-        this.realtimeChannel = this.supabase.subscribeToOrders(activeTenantId, (payload) => {
-          console.log('[MerchantAdmin] Realtime event from Supabase:', payload);
-          if (payload) {
-            const eventType = payload.eventType || (payload.old ? 'UPDATE' : 'INSERT');
-            const newRow = payload.new || payload.order || payload;
-            const oldRow = payload.old;
-
-            if (eventType === 'INSERT') {
-              this.triggerNewOrderDesktopAlert(newRow);
-            } else if (eventType === 'UPDATE' && newRow) {
-              const bFilter = this.activeBranchId();
-              const isMain = Boolean(this.activeBranch()?.isMain || this.activeBranch()?.name?.toLowerCase().includes('principal'));
-              const rowBranchId = newRow.branch_id ?? newRow.branchId;
-              const belongsToActiveBranch = Boolean(bFilter) && (rowBranchId === bFilter || (isMain && !rowBranchId));
-
-              let handledAddition = false;
-              if (belongsToActiveBranch && this.ordersBaselineInitialized) {
-                const existingOrder = this.orders().find(o => o.id === newRow.id);
-                const prev = this.knownOrderAdditionsMap.get(newRow.id);
-                const newAdditions = parseOrderAdditions(newRow.notes);
-                const prevCount = prev
-                  ? prev.additionsCount
-                  : (existingOrder ? parseOrderAdditions(existingOrder.notes).length : parseOrderAdditions(oldRow?.notes).length);
-
-                if (newAdditions.length > prevCount) {
-                  handledAddition = true;
-                  const addedList = newAdditions.slice(prevCount);
-                  const summary = this.summarizeNewAdditions(
-                    addedList,
-                    Number(newRow.exchange_rate ?? existingOrder?.exchangeRate ?? 0)
-                  );
-                  this.knownOrderAdditionsMap.set(newRow.id, {
-                    additionsCount: newAdditions.length,
-                    itemsCount: prev?.itemsCount ?? existingOrder?.items?.length ?? 0,
-                    total: Number(newRow.total ?? prev?.total ?? existingOrder?.total ?? 0)
-                  });
-                  this.triggerOrderAdditionAlert({
-                    dedupKey: `${newRow.id}:add:${newAdditions.length}`,
-                    orderId: newRow.id,
-                    orderNumber: newRow.order_number || newRow.orderNumber || existingOrder?.orderNumber || newRow.id,
-                    customerName: newRow.customer_name || newRow.customerName || existingOrder?.customer?.name || 'Cliente',
-                    ...summary
-                  });
-                  setTimeout(() => reloadOrders(), 1500);
-                }
-              }
-
-              if (!handledAddition) {
-                const driverJustAssigned = (!oldRow?.driver_id && newRow.driver_id) ||
-                                           (oldRow?.driver_id !== newRow.driver_id && newRow.driver_id);
-                if (driverJustAssigned) {
-                  this.triggerRiderAssignedAlert(newRow, newRow.driver_name || newRow.driverName);
-                } else if (oldRow?.status !== newRow.status && newRow.status) {
-                  this.triggerOrderStatusAlert(newRow, newRow.status);
-                }
-              }
-            } else if (eventType === 'REJECTED_BY_RIDER' && payload.order) {
-              triggerRejectionAlert(payload.order.orderNumber || payload.order.id, payload.order.riderName);
-            }
-          }
-          reloadOrders();
-        });
-      } catch (e) {
-        console.warn('[MerchantAdmin] Realtime subscribeToOrders caught error:', e);
-      }
+      this.subscribeOrdersRealtime(activeTenantId, reloadOrders, triggerRejectionAlert);
     }
 
     // Polling de respaldo para órdenes y ubicación en vivo de motorizados (Supabase Realtime notifica al instante)
@@ -3000,53 +3106,204 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     this.isRejectPaymentConfirmOpen.set(false);
   }
 
-  async handleVerifyAdditionPayment(event: { order: Order; addition: OrderAddition }): Promise<void> {
-    const { order, addition } = event;
-    const client = this.supabase.rawClient;
-    if (!client || !order?.notes) return;
+  getOrderBaseTotal(order: Order | null | undefined): number {
+    if (!order) return 0;
+    const addSum = parseOrderAdditions(order.notes).reduce((s, a) => s + a.amountUsd, 0);
+    return Math.max(0, Number(((order.total || 0) - addSum).toFixed(2)));
+  }
 
-    const oldRaw = addition.raw;
-    let newRaw = oldRaw;
-    if (/Estado:\s*Pendiente/i.test(oldRaw)) {
-      newRaw = oldRaw.replace(/Estado:\s*Pendiente(?:\s*de\s*Verificación)?/i, 'Estado: Verificado');
-    } else {
-      newRaw = oldRaw.replace(/\]$/, ' | Estado: Verificado]');
+  getAdditionBsAmount(addition: OrderAddition, order: Order | null | undefined): number {
+    if (addition.amountBs !== undefined && addition.amountBs !== null) {
+      return addition.amountBs;
     }
+    const rate = order?.exchangeRate || this.activeExchangeRate() || 1;
+    return Number((addition.amountUsd * rate).toFixed(2));
+  }
 
-    const updatedNotes = order.notes.replace(oldRaw, newRaw);
+  openAdditionVerificationModal(event: { order: Order; addition: OrderAddition }): void {
+    const latestOrder = this.orders().find(o => o.id === event.order.id) || event.order;
+    const latestAddition =
+      parseOrderAdditions(latestOrder.notes).find(a => a.raw === event.addition.raw || a.index === event.addition.index) ||
+      event.addition;
+    this.verifyingAdditionContext.set({ order: latestOrder, addition: latestAddition });
+    this.additionRefInput.set(latestAddition.reference || '');
+    this.additionOriginBankInput.set(latestAddition.originBank || '');
+    this.isProcessingAdditionVerification.set(false);
+    this.isRejectAdditionConfirmOpen.set(false);
+  }
 
+  closeAdditionVerificationModal(): void {
+    this.verifyingAdditionContext.set(null);
+    this.additionRefInput.set('');
+    this.additionOriginBankInput.set('');
+    this.isProcessingAdditionVerification.set(false);
+    this.isRejectAdditionConfirmOpen.set(false);
+  }
+
+  openRejectAdditionConfirm(): void {
+    this.isRejectAdditionConfirmOpen.set(true);
+  }
+
+  cancelRejectAdditionConfirm(): void {
+    this.isRejectAdditionConfirmOpen.set(false);
+  }
+
+  private async persistAdditionStatus(
+    order: Order,
+    addition: OrderAddition,
+    status: 'verified' | 'rejected',
+    reference?: string,
+    originBank?: string
+  ): Promise<boolean> {
+    if (!order?.notes) return false;
+
+    const verifiedBy = this.auth.currentUser()?.name || 'Comercio';
+    const updatedNotes = updateAdditionTagInNotes(order.notes, addition.raw, {
+      status,
+      reference,
+      originBank,
+      verifiedBy
+    });
+
+    const newPendingSig = this.getPendingMobileSignature(updatedNotes);
+    const prevEntry = this.knownOrderAdditionsMap.get(order.id);
+    this.knownOrderAdditionsMap.set(order.id, {
+      additionsCount: Math.max(prevEntry?.additionsCount ?? 0, parseOrderAdditions(updatedNotes).length),
+      itemsCount: prevEntry?.itemsCount ?? order.items?.length ?? 0,
+      total: Number(prevEntry?.total ?? order.total ?? 0),
+      pendingMobileSig: newPendingSig
+    });
+
+    let persisted = false;
     try {
-      const { error } = await client.from('orders').update({
-        notes: updatedNotes,
-        updated_at: new Date().toISOString()
-      }).eq('id', order.id);
-
-      if (!error) {
-        this.orders.update(list =>
-          list.map(o => o.id === order.id ? { ...o, notes: updatedNotes } : o)
-        );
-        const currentDetail = this.selectedOrderDetail();
-        if (currentDetail && currentDetail.id === order.id) {
-          this.selectedOrderDetail.set({ ...currentDetail, notes: updatedNotes });
-        }
-        const remainingPending = parseOrderAdditions(updatedNotes).some(
-          a => a.method === 'mobile_transfer' && a.status !== 'verified'
-        );
-        this.additionAlerts.update(list => {
-          if (!remainingPending) {
-            return list.filter(a => a.orderId !== order.id);
-          }
-          return list.map(a => a.orderId === order.id ? { ...a, needsPaymentVerification: true } : a);
-        });
-        this.showToast(
-          'success',
-          'Pago Adicional Validado',
-          `Pago adicional de la orden ${this.formatOrderNumber(order.orderNumber)} verificado.`
-        );
-      }
-    } catch (e) {
-      console.warn('[MerchantAdmin] Error validando pago adicional:', e);
+      await firstValueFrom(
+        this.api.verifyAdditionPayment(order.id, {
+          additionRaw: addition.raw,
+          status,
+          reference: reference?.trim() || undefined,
+          originBank: originBank?.trim() || undefined,
+          verifiedBy
+        })
+      );
+      persisted = true;
+    } catch (apiErr) {
+      console.warn('[MerchantAdmin] Backend verifyAdditionPayment falló, intentando Supabase directo:', apiErr);
     }
+
+    if (!persisted) {
+      const client = this.supabase.rawClient;
+      if (client) {
+        const { error } = await client
+          .from('orders')
+          .update({
+            notes: updatedNotes,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', order.id);
+        if (!error) {
+          persisted = true;
+        }
+      }
+    }
+
+    if (!persisted) {
+      return false;
+    }
+
+    this.orders.update(list =>
+      list.map(o => o.id === order.id ? { ...o, notes: updatedNotes, updatedAt: new Date().toISOString() } : o)
+    );
+    const currentDetail = this.selectedOrderDetail();
+    if (currentDetail && currentDetail.id === order.id) {
+      this.selectedOrderDetail.set({ ...currentDetail, notes: updatedNotes });
+    }
+
+    const remainingPending = parseOrderAdditions(updatedNotes).some(
+      a => a.method === 'mobile_transfer' && a.status === 'pending'
+    );
+    this.additionAlerts.update(list => {
+      if (!remainingPending) {
+        return list.filter(a => a.orderId !== order.id);
+      }
+      return list.map(a => a.orderId === order.id ? { ...a, needsPaymentVerification: true } : a);
+    });
+
+    return true;
+  }
+
+  async confirmAdditionPaymentVerification(): Promise<void> {
+    const ctx = this.verifyingAdditionContext();
+    if (!ctx) return;
+
+    const ref = this.additionRefInput().trim();
+    if (ref.length < 4) {
+      alert('Por favor confirma o ingresa los últimos dígitos (mínimo 4) de la referencia de Pago Móvil adicional.');
+      return;
+    }
+
+    this.isProcessingAdditionVerification.set(true);
+    const bank = this.additionOriginBankInput().trim();
+    const ok = await this.persistAdditionStatus(ctx.order, ctx.addition, 'verified', ref, bank);
+    this.isProcessingAdditionVerification.set(false);
+
+    if (ok) {
+      this.showToast(
+        'success',
+        'Pago Adicional Verificado',
+        `Pago Móvil adicional de la orden ${this.formatOrderNumber(ctx.order.orderNumber)} (+$${ctx.addition.amountUsd.toFixed(2)}) confirmado.`
+      );
+      this.closeAdditionVerificationModal();
+    } else {
+      this.showToast('error', 'Error', 'No se pudo confirmar el pago adicional en el servidor.');
+    }
+  }
+
+  async executeRejectAdditionPayment(): Promise<void> {
+    const ctx = this.verifyingAdditionContext();
+    if (!ctx) return;
+
+    this.isProcessingAdditionVerification.set(true);
+    const ref = this.additionRefInput().trim();
+    const bank = this.additionOriginBankInput().trim();
+    const ok = await this.persistAdditionStatus(ctx.order, ctx.addition, 'rejected', ref, bank);
+    this.isProcessingAdditionVerification.set(false);
+    this.isRejectAdditionConfirmOpen.set(false);
+
+    if (ok) {
+      this.showToast(
+        'info',
+        'Pago Adicional Rechazado',
+        `Se notificó al cliente de la orden ${this.formatOrderNumber(ctx.order.orderNumber)} para que reenvíe la referencia.`
+      );
+      this.closeAdditionVerificationModal();
+    } else {
+      this.showToast('error', 'Error', 'No se pudo rechazar el pago adicional en el servidor.');
+    }
+  }
+
+  async handleVerifyAdditionPayment(event: { order: Order; addition: OrderAddition }): Promise<void> {
+    this.openAdditionVerificationModal(event);
+  }
+
+  handleAdvanceOrderStatus(event: { orderId: string; status: OrderStatus }): void {
+    if (event.status === 'on_the_way') {
+      const order = this.orders().find(o => o.id === event.orderId);
+      if (order) {
+        const pendingAdd = parseOrderAdditions(order.notes).find(
+          a => a.method === 'mobile_transfer' && a.status === 'pending'
+        );
+        if (pendingAdd) {
+          this.showToast(
+            'warning',
+            `Verificar Adicional ${this.formatOrderNumber(order.orderNumber)}`,
+            'Verifica primero el Pago Móvil del pedido adicional antes de despachar.'
+          );
+          this.openAdditionVerificationModal({ order, addition: pendingAdd });
+          return;
+        }
+      }
+    }
+    this.advanceOrderStatus(event.orderId, event.status);
   }
 
   executeRejectPayment(): void {
@@ -3618,12 +3875,18 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
 
   simulateIncomingOrder(): void {
     const num = Math.floor(1000 + Math.random() * 9000);
+    let pin = String(Math.floor(1000 + Math.random() * 9000));
+    while (pin === String(num)) {
+      pin = String(Math.floor(1000 + Math.random() * 9000));
+    }
     const resolvedTenantId = this.currentTenant().id || this.auth.currentUser()?.tenantId || '';
     const targetBranch = this.selectedBranch() || (this.branches().length > 0 ? this.branches()[0] : null);
 
     const newOrd: Order = {
       id: `ord_${Date.now()}`,
       orderNumber: `ORD-${num}`,
+      deliveryPin: pin,
+      notes: `[PIN:${pin}]`,
       tenantId: resolvedTenantId,
       tenantName: this.currentTenant().name || this.auth.currentUser()?.tenantName || 'Comercio',
       branchId: targetBranch?.id,
@@ -3670,6 +3933,8 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       tenant_id: resolvedTenantId,
       branch_id: targetBranch?.id,
       order_number: `ORD-${num}`,
+      delivery_pin: pin,
+      notes: `[PIN:${pin}]`,
       source: 'whatsapp_link',
       status: 'received',
       fulfillment_type: 'delivery',

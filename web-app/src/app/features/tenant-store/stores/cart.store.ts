@@ -752,6 +752,11 @@ export const CartStore = signalStore(
       const tenant = store.activeTenant();
       const branch = store.selectedBranch();
       const orderNumber = `ORD-${Math.floor(1000 + Math.random() * 9000)}`;
+      const orderDigits = orderNumber.replace(/\D/g, '').slice(-4).padStart(4, '0');
+      let randomPin = String(Math.floor(1000 + Math.random() * 9000));
+      while (randomPin === orderDigits) {
+        randomPin = String(Math.floor(1000 + Math.random() * 9000));
+      }
 
       const rate = store.selectedBranch()?.currencySettings?.exchangeRate ||
                    store.selectedBranch()?.exchangeRate ||
@@ -761,6 +766,7 @@ export const CartStore = signalStore(
       const order: Order = {
         id: `ord_${Date.now()}`,
         orderNumber,
+        deliveryPin: randomPin,
         tenantId: store.cartTenantId() || ((tenant?.id && tenant.id !== 'tenant-1') ? tenant.id : (branch?.companyId || 'dac59429-fd6f-4d3e-8b2e-ab0e23828c1f')),
         tenantName: store.cartTenantName() || tenant?.name || branch?.companyName || 'Comercio',
         branchId: store.cartBranchId() || branch?.id,

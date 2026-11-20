@@ -12,6 +12,30 @@ import '../../../core/services/api_service.dart';
 import '../../../core/services/cart_service.dart';
 import '../../../core/theme/app_theme.dart';
 
+class _ParsedOrderAddition {
+  final int index;
+  final String raw;
+  final String itemsSummary;
+  final double amountUsd;
+  final double? amountBs;
+  final String method; // 'mobile_transfer' | 'cash'
+  final String originBank;
+  final String reference;
+  final String status; // 'verified' | 'rejected' | 'pending' | 'cash'
+
+  const _ParsedOrderAddition({
+    required this.index,
+    required this.raw,
+    required this.itemsSummary,
+    required this.amountUsd,
+    this.amountBs,
+    required this.method,
+    required this.originBank,
+    required this.reference,
+    required this.status,
+  });
+}
+
 class CustomerTrackingScreen extends StatefulWidget {
   final DeliveryOrder order;
 
@@ -299,6 +323,134 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
     }
   }
 
+  bool _isAdditionItem(CartItem item) {
+    final nameLower = item.product.name.toLowerCase();
+    if (nameLower.contains('(adición)') || nameLower.contains('(adicion)')) {
+      return true;
+    }
+    return item.selectedModifiers.any(
+      (m) => m.optionName.toLowerCase().contains('adici'),
+    );
+  }
+
+  List<_ParsedOrderAddition> _parseOrderAdditions(String notes) {
+    if (notes.trim().isEmpty) return [];
+    final matches = RegExp(r'\[(?:ADICIONAL|Adición en app)[^\]]*\]', caseSensitive: false)
+        .allMatches(notes)
+        .toList();
+    final List<_ParsedOrderAddition> result = [];
+    for (int idx = 0; idx < matches.length; idx++) {
+      final raw = matches[idx].group(0)!;
+      final inner = raw
+          .replaceFirst(RegExp(r'^\[(?:ADICIONAL|Adición en app):\s*', caseSensitive: false), '')
+          .replaceFirst(RegExp(r'\]$'), '')
+          .trim();
+      final parts = inner.split('|').map((s) => s.trim()).toList();
+      final itemsSummary = parts.isNotEmpty ? parts[0] : 'Productos adicionales';
+
+      double amountUsd = 0.0;
+      double? amountBs;
+      String method = 'cash';
+      String originBank = '';
+      String reference = '';
+      String status = '';
+
+      for (int pIdx = 1; pIdx < parts.length; pIdx++) {
+        final seg = parts[pIdx];
+        final usdMatch = RegExp(r'\+?\$\s*(\d+(?:\.\d+)?)').firstMatch(seg);
+        if (usdMatch != null) {
+          amountUsd = double.tryParse(usdMatch.group(1)!) ?? amountUsd;
+          final bsMatch = RegExp(r'Bs\.?\s*(\d+(?:\.\d+)?)', caseSensitive: false).firstMatch(seg);
+          if (bsMatch != null) {
+            amountBs = double.tryParse(bsMatch.group(1)!);
+          }
+          continue;
+        }
+        final segLower = seg.toLowerCase();
+        if (segLower.startsWith('método:') || segLower.startsWith('metodo:')) {
+          method = (segLower.contains('pago m') || segLower.contains('transfer'))
+              ? 'mobile_transfer'
+              : 'cash';
+        } else if (segLower.startsWith('banco:')) {
+          originBank = seg.replaceFirst(RegExp(r'^Banco:\s*', caseSensitive: false), '').trim();
+        } else if (segLower.startsWith('ref:')) {
+          reference = seg.replaceFirst(RegExp(r'^Ref:\s*', caseSensitive: false), '').trim();
+        } else if (segLower.startsWith('estado:')) {
+          final stVal = seg.replaceFirst(RegExp(r'^Estado:\s*', caseSensitive: false), '').toLowerCase();
+          if (stVal.contains('verificado') || stVal.contains('confirmado') || stVal.contains('aprobado')) {
+            status = 'verified';
+          } else if (stVal.contains('rechazado')) {
+            status = 'rejected';
+          } else {
+            status = 'pending';
+          }
+        }
+      }
+
+      if (status.isEmpty) {
+        if (method == 'mobile_transfer') {
+          final rawLower = raw.toLowerCase();
+          if (rawLower.contains('verificado') || rawLower.contains('aprobado')) {
+            status = 'verified';
+          } else if (rawLower.contains('rechazado')) {
+            status = 'rejected';
+          } else {
+            status = 'pending';
+          }
+        } else {
+          status = 'cash';
+        }
+      }
+
+      result.add(
+        _ParsedOrderAddition(
+          index: idx + 1,
+          raw: raw,
+          itemsSummary: itemsSummary,
+          amountUsd: amountUsd,
+          amountBs: amountBs,
+          method: method,
+          originBank: originBank,
+          reference: reference,
+          status: status,
+        ),
+      );
+    }
+    return result;
+  }
+
+  List<CartItem> _parseOrderItemsFromRows(dynamic rawItems) {
+    if (rawItems is! List || rawItems.isEmpty) return [];
+    return rawItems.whereType<Map>().map((i) {
+      final rawMods = i['selected_modifiers'] as List? ?? [];
+      final mods = rawMods
+          .whereType<Map>()
+          .map((m) => SelectedProductModifier(
+                groupId: (m['group_id'] ?? m['groupId'] ?? '').toString(),
+                groupTitle: (m['group_title'] ?? m['groupTitle'] ?? '').toString(),
+                optionId: (m['option_id'] ?? m['optionId'] ?? '').toString(),
+                optionName: (m['option_name'] ?? m['optionName'] ?? m['name'] ?? '').toString(),
+                priceDelta: (m['price_delta'] as num?)?.toDouble() ??
+                    (m['priceDelta'] as num?)?.toDouble() ??
+                    (m['price'] as num?)?.toDouble() ??
+                    0.0,
+              ))
+          .toList();
+      return CartItem(
+        product: Product(
+          id: i['product_id']?.toString() ?? '',
+          name: i['product_name']?.toString() ?? 'Producto',
+          description: '',
+          price: (i['unit_price'] as num?)?.toDouble() ?? 0.0,
+          imageUrl: '',
+          category: 'General',
+        ),
+        quantity: (i['quantity'] as num?)?.toInt() ?? 1,
+        selectedModifiers: mods,
+      );
+    }).toList();
+  }
+
   Future<void> _refreshOrderStatus() async {
     try {
       final supabase = Supabase.instance.client;
@@ -312,11 +464,12 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
 
       final res = await supabase
           .from('orders')
-          .select('*, riders(*), tenants(*), branches(*)')
+          .select('*, order_items(*), riders(*), tenants(*), branches(*)')
           .or(filter)
           .maybeSingle();
 
       if (res != null && mounted) {
+        final freshId = (res['id'] ?? _order.id).toString();
         final statusStr = res['status']?.toString() ?? '';
         final rawNotes = (res['notes'] ?? '').toString();
         final riderData = res['riders'] as Map<String, dynamic>?;
@@ -342,7 +495,7 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
         }
 
         // Live telemetry check when order is on the way
-        final orderUuid = (res['id'] ?? _order.id).toString();
+        final orderUuid = freshId;
         if (orderUuid.isNotEmpty) {
           _subscribeToOrderTelemetry(orderUuid);
         }
@@ -416,17 +569,53 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
           if (m != null) originBank = m.group(1)!.trim();
         }
 
-        if (newStatus != _order.status ||
+        final freshItems = _parseOrderItemsFromRows(res['order_items']);
+        final double freshSubtotal = (res['subtotal'] as num?)?.toDouble() ?? _order.subtotal;
+        final double freshTotal = (res['total'] as num?)?.toDouble() ?? _order.total;
+
+        final String freshPin = () {
+          final explicitPin = (res['delivery_pin'] ?? '').toString().trim();
+          if (RegExp(r'^\d{4}$').hasMatch(explicitPin)) return explicitPin;
+          final m = RegExp(r'\[PIN:(\d{4})\]').firstMatch(rawNotes);
+          if (m != null) return m.group(1)!;
+          if (RegExp(r'^\d{4}$').hasMatch(_order.pin.trim()) &&
+              _order.pin.trim() != '1234' &&
+              _order.pin.trim() != '6420') {
+            return _order.pin.trim();
+          }
+          final orderNum = (res['order_number'] ?? _order.orderNumber).toString();
+          final digits = orderNum.replaceAll(RegExp(r'\D'), '');
+          if (digits.length >= 4) {
+            return digits.substring(digits.length - 4);
+          } else if (digits.isNotEmpty) {
+            return digits.padLeft(4, '0');
+          }
+          return '1234';
+        }();
+
+        final bool hasChanges = newStatus != _order.status ||
             newPaymentStatus != _order.paymentStatus ||
             newPaymentReference != _order.paymentReference ||
             riderName != _order.riderName ||
             riderPlate != _order.riderPlate ||
             dynamicMerchantName != _order.merchantName ||
-            merchantLocationChanged) {
+            merchantLocationChanged ||
+            rawNotes != (_order.notes ?? '') ||
+            (freshTotal - _order.total).abs() > 0.001 ||
+            (freshItems.isNotEmpty && freshItems.length != _order.items.length) ||
+            freshId != _order.id ||
+            freshPin != _order.pin;
+
+        if (freshId != _order.id &&
+            RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')
+                .hasMatch(freshId)) {
+          CartService().updateOrderCloudId(_order.orderNumber, freshId);
+        }
+
+        if (hasChanges) {
           setState(() {
-            _order.status = newStatus;
             _order = DeliveryOrder(
-              id: _order.id,
+              id: freshId,
               orderNumber: _order.orderNumber,
               riderId: res['driver_id']?.toString() ?? _order.riderId,
               merchantName: dynamicMerchantName,
@@ -443,29 +632,12 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
               riderPhone: riderPhone,
               riderVehicle: riderVehicle,
               riderPlate: riderPlate,
-              pin: () {
-                final notes = (res['notes'] ?? '').toString();
-                if (notes.contains('[PIN:')) {
-                  final m = RegExp(r'\[PIN:(\d{4})\]').firstMatch(notes);
-                  if (m != null) return m.group(1)!;
-                }
-                final orderNum = (res['order_number'] ?? _order.orderNumber).toString();
-                final digits = orderNum.replaceAll(RegExp(r'\D'), '');
-                if (digits.length >= 4) {
-                  return digits.substring(digits.length - 4);
-                } else if (digits.isNotEmpty) {
-                  return digits.padLeft(4, '0');
-                }
-                if (_order.pin.isNotEmpty && _order.pin != '1234' && _order.pin != '6420') {
-                  return _order.pin;
-                }
-                return '1234';
-              }(),
+              pin: freshPin,
               status: newStatus,
-              items: _order.items,
-              subtotal: _order.subtotal,
-              deliveryFee: _order.deliveryFee,
-              total: _order.total,
+              items: freshItems.isNotEmpty ? freshItems : _order.items,
+              subtotal: freshSubtotal,
+              deliveryFee: (res['delivery_fee'] as num?)?.toDouble() ?? _order.deliveryFee,
+              total: freshTotal,
               paymentMethod: _order.paymentMethod,
               paymentStatus: newPaymentStatus,
               paymentReference: newPaymentReference,
@@ -473,6 +645,7 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
               createdAt: _order.createdAt,
               branchId: _order.branchId,
               companyId: _order.companyId,
+              notes: rawNotes.isNotEmpty ? rawNotes : _order.notes,
             );
           });
           CartService().updateOrderStatus(newStatus, orderId: _order.id);
@@ -738,47 +911,25 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                       setDialogState(() => isSaving = true);
                       try {
                         final cleanNum = _order.orderNumber.replaceAll('#', '').trim();
+                        final isUuid = RegExp(
+                          r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+                        ).hasMatch(_order.id);
+                        final filter = isUuid
+                            ? 'id.eq.${_order.id},order_number.eq.$cleanNum,order_number.eq.#$cleanNum'
+                            : 'order_number.eq.$cleanNum,order_number.eq.#$cleanNum';
                         await Supabase.instance.client
                             .from('orders')
                             .update({
                               'payment_reference': newRef,
                               'payment_status': 'pending',
                             })
-                            .or('id.eq.${_order.id},order_number.eq.$cleanNum,order_number.eq.#$cleanNum');
+                            .or(filter);
 
                         if (mounted) {
                           setState(() {
-                            _order = DeliveryOrder(
-                              id: _order.id,
-                              orderNumber: _order.orderNumber,
-                              merchantName: _order.merchantName,
-                              merchantPhone: _order.merchantPhone,
-                              merchantAddress: _order.merchantAddress,
-                              merchantLat: _order.merchantLat,
-                              merchantLng: _order.merchantLng,
-                              customerName: _order.customerName,
-                              customerPhone: _order.customerPhone,
-                              customerAddress: _order.customerAddress,
-                              customerLat: _order.customerLat,
-                              customerLng: _order.customerLng,
-                              riderId: _order.riderId,
-                              riderName: _order.riderName,
-                              riderPhone: _order.riderPhone,
-                              riderVehicle: _order.riderVehicle,
-                              riderPlate: _order.riderPlate,
-                              pin: _order.pin,
-                              status: _order.status,
-                              items: _order.items,
-                              subtotal: _order.subtotal,
-                              deliveryFee: _order.deliveryFee,
-                              total: _order.total,
-                              paymentMethod: _order.paymentMethod,
+                            _order = _order.copyWith(
                               paymentStatus: 'pending',
                               paymentReference: newRef,
-                              paymentOriginBank: _order.paymentOriginBank,
-                              createdAt: _order.createdAt,
-                              branchId: _order.branchId,
-                              companyId: _order.companyId,
                             );
                           });
                           Navigator.pop(ctx);
@@ -804,6 +955,126 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
               child: isSaving
                   ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                   : Text('Guardar y Notificar', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showEditAdditionRefDialog(_ParsedOrderAddition addition) {
+    final refCtrl = TextEditingController(text: addition.reference);
+    final bankCtrl = TextEditingController(text: addition.originBank);
+    bool isSaving = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: const Color(0xFF1E293B),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text(
+            'Corregir Referencia • Adición #${addition.index}',
+            style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${addition.itemsSummary} (+\$${addition.amountUsd.toStringAsFixed(2)}${addition.amountBs != null ? " / Bs. ${addition.amountBs!.toStringAsFixed(2)}" : ""})',
+                style: GoogleFonts.outfit(color: const Color(0xFF94A3B8), fontSize: 12),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: refCtrl,
+                keyboardType: TextInputType.number,
+                style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.w600),
+                decoration: InputDecoration(
+                  labelText: 'Nueva Referencia (mín. 4 dígitos)',
+                  labelStyle: GoogleFonts.outfit(color: Colors.white60, fontSize: 12),
+                  hintText: 'Ej: 987654',
+                  hintStyle: GoogleFonts.outfit(color: Colors.white38),
+                  filled: true,
+                  fillColor: const Color(0xFF0F172A),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.white24)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.white24)),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppTheme.primary)),
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: bankCtrl,
+                style: GoogleFonts.outfit(color: Colors.white, fontSize: 13),
+                decoration: InputDecoration(
+                  labelText: 'Banco Emisor (opcional)',
+                  labelStyle: GoogleFonts.outfit(color: Colors.white60, fontSize: 12),
+                  hintText: 'Ej: Banesco, BDV, Mercantil',
+                  hintStyle: GoogleFonts.outfit(color: Colors.white38),
+                  filled: true,
+                  fillColor: const Color(0xFF0F172A),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.white24)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.white24)),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppTheme.primary)),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text('Cancelar', style: GoogleFonts.outfit(color: Colors.white54)),
+            ),
+            ElevatedButton(
+              onPressed: isSaving
+                  ? null
+                  : () async {
+                      final newRef = refCtrl.text.trim();
+                      if (newRef.length < 4) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Ingresa una referencia válida de al menos 4 dígitos.'),
+                            backgroundColor: Colors.amber,
+                          ),
+                        );
+                        return;
+                      }
+                      setDialogState(() => isSaving = true);
+                      final ok = await ApiService().resendAdditionPaymentReference(
+                        orderIdOrNumber: _order.id,
+                        orderNumber: _order.orderNumber,
+                        additionRaw: addition.raw,
+                        newReference: newRef,
+                        originBank: bankCtrl.text.trim(),
+                      );
+                      if (!mounted) return;
+                      if (ok) {
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('¡Referencia de adicional reenviada! El comercio la verificará en breve.'),
+                            backgroundColor: Color(0xFF10B981),
+                          ),
+                        );
+                        _refreshOrderStatus();
+                      } else {
+                        setDialogState(() => isSaving = false);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('No se pudo actualizar la referencia. Intenta de nuevo.'),
+                            backgroundColor: Colors.redAccent,
+                          ),
+                        );
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: isSaving
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : Text('Reenviar Referencia', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -845,6 +1116,7 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
               total: _order.total + extraAmount,
             );
           });
+          _refreshOrderStatus();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
@@ -1246,6 +1518,61 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                     ),
                   ],
 
+                  // Alerta si el comercio rechazó el Pago Móvil de alguna adición
+                  ..._parseOrderAdditions(_order.notes ?? '')
+                      .where((a) => a.status == 'rejected')
+                      .map((rejectedAdd) => Container(
+                            margin: const EdgeInsets.only(bottom: 14),
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF881337).withOpacity(0.92),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: const Color(0xFFF43F5E).withOpacity(0.45)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(Icons.error_outline_rounded, color: Colors.white, size: 18),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'Pago Móvil de Adición #${rejectedAdd.index} rechazado',
+                                        style: GoogleFonts.outfit(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  '${rejectedAdd.itemsSummary} (+\$${rejectedAdd.amountUsd.toStringAsFixed(2)}${rejectedAdd.amountBs != null ? " / Bs. ${rejectedAdd.amountBs!.toStringAsFixed(2)}" : ""}) • Ref: ${rejectedAdd.reference.isNotEmpty ? rejectedAdd.reference : "N/A"}',
+                                  style: GoogleFonts.outfit(fontSize: 11.5, color: const Color(0xFFFECDD3)),
+                                ),
+                                const SizedBox(height: 10),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton.icon(
+                                    onPressed: () => _showEditAdditionRefDialog(rejectedAdd),
+                                    icon: const Icon(Icons.edit_rounded, size: 15),
+                                    label: const Text('Corregir referencia del adicional'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppTheme.primary,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(vertical: 9),
+                                      textStyle: GoogleFonts.outfit(fontSize: 11.5, fontWeight: FontWeight.bold),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )),
+
                   // Delivery Timeline Stepper
                   Builder(
                     builder: (_) {
@@ -1408,7 +1735,9 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                   // Banner Adicionar Productos antes del Despacho
                   if (_order.status == OrderDeliveryStatus.pending ||
                       _order.status == OrderDeliveryStatus.confirmed ||
-                      _order.status == OrderDeliveryStatus.preparing) ...[
+                      _order.status == OrderDeliveryStatus.preparing ||
+                      _order.status == OrderDeliveryStatus.assigned ||
+                      _order.status == OrderDeliveryStatus.atMerchant) ...[
                     Container(
                       margin: const EdgeInsets.only(bottom: 12),
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -1441,7 +1770,7 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                                   ),
                                 ),
                                 Text(
-                                  'Tu orden está en preparación. Puedes adicionar productos.',
+                                  'Puedes adicionar productos antes de que salga el repartidor.',
                                   style: GoogleFonts.outfit(
                                     fontSize: 10.5,
                                     color: Colors.white70,
@@ -1869,107 +2198,268 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                     const SizedBox(height: 12),
 
                     // Items and Total
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1E293B),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.white10),
-                      ),
-                      child: Column(
-                        children: [
-                          ..._order.items.map((item) => Padding(
-                                padding: const EdgeInsets.only(bottom: 6),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      '${item.quantity}x ${item.product.name}',
-                                      style: GoogleFonts.outfit(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    Text(
-                                      '\$${item.totalPrice.toStringAsFixed(2)}',
-                                      style: GoogleFonts.outfit(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w700,
-                                        color: Colors.white70,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              )),
-                          const Divider(color: Colors.white10, height: 12),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Costo de Envío:',
-                                style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFF94A3B8)),
-                              ),
-                              Text(
-                                '\$${_order.deliveryFee.toStringAsFixed(2)}',
-                                style: GoogleFonts.outfit(fontSize: 12, color: Colors.white70),
-                              ),
-                            ],
+                    Builder(
+                      builder: (_) {
+                        final baseItems = _order.items.where((i) => !_isAdditionItem(i)).toList();
+                        final additionItems = _order.items.where(_isAdditionItem).toList();
+                        final additions = _parseOrderAdditions(_order.notes ?? '');
+
+                        return Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1E293B),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.white10),
                           ),
-                          const SizedBox(height: 4),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                'Total del Pedido:',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.white,
+                              if (additionItems.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 6),
+                                  child: Text(
+                                    'PEDIDO INICIAL',
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w800,
+                                      color: const Color(0xFF94A3B8),
+                                      letterSpacing: 0.6,
+                                    ),
+                                  ),
                                 ),
-                              ),
-                              Text(
-                                '\$${_order.total.toStringAsFixed(2)}',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w800,
-                                  color: AppTheme.riderAccent,
+                              ...baseItems.map((item) => Padding(
+                                    padding: const EdgeInsets.only(bottom: 6),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            '${item.quantity}x ${item.product.name}',
+                                            style: GoogleFonts.outfit(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                        Text(
+                                          '\$${item.totalPrice.toStringAsFixed(2)}',
+                                          style: GoogleFonts.outfit(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w700,
+                                            color: Colors.white70,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  )),
+                              if (additionItems.isNotEmpty) ...[
+                                const Divider(color: Colors.white10, height: 14),
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 6),
+                                  child: Text(
+                                    '➕ PRODUCTOS ADICIONALES',
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppTheme.amberAccent,
+                                      letterSpacing: 0.6,
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
-                          if ((_order.notes ?? '').contains('[ADICIONAL:') || (_order.notes ?? '').contains('[Adición')) ...[
-                            const SizedBox(height: 8),
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: AppTheme.primary.withOpacity(0.12),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: AppTheme.primary.withOpacity(0.3)),
-                              ),
-                              child: Row(
+                                ...additionItems.map((item) {
+                                  final cleanName = item.product.name
+                                      .replaceFirst(RegExp(r'\s*\(Adici[oó]n\)\s*$', caseSensitive: false), '')
+                                      .trim();
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 6),
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Row(
+                                            children: [
+                                              Flexible(
+                                                child: Text(
+                                                  '${item.quantity}x $cleanName',
+                                                  style: GoogleFonts.outfit(
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: Colors.white,
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: AppTheme.amberAccent.withOpacity(0.18),
+                                                  borderRadius: BorderRadius.circular(6),
+                                                  border: Border.all(color: AppTheme.amberAccent.withOpacity(0.45)),
+                                                ),
+                                                child: Text(
+                                                  'ADICIÓN',
+                                                  style: GoogleFonts.outfit(
+                                                    fontSize: 8.5,
+                                                    fontWeight: FontWeight.w800,
+                                                    color: AppTheme.amberAccent,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        Text(
+                                          '\$${item.totalPrice.toStringAsFixed(2)}',
+                                          style: GoogleFonts.outfit(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w700,
+                                            color: AppTheme.amberAccent,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }),
+                              ],
+                              const Divider(color: Colors.white10, height: 12),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  const Text('🍔 ', style: TextStyle(fontSize: 14)),
-                                  Expanded(
-                                    child: Text(
-                                      (_order.notes ?? '').contains('Pago Móvil') || (_order.notes ?? '').contains('Pago Movil')
-                                          ? ((_order.notes ?? '').contains('Verificado')
-                                              ? 'Pago Móvil de adición confirmado por el comercio.'
-                                              : 'Pago Móvil de adición enviado • Por validar por el comercio.')
-                                          : 'Diferencia de adicional a pagar en efectivo al repartidor al recibir.',
-                                      style: GoogleFonts.outfit(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.white,
-                                      ),
+                                  Text(
+                                    'Costo de Envío:',
+                                    style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFF94A3B8)),
+                                  ),
+                                  Text(
+                                    '\$${_order.deliveryFee.toStringAsFixed(2)}',
+                                    style: GoogleFonts.outfit(fontSize: 12, color: Colors.white70),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Total Consolidado:',
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  Text(
+                                    '\$${_order.total.toStringAsFixed(2)}',
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppTheme.riderAccent,
                                     ),
                                   ),
                                 ],
                               ),
-                            ),
-                          ],
-                        ],
-                      ),
+                              if (additions.isNotEmpty) ...[
+                                const SizedBox(height: 10),
+                                ...additions.map((add) {
+                                  final Color badgeColor;
+                                  final String badgeText;
+                                  if (add.status == 'verified') {
+                                    badgeColor = const Color(0xFF10B981);
+                                    badgeText = '✅ Verificado';
+                                  } else if (add.status == 'rejected') {
+                                    badgeColor = const Color(0xFFF43F5E);
+                                    badgeText = '❌ Rechazado';
+                                  } else if (add.status == 'pending') {
+                                    badgeColor = AppTheme.amberAccent;
+                                    badgeText = '⏳ Por verificar';
+                                  } else {
+                                    badgeColor = const Color(0xFF38BDF8);
+                                    badgeText = '💵 Efectivo al recibir';
+                                  }
+
+                                  return Container(
+                                    margin: const EdgeInsets.only(top: 8),
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: badgeColor.withOpacity(0.10),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(color: badgeColor.withOpacity(0.35)),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              'Adición #${add.index}',
+                                              style: GoogleFonts.outfit(
+                                                fontSize: 11.5,
+                                                fontWeight: FontWeight.w800,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: badgeColor.withOpacity(0.18),
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              child: Text(
+                                                badgeText,
+                                                style: GoogleFonts.outfit(
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: badgeColor,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          add.itemsSummary,
+                                          style: GoogleFonts.outfit(fontSize: 11, color: Colors.white70),
+                                        ),
+                                        const SizedBox(height: 3),
+                                        Text(
+                                          'Monto: +\$${add.amountUsd.toStringAsFixed(2)}'
+                                          '${add.amountBs != null ? " (Bs. ${add.amountBs!.toStringAsFixed(2)})" : ""}'
+                                          ' • ${add.method == "mobile_transfer" ? "Pago Móvil" : "Efectivo al Recibir"}'
+                                          '${add.originBank.isNotEmpty ? " • Banco: ${add.originBank}" : ""}'
+                                          '${add.reference.isNotEmpty ? " • Ref: #${add.reference}" : ""}',
+                                          style: GoogleFonts.outfit(
+                                            fontSize: 10.5,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        if (add.status == 'rejected') ...[
+                                          const SizedBox(height: 8),
+                                          SizedBox(
+                                            width: double.infinity,
+                                            child: ElevatedButton.icon(
+                                              onPressed: () => _showEditAdditionRefDialog(add),
+                                              icon: const Icon(Icons.edit_rounded, size: 14),
+                                              label: const Text('Corregir referencia del adicional'),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: AppTheme.primary,
+                                                foregroundColor: Colors.white,
+                                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                                textStyle: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.bold),
+                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  );
+                                }),
+                              ],
+                            ],
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ],
@@ -2206,7 +2696,9 @@ class _AppendItemsModalState extends State<_AppendItemsModal> {
   final Map<String, int> _selectedQuantities = {};
   String _paymentMethod = 'cash';
   final TextEditingController _refController = TextEditingController();
+  final TextEditingController _bankController = TextEditingController();
   BranchPaymentCredentials? _paymentCredentials;
+  double? _exchangeRate;
 
   @override
   void initState() {
@@ -2217,6 +2709,7 @@ class _AppendItemsModalState extends State<_AppendItemsModal> {
   @override
   void dispose() {
     _refController.dispose();
+    _bankController.dispose();
     super.dispose();
   }
 
@@ -2235,8 +2728,20 @@ class _AppendItemsModalState extends State<_AppendItemsModal> {
         final b = await ApiService().fetchBranchById(branchId);
         if (b != null) {
           _paymentCredentials = b.paymentCredentials;
+          if (b.exchangeRate != null && b.exchangeRate! > 1) {
+            _exchangeRate = b.exchangeRate;
+          }
         }
       } catch (_) {}
+    }
+    if (_exchangeRate == null || _exchangeRate! <= 1) {
+      final fxMatch = RegExp(r'\[FX:rate=([0-9.]+)').firstMatch(widget.order.notes ?? '');
+      if (fxMatch != null) {
+        final parsed = double.tryParse(fxMatch.group(1)!);
+        if (parsed != null && parsed > 1) {
+          _exchangeRate = parsed;
+        }
+      }
     }
     if (mounted) {
       setState(() {
@@ -2244,6 +2749,14 @@ class _AppendItemsModalState extends State<_AppendItemsModal> {
         _isLoading = false;
       });
     }
+  }
+
+  bool get _hasConfiguredPagoMovil {
+    final creds = _paymentCredentials;
+    if (creds == null) return false;
+    final phone = creds.pagoMovilPhone.trim();
+    if (phone.isEmpty) return false;
+    return !phone.contains('1234567') && phone != '04140000000' && phone != '04121234567';
   }
 
   double get _extraTotal {
@@ -2256,6 +2769,8 @@ class _AppendItemsModalState extends State<_AppendItemsModal> {
     }
     return sum;
   }
+
+  double? get _extraBs => (_exchangeRate != null && _exchangeRate! > 1) ? (_extraTotal * _exchangeRate!) : null;
 
   int get _totalCount {
     return _selectedQuantities.values.fold(0, (a, b) => a + b);
@@ -2281,7 +2796,7 @@ class _AppendItemsModalState extends State<_AppendItemsModal> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Por favor ingresa los últimos dígitos de la referencia de Pago Móvil.',
+            'Por favor ingresa los últimos dígitos de la referencia de Pago Móvil (mínimo 4).',
             style: GoogleFonts.outfit(),
           ),
           backgroundColor: Colors.amber[800],
@@ -2294,23 +2809,37 @@ class _AppendItemsModalState extends State<_AppendItemsModal> {
 
     final success = await ApiService().appendItemsToOrder(
       orderIdOrNumber: widget.order.id,
+      orderNumber: widget.order.orderNumber,
       newItems: addedItems,
       extraSubtotal: _extraTotal,
       paymentMethod: _paymentMethod,
       paymentReference: _refController.text.trim(),
+      paymentOriginBank: _bankController.text.trim(),
     );
 
     if (mounted) {
       setState(() => _isSubmitting = false);
       if (success) {
-        CartService().appendItemsToActiveOrder(widget.order.id, addedItems, _extraTotal);
+        final itemDetails = addedItems.map((i) => '${i.quantity}x ${i.product.name}').join(', ');
+        final bsSeg = _extraBs != null ? ' (Bs. ${_extraBs!.toStringAsFixed(2)})' : '';
+        final bankSeg = _bankController.text.trim().isNotEmpty ? ' | Banco: ${_bankController.text.trim()}' : '';
+        final localTag = _paymentMethod == 'mobile_transfer'
+            ? '[ADICIONAL: $itemDetails | +\$${_extraTotal.toStringAsFixed(2)}$bsSeg | Método: Pago Móvil$bankSeg | Ref: ${_refController.text.trim()} | Estado: Pendiente de Verificación]'
+            : '[ADICIONAL: $itemDetails | +\$${_extraTotal.toStringAsFixed(2)}$bsSeg | Método: Efectivo al Recibir]';
+
+        CartService().appendItemsToActiveOrder(
+          widget.order.id.isNotEmpty ? widget.order.id : widget.order.orderNumber,
+          addedItems,
+          _extraTotal,
+          appendedNote: localTag,
+        );
         widget.onItemsAdded(addedItems, _extraTotal);
         Navigator.pop(context);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'No se pudo actualizar en el servidor. Intenta de nuevo.',
+              'No se pudo actualizar en el servidor. Verifica tu conexión o el estado del pedido.',
               style: GoogleFonts.outfit(),
             ),
             backgroundColor: Colors.redAccent,
@@ -2624,12 +3153,12 @@ class _AppendItemsModalState extends State<_AppendItemsModal> {
                   if (_paymentMethod == 'cash') ...[
                     const SizedBox(height: 8),
                     Text(
-                      'ℹ️ Le pagarás la diferencia de \$${_extraTotal.toStringAsFixed(2)} en efectivo al repartidor al recibir.',
+                      'ℹ️ Le pagarás la diferencia de \$${_extraTotal.toStringAsFixed(2)}${_extraBs != null ? " (Bs. ${_extraBs!.toStringAsFixed(2)})" : ""} en efectivo al repartidor al recibir.',
                       style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.amberAccent),
                     ),
                   ] else ...[
                     const SizedBox(height: 10),
-                    if (_paymentCredentials != null && _paymentCredentials!.pagoMovilPhone.isNotEmpty) ...[
+                    if (_hasConfiguredPagoMovil) ...[
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
@@ -2652,10 +3181,38 @@ class _AppendItemsModalState extends State<_AppendItemsModal> {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 8),
+                    ] else ...[
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.amber.withOpacity(0.35)),
+                        ),
+                        child: Text(
+                          'El comercio no tiene datos de Pago Móvil configurados.',
+                          style: GoogleFonts.outfit(fontSize: 10.5, color: AppTheme.amberAccent, fontWeight: FontWeight.w600),
+                        ),
+                      ),
                     ],
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _bankController,
+                      style: GoogleFonts.outfit(color: Colors.white, fontSize: 12),
+                      decoration: InputDecoration(
+                        hintText: 'Banco Emisor (ej: Banesco, BDV, Mercantil)',
+                        hintStyle: GoogleFonts.outfit(color: Colors.white38, fontSize: 11),
+                        filled: true,
+                        fillColor: const Color(0xFF0F172A),
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
                     TextField(
                       controller: _refController,
+                      keyboardType: TextInputType.number,
                       style: GoogleFonts.outfit(color: Colors.white, fontSize: 12),
                       decoration: InputDecoration(
                         hintText: 'Últimos dígitos de la Ref. Pago Móvil (ej: 849201)',
@@ -2690,9 +3247,9 @@ class _AppendItemsModalState extends State<_AppendItemsModal> {
                           style: GoogleFonts.outfit(fontSize: 11.5, color: Colors.white70),
                         ),
                         Text(
-                          'Adicional: +\$${_extraTotal.toStringAsFixed(2)}',
+                          'Adicional: +\$${_extraTotal.toStringAsFixed(2)}${_extraBs != null ? " (Bs. ${_extraBs!.toStringAsFixed(2)})" : ""}',
                           style: GoogleFonts.outfit(
-                            fontSize: 15,
+                            fontSize: 14.5,
                             fontWeight: FontWeight.w800,
                             color: Colors.white,
                           ),

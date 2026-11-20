@@ -86,8 +86,36 @@ export class OrdersController {
   }
   @Post(':id/append-items')
   @ApiOperation({ summary: 'Adicionar productos a un pedido antes de ser despachado' })
-  appendItems(@Param('id') id: string, @Body('items') items: any[]) {
-    return this.ordersService.appendItems(id, items);
+  appendItems(
+    @Param('id') id: string,
+    @Body()
+    body:
+      | {
+          items?: any[];
+          paymentMethod?: 'cash' | 'mobile_transfer';
+          paymentReference?: string;
+          paymentOriginBank?: string;
+          extraSubtotal?: number;
+        }
+      | any[],
+  ) {
+    return this.ordersService.appendItems(id, body);
+  }
+
+  @Patch(':id/verify-addition')
+  @ApiOperation({ summary: 'Verificar o rechazar Pago Móvil de una adición a un pedido' })
+  verifyAdditionPayment(
+    @Param('id') id: string,
+    @Body()
+    payload: {
+      additionRaw: string;
+      status: 'verified' | 'rejected' | 'pending';
+      reference?: string;
+      originBank?: string;
+      verifiedBy?: string;
+    },
+  ) {
+    return this.ordersService.verifyAdditionPayment(id, payload);
   }
 
   @Post(':id/remove-item')
