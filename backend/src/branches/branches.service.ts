@@ -13,7 +13,7 @@ export class BranchesService {
     private supabase: SupabaseService,
     private usersService: UsersService,
     private plansService: PlansService,
-  ) {}
+  ) { }
 
   private loadMetadata(): Record<string, any> {
     try {
@@ -21,7 +21,7 @@ export class BranchesService {
         const raw = fs.readFileSync(this.metadataFilePath, 'utf-8');
         return JSON.parse(raw);
       }
-    } catch (_) {}
+    } catch (_) { }
     return {};
   }
 
@@ -219,10 +219,10 @@ export class BranchesService {
     const zelleEmail = String(zelle.email || rawCreds.zelle_email || rawCreds.zelleEmail || branch.zelleEmail || '').trim();
     const isRealZelle = Boolean(zelleEmail.includes('@') && zelleEmail.length >= 5);
 
-    let rawMethods = branch.accepted_payment_methods ?? 
-                     branch.acceptedPaymentMethods ?? 
-                     branch.currency_settings?.acceptedPaymentMethods ?? 
-                     branch.currencySettings?.acceptedPaymentMethods;
+    let rawMethods = branch.accepted_payment_methods ??
+      branch.acceptedPaymentMethods ??
+      branch.currency_settings?.acceptedPaymentMethods ??
+      branch.currencySettings?.acceptedPaymentMethods;
 
     let methods: string[] = [];
     if (Array.isArray(rawMethods)) {
@@ -289,7 +289,7 @@ export class BranchesService {
 
     const deliveryTiers = branch.delivery_tiers ?? meta.delivery_tiers ?? meta.deliveryTiers ?? tenant.delivery_tiers ?? defaultDeliveryTiers;
     const acceptedPaymentMethods = branch.accepted_payment_methods ?? meta.accepted_payment_methods ?? meta.acceptedPaymentMethods ?? tenant.accepted_payment_methods ?? tenant.acceptedPaymentMethods ?? [];
-    
+
     const rawCreds = Array.isArray(branch.branch_payment_credentials)
       ? branch.branch_payment_credentials[0]
       : (branch.branch_payment_credentials || branch.payment_credentials || branch.paymentCredentials || meta.payment_credentials || meta.paymentCredentials || null);
@@ -828,7 +828,7 @@ export class BranchesService {
           .from('branches')
           .update({ payment_credentials: credUpdate })
           .eq('id', id);
-      } catch (_) {}
+      } catch (_) { }
     }
 
     // Si la sucursal editada es la Sede Principal, sincronizar con la tabla tenants
@@ -854,7 +854,7 @@ export class BranchesService {
             business_hours: metaToSave.business_hours
           };
           fs.writeFileSync(tMetaPath, JSON.stringify(tData, null, 2), 'utf-8');
-        } catch (_) {}
+        } catch (_) { }
       }
 
       await client.from('tenants').update(tenantUpdate).eq('id', updatedBranch.company_id);
@@ -906,25 +906,25 @@ export class BranchesService {
     // 5. Eliminar credenciales de pago asociadas a esta sucursal
     try {
       await client.from('branch_payment_credentials').delete().eq('branch_id', id);
-    } catch (_) {}
+    } catch (_) { }
 
     // 6. Eliminar inventario y productos exclusivos asociados a esta sucursal
     try {
       await client.from('branch_inventory').delete().eq('branch_id', id);
-    } catch (_) {}
+    } catch (_) { }
     try {
       await client.from('products').delete().eq('branch_id', id);
-    } catch (_) {}
+    } catch (_) { }
 
     // 7. Desvincular órdenes históricas de esta sucursal (para conservar reportes de ventas)
     try {
       await client.from('orders').update({ branch_id: null }).eq('branch_id', id);
-    } catch (_) {}
+    } catch (_) { }
 
     // 8. Desvincular repartidores/motorizados asignados a esta sede
     try {
       await client.from('riders').update({ branch_id: null }).eq('branch_id', id);
-    } catch (_) {}
+    } catch (_) { }
     try {
       const ridersPath = path.resolve(process.cwd(), 'data', 'riders_storage.json');
       if (fs.existsSync(ridersPath)) {
@@ -942,7 +942,7 @@ export class BranchesService {
           }
         }
       }
-    } catch (_) {}
+    } catch (_) { }
 
     // 9. Eliminar la sucursal física
     const { error: delErr } = await client
@@ -1025,7 +1025,7 @@ export class BranchesService {
       isOpen: newIsOpen,
       status: updated.status,
       branch: updated,
-      message: newIsOpen 
+      message: newIsOpen
         ? `Sucursal "${branch.name}" reactivada exitosamente. Ya está recibiendo pedidos.`
         : `Sucursal "${branch.name}" desactivada temporalmente (pausada). No recibirá nuevos pedidos hasta que sea reactivada.`
     };

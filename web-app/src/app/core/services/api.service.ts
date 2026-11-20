@@ -2232,7 +2232,7 @@ export class ApiService {
             const methods = branchData.accepted_payment_methods || 
                             branchData.acceptedPaymentMethods || 
                             rawCurr.acceptedPaymentMethods || 
-                            ['cash_usd', 'mobile_transfer', 'cash_local'];
+                            [];
             updateData.currency_settings = {
               ...rawCurr,
               acceptedPaymentMethods: methods
@@ -2454,17 +2454,35 @@ export class ApiService {
     if (Array.isArray(rawMethods) && rawMethods.length > 0) {
       acceptedPaymentMethods = rawMethods;
     } else if (rawMethods && typeof rawMethods === 'object') {
-      const keys = Object.keys(rawMethods).filter(k => Boolean(rawMethods[k]));
-      acceptedPaymentMethods = keys.length > 0 ? keys : ['cash_usd', 'mobile_transfer', 'cash_local'];
+      acceptedPaymentMethods = Object.keys(rawMethods).filter(k => Boolean(rawMethods[k]));
     } else {
-      acceptedPaymentMethods = ['cash_usd', 'mobile_transfer', 'cash_local'];
+      acceptedPaymentMethods = [];
     }
 
     const paymentCredentials = this.mapPaymentCredentials(r.branch_payment_credentials || r.payment_credentials || r.paymentCredentials);
     
     let hasValidPaymentMethods = r.has_valid_payment_methods ?? r.hasValidPaymentMethods;
     if (hasValidPaymentMethods === undefined) {
-      hasValidPaymentMethods = true;
+      if (acceptedPaymentMethods.length === 0) {
+        hasValidPaymentMethods = false;
+      } else {
+        const pmPhone = String(paymentCredentials.pagoMovilPhone || '').replace(/\D/g, '');
+        const pmBank = String(paymentCredentials.pagoMovilBank || '').trim();
+        const pmId = String(paymentCredentials.pagoMovilIdNumber || '').replace(/\D/g, '');
+        const isRealPm = pmBank.length >= 2 && pmPhone.length >= 10 && pmId.length >= 5 &&
+          !pmPhone.includes('1234567') && pmPhone !== '04140000000' && pmPhone !== '04121234567' &&
+          !pmId.includes('50123456') && !pmId.includes('12345678') && pmId !== '00000000';
+        const isRealZelle = Boolean(paymentCredentials.zelleEmail && paymentCredentials.zelleEmail.includes('@') && paymentCredentials.zelleEmail.length >= 5);
+        
+        const valid = acceptedPaymentMethods.filter(m => {
+          const s = String(m).toLowerCase().trim();
+          if (s === 'mobile_transfer' || s === 'pago_movil') return isRealPm;
+          if (s === 'zelle') return isRealZelle;
+          if (s === 'cash_usd' || s === 'cash_local' || s === 'card_terminal' || s === 'efectivo' || s === 'tarjeta') return true;
+          return false;
+        });
+        hasValidPaymentMethods = valid.length > 0;
+      }
     }
 
     return {

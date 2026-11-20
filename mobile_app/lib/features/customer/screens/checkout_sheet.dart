@@ -1204,7 +1204,7 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                           Builder(
                             builder: (context) {
                               final branch = cart.currentBranch;
-                              final rawAccepted = branch?.acceptedPaymentMethods ?? const ['pago_movil', 'cash_usd', 'cash_local', 'mobile_transfer'];
+                              final rawAccepted = branch?.acceptedPaymentMethods ?? const [];
                               
                               final allMethodsDef = [
                                 {

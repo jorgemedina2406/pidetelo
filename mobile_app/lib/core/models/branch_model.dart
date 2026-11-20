@@ -495,7 +495,7 @@ class Branch {
                   ? (json['currency_settings']['acceptedPaymentMethods'] as List).map((e) => e.toString()).toList()
                   : (json['currencySettings'] is Map && json['currencySettings']['acceptedPaymentMethods'] is List)
                       ? (json['currencySettings']['acceptedPaymentMethods'] as List).map((e) => e.toString()).toList()
-                      : const ['pago_movil', 'mobile_transfer', 'cash_usd', 'cash_local'],
+                      : const [],
     );
   }
 }
