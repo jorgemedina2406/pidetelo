@@ -11,6 +11,7 @@ import { ThemeService } from '../../core/services/theme.service';
 import { I18nService } from '../../core/services/i18n.service';
 import { AuthStore } from '../../core/stores/auth.store';
 import { Order } from '../../core/models/order.model';
+import { Product } from '../../core/models/product.model';
 import { IconComponent } from '../../shared/components/icon.component';
 
 @Component({
@@ -42,8 +43,7 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
   readonly regHasMinLength = computed(() => (this.regPassword() || '').length >= 8);
   readonly regHasUppercase = computed(() => /[A-Z]/.test(this.regPassword() || ''));
   readonly regHasSpecialChar = computed(() => {
-    const specialRegex = new RegExp('[!@#$%^&*(),.?":{}|<>\_\-+=\\[\\]\\\\/~`]');
-    return specialRegex.test(this.regPassword() || '');
+    return /[-!@#$%^&*(),.?":{}|<>_+=~`[\]\\/]/.test(this.regPassword() || '');
   });
   readonly isRegPasswordValid = computed(() => this.regHasMinLength() && this.regHasUppercase() && this.regHasSpecialChar());
   readonly isRegistering = signal<boolean>(false);
@@ -66,6 +66,39 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
   readonly riderComment = signal<string>('');
   readonly isSubmittingRiderRating = signal<boolean>(false);
   readonly hasRatedRider = signal<boolean>(false);
+
+  // Modal para Adicionar Productos al Pedido Activo
+  readonly isAppendModalOpen = signal<boolean>(false);
+  readonly storeProducts = signal<Product[]>([]);
+  readonly isLoadingProducts = signal<boolean>(false);
+  readonly isAppendingItems = signal<boolean>(false);
+  readonly appendSuccessMessage = signal<string>('');
+  readonly appendErrorMessage = signal<string>('');
+  readonly appendProductSearch = signal<string>('');
+  readonly appendCart = signal<Map<string, { product: Product; quantity: number }>>(new Map());
+
+  readonly filteredStoreProducts = computed(() => {
+    const query = this.appendProductSearch().trim().toLowerCase();
+    const list = this.storeProducts();
+    if (!query) return list;
+    return list.filter(p => (p.name || '').toLowerCase().includes(query) || (p.description || '').toLowerCase().includes(query));
+  });
+
+  readonly appendSubtotal = computed(() => {
+    let total = 0;
+    for (const item of this.appendCart().values()) {
+      total += item.product.price * item.quantity;
+    }
+    return Number(total.toFixed(2));
+  });
+
+  readonly appendTotalItemsCount = computed(() => {
+    let count = 0;
+    for (const item of this.appendCart().values()) {
+      count += item.quantity;
+    }
+    return count;
+  });
 
   submitStoreReview(): void {
     const ord = this.order();
@@ -108,6 +141,142 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
         this.hasRatedRider.set(true);
       }
     });
+  }
+
+  openAppendModal(): void {
+    const ord = this.order();
+    if (!ord) return;
+    this.appendCart.set(new Map());
+    this.appendProductSearch.set('');
+    this.appendSuccessMessage.set('');
+    this.appendErrorMessage.set('');
+    this.isAppendModalOpen.set(true);
+
+    if (this.storeProducts().length === 0 && ord.tenantId) {
+      this.isLoadingProducts.set(true);
+      const branchId = (ord as any).branchId || (ord as any).branch_id;
+      this.api.getProducts(ord.tenantId, branchId, true).subscribe({
+        next: (prods) => {
+          this.storeProducts.set(prods || []);
+          this.isLoadingProducts.set(false);
+        },
+        error: (err) => {
+          console.warn('[Tracking] Error cargando productos de la tienda:', err);
+          this.isLoadingProducts.set(false);
+        }
+      });
+    }
+  }
+
+  closeAppendModal(): void {
+    this.isAppendModalOpen.set(false);
+  }
+
+  getAppendItemQty(productId: string): number {
+    return this.appendCart().get(productId)?.quantity || 0;
+  }
+
+  increaseAppendItem(prod: Product): void {
+    const map = new Map(this.appendCart());
+    const existing = map.get(prod.id);
+    if (existing) {
+      existing.quantity += 1;
+    } else {
+      map.set(prod.id, { product: prod, quantity: 1 });
+    }
+    this.appendCart.set(map);
+  }
+
+  decreaseAppendItem(prod: Product): void {
+    const map = new Map(this.appendCart());
+    const existing = map.get(prod.id);
+    if (existing) {
+      if (existing.quantity > 1) {
+        existing.quantity -= 1;
+      } else {
+        map.delete(prod.id);
+      }
+      this.appendCart.set(map);
+    }
+  }
+
+  async confirmAppendToOrder(): Promise<void> {
+    const ord = this.order();
+    const items = Array.from(this.appendCart().values());
+    if (!ord || items.length === 0) return;
+
+    this.isAppendingItems.set(true);
+    this.appendErrorMessage.set('');
+    this.appendSuccessMessage.set('');
+
+    const client = this.supabase.rawClient;
+    if (!client) {
+      this.appendErrorMessage.set('No hay conexión disponible con el servidor.');
+      this.isAppendingItems.set(false);
+      return;
+    }
+
+    try {
+      const extraSubtotal = this.appendSubtotal();
+      const currentSubtotal = Number(ord.subtotal || 0);
+      const deliveryFee = Number(ord.deliveryFee || 0);
+      const newSubtotal = Number((currentSubtotal + extraSubtotal).toFixed(2));
+      const newTotal = Number((newSubtotal + deliveryFee).toFixed(2));
+
+      const rate = Number(ord.exchangeRate) || 1.0;
+      const newTotalBs = rate > 1 ? Number((newTotal * rate).toFixed(2)) : null;
+      const newSubtotalBs = rate > 1 ? Number((newSubtotal * rate).toFixed(2)) : null;
+
+      const appendSummary = items.map(i => `${i.quantity}x ${i.product.name}`).join(', ');
+      const existingNotes = ord.notes || '';
+      const newNotes = existingNotes 
+        ? `${existingNotes} [ADICIONAL: ${appendSummary} (+$${extraSubtotal.toFixed(2)})]`
+        : `[ADICIONAL: ${appendSummary} (+$${extraSubtotal.toFixed(2)})]`;
+
+      // 1. Insertar en order_items
+      for (const it of items) {
+        const itemTotal = Number((it.product.price * it.quantity).toFixed(2));
+        await client.from('order_items').insert({
+          order_id: ord.id,
+          product_id: it.product.id || null,
+          product_name: it.product.name,
+          unit_price: it.product.price,
+          quantity: it.quantity,
+          item_total: itemTotal,
+          selected_modifiers: []
+        });
+      }
+
+      // 2. Actualizar totales en la tabla orders
+      const updatePayload: any = {
+        subtotal: newSubtotal,
+        total: newTotal,
+        notes: newNotes,
+        updated_at: new Date().toISOString()
+      };
+      if (newTotalBs !== null) {
+        updatePayload.total_bs = newTotalBs;
+      }
+      if (newSubtotalBs !== null) {
+        updatePayload.subtotal_bs = newSubtotalBs;
+      }
+
+      const { error: updErr } = await client.from('orders').update(updatePayload).eq('id', ord.id);
+      if (updErr) {
+        console.warn('[Tracking] Update order error:', updErr);
+      }
+
+      this.isAppendingItems.set(false);
+      this.appendSuccessMessage.set(`¡${items.length} producto(s) agregado(s) a tu orden!`);
+      setTimeout(() => {
+        this.closeAppendModal();
+        this.loadOrderDetails(ord.id);
+      }, 1200);
+    } catch (err: any) {
+      console.error('[Tracking] Error agregando productos:', err);
+      this.appendErrorMessage.set('Ocurrió un error al agregar los productos. Intenta nuevamente.');
+      this.isAppendingItems.set(false);
+    }
   }
 
   private leafletMap?: L.Map;
@@ -741,7 +910,7 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
       this.registrationError.set('Ingresa un correo electrónico válido.');
       return;
     }
-    const specialRegex = new RegExp('[!@#$%^&*(),.?":{}|<>_\\-+=\\[\\]\\\\/~`]');
+    const specialRegex = /[-!@#$%^&*(),.?":{}|<>_+=~`[\]\\/]/;
     if (!password || password.length < 8 || !/[A-Z]/.test(password) || !specialRegex.test(password)) {
       this.registrationError.set('La contraseña debe tener al menos 8 caracteres, incluir al menos una letra mayúscula y un carácter especial (*, ., @, etc).');
       return;

@@ -14,18 +14,22 @@ class DeliveryTier {
   });
 
   factory DeliveryTier.fromJson(Map<String, dynamic> json) => DeliveryTier(
-    id: json['id']?.toString() ?? '',
-    minKm: (json['minKm'] as num?)?.toDouble() ?? (json['min_km'] as num?)?.toDouble() ?? 0.0,
-    maxKm: (json['maxKm'] as num?)?.toDouble() ?? (json['max_km'] as num?)?.toDouble() ?? 5.0,
-    price: (json['price'] as num?)?.toDouble() ?? 2.50,
-  );
+        id: json['id']?.toString() ?? '',
+        minKm: (json['minKm'] as num?)?.toDouble() ??
+            (json['min_km'] as num?)?.toDouble() ??
+            0.0,
+        maxKm: (json['maxKm'] as num?)?.toDouble() ??
+            (json['max_km'] as num?)?.toDouble() ??
+            5.0,
+        price: (json['price'] as num?)?.toDouble() ?? 2.50,
+      );
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'minKm': minKm,
-    'maxKm': maxKm,
-    'price': price,
-  };
+        'id': id,
+        'minKm': minKm,
+        'maxKm': maxKm,
+        'price': price,
+      };
 }
 
 class BranchPaymentCredentials {
@@ -58,21 +62,41 @@ class BranchPaymentCredentials {
       };
 
   factory BranchPaymentCredentials.fromJson(Map<String, dynamic> json) {
-    final pm = json['pago_movil'] is Map ? json['pago_movil'] as Map<String, dynamic> : null;
-    final z = json['zelle'] is Map ? json['zelle'] as Map<String, dynamic> : null;
+    final pm = json['pago_movil'] is Map
+        ? json['pago_movil'] as Map<String, dynamic>
+        : null;
+    final z =
+        json['zelle'] is Map ? json['zelle'] as Map<String, dynamic> : null;
 
-    final bankName = pm?['bank_name'] ?? json['pago_movil_bank'] ?? json['pagoMovilBank'] ?? '';
+    final bankName = pm?['bank_name'] ??
+        json['pago_movil_bank'] ??
+        json['pagoMovilBank'] ??
+        '';
     final bankCode = pm?['bank_code'] != null ? '${pm!['bank_code']} - ' : '';
     final fullBank = pm?['bank_name'] != null ? '$bankCode$bankName' : bankName;
 
     return BranchPaymentCredentials(
       pagoMovilBank: fullBank,
-      pagoMovilPhone: pm?['phone'] ?? json['pago_movil_phone'] ?? json['pagoMovilPhone'] ?? '',
-      pagoMovilIdNumber: pm?['id_number'] ?? json['pago_movil_id_number'] ?? json['pagoMovilIdNumber'] ?? '',
-      pagoMovilAccountName: pm?['account_name'] ?? json['pago_movil_account_name'] ?? json['pagoMovilAccountName'] ?? (json['name'] ?? ''),
+      pagoMovilPhone: pm?['phone'] ??
+          json['pago_movil_phone'] ??
+          json['pagoMovilPhone'] ??
+          '',
+      pagoMovilIdNumber: pm?['id_number'] ??
+          json['pago_movil_id_number'] ??
+          json['pagoMovilIdNumber'] ??
+          '',
+      pagoMovilAccountName: pm?['account_name'] ??
+          json['pago_movil_account_name'] ??
+          json['pagoMovilAccountName'] ??
+          (json['name'] ?? ''),
       zelleEmail: z?['email'] ?? json['zelle_email'] ?? json['zelleEmail'],
-      zelleAccountName: z?['account_name'] ?? json['zelle_account_name'] ?? json['zelleAccountName'],
-      isActive: (pm?['enabled'] as bool?) ?? json['is_active'] ?? json['isActive'] ?? true,
+      zelleAccountName: z?['account_name'] ??
+          json['zelle_account_name'] ??
+          json['zelleAccountName'],
+      isActive: (pm?['enabled'] as bool?) ??
+          json['is_active'] ??
+          json['isActive'] ??
+          true,
     );
   }
 }
@@ -155,14 +179,28 @@ class Branch {
   bool get isPaymentValid {
     if (!hasValidPaymentMethods) return false;
     if (acceptedPaymentMethods.isEmpty) return false;
-    final pmPhone = paymentCredentials.pagoMovilPhone.replaceAll(RegExp(r'\D'), '');
+    final pmPhone =
+        paymentCredentials.pagoMovilPhone.replaceAll(RegExp(r'\D'), '');
     final pmBank = paymentCredentials.pagoMovilBank.trim();
-    final pmId = paymentCredentials.pagoMovilIdNumber.replaceAll(RegExp(r'\D'), '');
-    final isRealPm = pmBank.length >= 2 && pmPhone.length >= 10 && pmId.length >= 5 &&
-      !pmPhone.contains('1234567') && pmPhone != '04140000000' && pmPhone != '04121234567' &&
-      !pmId.contains('50123456') && !pmId.contains('12345678') && pmId != '00000000';
-    final hasRealPm = acceptedPaymentMethods.any((m) => m == 'pago_movil' || m == 'mobile_transfer') && isRealPm;
-    final hasOther = acceptedPaymentMethods.any((m) => m == 'cash_usd' || m == 'cash_local' || m == 'card_terminal' || m == 'zelle');
+    final pmId =
+        paymentCredentials.pagoMovilIdNumber.replaceAll(RegExp(r'\D'), '');
+    final isRealPm = pmBank.length >= 2 &&
+        pmPhone.length >= 10 &&
+        pmId.length >= 5 &&
+        !pmPhone.contains('1234567') &&
+        pmPhone != '04140000000' &&
+        pmPhone != '04121234567' &&
+        !pmId.contains('50123456') &&
+        !pmId.contains('12345678') &&
+        pmId != '00000000';
+    final hasRealPm = acceptedPaymentMethods
+            .any((m) => m == 'pago_movil' || m == 'mobile_transfer') &&
+        isRealPm;
+    final hasOther = acceptedPaymentMethods.any((m) =>
+        m == 'cash_usd' ||
+        m == 'cash_local' ||
+        m == 'card_terminal' ||
+        m == 'zelle');
     return hasRealPm || hasOther;
   }
 
@@ -204,8 +242,10 @@ class Branch {
     return true;
   }
 
-  String get todayOpenTime => todayScheduleConfig?['from']?.toString() ?? openTime;
-  String get todayCloseTime => todayScheduleConfig?['to']?.toString() ?? closeTime;
+  String get todayOpenTime =>
+      todayScheduleConfig?['from']?.toString() ?? openTime;
+  String get todayCloseTime =>
+      todayScheduleConfig?['to']?.toString() ?? closeTime;
 
   String get scheduleStatusMessage {
     if (!isOpenToday) {
@@ -220,10 +260,13 @@ class Branch {
   /// Check whether the store branch is within its open business hours
   bool get isOpenRightNow {
     try {
-      if (businessHours?['forceOpen'] == true || businessHours?['force_open'] == true) {
+      if (businessHours?['forceOpen'] == true ||
+          businessHours?['force_open'] == true) {
         return true;
       }
-      if (businessHours?['isOpenToday'] == false || !isOpenNow || status != 'active') {
+      if (businessHours?['isOpenToday'] == false ||
+          !isOpenNow ||
+          status != 'active') {
         return false;
       }
 
@@ -265,8 +308,10 @@ class Branch {
           final dClose = todayConfig['to']?.toString() ?? closeTime;
           final openParts = dOpen.split(':').map(int.parse).toList();
           final closeParts = dClose.split(':').map(int.parse).toList();
-          final openMin = (openParts.isNotEmpty ? openParts[0] : 11) * 60 + (openParts.length > 1 ? openParts[1] : 0);
-          final closeMin = (closeParts.isNotEmpty ? closeParts[0] : 23) * 60 + (closeParts.length > 1 ? closeParts[1] : 0);
+          final openMin = (openParts.isNotEmpty ? openParts[0] : 11) * 60 +
+              (openParts.length > 1 ? openParts[1] : 0);
+          final closeMin = (closeParts.isNotEmpty ? closeParts[0] : 23) * 60 +
+              (closeParts.length > 1 ? closeParts[1] : 0);
 
           if (closeMin > openMin) {
             return currentMinutes >= openMin && currentMinutes < closeMin;
@@ -278,8 +323,10 @@ class Branch {
 
       final openParts = openTime.split(':').map(int.parse).toList();
       final closeParts = closeTime.split(':').map(int.parse).toList();
-      final openMin = (openParts.isNotEmpty ? openParts[0] : 11) * 60 + (openParts.length > 1 ? openParts[1] : 0);
-      final closeMin = (closeParts.isNotEmpty ? closeParts[0] : 23) * 60 + (closeParts.length > 1 ? closeParts[1] : 0);
+      final openMin = (openParts.isNotEmpty ? openParts[0] : 11) * 60 +
+          (openParts.length > 1 ? openParts[1] : 0);
+      final closeMin = (closeParts.isNotEmpty ? closeParts[0] : 23) * 60 +
+          (closeParts.length > 1 ? closeParts[1] : 0);
 
       if (closeMin > openMin) {
         return currentMinutes >= openMin && currentMinutes < closeMin;
@@ -380,8 +427,10 @@ class Branch {
       isFeatured: isFeatured ?? this.isFeatured,
       subscriptionPlanCode: subscriptionPlanCode ?? this.subscriptionPlanCode,
       hasFeaturedBanners: hasFeaturedBanners ?? this.hasFeaturedBanners,
-      acceptedPaymentMethods: acceptedPaymentMethods ?? this.acceptedPaymentMethods,
-      hasValidPaymentMethods: hasValidPaymentMethods ?? this.hasValidPaymentMethods,
+      acceptedPaymentMethods:
+          acceptedPaymentMethods ?? this.acceptedPaymentMethods,
+      hasValidPaymentMethods:
+          hasValidPaymentMethods ?? this.hasValidPaymentMethods,
     );
   }
 
@@ -413,7 +462,8 @@ class Branch {
     final credentials = payData is Map
         ? BranchPaymentCredentials.fromJson(Map<String, dynamic>.from(payData))
         : (payData is List && payData.isNotEmpty && payData.first is Map)
-            ? BranchPaymentCredentials.fromJson(Map<String, dynamic>.from(payData.first as Map))
+            ? BranchPaymentCredentials.fromJson(
+                Map<String, dynamic>.from(payData.first as Map))
             : const BranchPaymentCredentials(
                 pagoMovilBank: '',
                 pagoMovilPhone: '',
@@ -424,31 +474,47 @@ class Branch {
               );
 
     final rawTiers = json['delivery_tiers'] ?? json['deliveryTiers'];
-    final List<DeliveryTier> parsedTiers = (rawTiers is List && rawTiers.isNotEmpty)
-        ? rawTiers.map((t) => DeliveryTier.fromJson(Map<String, dynamic>.from(t as Map))).toList()
-        : const [
-            DeliveryTier(id: 'tier_1', minKm: 0, maxKm: 2, price: 1.50),
-            DeliveryTier(id: 'tier_2', minKm: 2, maxKm: 5, price: 3.00),
-            DeliveryTier(id: 'tier_3', minKm: 5, maxKm: 8, price: 4.50),
-          ];
+    final List<DeliveryTier> parsedTiers =
+        (rawTiers is List && rawTiers.isNotEmpty)
+            ? rawTiers
+                .map((t) =>
+                    DeliveryTier.fromJson(Map<String, dynamic>.from(t as Map)))
+                .toList()
+            : const [
+                DeliveryTier(id: 'tier_1', minKm: 0, maxKm: 2, price: 1.50),
+                DeliveryTier(id: 'tier_2', minKm: 2, maxKm: 5, price: 3.00),
+                DeliveryTier(id: 'tier_3', minKm: 5, maxKm: 8, price: 4.50),
+              ];
 
     final bh = json['business_hours'] is Map
         ? json['business_hours'] as Map<String, dynamic>
-        : (json['businessHours'] is Map ? json['businessHours'] as Map<String, dynamic> : null);
-    final rawSDays = bh?['scheduleDays'] ?? json['scheduleDays'] ?? json['schedule_days'];
+        : (json['businessHours'] is Map
+            ? json['businessHours'] as Map<String, dynamic>
+            : null);
+    final rawSDays =
+        bh?['scheduleDays'] ?? json['scheduleDays'] ?? json['schedule_days'];
     List<Map<String, dynamic>>? parsedSDays;
     if (rawSDays is List) {
-      parsedSDays = rawSDays.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+      parsedSDays = rawSDays
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
     }
-    final oTime = (json['open_time'] ?? json['openTime'] ?? bh?['open'] ?? '11:00').toString();
-    final cTime = (json['close_time'] ?? json['closeTime'] ?? bh?['close'] ?? '23:00').toString();
+    final oTime =
+        (json['open_time'] ?? json['openTime'] ?? bh?['open'] ?? '11:00')
+            .toString();
+    final cTime =
+        (json['close_time'] ?? json['closeTime'] ?? bh?['close'] ?? '23:00')
+            .toString();
     final isOp = json['is_open_now'] ??
         json['isOpenNow'] ??
         bh?['isOpenNow'] ??
         bh?['isOpenToday'] ??
         (json['status'] == 'active');
-    final isOpenNowBool = isOp is bool ? isOp : (isOp?.toString().toLowerCase() == 'true');
-    final statusLabel = json['storeStatusLabel']?.toString() ?? bh?['label']?.toString();
+    final isOpenNowBool =
+        isOp is bool ? isOp : (isOp?.toString().toLowerCase() == 'true');
+    final statusLabel =
+        json['storeStatusLabel']?.toString() ?? bh?['label']?.toString();
 
     return Branch(
       id: json['id'] ?? '',
@@ -477,24 +543,53 @@ class Branch {
       storeStatusLabel: statusLabel,
       paymentCredentials: credentials,
       tagline: json['tagline']?.toString(),
-      accentColor: json['accent_color']?.toString() ?? json['accentColor']?.toString(),
+      accentColor:
+          json['accent_color']?.toString() ?? json['accentColor']?.toString(),
       logoUrl: json['logo_url']?.toString() ?? json['logoUrl']?.toString(),
-      bannerUrl: json['banner_url']?.toString() ?? json['bannerUrl']?.toString(),
-      exchangeRate: (json['exchange_rate'] as num?)?.toDouble() ?? (json['exchangeRate'] as num?)?.toDouble(),
-      baseCurrency: json['base_currency']?.toString() ?? json['baseCurrency']?.toString(),
-      displayMode: json['display_mode']?.toString() ?? json['displayMode']?.toString(),
-      isFeatured: json['is_featured'] ?? json['isFeatured'] ?? (json['plan_code'] == 'FRANQUICIA'),
-      subscriptionPlanCode: json['plan_code']?.toString() ?? json['subscription_plan_code']?.toString() ?? json['planCode']?.toString(),
-      hasFeaturedBanners: json['has_featured_banners'] ?? (json['plan_code'] == 'FRANQUICIA') ?? false,
-      hasValidPaymentMethods: json['has_valid_payment_methods'] ?? json['hasValidPaymentMethods'] ?? true,
-      acceptedPaymentMethods: (json['accepted_payment_methods'] is List && (json['accepted_payment_methods'] as List).isNotEmpty)
-          ? (json['accepted_payment_methods'] as List).map((e) => e.toString()).toList()
-          : (json['acceptedPaymentMethods'] is List && (json['acceptedPaymentMethods'] as List).isNotEmpty)
-              ? (json['acceptedPaymentMethods'] as List).map((e) => e.toString()).toList()
-              : (json['currency_settings'] is Map && json['currency_settings']['acceptedPaymentMethods'] is List)
-                  ? (json['currency_settings']['acceptedPaymentMethods'] as List).map((e) => e.toString()).toList()
-                  : (json['currencySettings'] is Map && json['currencySettings']['acceptedPaymentMethods'] is List)
-                      ? (json['currencySettings']['acceptedPaymentMethods'] as List).map((e) => e.toString()).toList()
+      bannerUrl:
+          json['banner_url']?.toString() ?? json['bannerUrl']?.toString(),
+      exchangeRate: (json['exchange_rate'] as num?)?.toDouble() ??
+          (json['exchangeRate'] as num?)?.toDouble(),
+      baseCurrency:
+          json['base_currency']?.toString() ?? json['baseCurrency']?.toString(),
+      displayMode:
+          json['display_mode']?.toString() ?? json['displayMode']?.toString(),
+      isFeatured: json['is_featured'] ??
+          json['isFeatured'] ??
+          (json['plan_code'] == 'FRANQUICIA'),
+      subscriptionPlanCode: json['plan_code']?.toString() ??
+          json['subscription_plan_code']?.toString() ??
+          json['planCode']?.toString(),
+      hasFeaturedBanners: json['has_featured_banners'] ??
+          (json['plan_code'] == 'FRANQUICIA') ??
+          false,
+      hasValidPaymentMethods: json['has_valid_payment_methods'] ??
+          json['hasValidPaymentMethods'] ??
+          true,
+      acceptedPaymentMethods: (json['accepted_payment_methods'] is List &&
+              (json['accepted_payment_methods'] as List).isNotEmpty)
+          ? (json['accepted_payment_methods'] as List)
+              .map((e) => e.toString())
+              .toList()
+          : (json['acceptedPaymentMethods'] is List &&
+                  (json['acceptedPaymentMethods'] as List).isNotEmpty)
+              ? (json['acceptedPaymentMethods'] as List)
+                  .map((e) => e.toString())
+                  .toList()
+              : (json['currency_settings'] is Map &&
+                      json['currency_settings']['acceptedPaymentMethods']
+                          is List)
+                  ? (json['currency_settings']['acceptedPaymentMethods']
+                          as List)
+                      .map((e) => e.toString())
+                      .toList()
+                  : (json['currencySettings'] is Map &&
+                          json['currencySettings']['acceptedPaymentMethods']
+                              is List)
+                      ? (json['currencySettings']['acceptedPaymentMethods']
+                              as List)
+                          .map((e) => e.toString())
+                          .toList()
                       : const [],
     );
   }
@@ -533,22 +628,33 @@ class BannerItem {
     this.planCode,
   });
 
-  bool get isFranquicia => planCode?.toUpperCase() == 'FRANQUICIA' || (badgeText?.toUpperCase().contains('VIP') ?? false);
+  bool get isFranquicia =>
+      planCode?.toUpperCase() == 'FRANQUICIA' ||
+      (badgeText?.toUpperCase().contains('VIP') ?? false);
 
   factory BannerItem.fromJson(Map<String, dynamic> json) => BannerItem(
-    id: json['id']?.toString() ?? '',
-    title: json['title']?.toString() ?? '',
-    subtitle: json['subtitle']?.toString() ?? '',
-    couponCode: json['coupon_code']?.toString() ?? json['couponCode']?.toString(),
-    badgeText: json['badge_text']?.toString() ?? json['badgeText']?.toString(),
-    buttonText: json['button_text']?.toString() ?? json['buttonText']?.toString(),
-    linkUrl: json['link_url']?.toString() ?? json['linkUrl']?.toString(),
-    imageUrl: json['image_url']?.toString() ?? json['imageUrl']?.toString(),
-    bgGradientStart: json['bg_gradient_start']?.toString() ?? json['bgGradientStart']?.toString() ?? '#f97316',
-    bgGradientEnd: json['bg_gradient_end']?.toString() ?? json['bgGradientEnd']?.toString() ?? '#ea580c',
-    isActive: json['is_active'] ?? json['isActive'] ?? true,
-    sortOrder: (json['sort_order'] as num?)?.toInt() ?? (json['sortOrder'] as num?)?.toInt() ?? 0,
-    tenantId: json['tenant_id']?.toString() ?? json['tenantId']?.toString(),
-    planCode: json['plan_code']?.toString() ?? json['planCode']?.toString(),
-  );
+        id: json['id']?.toString() ?? '',
+        title: json['title']?.toString() ?? '',
+        subtitle: json['subtitle']?.toString() ?? '',
+        couponCode:
+            json['coupon_code']?.toString() ?? json['couponCode']?.toString(),
+        badgeText:
+            json['badge_text']?.toString() ?? json['badgeText']?.toString(),
+        buttonText:
+            json['button_text']?.toString() ?? json['buttonText']?.toString(),
+        linkUrl: json['link_url']?.toString() ?? json['linkUrl']?.toString(),
+        imageUrl: json['image_url']?.toString() ?? json['imageUrl']?.toString(),
+        bgGradientStart: json['bg_gradient_start']?.toString() ??
+            json['bgGradientStart']?.toString() ??
+            '#f97316',
+        bgGradientEnd: json['bg_gradient_end']?.toString() ??
+            json['bgGradientEnd']?.toString() ??
+            '#ea580c',
+        isActive: json['is_active'] ?? json['isActive'] ?? true,
+        sortOrder: (json['sort_order'] as num?)?.toInt() ??
+            (json['sortOrder'] as num?)?.toInt() ??
+            0,
+        tenantId: json['tenant_id']?.toString() ?? json['tenantId']?.toString(),
+        planCode: json['plan_code']?.toString() ?? json['planCode']?.toString(),
+      );
 }

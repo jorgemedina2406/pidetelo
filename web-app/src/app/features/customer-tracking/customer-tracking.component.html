@@ -671,11 +671,11 @@
                       </p>
                     </div>
                   </div>
-                  <a [routerLink]="ord.tenantSlug ? '/t/' + ord.tenantSlug : '/'" [queryParams]="{ appendToOrder: ord.id, orderNumber: ord.orderNumber }"
-                     class="px-4 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-extrabold text-xs shadow-sm flex items-center gap-1.5 shrink-0 transition-all cursor-pointer">
+                  <button type="button" (click)="openAppendModal()"
+                     class="px-4 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 active:scale-95 text-white font-extrabold text-xs shadow-sm flex items-center gap-1.5 shrink-0 transition-all cursor-pointer">
                     <app-icon name="plus" [size]="13"></app-icon>
                     <span>+ Adicionar Productos</span>
-                  </a>
+                  </button>
                 </div>
               }
 
@@ -796,6 +796,149 @@
                     class="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 font-bold text-xs transition-colors cursor-pointer">
               Entendido
             </button>
+          </div>
+        </div>
+      }
+
+      <!-- ================= MODAL: ADICIONAR PRODUCTOS AL PEDIDO ACTIVO ================= -->
+      @if (isAppendModalOpen()) {
+        <div class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg shadow-2xl flex flex-col max-h-[85vh] overflow-hidden animate-scale-in">
+            
+            <!-- Header -->
+            <div class="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3">
+              <div class="flex items-center gap-2.5 min-w-0">
+                <span class="p-2 rounded-xl bg-brand-500/10 text-brand-500 shrink-0">
+                  <app-icon name="plus" [size]="18"></app-icon>
+                </span>
+                <div class="min-w-0">
+                  <h3 class="text-sm font-extrabold text-slate-900 dark:text-white truncate">
+                    Adicionar Productos
+                  </h3>
+                  <p class="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                    Orden #{{ order()?.orderNumber }} • {{ order()?.tenantName }}
+                  </p>
+                </div>
+              </div>
+              <button (click)="closeAppendModal()" type="button"
+                      class="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer">
+                ✕
+              </button>
+            </div>
+
+            <!-- Buscador -->
+            <div class="p-3 border-b border-slate-100 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-800/20">
+              <input type="text"
+                     [ngModel]="appendProductSearch()"
+                     (ngModelChange)="appendProductSearch.set($event)"
+                     placeholder="Buscar en el menú del comercio..."
+                     class="w-full px-3.5 py-2 text-xs rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-hidden focus:border-brand-500" />
+            </div>
+
+            <!-- Listado de Productos -->
+            <div class="flex-1 overflow-y-auto p-3 space-y-2.5 divide-y divide-slate-100 dark:divide-slate-800/60">
+              @if (isLoadingProducts()) {
+                <div class="py-12 text-center text-xs text-slate-400 space-y-2">
+                  <div class="animate-spin text-2xl">⏳</div>
+                  <div>Cargando menú de la tienda...</div>
+                </div>
+              } @else if (filteredStoreProducts().length === 0) {
+                <div class="py-12 text-center text-xs text-slate-400">
+                  No se encontraron productos disponibles para adicionar.
+                </div>
+              } @else {
+                @for (prod of filteredStoreProducts(); track prod.id) {
+                  <div class="pt-2.5 first:pt-0 flex items-center justify-between gap-3">
+                    @if (prod.imageUrl) {
+                      <img [src]="prod.imageUrl" [alt]="prod.name"
+                           class="w-14 h-14 rounded-xl object-cover bg-slate-100 dark:bg-slate-800 shrink-0 border border-slate-100 dark:border-slate-800" />
+                    }
+                    <div class="flex-1 min-w-0">
+                      <div class="text-xs font-bold text-slate-900 dark:text-white truncate">{{ prod.name }}</div>
+                      @if (prod.description) {
+                        <p class="text-[10px] text-slate-400 dark:text-slate-500 line-clamp-1 mt-0.5">{{ prod.description }}</p>
+                      }
+                      <div class="flex items-baseline gap-1.5 mt-1">
+                        <span class="text-xs font-extrabold text-brand-600 dark:text-brand-400">${{ prod.price.toFixed(2) }}</span>
+                        @if (order()?.exchangeRate && order()!.exchangeRate! > 1) {
+                          <span class="text-[10px] text-slate-400">≈ Bs. {{ (prod.price * order()!.exchangeRate!).toFixed(2) }}</span>
+                        }
+                      </div>
+                    </div>
+
+                    <!-- Botones de Cantidad -->
+                    <div class="shrink-0 flex items-center gap-1.5">
+                      @if (getAppendItemQty(prod.id) > 0) {
+                        <button (click)="decreaseAppendItem(prod)" type="button"
+                                class="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-extrabold text-xs flex items-center justify-center cursor-pointer transition-colors">
+                          -
+                        </button>
+                        <span class="w-6 text-center text-xs font-bold text-slate-900 dark:text-white">
+                          {{ getAppendItemQty(prod.id) }}
+                        </span>
+                        <button (click)="increaseAppendItem(prod)" type="button"
+                                class="w-7 h-7 rounded-lg bg-brand-500 hover:bg-brand-600 text-white font-extrabold text-xs flex items-center justify-center cursor-pointer transition-colors shadow-xs">
+                          +
+                        </button>
+                      } @else {
+                        <button (click)="increaseAppendItem(prod)" type="button"
+                                class="px-2.5 py-1.5 rounded-xl bg-brand-500/10 hover:bg-brand-500 text-brand-600 hover:text-white font-bold text-xs transition-colors cursor-pointer flex items-center gap-1">
+                          <span>+</span>
+                          <span>Agregar</span>
+                        </button>
+                      }
+                    </div>
+                  </div>
+                }
+              }
+            </div>
+
+            <!-- Footer con Totales y Confirmación -->
+            <div class="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 space-y-3">
+              @if (appendErrorMessage()) {
+                <div class="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 text-xs font-semibold text-center">
+                  {{ appendErrorMessage() }}
+                </div>
+              }
+              @if (appendSuccessMessage()) {
+                <div class="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 text-xs font-semibold text-center flex items-center justify-center gap-1.5">
+                  <span>✓</span>
+                  <span>{{ appendSuccessMessage() }}</span>
+                </div>
+              }
+
+              <div class="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
+                <span>Adicional a pagar:</span>
+                <div class="text-right">
+                  <span class="text-sm font-extrabold text-brand-600 dark:text-brand-400">
+                    +${{ appendSubtotal().toFixed(2) }}
+                  </span>
+                  @if (order()?.exchangeRate && order()!.exchangeRate! > 1) {
+                    <span class="block text-[10px] text-slate-400 font-normal">
+                      ≈ Bs. {{ (appendSubtotal() * order()!.exchangeRate!).toFixed(2) }}
+                    </span>
+                  }
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <button (click)="closeAppendModal()" type="button"
+                        class="flex-1 py-2.5 rounded-xl bg-slate-200/70 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs transition-colors cursor-pointer">
+                  Cancelar
+                </button>
+                <button (click)="confirmAppendToOrder()" type="button"
+                        [disabled]="appendTotalItemsCount() === 0 || isAppendingItems()"
+                        class="flex-2 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 active:scale-98 disabled:opacity-50 text-white font-extrabold text-xs shadow-md shadow-brand-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer">
+                  @if (isAppendingItems()) {
+                    <span class="animate-spin text-xs">⏳</span>
+                    <span>Actualizando Pedido...</span>
+                  } @else {
+                    <span>Confirmar Adición (+{{ appendTotalItemsCount() }})</span>
+                  }
+                </button>
+              </div>
+            </div>
+
           </div>
         </div>
       }
