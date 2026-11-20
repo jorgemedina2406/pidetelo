@@ -31,7 +31,7 @@ export class ApiService {
         // Fallback directo a Supabase
         const client = this.supabase.rawClient;
         if (client) {
-          let query = client.from('tenants').select('*').order('name');
+          let query = client.from('tenants').select('*, branches(*, branch_payment_credentials(*))').order('name');
           if (!includeInactive) {
             query = query.eq('is_active', true);
           }
@@ -1474,24 +1474,18 @@ export class ApiService {
     const defaultLogo = row.logo_url || fallbackLogo;
     const defaultBanner = row.banner_url || fallbackBanner;
 
-    let cachedBranding: any = null;
-    if (typeof localStorage !== 'undefined') {
-      try {
-        const stored = localStorage.getItem('pidetelo_branding_' + row.id);
-        if (stored) cachedBranding = JSON.parse(stored);
-      } catch (_) { }
-    }
-
-    const rawBh = cachedBranding?.business_hours || cachedBranding?.businessHours || row.business_hours || row.businessHours || row.deliverySettings?.businessHours;
-    const bhOpen = rawBh?.open || cachedBranding?.openTime || row.open_time || row.openTime || '08:00';
-    const bhClose = rawBh?.close || cachedBranding?.closeTime || row.close_time || row.closeTime || '23:00';
-    const sDays = rawBh?.scheduleDays || cachedBranding?.scheduleDays || row.scheduleDays || [];
+    const firstBranch = Array.isArray(row.branches) && row.branches.length > 0 ? row.branches[0] : null;
+    const branchBh = firstBranch?.business_hours || firstBranch?.businessHours;
+    const rawBh = row.business_hours || row.businessHours || branchBh || row.deliverySettings?.businessHours;
+    const bhOpen = rawBh?.open || branchBh?.open || row.open_time || row.openTime || '08:00';
+    const bhClose = rawBh?.close || branchBh?.close || row.close_time || row.closeTime || '23:00';
+    const sDays = rawBh?.scheduleDays || branchBh?.scheduleDays || row.scheduleDays || [];
     const bHours = {
       open: bhOpen,
       close: bhClose,
-      isOpenToday: rawBh?.isOpenToday ?? true,
+      isOpenToday: rawBh?.isOpenToday ?? branchBh?.isOpenToday ?? true,
       scheduleDays: sDays,
-      label: rawBh?.label
+      label: rawBh?.label || branchBh?.label
     };
 
     return {

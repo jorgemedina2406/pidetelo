@@ -980,6 +980,25 @@ class CartService extends ChangeNotifier {
     notifyListeners();
   }
 
+  void appendItemsToActiveOrder(String orderId, List<CartItem> newItems, double extraAmount) {
+    final idx = _orderHistory.indexWhere((o) => o.id == orderId || o.orderNumber == orderId);
+    if (idx != -1) {
+      final old = _orderHistory[idx];
+      final updatedItems = List<CartItem>.from(old.items)..addAll(newItems);
+      final updated = old.copyWith(
+        items: updatedItems,
+        subtotal: old.subtotal + extraAmount,
+        total: old.total + extraAmount,
+      );
+      _orderHistory[idx] = updated;
+      if (_activeOrder?.id == orderId || _activeOrder?.orderNumber == orderId) {
+        _activeOrder = updated;
+      }
+      _saveOrders();
+      notifyListeners();
+    }
+  }
+
   void updateOrderStatus(OrderDeliveryStatus newStatus, {String? orderId}) {
     if (orderId != null) {
       final idx = _orderHistory.indexWhere((o) => o.id == orderId);

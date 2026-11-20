@@ -828,98 +828,50 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
   void _showAppendItemsSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: const Color(0xFF0F172A),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(22),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.white24,
-                  borderRadius: BorderRadius.circular(10),
-                ),
+      builder: (ctx) => _AppendItemsModal(
+        order: _order,
+        onItemsAdded: (addedItems, extraAmount) {
+          setState(() {
+            final updatedItems = List<CartItem>.from(_order.items)..addAll(addedItems);
+            _order = _order.copyWith(
+              items: updatedItems,
+              subtotal: _order.subtotal + extraAmount,
+              total: _order.total + extraAmount,
+            );
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '¡Se adicionaron ${addedItems.length} producto(s) a tu orden #${_order.orderNumber}!',
+                style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+              ),
+              backgroundColor: const Color(0xFF10B981),
+              behavior: SnackBarBehavior.floating,
+              action: SnackBarAction(
+                label: 'Avisar WhatsApp',
+                textColor: Colors.white,
+                onPressed: () {
+                  final phone = _order.merchantPhone.replaceAll('+', '').replaceAll(' ', '');
+                  final cleanPhone = phone.isNotEmpty ? phone : '584245065032';
+                  final itemsStr = addedItems.map((i) => '${i.quantity}x ${i.product.name}').join(', ');
+                  final msg = Uri.encodeComponent(
+                    'Hola ${_order.merchantName}, acabo de adicionar a mi pedido #${_order.orderNumber} desde la app:\n'
+                    '$itemsStr\n'
+                    'Total adicional: \$${extraAmount.toStringAsFixed(2)}\n'
+                    'Nuevo total del pedido: \$${_order.total.toStringAsFixed(2)}',
+                  );
+                  final url = Uri.parse('https://wa.me/$cleanPhone?text=$msg');
+                  launchUrl(url, mode: LaunchMode.externalApplication);
+                },
               ),
             ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primary.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Icons.add_circle_outline_rounded, color: AppTheme.primary, size: 24),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Adicionar a Orden ${_order.orderNumber}',
-                        style: GoogleFonts.outfit(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                        ),
-                      ),
-                      Text(
-                        'Estado: En Preparación en Cocina',
-                        style: GoogleFonts.outfit(
-                          fontSize: 12,
-                          color: const Color(0xFF10B981),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            Text(
-              '¡Estás a tiempo! Como tu orden aún no ha salido con el repartidor, puedes adicionar bebidas, acompañantes o postres. Comunícate al WhatsApp del comercio o indícalo directamente para anexarlo a tu comanda.',
-              style: GoogleFonts.outfit(
-                fontSize: 13,
-                color: Colors.white70,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.pop(ctx);
-                _launchWhatsAppMerchant();
-              },
-              icon: const Icon(Icons.chat_rounded, size: 18),
-              label: const Text('Coordinar Adición por WhatsApp'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF22C55E),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                textStyle: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w700),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              ),
-            ),
-            const SizedBox(height: 10),
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text(
-                'Cerrar',
-                style: GoogleFonts.outfit(color: Colors.white54, fontWeight: FontWeight.w600),
-              ),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -2198,6 +2150,382 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
             child: Icon(icon, color: color, size: 22),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _AppendItemsModal extends StatefulWidget {
+  final DeliveryOrder order;
+  final Function(List<CartItem> addedItems, double extraAmount) onItemsAdded;
+
+  const _AppendItemsModal({
+    required this.order,
+    required this.onItemsAdded,
+  });
+
+  @override
+  State<_AppendItemsModal> createState() => _AppendItemsModalState();
+}
+
+class _AppendItemsModalState extends State<_AppendItemsModal> {
+  bool _isLoading = true;
+  bool _isSubmitting = false;
+  List<Product> _products = [];
+  final Map<String, int> _selectedQuantities = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProducts();
+  }
+
+  Future<void> _loadProducts() async {
+    final tenantId = widget.order.companyId ?? '';
+    final branchId = widget.order.branchId;
+    List<Product> list = [];
+    if (tenantId.isNotEmpty) {
+      list = await ApiService().fetchProductsByTenant(tenantId, branchId: branchId);
+    }
+    if (list.isEmpty && branchId != null && branchId.isNotEmpty) {
+      list = await ApiService().fetchProductsByTenant(branchId, branchId: branchId);
+    }
+    if (mounted) {
+      setState(() {
+        _products = list;
+        _isLoading = false;
+      });
+    }
+  }
+
+  double get _extraTotal {
+    double sum = 0.0;
+    for (final p in _products) {
+      final q = _selectedQuantities[p.id] ?? 0;
+      if (q > 0) {
+        sum += p.price * q;
+      }
+    }
+    return sum;
+  }
+
+  int get _totalCount {
+    return _selectedQuantities.values.fold(0, (a, b) => a + b);
+  }
+
+  Future<void> _submitAdditions() async {
+    final addedItems = <CartItem>[];
+    for (final p in _products) {
+      final q = _selectedQuantities[p.id] ?? 0;
+      if (q > 0) {
+        addedItems.add(CartItem(
+          product: p,
+          quantity: q,
+          selectedOptions: const [],
+          selectedModifiers: const [],
+        ));
+      }
+    }
+
+    if (addedItems.isEmpty) return;
+
+    setState(() => _isSubmitting = true);
+
+    final success = await ApiService().appendItemsToOrder(
+      orderIdOrNumber: widget.order.id,
+      newItems: addedItems,
+      extraSubtotal: _extraTotal,
+    );
+
+    if (mounted) {
+      setState(() => _isSubmitting = false);
+      if (success) {
+        CartService().appendItemsToActiveOrder(widget.order.id, addedItems, _extraTotal);
+        widget.onItemsAdded(addedItems, _extraTotal);
+        Navigator.pop(context);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'No se pudo actualizar en el servidor. Intenta de nuevo.',
+              style: GoogleFonts.outfit(),
+            ),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final maxH = MediaQuery.of(context).size.height * 0.85;
+
+    return Container(
+      constraints: BoxConstraints(maxHeight: maxH),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+      decoration: const BoxDecoration(
+        color: Color(0xFF0F172A),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Drag handle
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Header
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.add_shopping_cart_rounded, color: AppTheme.primary, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Adicionar a Orden ${widget.order.orderNumber}',
+                      style: GoogleFonts.outfit(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
+                    Text(
+                      '${widget.order.merchantName} • En Preparación',
+                      style: GoogleFonts.outfit(
+                        fontSize: 11.5,
+                        color: const Color(0xFF10B981),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.close_rounded, color: Colors.white54, size: 22),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Selecciona los productos que deseas agregar antes de que el repartidor salga del local.',
+            style: GoogleFonts.outfit(fontSize: 12, color: Colors.white60),
+          ),
+          const Divider(color: Colors.white12, height: 24),
+
+          // Product list or Loading
+          Expanded(
+            child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppTheme.primary),
+                  )
+                : _products.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.inventory_2_outlined, size: 48, color: Colors.white24),
+                            const SizedBox(height: 12),
+                            Text(
+                              'No se encontraron productos disponibles para este comercio.',
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.outfit(color: Colors.white70, fontSize: 13),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: _products.length,
+                        separatorBuilder: (_, __) => const Divider(color: Colors.white10, height: 16),
+                        itemBuilder: (context, idx) {
+                          final p = _products[idx];
+                          final q = _selectedQuantities[p.id] ?? 0;
+                          return Row(
+                            children: [
+                              // Image or placeholder
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(10),
+                                child: Container(
+                                  width: 50,
+                                  height: 50,
+                                  color: const Color(0xFF1E293B),
+                                  child: p.imageUrl.isNotEmpty
+                                      ? Image.network(
+                                          p.imageUrl,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (_, __, ___) => const Icon(
+                                            Icons.fastfood_rounded,
+                                            color: Colors.white38,
+                                            size: 24,
+                                          ),
+                                        )
+                                      : const Icon(Icons.fastfood_rounded, color: Colors.white38, size: 24),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              // Info
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      p.name,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 13.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '\$${p.price.toStringAsFixed(2)}',
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w800,
+                                        color: AppTheme.primary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              // Counter
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF1E293B),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: q > 0 ? AppTheme.primary : Colors.white12),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (q > 0) ...[
+                                      IconButton(
+                                        icon: const Icon(Icons.remove_rounded, size: 16, color: Colors.white70),
+                                        padding: const EdgeInsets.all(4),
+                                        constraints: const BoxConstraints(),
+                                        onPressed: () {
+                                          setState(() {
+                                            if (q > 1) {
+                                              _selectedQuantities[p.id] = q - 1;
+                                            } else {
+                                              _selectedQuantities.remove(p.id);
+                                            }
+                                          });
+                                        },
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6),
+                                        child: Text(
+                                          '$q',
+                                          style: GoogleFonts.outfit(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w700,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                    IconButton(
+                                      icon: Icon(
+                                        Icons.add_rounded,
+                                        size: 16,
+                                        color: q > 0 ? AppTheme.primary : Colors.white70,
+                                      ),
+                                      padding: const EdgeInsets.all(4),
+                                      constraints: const BoxConstraints(),
+                                      onPressed: () {
+                                        setState(() {
+                                          _selectedQuantities[p.id] = q + 1;
+                                        });
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+          ),
+
+          // Bottom confirmation bar
+          if (_totalCount > 0) ...[
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E293B),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppTheme.primary.withOpacity(0.4)),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '$_totalCount producto(s) seleccionado(s)',
+                          style: GoogleFonts.outfit(fontSize: 11.5, color: Colors.white70),
+                        ),
+                        Text(
+                          'Adicional: +\$${_extraTotal.toStringAsFixed(2)}',
+                          style: GoogleFonts.outfit(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  ElevatedButton(
+                    onPressed: _isSubmitting ? null : _submitAdditions,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: _isSubmitting
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          )
+                        : Text(
+                            'Confirmar Adición',
+                            style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.w700),
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

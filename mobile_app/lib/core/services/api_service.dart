@@ -1066,6 +1066,76 @@ class ApiService {
     return savedInSupabase;
   }
 
+  /// Append new items to an active order in Supabase
+  Future<bool> appendItemsToOrder({
+    required String orderIdOrNumber,
+    required List<CartItem> newItems,
+    required double extraSubtotal,
+  }) async {
+    try {
+      final supabase = Supabase.instance.client;
+      final query = supabase
+          .from('orders')
+          .select('id, subtotal, total, notes');
+
+      final isUuid = RegExp(
+              r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+              caseSensitive: false)
+          .hasMatch(orderIdOrNumber);
+
+      final Map<String, dynamic>? currentOrder = isUuid
+          ? await query.eq('id', orderIdOrNumber).maybeSingle()
+          : await query.eq('order_number', orderIdOrNumber).maybeSingle();
+
+      if (currentOrder != null) {
+        final realId = currentOrder['id'].toString();
+        final currentSub = (currentOrder['subtotal'] as num?)?.toDouble() ?? 0.0;
+        final currentTot = (currentOrder['total'] as num?)?.toDouble() ?? 0.0;
+        final updatedSub = currentSub + extraSubtotal;
+        final updatedTot = currentTot + extraSubtotal;
+
+        final existingNotes = currentOrder['notes']?.toString() ?? '';
+        final itemDetails = newItems
+            .map((i) =>
+                '${i.quantity}x ${i.product.name} (\$${(i.product.price * i.quantity).toStringAsFixed(2)})')
+            .join(', ');
+        final appendedNotes = existingNotes.trim().isEmpty
+            ? '[Adición en app]: $itemDetails'
+            : '$existingNotes\n[Adición en app]: $itemDetails';
+
+        await supabase.from('orders').update({
+          'subtotal': updatedSub,
+          'total': updatedTot,
+          'notes': appendedNotes,
+          'updated_at': DateTime.now().toIso8601String(),
+        }).eq('id', realId);
+
+        for (final item in newItems) {
+          final itemTotal = item.product.price * item.quantity;
+          try {
+            await supabase.from('order_items').insert({
+              'order_id': realId,
+              'product_id': item.product.id.isNotEmpty ? item.product.id : null,
+              'product_name': item.product.name,
+              'unit_price': item.product.price,
+              'quantity': item.quantity,
+              'item_total': itemTotal,
+              'selected_modifiers':
+                  item.selectedModifiers.map((m) => m.toJson()).toList(),
+            });
+          } catch (itemErr) {
+            if (kDebugMode) print('[ApiService] Insert order_item error: $itemErr');
+          }
+        }
+        return true;
+      }
+      return false;
+    } catch (e) {
+      if (kDebugMode) print('[ApiService] appendItemsToOrder error: $e');
+      return false;
+    }
+  }
+
   /// Fetch user's orders from Supabase cloud database
   Future<List<DeliveryOrder>> fetchUserOrdersFromCloud(String phoneOrName) async {
     final search = phoneOrName.trim();

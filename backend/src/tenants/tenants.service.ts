@@ -160,7 +160,7 @@ export class TenantsService {
       };
     }
 
-    if (businessHours?.isOpenToday === false || businessHours?.isOpenNow === false) {
+    if (businessHours?.isOpenToday === false) {
       return {
         isOpen: false,
         openStr: businessHours?.open || '11:00',
