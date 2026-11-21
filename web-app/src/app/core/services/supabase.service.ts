@@ -154,7 +154,7 @@ export class SupabaseService {
     return true;
   }
 
-  async verifyOrderPayment(orderId: string, payload: { status: 'verified' | 'rejected' | 'pending'; reference?: string; originBank?: string; orderStatus?: OrderStatus }): Promise<boolean> {
+  async verifyOrderPayment(orderId: string, payload: { status: 'verified' | 'rejected' | 'pending'; reference?: string; originBank?: string; orderStatus?: OrderStatus; rejectionReason?: string }): Promise<boolean> {
     if (!this.client) return false;
     try {
       const { data: currentOrder, error: fetchError } = await this.client
@@ -172,6 +172,11 @@ export class SupabaseService {
       const cleanNotes = existingNotes.replace(/\[PAGO_[A-Z_]+(?::[^\]]*)?\]\s*/g, '').trim();
       const originBank = payload.originBank || existingNotes.match(/\[PAGO_ORIGEN:([^\]]+)\]/)?.[1];
       const originTag = originBank ? `[PAGO_ORIGEN:${originBank}]` : '';
+      const cleanReason = String(payload.rejectionReason || '')
+        .replace(/[\[\]|]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 240);
 
       let notesToSave: string | null = null;
       if (payload.status === 'verified') {
@@ -179,7 +184,8 @@ export class SupabaseService {
         notesToSave = [auditTag, cleanNotes].filter(Boolean).join(' ').trim();
       } else if (payload.status === 'rejected') {
         const rejectTag = `[PAGO_RECHAZADO${payload.reference ? ':Ref ' + payload.reference : ''}]`;
-        notesToSave = [rejectTag, cleanNotes].filter(Boolean).join(' ').trim();
+        const reasonTag = cleanReason ? `[PAGO_MOTIVO:${cleanReason}]` : '';
+        notesToSave = [rejectTag, reasonTag, cleanNotes].filter(Boolean).join(' ').trim();
       } else if (payload.status === 'pending') {
         notesToSave = [originTag, cleanNotes].filter(Boolean).join(' ').trim();
       }

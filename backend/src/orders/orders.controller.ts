@@ -114,6 +114,7 @@ export class OrdersController {
       reference?: string;
       originBank?: string;
       verifiedBy?: string;
+      rejectionReason?: string;
     },
   ) {
     return this.ordersService.verifyAdditionPayment(id, payload);
@@ -146,6 +147,7 @@ export class OrdersController {
       originBank?: string;
       verifiedBy?: string;
       autoSendToKitchen?: boolean;
+      rejectionReason?: string;
     },
   ) {
     return this.ordersService.verifyPayment(id, payload);

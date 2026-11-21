@@ -1388,6 +1388,92 @@ class ApiService {
     }
   }
 
+  /// Resend corrected Pago Móvil reference for a rejected initial order
+  Future<bool> resendInitialPaymentReference({
+    required String orderIdOrNumber,
+    String? orderNumber,
+    required String newReference,
+    String? originBank,
+  }) async {
+    final uuidRegex = RegExp(
+      r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+    );
+    final isUuid = uuidRegex.hasMatch(orderIdOrNumber);
+    final cleanNum = (orderNumber ?? orderIdOrNumber).replaceAll('#', '').trim();
+    final targetKey = isUuid ? orderIdOrNumber : cleanNum;
+    final cleanRef = newReference.trim();
+    final cleanBank = (originBank ?? '').trim();
+
+    // 1. Primary path: Backend API
+    try {
+      final url = Uri.parse('${AppConfig.backendBaseUrl}/orders/$targetKey/verify-payment');
+      final body = <String, dynamic>{
+        'status': 'pending',
+        'reference': cleanRef,
+        if (cleanBank.isNotEmpty) 'originBank': cleanBank,
+      };
+      final res = await http
+          .patch(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode(body),
+          )
+          .timeout(const Duration(seconds: 8));
+      if (res.statusCode == 200 || res.statusCode == 201) {
+        return true;
+      }
+    } catch (e) {
+      if (kDebugMode) print('[ApiService] Backend resendInitialPayment fallback to Supabase: $e');
+    }
+
+    // 2. Fallback path: Direct Supabase
+    try {
+      final supabase = Supabase.instance.client;
+      Map<String, dynamic>? currentOrder;
+      if (isUuid) {
+        currentOrder = await supabase.from('orders').select('id, notes').eq('id', orderIdOrNumber).maybeSingle();
+      }
+      currentOrder ??= await supabase
+          .from('orders')
+          .select('id, notes')
+          .or('order_number.eq.$cleanNum,order_number.eq.#$cleanNum')
+          .order('created_at', ascending: false)
+          .limit(1)
+          .maybeSingle();
+
+      if (currentOrder == null) return false;
+      final realId = currentOrder['id'].toString();
+      final rawNotes = (currentOrder['notes'] ?? '').toString();
+      final cleanNotes = rawNotes.replaceAll(RegExp(r'\[PAGO_[A-Z_]+(?::[^\]]*)?\]\s*', caseSensitive: false), '').trim();
+      final resolvedBank = cleanBank.isNotEmpty
+          ? cleanBank
+          : (RegExp(r'\[PAGO_ORIGEN:([^\]]+)\]').firstMatch(rawNotes)?.group(1)?.trim() ?? '');
+      final originTag = resolvedBank.isNotEmpty ? '[PAGO_ORIGEN:$resolvedBank]' : '';
+      final updatedNotes = [if (originTag.isNotEmpty) originTag, if (cleanNotes.isNotEmpty) cleanNotes].join(' ').trim();
+
+      final updateMap = <String, dynamic>{
+        'payment_status': 'pending',
+        'payment_reference': cleanRef,
+        'notes': updatedNotes.isNotEmpty ? updatedNotes : null,
+        'updated_at': DateTime.now().toIso8601String(),
+      };
+      if (resolvedBank.isNotEmpty) {
+        updateMap['payment_origin_bank'] = resolvedBank;
+      }
+
+      try {
+        await supabase.from('orders').update(updateMap).eq('id', realId);
+      } catch (_) {
+        updateMap.remove('payment_origin_bank');
+        await supabase.from('orders').update(updateMap).eq('id', realId);
+      }
+      return true;
+    } catch (e) {
+      if (kDebugMode) print('[ApiService] resendInitialPaymentReference error: $e');
+      return false;
+    }
+  }
+
   /// Resend corrected Pago Móvil reference for a rejected additional order
   Future<bool> resendAdditionPaymentReference({
     required String orderIdOrNumber,
@@ -1459,7 +1545,7 @@ class ApiService {
       }
       if (!notes.contains(targetRaw)) return false;
 
-      String updatedTag = targetRaw;
+      String updatedTag = targetRaw.replaceAll(RegExp(r'\s*\|\s*Motivo:\s*[^|\]]+', caseSensitive: false), '');
       if (cleanRef.isNotEmpty) {
         if (RegExp(r'Ref:\s*[^|\]]+', caseSensitive: false).hasMatch(updatedTag)) {
           updatedTag = updatedTag.replaceFirst(RegExp(r'Ref:\s*[^|\]]+', caseSensitive: false), 'Ref: $cleanRef');

@@ -75,6 +75,7 @@ export interface Order {
   paymentAmountBs?: number;
   paymentVerifiedAt?: string;
   paymentVerifiedBy?: string;
+  paymentRejectionReason?: string;
   customer: CustomerInfo;
   items: CartItem[];
   subtotal: number;
@@ -124,6 +125,7 @@ export interface OrderAddition {
   originBank?: string;
   status: 'pending' | 'verified' | 'rejected' | 'cash_on_delivery';
   description?: string;
+  rejectionReason?: string;
 }
 
 export function isOrderAdditionItem(item: any): boolean {
@@ -166,6 +168,9 @@ export function parseOrderAdditions(notes?: string | null): OrderAddition[] {
     const bankMatch = m.match(/Banco:\s*([^|\]]+)/i);
     const originBank = bankMatch ? bankMatch[1].trim() : undefined;
 
+    const reasonMatch = m.match(/Motivo:\s*([^|\]]+)/i);
+    const rejectionReason = reasonMatch ? reasonMatch[1].trim() : undefined;
+
     const isRejected = /rechazado/i.test(m);
     const isVerified = /verificado|confirmado/i.test(m);
     let status: 'pending' | 'verified' | 'rejected' | 'cash_on_delivery' = 'cash_on_delivery';
@@ -182,7 +187,8 @@ export function parseOrderAdditions(notes?: string | null): OrderAddition[] {
       reference,
       originBank,
       status,
-      description
+      description,
+      rejectionReason
     });
   }
   return results;
@@ -196,11 +202,12 @@ export function updateAdditionTagInNotes(
     reference?: string;
     originBank?: string;
     verifiedBy?: string;
+    rejectionReason?: string;
   }
 ): string {
   if (!notes || !targetRaw || !notes.includes(targetRaw)) return notes;
 
-  let updatedTag = targetRaw;
+  let updatedTag = targetRaw.replace(/\s*\|\s*Motivo:\s*[^|\]]+/i, '');
 
   if (params.reference && params.reference.trim().length > 0) {
     const cleanRef = params.reference.trim();
@@ -233,6 +240,17 @@ export function updateAdditionTagInNotes(
     updatedTag = updatedTag.replace(/Estado:\s*[^|\]]+/i, `Estado: ${statusLabel}`);
   } else {
     updatedTag = updatedTag.replace(/\]$/, ` | Estado: ${statusLabel}]`);
+  }
+
+  if (params.status === 'rejected' && params.rejectionReason) {
+    const cleanReason = params.rejectionReason
+      .replace(/[\[\]|]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 240);
+    if (cleanReason) {
+      updatedTag = updatedTag.replace(/\]$/, ` | Motivo: ${cleanReason}]`);
+    }
   }
 
   return notes.replace(targetRaw, updatedTag);

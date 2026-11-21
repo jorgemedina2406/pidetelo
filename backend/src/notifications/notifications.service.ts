@@ -12,7 +12,7 @@ export interface CustomerNotification {
   tenant_name?: string;
   title: string;
   body: string;
-  type: 'coupon' | 'promo' | 'order_status' | 'system';
+  type: 'coupon' | 'promo' | 'order_status' | 'payment_rejected' | 'system';
   data?: any;
   target_condition: string; // 'all', 'new_customers', 'frequent', 'inactive_15d', 'high_ticket'
   is_global: boolean;
@@ -518,6 +518,83 @@ export class NotificationsService implements OnModuleInit {
         title: `🛵 Repartidor asignado ${orderNumber}`,
         body: `${riderLabel} fue asignado a tu orden ${orderNumber}. Pronto irá rumbo al comercio.`,
         data: customerPushData,
+      });
+    }
+  }
+
+  async notifyPaymentRejected(order: any, reason?: string, isAddition = false) {
+    if (!order) return;
+    const orderNumber = order.order_number || order.orderNumber || `#${(order.id || '').substring(0, 6)}`;
+    const customerUserId = this.extractCustomerUid(order);
+    const cleanReason = String(reason || '').replace(/\s+/g, ' ').trim();
+
+    const title = isAddition
+      ? `⚠️ Pago de Adición Rechazado ${orderNumber}`
+      : `⚠️ Pago Móvil Rechazado ${orderNumber}`;
+    const body = cleanReason
+      ? `Motivo: ${cleanReason}. Ingresa a tu pedido para rectificar la referencia.`
+      : 'El comercio no pudo confirmar tu transferencia. Ingresa a tu pedido para rectificar tu referencia.';
+
+    const collapseTag = isAddition
+      ? `addition_rejected_${String(order.id || orderNumber)}`
+      : `payment_rejected_${String(order.id || orderNumber)}`;
+
+    await this.create({
+      title,
+      body,
+      type: 'payment_rejected',
+      data: {
+        orderId: order.id,
+        orderNumber,
+        reason: cleanReason,
+        isAddition: String(isAddition),
+        customerUserId: customerUserId || '',
+        customerPhone: order.customer_phone || order.customerPhone || '',
+      }
+    });
+
+    const candidateCustomerIds = [
+      customerUserId,
+      order.user_id,
+      order.customer_id,
+      order.customerId,
+      order.customer_phone,
+      order.customerPhone,
+      order.customer_email,
+      order.customerEmail,
+    ];
+    const customerTokens = this.getTokensForCandidates(candidateCustomerIds);
+    const pushData: Record<string, string> = {
+      type: 'payment_rejected',
+      orderId: String(order.id || ''),
+      orderNumber: String(orderNumber),
+      reason: cleanReason,
+      isAddition: String(isAddition),
+      customerUserId: String(customerUserId || ''),
+      collapseTag,
+    };
+
+    if (customerTokens.length > 0) {
+      await this.sendPushNotification({
+        tokens: customerTokens,
+        title,
+        body,
+        data: pushData,
+      });
+    }
+
+    if (order.id) {
+      await this.sendTopicNotification(`order_${order.id}`, {
+        title,
+        body,
+        data: pushData,
+      });
+    }
+    if (orderNumber) {
+      await this.sendTopicNotification(`order_${orderNumber}`, {
+        title,
+        body,
+        data: pushData,
       });
     }
   }

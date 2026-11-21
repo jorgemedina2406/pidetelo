@@ -1005,6 +1005,14 @@ export class OrdersService {
     };
   }
 
+  private sanitizeTagText(raw?: string): string {
+    return String(raw || '')
+      .replace(/[\[\]|]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 240);
+  }
+
   async verifyPayment(
     id: string,
     payload: {
@@ -1013,8 +1021,10 @@ export class OrdersService {
       originBank?: string;
       verifiedBy?: string;
       autoSendToKitchen?: boolean;
+      rejectionReason?: string;
     },
   ) {
+    const cleanReason = this.sanitizeTagText(payload.rejectionReason);
     const updateData: any = {
       payment_status: payload.status,
       updated_at: new Date().toISOString(),
@@ -1046,7 +1056,9 @@ export class OrdersService {
           updateData.notes = cleanNotes.length > 0 ? `${auditTag} ${cleanNotes}` : auditTag;
         } else if (payload.status === 'rejected') {
           const rejectTag = `[PAGO_RECHAZADO${payload.reference ? ':Ref ' + payload.reference : ''}]`;
-          updateData.notes = cleanNotes.length > 0 ? `${rejectTag} ${cleanNotes}` : rejectTag;
+          const reasonTag = cleanReason ? `[PAGO_MOTIVO:${cleanReason}]` : '';
+          const combined = [rejectTag, reasonTag, cleanNotes].filter(Boolean).join(' ').trim();
+          updateData.notes = combined.length > 0 ? combined : null;
         } else if (payload.status === 'pending') {
           const originTag = originBank ? `[PAGO_ORIGEN:${originBank}]` : '';
           const combined = [originTag, cleanNotes].filter(Boolean).join(' ').trim();
@@ -1066,6 +1078,13 @@ export class OrdersService {
     if (error) {
       throw new InternalServerErrorException(`Error verificando pago: ${error.message}`);
     }
+
+    if (payload.status === 'rejected' && data) {
+      try {
+        this.notificationsService.notifyPaymentRejected(data, cleanReason, false);
+      } catch (_) {}
+    }
+
     return data;
   }
 
@@ -1077,6 +1096,7 @@ export class OrdersService {
       reference?: string;
       originBank?: string;
       verifiedBy?: string;
+      rejectionReason?: string;
     },
   ) {
     const order = await this.findById(id);
@@ -1084,6 +1104,7 @@ export class OrdersService {
       throw new NotFoundException(`Pedido '${id}' no encontrado`);
     }
 
+    const cleanReason = this.sanitizeTagText(payload.rejectionReason);
     const notes: string = String(order.notes || '');
     let targetRaw = payload.additionRaw ? String(payload.additionRaw).trim() : '';
 
@@ -1104,7 +1125,7 @@ export class OrdersService {
       throw new NotFoundException('No se encontró el registro de adicional especificado en este pedido.');
     }
 
-    let updatedTag = targetRaw;
+    let updatedTag = targetRaw.replace(/\s*\|\s*Motivo:\s*[^|\]]+/i, '');
 
     if (payload.reference && payload.reference.trim().length > 0) {
       const cleanRef = payload.reference.trim();
@@ -1139,6 +1160,10 @@ export class OrdersService {
       updatedTag = updatedTag.replace(/\]$/, ` | Estado: ${statusLabel}]`);
     }
 
+    if (payload.status === 'rejected' && cleanReason) {
+      updatedTag = updatedTag.replace(/\]$/, ` | Motivo: ${cleanReason}]`);
+    }
+
     const updatedNotes = notes.replace(targetRaw, updatedTag);
 
     const { error } = await this.supabase
@@ -1152,6 +1177,12 @@ export class OrdersService {
 
     if (error) {
       throw new InternalServerErrorException(`Error actualizando estado de adicional: ${error.message}`);
+    }
+
+    if (payload.status === 'rejected') {
+      try {
+        this.notificationsService.notifyPaymentRejected(order, cleanReason, true);
+      } catch (_) {}
     }
 
     return this.findById(order.id);

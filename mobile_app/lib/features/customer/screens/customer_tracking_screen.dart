@@ -24,6 +24,7 @@ class _ParsedOrderAddition {
   final String originBank;
   final String reference;
   final String status; // 'verified' | 'rejected' | 'pending' | 'cash'
+  final String rejectionReason;
 
   const _ParsedOrderAddition({
     required this.index,
@@ -35,6 +36,7 @@ class _ParsedOrderAddition {
     required this.originBank,
     required this.reference,
     required this.status,
+    this.rejectionReason = '',
   });
 }
 
@@ -397,6 +399,7 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
       String originBank = '';
       String reference = '';
       String status = '';
+      String rejectionReason = '';
 
       for (int pIdx = 1; pIdx < parts.length; pIdx++) {
         final seg = parts[pIdx];
@@ -424,6 +427,10 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
         } else if (segLower.startsWith('ref:')) {
           reference = seg
               .replaceFirst(RegExp(r'^Ref:\s*', caseSensitive: false), '')
+              .trim();
+        } else if (segLower.startsWith('motivo:')) {
+          rejectionReason = seg
+              .replaceFirst(RegExp(r'^Motivo:\s*', caseSensitive: false), '')
               .trim();
         } else if (segLower.startsWith('estado:')) {
           final stVal = seg
@@ -468,10 +475,17 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
           originBank: originBank,
           reference: reference,
           status: status,
+          rejectionReason: rejectionReason,
         ),
       );
     }
     return result;
+  }
+
+  String _extractPaymentRejectionReason(String? notes) {
+    if (notes == null || notes.trim().isEmpty) return '';
+    final m = RegExp(r'\[PAGO_MOTIVO:([^\]]+)\]').firstMatch(notes);
+    return m?.group(1)?.trim() ?? '';
   }
 
   List<CartItem> _parseOrderItemsFromRows(dynamic rawItems) {
@@ -1008,6 +1022,8 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
 
   void _showEditPaymentRefDialog() {
     final textCtrl = TextEditingController(text: _order.paymentReference);
+    final bankCtrl = TextEditingController(text: _order.paymentOriginBank);
+    final rejectionReason = _extractPaymentRejectionReason(_order.notes);
     bool isSaving = false;
 
     showDialog(
@@ -1018,7 +1034,7 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: Text(
-            'Corregir Referencia de Pago',
+            'Rectificar Referencia de Pago',
             style: GoogleFonts.outfit(
                 color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
           ),
@@ -1026,6 +1042,27 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (rejectionReason.isNotEmpty) ...[
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF881337).withOpacity(0.55),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                        color: const Color(0xFFF43F5E).withOpacity(0.5)),
+                  ),
+                  child: Text(
+                    'Motivo del comercio: $rejectionReason',
+                    style: GoogleFonts.outfit(
+                      color: const Color(0xFFFECDD3),
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
               Text(
                 'Ingresa los dígitos correctos del comprobante bancario emitido a ${_order.merchantName}:',
                 style: GoogleFonts.outfit(
@@ -1038,7 +1075,33 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                 style: GoogleFonts.outfit(
                     color: Colors.white, fontWeight: FontWeight.w600),
                 decoration: InputDecoration(
+                  labelText: 'Nueva Referencia (mín. 4 dígitos)',
+                  labelStyle:
+                      GoogleFonts.outfit(color: Colors.white60, fontSize: 12),
                   hintText: 'Ej: 987654',
+                  hintStyle: GoogleFonts.outfit(color: Colors.white38),
+                  filled: true,
+                  fillColor: const Color(0xFF0F172A),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Colors.white24)),
+                  enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Colors.white24)),
+                  focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppTheme.primary)),
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: bankCtrl,
+                style: GoogleFonts.outfit(color: Colors.white, fontSize: 13),
+                decoration: InputDecoration(
+                  labelText: 'Banco Emisor (opcional)',
+                  labelStyle:
+                      GoogleFonts.outfit(color: Colors.white60, fontSize: 12),
+                  hintText: 'Ej: Banesco, BDV, Mercantil',
                   hintStyle: GoogleFonts.outfit(color: Colors.white38),
                   filled: true,
                   fillColor: const Color(0xFF0F172A),
@@ -1066,44 +1129,70 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                   ? null
                   : () async {
                       final newRef = textCtrl.text.trim();
-                      if (newRef.isEmpty) return;
+                      final newBank = bankCtrl.text.trim();
+                      if (newRef.length < 4) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                                'Ingresa una referencia válida de al menos 4 dígitos.'),
+                            backgroundColor: Colors.amber,
+                          ),
+                        );
+                        return;
+                      }
                       setDialogState(() => isSaving = true);
-                      try {
-                        final cleanNum =
-                            _order.orderNumber.replaceAll('#', '').trim();
-                        final isUuid = RegExp(
-                          r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
-                        ).hasMatch(_order.id);
-                        final filter = isUuid
-                            ? 'id.eq.${_order.id},order_number.eq.$cleanNum,order_number.eq.#$cleanNum'
-                            : 'order_number.eq.$cleanNum,order_number.eq.#$cleanNum';
-                        await Supabase.instance.client.from('orders').update({
-                          'payment_reference': newRef,
-                          'payment_status': 'pending',
-                        }).or(filter);
+                      final ok =
+                          await ApiService().resendInitialPaymentReference(
+                        orderIdOrNumber: _order.id,
+                        orderNumber: _order.orderNumber,
+                        newReference: newRef,
+                        originBank: newBank,
+                      );
+                      if (!mounted) return;
+                      if (ok) {
+                        final cleanedLocalNotes = (_order.notes ?? '')
+                            .replaceAll(
+                              RegExp(r'\[PAGO_[A-Z_]+(?::[^\]]*)?\]\s*',
+                                  caseSensitive: false),
+                              '',
+                            )
+                            .trim();
+                        final resolvedBank = newBank.isNotEmpty
+                            ? newBank
+                            : _order.paymentOriginBank;
+                        final updatedLocalNotes = [
+                          if (resolvedBank.isNotEmpty)
+                            '[PAGO_ORIGEN:$resolvedBank]',
+                          if (cleanedLocalNotes.isNotEmpty) cleanedLocalNotes,
+                        ].join(' ').trim();
 
-                        if (mounted) {
-                          setState(() {
-                            _order = _order.copyWith(
-                              paymentStatus: 'pending',
-                              paymentReference: newRef,
-                            );
-                          });
-                          Navigator.pop(ctx);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                  '¡Referencia actualizada! El comercio la validará en breve.'),
-                              backgroundColor: Color(0xFF10B981),
-                            ),
+                        setState(() {
+                          _order = _order.copyWith(
+                            paymentStatus: 'pending',
+                            paymentReference: newRef,
+                            paymentOriginBank: resolvedBank,
+                            notes: updatedLocalNotes.isNotEmpty
+                                ? updatedLocalNotes
+                                : '',
                           );
-                        }
-                      } catch (e) {
+                        });
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                                '¡Referencia actualizada! El comercio la validará en breve.'),
+                            backgroundColor: Color(0xFF10B981),
+                          ),
+                        );
+                        _refreshOrderStatus();
+                      } else {
                         setDialogState(() => isSaving = false);
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                              content: Text('Error al actualizar: $e'),
-                              backgroundColor: Colors.red),
+                          const SnackBar(
+                            content: Text(
+                                'No se pudo actualizar la referencia. Intenta de nuevo.'),
+                            backgroundColor: Colors.red,
+                          ),
                         );
                       }
                     },
@@ -1119,7 +1208,7 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                       height: 16,
                       child: CircularProgressIndicator(
                           strokeWidth: 2, color: Colors.white))
-                  : Text('Guardar y Notificar',
+                  : Text('Rectificar y Reenviar',
                       style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
             ),
           ],
@@ -1149,6 +1238,27 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (addition.rejectionReason.isNotEmpty) ...[
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF881337).withOpacity(0.55),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                        color: const Color(0xFFF43F5E).withOpacity(0.5)),
+                  ),
+                  child: Text(
+                    'Motivo del comercio: ${addition.rejectionReason}',
+                    style: GoogleFonts.outfit(
+                      color: const Color(0xFFFECDD3),
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
               Text(
                 '${addition.itemsSummary} (+\$${addition.amountUsd.toStringAsFixed(2)}${addition.amountBs != null ? " / Bs. ${addition.amountBs!.toStringAsFixed(2)}" : ""})',
                 style: GoogleFonts.outfit(
@@ -1656,95 +1766,130 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                   const SizedBox(height: 12),
 
                   if (_order.paymentStatus == 'rejected') ...[
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 14),
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF881337).withOpacity(0.92),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                            color: const Color(0xFFF43F5E).withOpacity(0.4)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
+                    Builder(
+                      builder: (_) {
+                        final rejectionReason =
+                            _extractPaymentRejectionReason(_order.notes);
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 14),
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF881337).withOpacity(0.92),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                                color:
+                                    const Color(0xFFF43F5E).withOpacity(0.4)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Container(
-                                padding: const EdgeInsets.all(6),
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFFE11D48),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(Icons.warning_amber_rounded,
-                                    color: Colors.white, size: 16),
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFFE11D48),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                        Icons.warning_amber_rounded,
+                                        color: Colors.white,
+                                        size: 16),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'Pago Móvil no verificado / En pausa',
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'Pago Móvil no verificado / En pausa',
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.white,
+                              const SizedBox(height: 8),
+                              Text(
+                                'El comercio no pudo confirmar la transferencia bancaria (${_order.paymentReference.isNotEmpty ? "Ref: #" + _order.paymentReference : "sin referencia"}). Para iniciar la preparación en cocina, rectifica la referencia o envía tu capture.',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 11,
+                                  color: const Color(0xFFFECDD3),
+                                  height: 1.3,
+                                ),
+                              ),
+                              if (rejectionReason.isNotEmpty) ...[
+                                const SizedBox(height: 8),
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withOpacity(0.24),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                        color: const Color(0xFFFDA4AF)
+                                            .withOpacity(0.45)),
+                                  ),
+                                  child: Text(
+                                    'Motivo del comercio: $rejectionReason',
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                    ),
                                   ),
                                 ),
+                              ],
+                              const SizedBox(height: 10),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: ElevatedButton.icon(
+                                      onPressed: _launchWhatsAppPaymentIssue,
+                                      icon: const Icon(Icons.chat_rounded,
+                                          size: 15),
+                                      label:
+                                          const Text('Enviar Capture WhatsApp'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor:
+                                            const Color(0xFF22C55E),
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 8),
+                                        textStyle: GoogleFonts.outfit(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold),
+                                        shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(10)),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  OutlinedButton.icon(
+                                    onPressed: _showEditPaymentRefDialog,
+                                    icon: const Icon(Icons.edit, size: 14),
+                                    label: const Text('Rectificar Pago'),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: Colors.white,
+                                      side: const BorderSide(
+                                          color: Colors.white30),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 10, vertical: 8),
+                                      textStyle: GoogleFonts.outfit(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold),
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10)),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'El comercio no pudo confirmar la transferencia bancaria (${_order.paymentReference.isNotEmpty ? "Ref: #" + _order.paymentReference : "sin referencia"}). Para iniciar la preparación en cocina, reenvía el comprobante.',
-                            style: GoogleFonts.outfit(
-                              fontSize: 11,
-                              color: const Color(0xFFFECDD3),
-                              height: 1.3,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  onPressed: _launchWhatsAppPaymentIssue,
-                                  icon:
-                                      const Icon(Icons.chat_rounded, size: 15),
-                                  label: const Text('Enviar Capture WhatsApp'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF22C55E),
-                                    foregroundColor: Colors.white,
-                                    padding:
-                                        const EdgeInsets.symmetric(vertical: 8),
-                                    textStyle: GoogleFonts.outfit(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold),
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(10)),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              OutlinedButton.icon(
-                                onPressed: _showEditPaymentRefDialog,
-                                icon: const Icon(Icons.edit, size: 14),
-                                label: const Text('Corregir Ref'),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: Colors.white,
-                                  side: const BorderSide(color: Colors.white30),
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 10, vertical: 8),
-                                  textStyle: GoogleFonts.outfit(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold),
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10)),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                        );
+                      },
                     ),
                   ],
 
@@ -1788,6 +1933,28 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                                       fontSize: 11.5,
                                       color: const Color(0xFFFECDD3)),
                                 ),
+                                if (rejectedAdd.rejectionReason.isNotEmpty) ...[
+                                  const SizedBox(height: 8),
+                                  Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(9),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withOpacity(0.24),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                          color: const Color(0xFFFDA4AF)
+                                              .withOpacity(0.45)),
+                                    ),
+                                    child: Text(
+                                      'Motivo del comercio: ${rejectedAdd.rejectionReason}',
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                                 const SizedBox(height: 10),
                                 SizedBox(
                                   width: double.infinity,
@@ -1797,7 +1964,7 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                                     icon: const Icon(Icons.edit_rounded,
                                         size: 15),
                                     label: const Text(
-                                        'Corregir referencia del adicional'),
+                                        'Rectificar referencia del adicional'),
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: AppTheme.primary,
                                       foregroundColor: Colors.white,
@@ -2784,6 +2951,28 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                                           ),
                                         ),
                                         if (add.status == 'rejected') ...[
+                                          if (add.rejectionReason.isNotEmpty) ...[
+                                            const SizedBox(height: 6),
+                                            Container(
+                                              width: double.infinity,
+                                              padding: const EdgeInsets.all(8),
+                                              decoration: BoxDecoration(
+                                                color: Colors.black.withOpacity(0.22),
+                                                borderRadius: BorderRadius.circular(8),
+                                                border: Border.all(
+                                                    color: const Color(0xFFFDA4AF)
+                                                        .withOpacity(0.45)),
+                                              ),
+                                              child: Text(
+                                                'Motivo del comercio: ${add.rejectionReason}',
+                                                style: GoogleFonts.outfit(
+                                                  fontSize: 10.5,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: const Color(0xFFFECDD3),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
                                           const SizedBox(height: 8),
                                           SizedBox(
                                             width: double.infinity,
@@ -2795,7 +2984,7 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
                                                   Icons.edit_rounded,
                                                   size: 14),
                                               label: const Text(
-                                                  'Corregir referencia del adicional'),
+                                                  'Rectificar referencia del adicional'),
                                               style: ElevatedButton.styleFrom(
                                                 backgroundColor:
                                                     AppTheme.primary,

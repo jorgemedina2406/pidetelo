@@ -78,26 +78,39 @@
                     }.
                     Tu pedido <strong>no entrará a preparación en cocina</strong> hasta validar los fondos.
                   </p>
+                  @if (ord.paymentRejectionReason) {
+                    <div class="mt-2 p-2.5 rounded-xl bg-red-600/20 border border-red-500/40 text-xs text-red-950 dark:text-red-100">
+                      <span class="font-black uppercase text-[10px] tracking-wider block text-red-700 dark:text-red-300 mb-0.5">
+                        Motivo indicado por el comercio:
+                      </span>
+                      <span class="font-semibold">{{ ord.paymentRejectionReason }}</span>
+                    </div>
+                  }
                 </div>
               </div>
 
-              <!-- Formulario de Reenvío de Referencia -->
+              <!-- Formulario de Reenvío / Rectificación de Referencia -->
               <div class="pt-2.5 border-t border-red-500/20 space-y-2.5">
                 <label class="block text-[11px] font-bold text-slate-800 dark:text-slate-200">
-                  ¿Ya realizaste el pago? Reenvía el número de referencia correcto:
+                  Rectifica tu referencia bancaria y banco emisor para enviarlo nuevamente a verificación:
                 </label>
                 <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                   <input type="text"
                          [ngModel]="newPaymentRefInput()"
                          (ngModelChange)="newPaymentRefInput.set($event)"
-                         placeholder="Ej: 849201 (Referencia Bancaria)"
+                         placeholder="Nueva Referencia (mín. 4 dígitos)"
                          class="flex-1 min-w-0 text-xs font-mono font-bold rounded-xl border border-red-300 dark:border-red-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 focus:ring-2 focus:ring-red-500" />
+                  <input type="text"
+                         [ngModel]="newPaymentOriginBankInput()"
+                         (ngModelChange)="newPaymentOriginBankInput.set($event)"
+                         placeholder="Banco Emisor (opcional)"
+                         class="sm:w-44 text-xs font-semibold rounded-xl border border-red-300 dark:border-red-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white p-2.5 focus:ring-2 focus:ring-red-500" />
                   
                   <button (click)="submitCorrectedPaymentRef(ord)"
-                          [disabled]="!newPaymentRefInput().trim() || isSubmittingPaymentRef()"
+                          [disabled]="newPaymentRefInput().trim().length < 4 || isSubmittingPaymentRef()"
                           class="px-4 py-2.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-black text-xs rounded-xl shadow transition cursor-pointer flex items-center justify-center gap-1.5 shrink-0 whitespace-nowrap">
                     <app-icon name="check" [size]="14"></app-icon>
-                    <span>{{ isSubmittingPaymentRef() ? 'Enviando...' : 'Reenviar Referencia' }}</span>
+                    <span>{{ isSubmittingPaymentRef() ? 'Enviando...' : 'Rectificar y Reenviar' }}</span>
                   </button>
                 </div>
 
@@ -720,8 +733,13 @@
                               ✓ Pago Móvil adicional confirmado (Ref: {{ add.reference }}@if (add.originBank) { • {{ add.originBank }}})
                             </div>
                           } @else if (add.status === 'rejected') {
-                            <div class="text-[10px] font-bold text-rose-600 dark:text-rose-400 mt-0.5">
-                              ✕ Pago Móvil adicional rechazado (Ref: {{ add.reference || 'N/A' }}). Verifica tu comprobante y reenvía la referencia correcta:
+                            <div class="text-[10px] font-bold text-rose-600 dark:text-rose-400 mt-0.5 space-y-1">
+                              <div>✕ Pago Móvil adicional rechazado (Ref: {{ add.reference || 'N/A' }}). Rectifica y reenvía la referencia correcta:</div>
+                              @if (add.rejectionReason) {
+                                <div class="p-1.5 rounded bg-rose-500/15 border border-rose-500/30 text-rose-800 dark:text-rose-200 font-semibold">
+                                  Motivo del comercio: {{ add.rejectionReason }}
+                                </div>
+                              }
                             </div>
                           } @else {
                             <div class="text-[10px] font-medium text-amber-700 dark:text-amber-300 mt-0.5">
@@ -738,17 +756,22 @@
                       </div>
 
                       @if (add.status === 'rejected') {
-                        <div class="flex items-center gap-2 pt-1 border-t border-rose-500/20">
+                        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1.5 border-t border-rose-500/20">
                           <input type="text"
                                  [ngModel]="resendAdditionRefMap()[add.raw] || ''"
                                  (ngModelChange)="setResendAdditionRef(add.raw, $event)"
                                  placeholder="Nueva Ref. bancaria (mín. 4 dígitos)"
                                  class="flex-1 px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-rose-300 dark:border-rose-700 text-xs font-mono font-bold text-slate-900 dark:text-white" />
+                          <input type="text"
+                                 [ngModel]="resendAdditionBankMap()[add.raw] || ''"
+                                 (ngModelChange)="setResendAdditionBank(add.raw, $event)"
+                                 placeholder="Banco (opcional)"
+                                 class="sm:w-32 px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-rose-300 dark:border-rose-700 text-xs font-semibold text-slate-900 dark:text-white" />
                           <button type="button"
                                   (click)="resendRejectedAdditionRef(add)"
-                                  [disabled]="isResendingAdditionRef()"
+                                  [disabled]="(resendAdditionRefMap()[add.raw] || '').trim().length < 4 || isResendingAdditionRef()"
                                   class="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-black text-[10.5px] cursor-pointer shrink-0">
-                            Reenviar Referencia
+                            Rectificar y Reenviar
                           </button>
                         </div>
                       }

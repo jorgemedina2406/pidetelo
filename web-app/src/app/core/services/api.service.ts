@@ -612,7 +612,7 @@ export class ApiService {
     );
   }
 
-  verifyOrderPayment(orderId: string, payload: { status: 'verified' | 'rejected' | 'pending'; reference?: string; originBank?: string; autoSendToKitchen?: boolean }): Observable<any> {
+  verifyOrderPayment(orderId: string, payload: { status: 'verified' | 'rejected' | 'pending'; reference?: string; originBank?: string; autoSendToKitchen?: boolean; rejectionReason?: string }): Observable<any> {
     return this.http.patch<any>(`${this.baseUrl}/orders/${orderId}/verify-payment`, payload).pipe(
       catchError(err => {
         console.error(`[ApiService] Error verificando pago de pedido '${orderId}':`, err);
@@ -1953,6 +1953,7 @@ export class ApiService {
     cleanNotes = cleanNotes
       .replace(/\[RIDER_(?:ACCEPTED|AT_MERCHANT|PICKED_UP|ON_THE_WAY)\]\s*/g, '')
       .replace(/\[RIDER_REJECTED(?::[^\]]+)?\]\s*/g, '')
+      .replace(/\[PAGO_MOTIVO:[^\]]*\]\s*/g, '')
       .trim();
 
     const fxMatch = rawNotes.match(/\[FX:rate=([0-9.]+)\|total_bs=([0-9.]+)(?:\|delivery_bs=([0-9.]+))?(?:\|subtotal_bs=([0-9.]+))?\]/);
@@ -1996,6 +1997,7 @@ export class ApiService {
       paymentStatus: (row.payment_status === 'pending' ? 'pending' : (row.payment_status === 'verified' || rawNotes.includes('[PAGO_VERIFICADO') ? 'verified' : (row.payment_status === 'rejected' || rawNotes.includes('[PAGO_RECHAZADO') ? 'rejected' : ((row.payment_method === 'mobile_transfer' || row.payment_method === 'pago_movil') ? 'pending' : 'not_required')))),
       paymentReference: row.payment_reference || (rawNotes.match(/\[PAGO_VERIFICADO:Ref\s*([^ \]]+)/)?.[1] || undefined),
       paymentOriginBank: row.payment_origin_bank || (rawNotes.match(/\[PAGO_ORIGEN:([^\]]+)\]/)?.[1] || rawNotes.match(/\[PAGO_VERIFICADO:[^)]*\(([^)]+)\)/)?.[1] || undefined),
+      paymentRejectionReason: rawNotes.match(/\[PAGO_MOTIVO:([^\]]+)\]/)?.[1]?.trim() || undefined,
       paymentAmountBs: row.payment_amount_bs ? Number(row.payment_amount_bs) : undefined,
       customer: {
         name: row.customer_name,
@@ -2886,6 +2888,7 @@ export class ApiService {
       reference?: string;
       originBank?: string;
       verifiedBy?: string;
+      rejectionReason?: string;
     }
   ): Observable<any> {
     return this.http.patch<any>(this.baseUrl + '/orders/' + orderId + '/verify-addition', payload);

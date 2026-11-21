@@ -951,6 +951,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
   readonly paymentOriginBankInput = signal<string>('');
   readonly isProcessingVerification = signal<boolean>(false);
   readonly isRejectPaymentConfirmOpen = signal<boolean>(false);
+  readonly rejectPaymentReasonInput = signal<string>('');
 
   // --- VERIFICACIÓN Y AUDITORÍA DE PAGO DE PEDIDO ADICIONAL ---
   readonly verifyingAdditionContext = signal<{ order: Order; addition: OrderAddition } | null>(null);
@@ -958,6 +959,14 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
   readonly additionOriginBankInput = signal<string>('');
   readonly isProcessingAdditionVerification = signal<boolean>(false);
   readonly isRejectAdditionConfirmOpen = signal<boolean>(false);
+  readonly rejectAdditionReasonInput = signal<string>('');
+
+  readonly paymentRejectionPresets: string[] = [
+    'El pago no cayó en la cuenta',
+    'Monto incompleto / no coincide',
+    'Referencia incorrecta o no encontrada',
+    'Transferencia a cuenta equivocada'
+  ];
 
   // Modal y gestión de Colaboradores & Encargados de Sucursal
   readonly isUserModalOpen = signal(false);
@@ -1640,6 +1649,16 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         this.alertedLifecycleKeys.add(dedupKey);
         this.triggerRiderRejectionAlert(orderNum, rejectedName, params.id);
       }
+    }
+
+    if (prev.paymentStatus === 'rejected' && params.paymentStatus === 'pending') {
+      this.emitLifecycleNotification(`${params.id}:payment_rectified`, {
+        toastType: 'info',
+        title: `📲 Pago rectificado ${orderNum}`,
+        message: `${customer} reenvió una nueva referencia bancaria para verificar.`,
+        desktopTag: `${replaceKey}-payment-rectified-${Date.now()}`,
+        replaceKey,
+      });
     }
   }
 
@@ -2415,6 +2434,9 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
                         ? String(resolvedDriverName).trim()
                         : (this.resolveRiderDisplayName(String(resolvedDriverId), existingOrder.driverName) || existingOrder.driverName))
                     : undefined;
+                  const resolvedPaymentStatus = (newRow.payment_status ?? newRow.paymentStatus ?? existingOrder.paymentStatus) as any;
+                  const resolvedPaymentRef = (newRow.payment_reference ?? newRow.paymentReference ?? existingOrder.paymentReference) as any;
+                  const resolvedPaymentReason = resolvedNotes.match(/\[PAGO_MOTIVO:([^\]]+)\]/)?.[1]?.trim() || undefined;
                   this.orders.update(list =>
                     list.map(o => o.id === newRow.id ? {
                       ...o,
@@ -2422,6 +2444,9 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
                       driverId: resolvedDriverId ? String(resolvedDriverId) : undefined,
                       driverName: displayDriverName,
                       notes: resolvedNotes,
+                      paymentStatus: resolvedPaymentStatus,
+                      paymentReference: resolvedPaymentRef,
+                      paymentRejectionReason: resolvedPaymentStatus === 'rejected' ? resolvedPaymentReason : undefined,
                       riderAccepted: liveRiderAccepted,
                       riderRejected: liveRiderRejected,
                     } : o)
@@ -3520,6 +3545,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     this.paymentOriginBankInput.set('');
     this.isProcessingVerification.set(false);
     this.isRejectPaymentConfirmOpen.set(false);
+    this.rejectPaymentReasonInput.set('');
   }
 
   confirmPaymentAndSendToKitchen(sendToKitchen: boolean = true): void {
@@ -3574,11 +3600,13 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
   }
 
   openRejectPaymentConfirm(): void {
+    this.rejectPaymentReasonInput.set('');
     this.isRejectPaymentConfirmOpen.set(true);
   }
 
   cancelRejectPaymentConfirm(): void {
     this.isRejectPaymentConfirmOpen.set(false);
+    this.rejectPaymentReasonInput.set('');
   }
 
   getOrderBaseTotal(order: Order | null | undefined): number {
@@ -3634,14 +3662,17 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     this.additionOriginBankInput.set('');
     this.isProcessingAdditionVerification.set(false);
     this.isRejectAdditionConfirmOpen.set(false);
+    this.rejectAdditionReasonInput.set('');
   }
 
   openRejectAdditionConfirm(): void {
+    this.rejectAdditionReasonInput.set('');
     this.isRejectAdditionConfirmOpen.set(true);
   }
 
   cancelRejectAdditionConfirm(): void {
     this.isRejectAdditionConfirmOpen.set(false);
+    this.rejectAdditionReasonInput.set('');
   }
 
   private async persistAdditionStatus(
@@ -3649,7 +3680,8 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     addition: OrderAddition,
     status: 'verified' | 'rejected',
     reference?: string,
-    originBank?: string
+    originBank?: string,
+    rejectionReason?: string
   ): Promise<boolean> {
     if (!order?.notes) return false;
 
@@ -3658,7 +3690,8 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       status,
       reference,
       originBank,
-      verifiedBy
+      verifiedBy,
+      rejectionReason
     });
 
     const newPendingSig = this.getPendingMobileSignature(updatedNotes);
@@ -3678,7 +3711,8 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
           status,
           reference: reference?.trim() || undefined,
           originBank: originBank?.trim() || undefined,
-          verifiedBy
+          verifiedBy,
+          rejectionReason: rejectionReason?.trim() || undefined
         })
       );
       persisted = true;
@@ -3758,10 +3792,16 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     const ctx = this.verifyingAdditionContext();
     if (!ctx) return;
 
+    const reason = this.rejectAdditionReasonInput().trim();
+    if (reason.length < 3) {
+      this.showToast('warning', 'Motivo requerido', 'Indica un breve motivo del rechazo para que el cliente sepa cómo rectificar.');
+      return;
+    }
+
     this.isProcessingAdditionVerification.set(true);
     const ref = this.additionRefInput().trim();
     const bank = this.additionOriginBankInput().trim();
-    const ok = await this.persistAdditionStatus(ctx.order, ctx.addition, 'rejected', ref, bank);
+    const ok = await this.persistAdditionStatus(ctx.order, ctx.addition, 'rejected', ref, bank, reason);
     this.isProcessingAdditionVerification.set(false);
     this.isRejectAdditionConfirmOpen.set(false);
 
@@ -3769,7 +3809,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       this.showToast(
         'info',
         'Pago Adicional Rechazado',
-        `Se notificó al cliente de la orden ${this.formatOrderNumber(ctx.order.orderNumber)} para que reenvíe la referencia.`
+        `Se notificó al cliente de la orden ${this.formatOrderNumber(ctx.order.orderNumber)} con el motivo para rectificar.`
       );
       this.closeAdditionVerificationModal();
     } else {
@@ -3835,33 +3875,65 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     const order = this.verifyingPaymentOrder();
     if (!order) return;
 
+    const reason = this.rejectPaymentReasonInput().trim();
+    if (reason.length < 3) {
+      this.showToast(
+        'warning',
+        'Motivo requerido',
+        'Indica un breve motivo del rechazo para que el cliente sepa cómo rectificar.'
+      );
+      return;
+    }
+
     this.isProcessingVerification.set(true);
+    this.clearLifecycleDedupPrefixes(order.id, ['payment_rectified']);
 
     this.orders.update(list =>
       list.map(o => o.id === order.id ? {
         ...o,
         paymentStatus: 'rejected',
+        paymentRejectionReason: reason,
         updatedAt: new Date().toISOString()
       } : o)
     );
 
+    const prevLifecycle = this.knownOrderLifecycleMap.get(order.id);
+    if (prevLifecycle) {
+      this.knownOrderLifecycleMap.set(order.id, {
+        ...prevLifecycle,
+        paymentStatus: 'rejected'
+      });
+    }
+
     this.api.verifyOrderPayment(order.id, {
       status: 'rejected',
       reference: this.paymentRefInput().trim(),
+      rejectionReason: reason,
       autoSendToKitchen: false
     }).subscribe({
       next: () => {
         this.isProcessingVerification.set(false);
         this.isRejectPaymentConfirmOpen.set(false);
+        this.showToast(
+          'info',
+          'Pago Rechazado',
+          `Se notificó al cliente el motivo para rectificar el pedido ${this.formatOrderNumber(order.orderNumber)}.`
+        );
         this.closePaymentVerificationModal();
       },
       error: () => {
         this.supabase.verifyOrderPayment(order.id, {
           status: 'rejected',
-          reference: this.paymentRefInput().trim()
+          reference: this.paymentRefInput().trim(),
+          rejectionReason: reason
         }).finally(() => {
           this.isProcessingVerification.set(false);
           this.isRejectPaymentConfirmOpen.set(false);
+          this.showToast(
+            'info',
+            'Pago Rechazado',
+            `Se notificó al cliente el motivo para rectificar el pedido ${this.formatOrderNumber(order.orderNumber)}.`
+          );
           this.closePaymentVerificationModal();
         });
       }

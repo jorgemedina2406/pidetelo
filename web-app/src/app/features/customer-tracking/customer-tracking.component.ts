@@ -60,6 +60,7 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
 
   // Corrección y Reenvío de Pago Móvil Rechazado
   readonly newPaymentRefInput = signal<string>('');
+  readonly newPaymentOriginBankInput = signal<string>('');
   readonly isSubmittingPaymentRef = signal<boolean>(false);
   readonly paymentRefUpdatedSuccess = signal<boolean>(false);
 
@@ -87,6 +88,7 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
   readonly appendPaymentRef = signal<string>('');
   readonly appendOriginBank = signal<string>('');
   readonly resendAdditionRefMap = signal<Record<string, string>>({});
+  readonly resendAdditionBankMap = signal<Record<string, string>>({});
   readonly isResendingAdditionRef = signal<boolean>(false);
   readonly branchCredentials = signal<any | null>(null);
 
@@ -449,10 +451,15 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
     this.resendAdditionRefMap.update(m => ({ ...m, [raw]: val }));
   }
 
+  setResendAdditionBank(raw: string, val: string): void {
+    this.resendAdditionBankMap.update(m => ({ ...m, [raw]: val }));
+  }
+
   async resendRejectedAdditionRef(addition: OrderAddition): Promise<void> {
     const ord = this.order();
     if (!ord) return;
     const newRef = (this.resendAdditionRefMap()[addition.raw] || '').trim();
+    const originBank = (this.resendAdditionBankMap()[addition.raw] || '').trim();
     if (newRef.length < 4) {
       alert('Por favor ingresa una referencia bancaria válida (mínimo 4 dígitos).');
       return;
@@ -466,7 +473,8 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
         this.api.verifyAdditionPayment(ord.id || ord.orderNumber, {
           additionRaw: addition.raw,
           status: 'pending',
-          reference: newRef
+          reference: newRef,
+          originBank: originBank || undefined
         })
       );
       updated = true;
@@ -479,7 +487,8 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
       if (client && ord.notes) {
         const updatedNotes = updateAdditionTagInNotes(ord.notes, addition.raw, {
           status: 'pending',
-          reference: newRef
+          reference: newRef,
+          originBank: originBank || undefined
         });
         const { error } = await client
           .from('orders')
@@ -494,6 +503,11 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
     this.isResendingAdditionRef.set(false);
     if (updated) {
       this.resendAdditionRefMap.update(m => {
+        const next = { ...m };
+        delete next[addition.raw];
+        return next;
+      });
+      this.resendAdditionBankMap.update(m => {
         const next = { ...m };
         delete next[addition.raw];
         return next;
@@ -564,14 +578,19 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
 
   submitCorrectedPaymentRef(ord: Order): void {
     const ref = this.newPaymentRefInput().trim();
-    if (!ref) return;
+    const originBank = this.newPaymentOriginBankInput().trim();
+    if (ref.length < 4) {
+      alert('Por favor ingresa una referencia bancaria válida (mínimo 4 dígitos).');
+      return;
+    }
 
     this.isSubmittingPaymentRef.set(true);
 
     // Sincronizar API Backend primero; solo usar Supabase directo como fallback (evita sobrescritura concurrente de notas/PIN)
     this.api.verifyOrderPayment(ord.id, {
       status: 'pending',
-      reference: ref
+      reference: ref,
+      originBank: originBank || undefined
     }).subscribe({
       next: () => {
         this.isSubmittingPaymentRef.set(false);
@@ -579,25 +598,32 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
         this.order.update(curr => curr ? {
           ...curr,
           paymentStatus: 'pending',
-          paymentReference: ref
+          paymentReference: ref,
+          paymentOriginBank: originBank || curr.paymentOriginBank,
+          paymentRejectionReason: undefined
         } : null);
         this.newPaymentRefInput.set('');
+        this.newPaymentOriginBankInput.set('');
         setTimeout(() => this.paymentRefUpdatedSuccess.set(false), 5000);
       },
       error: (err) => {
         console.warn('[Tracking] Error reenviando referencia a API, usando fallback Supabase:', err);
         this.supabase.verifyOrderPayment(ord.id, {
           status: 'pending',
-          reference: ref
+          reference: ref,
+          originBank: originBank || undefined
         }).finally(() => {
           this.isSubmittingPaymentRef.set(false);
           this.order.update(curr => curr ? {
             ...curr,
             paymentStatus: 'pending',
-            paymentReference: ref
+            paymentReference: ref,
+            paymentOriginBank: originBank || curr.paymentOriginBank,
+            paymentRejectionReason: undefined
           } : null);
           this.paymentRefUpdatedSuccess.set(true);
           this.newPaymentRefInput.set('');
+          this.newPaymentOriginBankInput.set('');
           setTimeout(() => this.paymentRefUpdatedSuccess.set(false), 5000);
         });
       }
