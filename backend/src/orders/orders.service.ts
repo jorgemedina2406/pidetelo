@@ -426,18 +426,25 @@ export class OrdersService {
   }
 
   async updateStatus(id: string, status: string) {
-    let dbStatus = status;
+    const semanticStatus = String(status || '').trim().toLowerCase();
+    let dbStatus = semanticStatus;
     let riderTag = '';
+    let shouldCleanRiderTags = false;
 
-    if (status === 'assigned_driver') {
+    if (semanticStatus === 'assigned_driver' || semanticStatus === 'rider_accepted') {
       dbStatus = 'in_kitchen';
       riderTag = '[RIDER_ACCEPTED]';
-    } else if (status === 'at_merchant') {
+    } else if (semanticStatus === 'at_merchant') {
       dbStatus = 'in_kitchen';
       riderTag = '[RIDER_AT_MERCHANT]';
-    } else if (status === 'on_the_way') {
+    } else if (semanticStatus === 'picked_up') {
+      dbStatus = 'in_kitchen';
+      riderTag = '[RIDER_PICKED_UP]';
+    } else if (semanticStatus === 'on_the_way' || semanticStatus === 'on_way' || semanticStatus === 'dispatched') {
       dbStatus = 'on_the_way';
       riderTag = '[RIDER_ON_THE_WAY]';
+    } else if (semanticStatus === 'delivered' || semanticStatus === 'cancelled') {
+      shouldCleanRiderTags = true;
     }
 
     const updatePayload: any = {
@@ -445,7 +452,7 @@ export class OrdersService {
       updated_at: new Date().toISOString(),
     };
 
-    if (riderTag) {
+    if (riderTag || shouldCleanRiderTags) {
       try {
         const { data: currentOrder, error: fetchErr } = await this.supabase
           .getClient()
@@ -459,7 +466,11 @@ export class OrdersService {
             .toString()
             .replace(/\[RIDER_[A-Z_]+(?::[^\]]*)?\]\s*/g, '')
             .trim();
-          updatePayload.notes = cleanNotes.length > 0 ? `${riderTag} ${cleanNotes}` : riderTag;
+          if (riderTag) {
+            updatePayload.notes = cleanNotes.length > 0 ? `${riderTag} ${cleanNotes}` : riderTag;
+          } else {
+            updatePayload.notes = cleanNotes.length > 0 ? cleanNotes : null;
+          }
         }
       } catch (_) {}
     }
@@ -476,9 +487,9 @@ export class OrdersService {
       throw new InternalServerErrorException(`Error updating order status: ${error.message}`);
     }
 
-    // Disparar Push Notification al cliente si cambia el estado
+    // Disparar Push Notification al cliente con el estado semántico exacto
     try {
-      this.notificationsService.notifyOrderStatus(data || { id, status: dbStatus }, dbStatus);
+      this.notificationsService.notifyOrderStatus(data || { id, status: dbStatus }, semanticStatus);
     } catch (_) {}
 
     // Registro automático y transparente en el Libro de Comisiones y Reparto al entregarse el pedido

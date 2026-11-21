@@ -58,9 +58,17 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     });
   }
 
+  void _onSessionChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
   @override
   void initState() {
     super.initState();
+    widget.sessionService.addListener(_onSessionChanged);
+    widget.sessionService.syncFavoritesWithCloud();
     _loadTenants();
     _loadCategories();
     _loadBanners();
@@ -188,10 +196,49 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
         const Duration(seconds: 10), (_) => _syncNotifications());
   }
 
+  bool _isNotificationForCurrentUser(Map<String, dynamic> n) {
+    final type = (n['type'] ?? '').toString().toLowerCase();
+    if (type != 'order_status') return true;
+
+    final data = n['data'] is Map ? Map<String, dynamic>.from(n['data'] as Map) : const <String, dynamic>{};
+    final currentUser = widget.sessionService.currentUser;
+    final currentUid = currentUser?.id.trim() ?? '';
+    final notifUid = (data['customerUserId'] ?? '').toString().trim();
+    if (currentUid.isNotEmpty && notifUid.isNotEmpty && notifUid == currentUid) {
+      return true;
+    }
+
+    final notifOrderId = (data['orderId'] ?? '').toString().trim();
+    final notifOrderNum = (data['orderNumber'] ?? '').toString().replaceAll('#', '').trim();
+    for (final ord in CartService().orderHistory) {
+      if (notifOrderId.isNotEmpty && ord.id == notifOrderId) return true;
+      if (notifOrderNum.isNotEmpty && ord.orderNumber.replaceAll('#', '').trim() == notifOrderNum) {
+        return true;
+      }
+    }
+
+    final userPhoneDigits = (currentUser?.phone ?? '').replaceAll(RegExp(r'\D'), '');
+    final notifPhoneDigits = (data['customerPhone'] ?? '').toString().replaceAll(RegExp(r'\D'), '');
+    if (userPhoneDigits.length >= 7 && notifPhoneDigits.length >= 7) {
+      final uTail = userPhoneDigits.length > 10 ? userPhoneDigits.substring(userPhoneDigits.length - 10) : userPhoneDigits;
+      final nTail = notifPhoneDigits.length > 10 ? notifPhoneDigits.substring(notifPhoneDigits.length - 10) : notifPhoneDigits;
+      if (uTail == nTail) return true;
+    }
+
+    return false;
+  }
+
   Future<void> _syncNotifications() async {
     try {
-      final notifs = await ApiService().fetchNotifications();
-      if (!mounted || notifs.isEmpty) return;
+      final rawNotifs = await ApiService().fetchNotifications();
+      if (!mounted || rawNotifs.isEmpty) return;
+      final notifs = rawNotifs.where(_isNotificationForCurrentUser).toList();
+      if (notifs.isEmpty) {
+        if (_isFirstNotifSync) {
+          _isFirstNotifSync = false;
+        }
+        return;
+      }
 
       int newCount = 0;
       Map<String, dynamic>? latestNewNotif;
@@ -202,7 +249,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
           _knownNotificationIds.add(id);
           if (!_isFirstNotifSync) {
             newCount++;
-            latestNewNotif = n;
+            latestNewNotif ??= n;
           }
         }
       }
@@ -220,6 +267,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
             _unreadNotificationsCount += newCount;
           });
           HapticFeedback.mediumImpact();
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               behavior: SnackBarBehavior.floating,
@@ -286,6 +334,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
   @override
   void dispose() {
+    widget.sessionService.removeListener(_onSessionChanged);
     _searchDebounceTimer?.cancel();
     _searchController.dispose();
     _bannerController.dispose();
@@ -549,6 +598,9 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
           builder: (context, snapshot) {
             final isDark = widget.sessionService.isDarkMode;
             final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+            final filteredNotifs = (snapshot.data ?? [])
+                .where(_isNotificationForCurrentUser)
+                .toList();
 
             return Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
@@ -593,7 +645,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                         child: Padding(
                             padding: EdgeInsets.all(32),
                             child: CircularProgressIndicator()))
-                  else if (!snapshot.hasData || snapshot.data!.isEmpty)
+                  else if (filteredNotifs.isEmpty)
                     Center(
                       child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 40),
@@ -610,7 +662,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Los cupones que recibas de tus comercios favoritos aparecerán aquí.',
+                              'Los cupones y actualizaciones de tus pedidos aparecerán aquí.',
                               textAlign: TextAlign.center,
                               style: GoogleFonts.outfit(
                                   fontSize: 12, color: Colors.grey),
@@ -622,10 +674,10 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   else
                     Expanded(
                       child: ListView.separated(
-                        itemCount: snapshot.data!.length,
+                        itemCount: filteredNotifs.length,
                         separatorBuilder: (_, __) => const SizedBox(height: 12),
                         itemBuilder: (context, idx) {
-                          final notif = snapshot.data![idx];
+                          final notif = filteredNotifs[idx];
                           final couponCode =
                               notif['coupon_code'] ?? notif['couponCode'];
                           return Container(
@@ -1625,6 +1677,9 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
         selectedIndex: _selectedTab,
         onDestinationSelected: (idx) {
           setState(() => _selectedTab = idx);
+          if (idx == 2) {
+            widget.sessionService.syncFavoritesWithCloud();
+          }
         },
         destinations: const [
           NavigationDestination(
@@ -3188,8 +3243,10 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
   Widget _buildStoreGridCard(Map<String, dynamic> store, bool isDark) {
     final isOpen = _isStoreOpenNow(store);
-    final isFav =
-        widget.sessionService.isFavorite(store['id']?.toString() ?? '');
+    final isFav = widget.sessionService.isFavorite(
+      store['id']?.toString() ?? '',
+      slug: store['slug']?.toString(),
+    );
     final selectedAddr = CartService().selectedAddress;
     final sLat = (store['lat'] as num?)?.toDouble() ??
         (store['latitude'] as num?)?.toDouble();
@@ -3340,8 +3397,10 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
   Widget _buildStoreListCard(Map<String, dynamic> store, bool isDark) {
     final isOpen = _isStoreOpenNow(store);
-    final isFav =
-        widget.sessionService.isFavorite(store['id']?.toString() ?? '');
+    final isFav = widget.sessionService.isFavorite(
+      store['id']?.toString() ?? '',
+      slug: store['slug']?.toString(),
+    );
     final selectedAddr = CartService().selectedAddress;
     final sLat = (store['lat'] as num?)?.toDouble() ??
         (store['latitude'] as num?)?.toDouble();

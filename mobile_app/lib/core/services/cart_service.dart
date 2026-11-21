@@ -639,11 +639,22 @@ class CartService extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       if (_items.isEmpty) {
         await prefs.remove(key);
-        // Eliminar también de Supabase
+        // Vaciar solo campos del carrito en Supabase preservando metadata (favoritos y direcciones)
         try {
           final user = Supabase.instance.client.auth.currentUser;
           if (user != null) {
-            await Supabase.instance.client.from('customer_carts').delete().eq('user_id', user.id);
+            await Supabase.instance.client
+                .from('customer_carts')
+                .update({
+                  'items': [],
+                  'items_count': 0,
+                  'subtotal': 0.0,
+                  'tenant_id': null,
+                  'branch_id': null,
+                  'store_name': null,
+                  'updated_at': DateTime.now().toUtc().toIso8601String(),
+                })
+                .eq('user_id', user.id);
           }
         } catch (_) {}
         return;
@@ -679,7 +690,7 @@ class CartService extends ChangeNotifier {
             'subtotal': subtotal,
             'exchange_rate': _currentStoreExchangeRate,
             'delivery_fee': deliveryFee,
-            'updated_at': DateTime.now().toIso8601String(),
+            'updated_at': DateTime.now().toUtc().toIso8601String(),
           }, onConflict: 'user_id');
         }
       } catch (dbErr) {
@@ -768,11 +779,22 @@ class CartService extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(key);
 
-      // Eliminar también de Supabase
+      // Vaciar solo campos del carrito en Supabase preservando metadata (favoritos y direcciones)
       try {
         final user = Supabase.instance.client.auth.currentUser;
         if (user != null) {
-          await Supabase.instance.client.from('customer_carts').delete().eq('user_id', user.id);
+          await Supabase.instance.client
+              .from('customer_carts')
+              .update({
+                'items': [],
+                'items_count': 0,
+                'subtotal': 0.0,
+                'tenant_id': null,
+                'branch_id': null,
+                'store_name': null,
+                'updated_at': DateTime.now().toUtc().toIso8601String(),
+              })
+              .eq('user_id', user.id);
         }
       } catch (_) {}
     } catch (e) {

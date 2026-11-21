@@ -210,12 +210,15 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
   });
 
   // --- SISTEMA DE TOASTS LLAMATIVOS PARA COMERCIO ---
-  readonly activeToasts = signal<{ id: string; type: 'success' | 'error' | 'info' | 'warning'; title: string; message: string }[]>([]);
+  readonly activeToasts = signal<{ id: string; type: 'success' | 'error' | 'info' | 'warning'; title: string; message: string; replaceKey?: string }[]>([]);
 
-  showToast(type: 'success' | 'error' | 'info' | 'warning', title: string, message: string): void {
+  showToast(type: 'success' | 'error' | 'info' | 'warning', title: string, message: string, replaceKey?: string): void {
     const id = `toast_${Date.now()}_${Math.random()}`;
-    this.activeToasts.update(list => [...list, { id, type, title, message }]);
-    const duration = type === 'warning' ? 9000 : 4500;
+    this.activeToasts.update(list => [
+      ...(replaceKey ? list.filter(t => t.replaceKey !== replaceKey) : list),
+      { id, type, title, message, replaceKey }
+    ]);
+    const duration = type === 'warning' ? 9000 : 5000;
     setTimeout(() => {
       this.activeToasts.update(list => list.filter(t => t.id !== id));
     }, duration);
@@ -1277,20 +1280,38 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     body: string,
     tag: string,
     playSound = true,
-    onClick?: () => void
+    onClick?: () => void,
+    options?: { requireInteraction?: boolean; replaceKey?: string }
   ): void {
     if (playSound) {
       this.playKitchenBellSound();
     }
     if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
       try {
+        const replaceKey = options?.replaceKey;
+        if (replaceKey) {
+          const prevNotif = this.activeOrderNotifications.get(replaceKey);
+          if (prevNotif) {
+            try { prevNotif.close(); } catch (_) {}
+            this.activeOrderNotifications.delete(replaceKey);
+          }
+        }
         const n = new Notification(title, {
           body,
           icon: '/assets/logo.png',
           badge: '/assets/logo.png',
-          tag,
-          requireInteraction: true,
-        });
+          tag: replaceKey || tag,
+          renotify: Boolean(replaceKey),
+          requireInteraction: options?.requireInteraction ?? true,
+        } as any);
+        if (replaceKey) {
+          this.activeOrderNotifications.set(replaceKey, n);
+          n.onclose = () => {
+            if (this.activeOrderNotifications.get(replaceKey) === n) {
+              this.activeOrderNotifications.delete(replaceKey);
+            }
+          };
+        }
         n.onclick = () => {
           window.focus();
           n.close();
@@ -1367,6 +1388,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       title: string;
       message: string;
       desktopTag: string;
+      replaceKey?: string;
       playSound?: boolean;
       blinkTitle?: string;
     }
@@ -1377,15 +1399,19 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     if (opts.playSound !== false) {
       this.playStatusChimeSound();
     }
-    this.showToast(opts.toastType, opts.title, opts.message);
-    this.triggerDesktopNotification(opts.title, opts.message, opts.desktopTag, false);
+    this.showToast(opts.toastType, opts.title, opts.message, opts.replaceKey);
+    this.triggerDesktopNotification(opts.title, opts.message, opts.desktopTag, false, undefined, {
+      requireInteraction: false,
+      replaceKey: opts.replaceKey,
+    });
     if (opts.blinkTitle) {
       this.startTabTitleBlink(opts.blinkTitle, '⚡ Pídetelo Comercio');
     }
   }
 
-  private triggerRiderRejectionAlert(orderNumber: string, riderName?: string): void {
+  private triggerRiderRejectionAlert(orderNumber: string, riderName?: string, orderId?: string): void {
     const displayNum = this.formatOrderNumber(orderNumber);
+    const replaceKey = orderId ? `order-lifecycle-${orderId}` : undefined;
     this.rejectedAlert.set({
       orderNumber: displayNum,
       message: `El repartidor ${riderName ? riderName + ' ' : ''}rechazó la asignación de ${displayNum}. Reasigna otro repartidor disponible.`
@@ -1393,13 +1419,16 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     this.showToast(
       'warning',
       `⚠️ Asignación rechazada ${displayNum}`,
-      `${riderName || 'El motorizado'} rechazó el pedido ${displayNum}. Asigna otro repartidor disponible.`
+      `${riderName || 'El motorizado'} rechazó el pedido ${displayNum}. Asigna otro repartidor disponible.`,
+      replaceKey
     );
     this.triggerDesktopNotification(
-      `⚠️ MOTORIZADO RECHAZÓ ${displayNum}`,
+      `⚠️ REPARTIDOR RECHAZÓ ${displayNum}`,
       `${riderName || 'El repartidor'} rechazó el pedido ${displayNum}. Reasigna otro motorizado.`,
-      `rider-rejected-${displayNum}-${Date.now()}`,
-      false
+      replaceKey || `rider-rejected-${displayNum}-${Date.now()}`,
+      false,
+      undefined,
+      { requireInteraction: false, replaceKey }
     );
     try {
       const audioCtx = this.userAudioContext || new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -1427,11 +1456,28 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     driverName?: string;
     notes: string;
     paymentStatus: string;
+    source?: 'realtime' | 'poll' | 'local';
   }): void {
     if (!this.ordersBaselineInitialized || !params.id) return;
 
+    const source = params.source || 'poll';
     const currPhase = this.resolveRiderPhase(params.status, params.notes, params.driverId);
     const prev = this.knownOrderLifecycleMap.get(params.id);
+
+    if (source === 'poll' && prev) {
+      const assignedAge = Date.now() - (this.localAssignedAt.get(params.id) || 0);
+      if (prev.driverId && assignedAge < 8000 && !params.driverId) {
+        return;
+      }
+      if (
+        currPhase !== 'rejected' &&
+        currPhase !== 'cancelled' &&
+        params.driverId === prev.driverId &&
+        this.PHASE_RANK[currPhase] < this.PHASE_RANK[prev.riderPhase]
+      ) {
+        return;
+      }
+    }
 
     this.knownOrderLifecycleMap.set(params.id, {
       status: params.status || '',
@@ -1445,6 +1491,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     const orderNum = this.formatOrderNumber(params.orderNumber || params.id);
     const customer = params.customerName || 'Cliente';
     const riderName = this.resolveRiderDisplayName(params.driverId, params.driverName);
+    const replaceKey = `order-lifecycle-${params.id}`;
 
     if (params.driverId && prev.driverId !== params.driverId) {
       this.clearLifecycleDedupPrefixes(params.id, ['accepted:', 'at_merchant:', 'on_the_way:', 'rejected:']);
@@ -1458,25 +1505,28 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       this.clearLifecycleDedupPrefixes(params.id, ['rejected:']);
       this.emitLifecycleNotification(`${params.id}:assigned:${params.driverId}`, {
         toastType: 'info',
-        title: `🛵 Motorizado asignado ${orderNum}`,
+        title: `🛵 Repartidor asignado ${orderNum}`,
         message: `${riderName} fue asignado al pedido de ${customer}. Esperando su confirmación.`,
-        desktopTag: `rider-assigned-${params.id}-${params.driverId}`
+        desktopTag: replaceKey,
+        replaceKey,
       });
     } else if (currPhase === 'accepted' && prev.riderPhase !== 'accepted') {
       this.clearLifecycleDedupPrefixes(params.id, ['rejected:']);
       this.emitLifecycleNotification(`${params.id}:accepted:${params.driverId || 'any'}`, {
         toastType: 'success',
-        title: `✅ Motorizado confirmó ${orderNum}`,
-        message: `${riderName} aceptó el pedido de ${customer} y va rumbo al comercio.`,
-        desktopTag: `rider-accepted-${params.id}-${params.driverId || 'any'}`
+        title: `✅ Repartidor aceptó ${orderNum}`,
+        message: `${riderName} confirmó el pedido de ${customer} y va rumbo al local.`,
+        desktopTag: replaceKey,
+        replaceKey,
       });
     } else if (currPhase === 'at_merchant' && prev.riderPhase !== 'at_merchant') {
       this.emitLifecycleNotification(`${params.id}:at_merchant:${params.driverId || 'any'}`, {
         toastType: 'info',
-        title: `📍 Motorizado en el local ${orderNum}`,
-        message: `${riderName} llegó al comercio para retirar el pedido de ${customer}.`,
-        desktopTag: `rider-at-merchant-${params.id}-${params.driverId || 'any'}`,
-        blinkTitle: `📍 Motorizado en local ${orderNum}`
+        title: `📍 Repartidor llegó al local ${orderNum}`,
+        message: `${riderName} ya está en el comercio para retirar el pedido de ${customer}.`,
+        desktopTag: replaceKey,
+        replaceKey,
+        blinkTitle: `📍 Repartidor en local ${orderNum}`
       });
     } else if (
       (currPhase === 'picked_up' || currPhase === 'on_the_way') &&
@@ -1485,23 +1535,26 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     ) {
       this.emitLifecycleNotification(`${params.id}:on_the_way:${params.driverId || 'any'}`, {
         toastType: 'info',
-        title: `🚀 Pedido recogido y en camino ${orderNum}`,
-        message: `${riderName} recogió el pedido ${orderNum} de ${customer} y va en camino al cliente.`,
-        desktopTag: `order-on-the-way-${params.id}`
+        title: `🚀 Pedido retirado • En camino ${orderNum}`,
+        message: `${riderName} retiró el pedido ${orderNum} de ${customer} y va en camino al cliente.`,
+        desktopTag: replaceKey,
+        replaceKey,
       });
     } else if (currPhase === 'delivered' && prev.riderPhase !== 'delivered') {
       this.emitLifecycleNotification(`${params.id}:delivered`, {
         toastType: 'success',
         title: `🎉 Pedido entregado ${orderNum}`,
         message: `${riderName} entregó exitosamente el pedido ${orderNum} a ${customer}.`,
-        desktopTag: `order-delivered-${params.id}`
+        desktopTag: replaceKey,
+        replaceKey,
       });
     } else if (currPhase === 'cancelled' && prev.riderPhase !== 'cancelled') {
       this.emitLifecycleNotification(`${params.id}:cancelled`, {
         toastType: 'error',
         title: `❌ Pedido cancelado ${orderNum}`,
         message: `El pedido ${orderNum} de ${customer} fue cancelado.`,
-        desktopTag: `order-cancelled-${params.id}`
+        desktopTag: replaceKey,
+        replaceKey,
       });
     } else if (currPhase === 'rejected' && prev.riderPhase !== 'rejected') {
       const rejectedName =
@@ -1511,7 +1564,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       this.clearLifecycleDedupPrefixes(params.id, ['assigned:', 'accepted:', 'at_merchant:']);
       if (!this.alertedLifecycleKeys.has(dedupKey)) {
         this.alertedLifecycleKeys.add(dedupKey);
-        this.triggerRiderRejectionAlert(orderNum, rejectedName);
+        this.triggerRiderRejectionAlert(orderNum, rejectedName, params.id);
       }
     }
   }
@@ -1526,7 +1579,8 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         driverId: ord.driverId || '',
         driverName: ord.driverName,
         notes: ord.notes || '',
-        paymentStatus: ord.paymentStatus || ''
+        paymentStatus: ord.paymentStatus || '',
+        source: 'poll',
       });
     }
   }
@@ -1978,6 +2032,20 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
   readonly highlightedAdditionOrderIds = computed(() => this.additionAlerts().map(a => a.orderId));
   private knownOrderAdditionsMap = new Map<string, { additionsCount: number; itemsCount: number; total: number; pendingMobileSig: string }>();
   private knownOrderLifecycleMap = new Map<string, { status: string; driverId: string; riderPhase: OrderRiderPhase; paymentStatus: string }>();
+  private activeOrderNotifications = new Map<string, Notification>();
+  private localAssignedAt = new Map<string, number>();
+  private reloadOrdersSeq = 0;
+  private readonly PHASE_RANK: Record<OrderRiderPhase, number> = {
+    none: 0,
+    rejected: 0,
+    assigned_pending: 1,
+    accepted: 2,
+    at_merchant: 3,
+    picked_up: 4,
+    on_the_way: 5,
+    delivered: 6,
+    cancelled: 7
+  };
   private baselineBranchId = '';
   private ordersBaselineInitialized = false;
   private alertedAdditionKeys = new Set<string>();
@@ -2096,7 +2164,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
   private subscribeOrdersRealtime(
     tenantUuid: string,
     reloadOrders: () => void,
-    triggerRejectionAlert: (orderNumber: string, riderName?: string) => void
+    triggerRejectionAlert: (orderNumber: string, riderName?: string, orderId?: string) => void
   ): void {
     const cleanId = (tenantUuid || '').trim();
     if (!cleanId || this.realtimeTenantId === cleanId) return;
@@ -2209,22 +2277,65 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
                 ? (newRow.driver_id || '')
                 : (newRow.driverId !== undefined ? (newRow.driverId || '') : (existingOrder?.driverId || ''));
               const resolvedStatus = (newRow.status || existingOrder?.status || '').toString();
-              const resolvedNotes = (newRow.notes !== undefined && newRow.notes !== null)
+              let resolvedNotes = (newRow.notes !== undefined && newRow.notes !== null)
                 ? String(newRow.notes)
                 : (existingOrder?.notes || '');
+              if ((newRow.notes === undefined || newRow.notes === null) && newRow.riderTag) {
+                const cleaned = resolvedNotes.replace(/\[RIDER_[A-Z_]+(?::[^\]]*)?\]\s*/g, '').trim();
+                resolvedNotes = cleaned ? `${newRow.riderTag} ${cleaned}` : String(newRow.riderTag);
+              }
               const resolvedOrderNum = newRow.order_number || newRow.orderNumber || existingOrder?.orderNumber || newRow.id;
               const resolvedCustomer = newRow.customer_name || newRow.customerName || existingOrder?.customer?.name || 'Cliente';
               const resolvedDriverName = newRow.driver_name || newRow.driverName || existingOrder?.driverName;
+
+              let patchedStatus = resolvedStatus;
+              if (resolvedStatus === 'in_kitchen' && resolvedDriverId) {
+                if (resolvedNotes.includes('[RIDER_PICKED_UP]')) {
+                  patchedStatus = 'picked_up';
+                } else if (resolvedNotes.includes('[RIDER_AT_MERCHANT]')) {
+                  patchedStatus = 'at_merchant';
+                } else {
+                  patchedStatus = 'assigned_driver';
+                }
+              }
+
+              const liveRiderAccepted =
+                resolvedNotes.includes('[RIDER_ACCEPTED]') ||
+                resolvedNotes.includes('[RIDER_AT_MERCHANT]') ||
+                resolvedNotes.includes('[RIDER_PICKED_UP]') ||
+                patchedStatus === 'on_the_way' ||
+                patchedStatus === 'delivered';
+              const liveRiderRejected = resolvedNotes.includes('[RIDER_REJECTED') && !resolvedDriverId;
+
+              if (existingOrder) {
+                const displayDriverName = resolvedDriverId
+                  ? (resolvedDriverName && String(resolvedDriverName).trim().length > 0
+                      ? String(resolvedDriverName).trim()
+                      : (this.resolveRiderDisplayName(String(resolvedDriverId), existingOrder.driverName) || existingOrder.driverName))
+                  : undefined;
+                this.orders.update(list =>
+                  list.map(o => o.id === newRow.id ? {
+                    ...o,
+                    status: patchedStatus as OrderStatus,
+                    driverId: resolvedDriverId ? String(resolvedDriverId) : undefined,
+                    driverName: displayDriverName,
+                    notes: resolvedNotes,
+                    riderAccepted: liveRiderAccepted,
+                    riderRejected: liveRiderRejected,
+                  } : o)
+                );
+              }
 
               this.evaluateOrderLifecycleTransition({
                 id: newRow.id,
                 orderNumber: resolvedOrderNum,
                 customerName: resolvedCustomer,
-                status: resolvedStatus,
+                status: patchedStatus,
                 driverId: String(resolvedDriverId),
                 driverName: resolvedDriverName,
                 notes: resolvedNotes,
-                paymentStatus: (newRow.payment_status || newRow.paymentStatus || existingOrder?.paymentStatus || '').toString()
+                paymentStatus: (newRow.payment_status || newRow.paymentStatus || existingOrder?.paymentStatus || '').toString(),
+                source: 'realtime'
               });
             }
           } else if (eventType === 'REJECTED_BY_RIDER' && payload.order) {
@@ -2244,10 +2355,11 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
                   paymentStatus: prevLifecycle?.paymentStatus || ''
                 });
               }
-              triggerRejectionAlert(ordNum, rName);
+              triggerRejectionAlert(ordNum, rName, ordId);
             }
           }
         }
+        this.reloadOrdersSeq++;
         reloadOrders();
       });
     } catch (e) {
@@ -2270,8 +2382,8 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       this.currentTenant.update(t => ({ ...t, name: user.tenantName! }));
     }
 
-    const triggerRejectionAlert = (orderNumber: string, riderName?: string) => {
-      this.triggerRiderRejectionAlert(orderNumber, riderName);
+    const triggerRejectionAlert = (orderNumber: string, riderName?: string, orderId?: string) => {
+      this.triggerRiderRejectionAlert(orderNumber, riderName, orderId);
     };
 
     const reloadOrders = () => {
@@ -2279,7 +2391,9 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       if (!tid) return;
       const bFilter = this.activeBranchId();
       if (!bFilter) return;
+      const reqSeq = ++this.reloadOrdersSeq;
       this.api.getOrders(tid, undefined, bFilter).subscribe(orders => {
+        if (reqSeq !== this.reloadOrdersSeq) return;
         const isMain = Boolean(this.activeBranch()?.isMain || this.activeBranch()?.name?.toLowerCase().includes('principal'));
         const orderList = (orders || []).filter(o => {
           if (o.branchId === bFilter) return true;
@@ -3646,6 +3760,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     );
 
     if (currentOrder && targetRiderId) {
+      this.localAssignedAt.set(orderId, Date.now());
       this.evaluateOrderLifecycleTransition({
         id: orderId,
         orderNumber: currentOrder.orderNumber || orderId,
@@ -3654,7 +3769,8 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         driverId: targetRiderId,
         driverName: rider?.name,
         notes: (currentOrder.notes || '').replace(/\[RIDER_[A-Z_]+(?::[^\]]*)?\]\s*/g, '').trim(),
-        paymentStatus: currentOrder.paymentStatus || ''
+        paymentStatus: currentOrder.paymentStatus || '',
+        source: 'local'
       });
     }
 

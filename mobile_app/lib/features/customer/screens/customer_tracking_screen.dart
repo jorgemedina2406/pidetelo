@@ -10,6 +10,7 @@ import '../../../core/models/order_model.dart';
 import '../../../core/models/branch_model.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/services/cart_service.dart';
+import '../../../core/services/notification_service.dart';
 import '../../../core/theme/app_theme.dart';
 
 class _ParsedOrderAddition {
@@ -72,6 +73,30 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
   RealtimeChannel? _telemetryChannel;
   String? _subscribedOrderUuid;
   final Set<String> _healedPinOrderIds = {};
+  OrderDeliveryStatus? _lastNotifiedStatus;
+
+  int _statusRank(OrderDeliveryStatus status) {
+    switch (status) {
+      case OrderDeliveryStatus.pending:
+        return 0;
+      case OrderDeliveryStatus.confirmed:
+        return 1;
+      case OrderDeliveryStatus.preparing:
+        return 2;
+      case OrderDeliveryStatus.assigned:
+        return 3;
+      case OrderDeliveryStatus.atMerchant:
+        return 4;
+      case OrderDeliveryStatus.pickedUp:
+        return 5;
+      case OrderDeliveryStatus.onTheWay:
+        return 6;
+      case OrderDeliveryStatus.delivered:
+        return 7;
+      case OrderDeliveryStatus.cancelled:
+        return 8;
+    }
+  }
 
   // Calificación del motorizado
   bool _hasRatedRider = false;
@@ -268,6 +293,7 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
   void initState() {
     super.initState();
     _order = widget.order;
+    _lastNotifiedStatus = widget.order.status;
     _animController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 3),
@@ -631,8 +657,7 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
         final double freshTotal =
             (res['total'] as num?)?.toDouble() ?? _order.total;
 
-        final orderNum =
-            (res['order_number'] ?? _order.orderNumber).toString();
+        final orderNum = (res['order_number'] ?? _order.orderNumber).toString();
         final digits = orderNum.replaceAll(RegExp(r'\D'), '');
         final orderDigits = digits.length >= 4
             ? digits.substring(digits.length - 4)
@@ -695,6 +720,16 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
         }
 
         if (hasChanges) {
+          final previousNotified = _lastNotifiedStatus ?? _order.status;
+          final bool movedForward = _statusRank(newStatus) > _statusRank(previousNotified);
+          final bool isTerminalAlert =
+              newStatus == OrderDeliveryStatus.cancelled &&
+              previousNotified != OrderDeliveryStatus.cancelled;
+          final bool riderWasUnassigned =
+              previousNotified == OrderDeliveryStatus.assigned &&
+              res['driver_id'] == null &&
+              newStatus.index < OrderDeliveryStatus.assigned.index;
+
           setState(() {
             _order = DeliveryOrder(
               id: freshId,
@@ -728,10 +763,25 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
               createdAt: _order.createdAt,
               branchId: _order.branchId,
               companyId: _order.companyId,
-              notes: effectiveRawNotes.isNotEmpty ? effectiveRawNotes : _order.notes,
+              notes: effectiveRawNotes.isNotEmpty
+                  ? effectiveRawNotes
+                  : _order.notes,
             );
           });
           CartService().updateOrderStatus(newStatus, orderId: _order.id);
+          if (riderWasUnassigned) {
+            _lastNotifiedStatus = newStatus;
+          } else if (movedForward || isTerminalAlert) {
+            _lastNotifiedStatus = newStatus;
+            try {
+              NotificationService().showOrderStatusNotification(
+                orderId: freshId,
+                orderNumber: orderNum,
+                status: newStatus.name,
+                riderName: riderName,
+              );
+            } catch (_) {}
+          }
           if (merchantLocationChanged) {
             _loadDynamicFastestRoute();
           }
@@ -755,6 +805,9 @@ class _CustomerTrackingScreenState extends State<CustomerTrackingScreen>
       case 'assigned_driver':
       case 'assigned':
         return OrderDeliveryStatus.assigned;
+      case 'at_merchant':
+        return OrderDeliveryStatus.atMerchant;
+      case 'picked_up':
       case 'on_the_way':
       case 'ontheway':
         return OrderDeliveryStatus.onTheWay;
@@ -3264,7 +3317,8 @@ class _AppendItemsModalState extends State<_AppendItemsModal> {
       newItems: addedItems,
       extraSubtotal: _extraTotal,
       paymentMethod: _paymentMethod,
-      paymentReference: _paymentMethod == 'mobile_transfer' ? cleanRefDigits : '',
+      paymentReference:
+          _paymentMethod == 'mobile_transfer' ? cleanRefDigits : '',
       paymentOriginBank: _bankController.text.trim(),
     );
 

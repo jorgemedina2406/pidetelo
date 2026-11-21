@@ -158,6 +158,7 @@ class RiderService extends ChangeNotifier {
   Timer? _pollTimer;
   bool _isLoading = false;
   String? _currentRiderId;
+  String? _currentRiderName;
   String? _lastNotifiedOrderId;
 
   DeliveryOrder? get activeOrder => _activeOrder;
@@ -336,25 +337,95 @@ class RiderService extends ChangeNotifier {
     _completedDeliveries.clear();
     _payoutHistory.clear();
     _currentRiderId = null;
+    _currentRiderName = null;
     _lastNotifiedOrderId = null;
     notifyListeners();
+  }
+
+  Future<String> _resolveCurrentRiderName() async {
+    if (_currentRiderName != null && _currentRiderName!.trim().isNotEmpty) {
+      return _currentRiderName!.trim();
+    }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final riderDataJson = prefs.getString('current_rider_user_v1');
+      if (riderDataJson != null) {
+        final Map<String, dynamic> data = jsonDecode(riderDataJson);
+        final parsed = data['name']?.toString().trim() ?? '';
+        if (parsed.isNotEmpty) {
+          _currentRiderName = parsed;
+          return parsed;
+        }
+      }
+    } catch (_) {}
+    return '';
+  }
+
+  Future<void> _broadcastMerchantOrderEvent(
+    String tenantId,
+    String event,
+    Map<String, dynamic> payload,
+  ) async {
+    final cleanTenant = tenantId.trim();
+    if (cleanTenant.isEmpty) return;
+    final supabase = Supabase.instance.client;
+    final channel = supabase.channel('orders:$cleanTenant');
+    try {
+      await channel.sendBroadcastMessage(event: event, payload: payload);
+    } catch (e) {
+      debugPrint('[RiderService] Broadcast $event notice: $e');
+    } finally {
+      try {
+        await supabase.removeChannel(channel);
+      } catch (_) {}
+    }
+  }
+
+  Future<void> _notifyBackendOrderStatus(
+    String orderId,
+    String semanticStatus,
+  ) async {
+    if (orderId.trim().isEmpty || semanticStatus.trim().isEmpty) return;
+    final targets = <String>[
+      AppConfig.backendBaseUrl,
+      if (AppConfig.backendBaseUrl != 'https://api.pidetelo.app/api')
+        'https://api.pidetelo.app/api',
+    ];
+    for (final base in targets) {
+      try {
+        final res = await http
+            .patch(
+              Uri.parse('$base/orders/$orderId/status'),
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode({'status': semanticStatus}),
+            )
+            .timeout(const Duration(seconds: 6));
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          return;
+        }
+      } catch (_) {}
+    }
   }
 
   Future<void> init([String? riderId]) async {
     final prefs = await SharedPreferences.getInstance();
 
     String? targetRiderId = riderId;
+    final riderDataJson = prefs.getString('current_rider_user_v1');
+    if (riderDataJson != null) {
+      try {
+        final Map<String, dynamic> data = jsonDecode(riderDataJson);
+        final cachedName = data['name']?.toString().trim() ?? '';
+        if (cachedName.isNotEmpty) {
+          _currentRiderName = cachedName;
+        }
+        if (targetRiderId == null || targetRiderId.isEmpty) {
+          targetRiderId = data['id']?.toString();
+        }
+      } catch (_) {}
+    }
     if (targetRiderId == null || targetRiderId.isEmpty) {
       targetRiderId = prefs.getString('rider_user_id_v1');
-      if (targetRiderId == null || targetRiderId.isEmpty) {
-        final riderDataJson = prefs.getString('current_rider_user_v1');
-        if (riderDataJson != null) {
-          try {
-            final Map<String, dynamic> data = jsonDecode(riderDataJson);
-            targetRiderId = data['id']?.toString();
-          } catch (_) {}
-        }
-      }
     }
 
     // Si cambió el rider logueado en este dispositivo, limpiamos el estado en memoria de inmediato
@@ -540,7 +611,7 @@ class RiderService extends ChangeNotifier {
       customerAddress: row['delivery_address'] ?? 'Dirección de Entrega',
       customerLat: (row['delivery_lat'] as num?)?.toDouble() ?? 10.034574,
       customerLng: (row['delivery_lng'] as num?)?.toDouble() ?? -69.237544,
-      riderName: '',
+      riderName: _currentRiderName ?? '',
       riderPhone: '',
       riderVehicle: '',
       riderPlate: '',
@@ -751,7 +822,7 @@ class RiderService extends ChangeNotifier {
       final updateMap = <String, dynamic>{
         'driver_id': cleanDriverId,
         'status': 'in_kitchen',
-        'updated_at': DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
       };
       if (updatedNotes != null) {
         updateMap['notes'] = updatedNotes;
@@ -759,6 +830,9 @@ class RiderService extends ChangeNotifier {
 
       // Al aceptar, permanece en Cocina ('in_kitchen') para ir al local a buscarlo
       await supabase.from('orders').update(updateMap).eq('id', order.id);
+      if (rider.name.trim().isNotEmpty) {
+        _currentRiderName = rider.name.trim();
+      }
 
       order.status = OrderDeliveryStatus.assigned;
       final assignedOrder = DeliveryOrder(
@@ -800,27 +874,22 @@ class RiderService extends ChangeNotifier {
           _keyActiveOrder, jsonEncode(assignedOrder.toJson()));
       await prefs.setString(_keyAcceptedOrder, assignedOrder.id);
 
-      // Notificar al portal web del comercio en tiempo real
+      // Notificar al portal web del comercio en tiempo real y al backend para push al cliente
       final tenantId = (fetchedTenantId ?? order.companyId ?? '').trim();
       if (tenantId.isNotEmpty) {
-        try {
-          final channel = supabase.channel('orders:$tenantId');
-          await channel.sendBroadcastMessage(
-            event: 'order_status_updated',
-            payload: {
-              'id': order.id,
-              'order_number': fetchedOrderNum,
-              'branch_id': fetchedBranchId ?? order.branchId,
-              'customer_name': fetchedCustomerName,
-              'status': 'in_kitchen',
-              if (updatedNotes != null) 'notes': updatedNotes,
-              'riderTag': '[RIDER_ACCEPTED]',
-              'driver_id': cleanDriverId,
-              'driver_name': rider.name,
-            },
-          );
-        } catch (_) {}
+        await _broadcastMerchantOrderEvent(tenantId, 'order_status_updated', {
+          'id': order.id,
+          'order_number': fetchedOrderNum,
+          'branch_id': fetchedBranchId ?? order.branchId,
+          'customer_name': fetchedCustomerName,
+          'status': 'in_kitchen',
+          if (updatedNotes != null) 'notes': updatedNotes,
+          'riderTag': '[RIDER_ACCEPTED]',
+          'driver_id': cleanDriverId,
+          'driver_name': rider.name,
+        });
       }
+      unawaited(_notifyBackendOrderStatus(order.id, 'assigned_driver'));
 
       notifyListeners();
       return true;
@@ -880,7 +949,7 @@ class RiderService extends ChangeNotifier {
 
       final updateMap = <String, dynamic>{
         'status': 'in_kitchen',
-        'updated_at': DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
       };
       if (updatedNotes != null) {
         updateMap['notes'] = updatedNotes;
@@ -889,27 +958,26 @@ class RiderService extends ChangeNotifier {
       // Al aceptar la asignación, se mantiene en cocina con la etiqueta [RIDER_ACCEPTED]
       await supabase.from('orders').update(updateMap).eq('id', orderId);
 
-      // Notificar al comercio
+      final resolvedRiderName = currentActive.riderName.trim().isNotEmpty
+          ? currentActive.riderName.trim()
+          : await _resolveCurrentRiderName();
+
+      // Notificar al comercio y al backend para push al cliente
       final tenantId = (fetchedTenantId ?? currentActive.companyId ?? '').trim();
       if (tenantId.isNotEmpty) {
-        try {
-          final channel = supabase.channel('orders:$tenantId');
-          await channel.sendBroadcastMessage(
-            event: 'order_status_updated',
-            payload: {
-              'id': orderId,
-              'order_number': fetchedOrderNum,
-              'branch_id': fetchedBranchId ?? currentActive.branchId,
-              'customer_name': fetchedCustomerName,
-              'driver_id': fetchedDriverId,
-              'driver_name': currentActive.riderName,
-              'status': 'in_kitchen',
-              if (updatedNotes != null) 'notes': updatedNotes,
-              'riderTag': '[RIDER_ACCEPTED]',
-            },
-          );
-        } catch (_) {}
+        await _broadcastMerchantOrderEvent(tenantId, 'order_status_updated', {
+          'id': orderId,
+          'order_number': fetchedOrderNum,
+          'branch_id': fetchedBranchId ?? currentActive.branchId,
+          'customer_name': fetchedCustomerName,
+          'driver_id': fetchedDriverId,
+          'driver_name': resolvedRiderName,
+          'status': 'in_kitchen',
+          if (updatedNotes != null) 'notes': updatedNotes,
+          'riderTag': '[RIDER_ACCEPTED]',
+        });
       }
+      unawaited(_notifyBackendOrderStatus(orderId, 'assigned_driver'));
 
       debugPrint(
           '[RiderService] Order $orderId accepted and kept in_kitchen in Supabase');
@@ -963,7 +1031,7 @@ class RiderService extends ChangeNotifier {
 
       final updateMap = <String, dynamic>{
         'driver_id': null,
-        'updated_at': DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
       };
       if (rejectedNotes != null) {
         updateMap['notes'] = rejectedNotes;
@@ -975,20 +1043,11 @@ class RiderService extends ChangeNotifier {
       // 4. Broadcast explicit rejection to merchant portal
       final tenantId = (fetchedTenantId ?? order.companyId ?? '').trim();
       if (tenantId.isNotEmpty) {
-        try {
-          final channel = supabase.channel('orders:$tenantId');
-          await channel.sendBroadcastMessage(
-            event: 'order_rejected',
-            payload: {
-              'id': order.id,
-              'orderNumber': order.orderNumber,
-              'riderName': riderName,
-            },
-          );
-        } catch (broadcastErr) {
-          debugPrint(
-              '[RiderService] Notice broadcasting rejection: $broadcastErr');
-        }
+        await _broadcastMerchantOrderEvent(tenantId, 'order_rejected', {
+          'id': order.id,
+          'orderNumber': order.orderNumber,
+          'riderName': riderName,
+        });
       }
 
       _activeOrder = null;
@@ -1063,7 +1122,7 @@ class RiderService extends ChangeNotifier {
 
       final updateMap = <String, dynamic>{
         'status': dbStatus,
-        'updated_at': DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
       };
       if (updatedNotes != null) {
         updateMap['notes'] = updatedNotes;
@@ -1071,27 +1130,51 @@ class RiderService extends ChangeNotifier {
 
       await supabase.from('orders').update(updateMap).eq('id', orderId);
 
+      final resolvedRiderName = currentActive.riderName.trim().isNotEmpty
+          ? currentActive.riderName.trim()
+          : await _resolveCurrentRiderName();
+
       // Broadcast update to merchant channel
       final tenantId = (fetchedTenantId ?? currentActive.companyId ?? '').trim();
       if (tenantId.isNotEmpty) {
-        try {
-          final channel = supabase.channel('orders:$tenantId');
-          await channel.sendBroadcastMessage(
-            event: 'order_status_updated',
-            payload: {
-              'id': orderId,
-              'order_number': fetchedOrderNum,
-              'branch_id': fetchedBranchId ?? currentActive.branchId,
-              'customer_name': fetchedCustomerName,
-              'driver_id': fetchedDriverId,
-              'driver_name': currentActive.riderName,
-              'status': dbStatus,
-              if (updatedNotes != null) 'notes': updatedNotes,
-              'riderTag': riderTag,
-            },
-          );
-        } catch (_) {}
+        await _broadcastMerchantOrderEvent(tenantId, 'order_status_updated', {
+          'id': orderId,
+          'order_number': fetchedOrderNum,
+          'branch_id': fetchedBranchId ?? currentActive.branchId,
+          'customer_name': fetchedCustomerName,
+          'driver_id': fetchedDriverId,
+          'driver_name': resolvedRiderName,
+          'status': dbStatus,
+          if (updatedNotes != null) 'notes': updatedNotes,
+          'riderTag': riderTag,
+        });
       }
+
+      // Disparar endpoint del backend para push notification exacta al cliente
+      final String semanticStatus;
+      switch (newStatus) {
+        case OrderDeliveryStatus.assigned:
+          semanticStatus = 'assigned_driver';
+          break;
+        case OrderDeliveryStatus.atMerchant:
+          semanticStatus = 'at_merchant';
+          break;
+        case OrderDeliveryStatus.pickedUp:
+          semanticStatus = 'picked_up';
+          break;
+        case OrderDeliveryStatus.onTheWay:
+          semanticStatus = 'on_the_way';
+          break;
+        case OrderDeliveryStatus.delivered:
+          semanticStatus = 'delivered';
+          break;
+        case OrderDeliveryStatus.cancelled:
+          semanticStatus = 'cancelled';
+          break;
+        default:
+          semanticStatus = dbStatus;
+      }
+      unawaited(_notifyBackendOrderStatus(orderId, semanticStatus));
     } catch (e) {
       debugPrint('[RiderService] Error updating status in Supabase: $e');
     }
@@ -1126,7 +1209,7 @@ class RiderService extends ChangeNotifier {
 
     final cleanLat = double.parse(lat.toStringAsFixed(6));
     final cleanLng = double.parse(lng.toStringAsFixed(6));
-    final nowIso = DateTime.now().toIso8601String();
+    final nowIso = DateTime.now().toUtc().toIso8601String();
 
     // 1. Actualizar API backend (ubicación + telemetría)
     if (riderId != null && riderId.isNotEmpty) {
@@ -1349,7 +1432,7 @@ class RiderService extends ChangeNotifier {
           'holderName': account?.holderName ?? rider?.name ?? '',
         },
         'status': 'pending',
-        'requested_at': DateTime.now().toIso8601String(),
+        'requested_at': DateTime.now().toUtc().toIso8601String(),
       };
 
       String? newId;

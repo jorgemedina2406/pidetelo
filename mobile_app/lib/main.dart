@@ -40,7 +40,7 @@ void main() async {
   // Initialize Session Persistence with timeout
   final sessionService = SessionService();
   try {
-    await sessionService.init().timeout(const Duration(seconds: 2));
+    await sessionService.init().timeout(const Duration(seconds: 5));
   } catch (e) {
     debugPrint('[Main] SessionService init error: $e');
   }

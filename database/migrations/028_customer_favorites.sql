@@ -30,6 +30,13 @@ CREATE POLICY "Los clientes pueden agregar favoritos"
   FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update own favorites" ON public.customer_favorites;
+CREATE POLICY "Users can update own favorites"
+  ON public.customer_favorites
+  FOR UPDATE
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
 DROP POLICY IF EXISTS "Los clientes pueden eliminar favoritos" ON public.customer_favorites;
 CREATE POLICY "Los clientes pueden eliminar favoritos"
   ON public.customer_favorites

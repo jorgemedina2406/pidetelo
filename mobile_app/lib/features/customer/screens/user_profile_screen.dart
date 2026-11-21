@@ -208,10 +208,23 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     );
   }
 
+  void _onSessionChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
   @override
   void initState() {
     super.initState();
+    widget.sessionService.addListener(_onSessionChanged);
     _loadUserPreferencesAndWallet();
+  }
+
+  @override
+  void dispose() {
+    widget.sessionService.removeListener(_onSessionChanged);
+    super.dispose();
   }
 
   Future<void> _loadUserPreferencesAndWallet() async {
@@ -1613,7 +1626,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                       icon: Icons.favorite_rounded,
                       iconColor: const Color(0xFFEF4444),
                       title: 'Favoritos',
-                      subtitle: '${widget.sessionService.favoriteStoreIds.length} comercios guardados',
+                      subtitle: '${widget.sessionService.uniqueFavoriteCount} comercios guardados',
                       onTap: _showFavoritesModal,
                     ),
                     Divider(height: 1, indent: 64, color: isDark ? Colors.white10 : const Color(0xFFE2E8F0)),

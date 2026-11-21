@@ -15,10 +15,13 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   debugPrint(
       '[FCM Background Customer] Push recibido con app cerrada: ${message.messageId}');
   final notification = message.notification;
-  if (notification != null) {
+  final title = notification?.title ?? message.data['title']?.toString();
+  final body = notification?.body ?? message.data['body']?.toString();
+  if (title != null || body != null) {
     NotificationService().showRawNotification(
-      title: notification.title ?? '🛍️ Actualización de tu Pedido',
-      body: notification.body ?? 'Consulta el estado de tu pedido en Pídetelo.',
+      title: title ?? '🛍️ Actualización de tu Pedido',
+      body: body ?? 'Consulta el estado de tu pedido en Pídetelo.',
+      orderId: message.data['orderId']?.toString(),
     );
   }
 }
@@ -113,12 +116,15 @@ class NotificationService {
         // Escuchar notificaciones mientras el cliente tiene la app abierta
         FirebaseMessaging.onMessage.listen((RemoteMessage message) {
           debugPrint(
-              '[FCM Foreground Customer] Mensaje recibido: ${message.notification?.title}');
+              '[FCM Foreground Customer] Mensaje recibido: ${message.notification?.title ?? message.data['title']}');
           final notif = message.notification;
-          if (notif != null) {
+          final title = notif?.title ?? message.data['title']?.toString();
+          final body = notif?.body ?? message.data['body']?.toString();
+          if (title != null || body != null) {
             showRawNotification(
-              title: notif.title ?? '🛍️ Pídetelo',
-              body: notif.body ?? '',
+              title: title ?? '🛍️ Pídetelo',
+              body: body ?? '',
+              orderId: message.data['orderId']?.toString(),
             );
           }
         });
@@ -203,8 +209,16 @@ class NotificationService {
   Future<void> showRawNotification({
     required String title,
     required String body,
+    String? orderId,
+    String? tag,
   }) async {
     try {
+      final cleanOrderId = orderId?.trim() ?? '';
+      final effectiveTag = tag ?? (cleanOrderId.isNotEmpty ? 'order_$cleanOrderId' : null);
+      final notifId = cleanOrderId.isNotEmpty
+          ? ((cleanOrderId.hashCode & 0x7fffffff) % 100000) + 1000
+          : DateTime.now().millisecondsSinceEpoch % 100000;
+
       final androidDetails = AndroidNotificationDetails(
         'orders_channel_v2',
         'Actualizaciones de Pedidos Pídetelo',
@@ -213,6 +227,7 @@ class NotificationService {
         importance: Importance.max,
         priority: Priority.high,
         ticker: title,
+        tag: effectiveTag,
         playSound: true,
         enableVibration: true,
         category: AndroidNotificationCategory.message,
@@ -222,7 +237,7 @@ class NotificationService {
 
       final notificationDetails = NotificationDetails(android: androidDetails);
       await _notificationsPlugin.show(
-        DateTime.now().millisecond,
+        notifId,
         title,
         body,
         notificationDetails,
@@ -230,5 +245,68 @@ class NotificationService {
     } catch (e) {
       debugPrint('[NotificationService] Show raw notification error: $e');
     }
+  }
+
+  Future<void> showOrderStatusNotification({
+    required String orderId,
+    required String orderNumber,
+    required String status,
+    String? riderName,
+  }) async {
+    final displayNum =
+        orderNumber.startsWith('#') ? orderNumber : '#$orderNumber';
+    final cleanRider = (riderName ?? '').trim();
+    final riderLabel = cleanRider.isNotEmpty ? cleanRider : 'Tu repartidor';
+    final st = status.trim().toLowerCase();
+
+    String title;
+    String body;
+
+    switch (st) {
+      case 'confirmed':
+      case 'in_kitchen':
+      case 'preparing':
+        title = '🍳 Pedido en preparación $displayNum';
+        body =
+            'El comercio confirmó tu orden $displayNum y ya la está preparando.';
+        break;
+      case 'assigned':
+      case 'assigned_driver':
+      case 'rider_accepted':
+        title = '🛵 Repartidor asignado $displayNum';
+        body =
+            '$riderLabel fue asignado a tu pedido $displayNum y va rumbo al comercio.';
+        break;
+      case 'atmerchant':
+      case 'at_merchant':
+        title = '📍 Repartidor en el comercio $displayNum';
+        body =
+            '$riderLabel ya llegó al local para retirar tu pedido $displayNum.';
+        break;
+      case 'pickedup':
+      case 'picked_up':
+      case 'ontheway':
+      case 'on_the_way':
+        title = '🚀 ¡Tu pedido va en camino! $displayNum';
+        body =
+            '$riderLabel retiró tu pedido $displayNum y va rumbo a tu dirección.';
+        break;
+      case 'delivered':
+        title = '🎉 ¡Pedido entregado! $displayNum';
+        body = 'Tu orden $displayNum fue entregada exitosamente. ¡Buen provecho!';
+        break;
+      case 'cancelled':
+        title = '❌ Pedido cancelado $displayNum';
+        body = 'Tu orden $displayNum ha sido cancelada.';
+        break;
+      default:
+        return;
+    }
+
+    await showRawNotification(
+      title: title,
+      body: body,
+      orderId: orderId,
+    );
   }
 }

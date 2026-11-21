@@ -25,6 +25,13 @@ class SessionService extends ChangeNotifier {
   bool _isInitialized = false;
   bool _isDarkMode = false;
   final Set<String> _favoriteStoreIds = {};
+  Future<void>? _pendingFavSync;
+
+  List<String> get _backendCandidateUrls => [
+        AppConfig.backendBaseUrl,
+        if (AppConfig.backendBaseUrl != 'https://api.pidetelo.app/api')
+          'https://api.pidetelo.app/api',
+      ];
 
   AppUserRole? get selectedRole => _selectedRole;
   AppUser? get currentUser => _currentUser;
@@ -34,6 +41,21 @@ class SessionService extends ChangeNotifier {
   bool get isDarkMode => _isDarkMode;
   ThemeMode get themeMode => _isDarkMode ? ThemeMode.dark : ThemeMode.light;
   Set<String> get favoriteStoreIds => Set.unmodifiable(_favoriteStoreIds);
+
+  int get uniqueFavoriteCount {
+    final uuidRegex = RegExp(
+        r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$');
+    final uuids = _favoriteStoreIds
+        .where((id) => uuidRegex.hasMatch(id.trim()))
+        .map((id) => id.trim().toLowerCase())
+        .toSet();
+    if (uuids.isNotEmpty) return uuids.length;
+    return _favoriteStoreIds
+        .map((id) => id.trim().toLowerCase())
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .length;
+  }
 
   Future<void> toggleTheme() async {
     _isDarkMode = !_isDarkMode;
@@ -82,12 +104,15 @@ class SessionService extends ChangeNotifier {
     }
 
     if (_currentUser != null) {
-      // Also load orders specifically for this user
-      await CartService().loadUserOrders(
-        _currentUser!.email.isNotEmpty ? _currentUser!.email : _currentUser!.id,
-        phone: _currentUser!.phone,
-      );
-      await syncFavoritesWithCloud();
+      await Future.wait([
+        syncFavoritesWithCloud(),
+        CartService().loadUserOrders(
+          _currentUser!.email.isNotEmpty
+              ? _currentUser!.email
+              : _currentUser!.id,
+          phone: _currentUser!.phone,
+        ),
+      ]);
     } else {
       CartService().clearOrders();
     }
@@ -147,26 +172,30 @@ class SessionService extends ChangeNotifier {
   }
 
   Future<void> saveUser(AppUser user) async {
+    final bool isSameUser = _currentUser != null && _currentUser!.id == user.id;
     _currentUser = user;
     _selectedRole = user.role;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyUserData, jsonEncode(user.toJson()));
     await prefs.setString(_keySelectedRole, user.role.name);
 
-    // Switch favorites to this user
-    _favoriteStoreIds.clear();
+    // Switch favorites to this user (never wipe existing synced favs on concurrent same-user saveUser)
+    if (!isSameUser) {
+      _favoriteStoreIds.clear();
+    }
     final favKey = _getFavoritesKey(user.email.isNotEmpty ? user.email : user.id);
     final favs = prefs.getStringList(favKey);
     if (favs != null) {
       _favoriteStoreIds.addAll(favs);
     }
 
-    // Switch orders specifically to this user
-    await CartService().loadUserOrders(
-      user.email.isNotEmpty ? user.email : user.id,
-      phone: user.phone,
-    );
-    await syncFavoritesWithCloud();
+    await Future.wait([
+      syncFavoritesWithCloud(),
+      CartService().loadUserOrders(
+        user.email.isNotEmpty ? user.email : user.id,
+        phone: user.phone,
+      ),
+    ]);
 
     // Registrar evento de login en métricas de la plataforma
     try {
@@ -229,6 +258,21 @@ class SessionService extends ChangeNotifier {
   }
 
   Future<void> syncFavoritesWithCloud() async {
+    if (_pendingFavSync != null) {
+      return _pendingFavSync!;
+    }
+    final future = _performSyncFavoritesWithCloud();
+    _pendingFavSync = future;
+    try {
+      await future;
+    } finally {
+      if (identical(_pendingFavSync, future)) {
+        _pendingFavSync = null;
+      }
+    }
+  }
+
+  Future<void> _performSyncFavoritesWithCloud() async {
     try {
       final supabase = Supabase.instance.client;
       final authUser = supabase.auth.currentUser;
@@ -236,6 +280,7 @@ class SessionService extends ChangeNotifier {
       if (userId == null || userId.trim().isEmpty) return;
 
       final Set<String> cloudFavs = {};
+      bool hasCustomerFavTableRows = false;
       void collect(dynamic list) {
         if (list is List) {
           for (final item in list) {
@@ -255,6 +300,7 @@ class SessionService extends ChangeNotifier {
             .select('tenant_id, tenant_slug')
             .eq('user_id', userId);
         for (final r in rows) {
+          hasCustomerFavTableRows = true;
           final tid = r['tenant_id']?.toString().trim() ?? '';
           final tslug = r['tenant_slug']?.toString().trim() ?? '';
           if (tid.isNotEmpty) cloudFavs.add(tid);
@@ -275,24 +321,33 @@ class SessionService extends ChangeNotifier {
       } catch (_) {}
 
       // 4. Backend endpoint fallback
-      try {
-        final res = await http
-            .get(Uri.parse('${AppConfig.backendBaseUrl}/users/$userId/favorites'))
-            .timeout(const Duration(seconds: 4));
-        if (res.statusCode == 200) {
-          final decoded = jsonDecode(res.body);
-          if (decoded is Map) {
-            collect(decoded['favorites']);
+      for (final base in _backendCandidateUrls) {
+        try {
+          final res = await http
+              .get(Uri.parse('$base/users/$userId/favorites'))
+              .timeout(const Duration(seconds: 8));
+          if (res.statusCode == 200) {
+            final decoded = jsonDecode(res.body);
+            if (decoded is Map) {
+              collect(decoded['favorites']);
+            }
+            break;
           }
-        }
-      } catch (_) {}
+        } catch (_) {}
+      }
 
       if (cloudFavs.isNotEmpty) {
         _favoriteStoreIds.addAll(cloudFavs);
         final prefs = await SharedPreferences.getInstance();
-        final favKey = _getFavoritesKey(_currentUser?.email.isNotEmpty == true ? _currentUser!.email : _currentUser?.id);
+        final favKey = _getFavoritesKey(
+            _currentUser?.email.isNotEmpty == true
+                ? _currentUser!.email
+                : _currentUser?.id);
         await prefs.setStringList(favKey, _favoriteStoreIds.toList());
         notifyListeners();
+        if (!hasCustomerFavTableRows) {
+          await _pushFavoritesToCloud();
+        }
       } else if (_favoriteStoreIds.isNotEmpty) {
         await _pushFavoritesToCloud();
       }
@@ -313,61 +368,99 @@ class SessionService extends ChangeNotifier {
       if (userId == null || userId.trim().isEmpty) return;
 
       final favList = _favoriteStoreIds.toList();
-      final uuidRegex = RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$');
+      final uuidRegex = RegExp(
+          r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$');
 
-      // 1. Direct normalized table upsert/delete (when table migrated & user authenticated)
-      if (toggledStoreId != null && uuidRegex.hasMatch(toggledStoreId)) {
+      // 1. Normalized customer_favorites insert/delete (evita upsert por política RLS UPDATE)
+      Future<void> syncFavoritesTable() async {
         try {
-          if (isAdding == true) {
-            await supabase.from('customer_favorites').upsert(
-              {
-                'user_id': userId,
-                'tenant_id': toggledStoreId,
-                'tenant_slug': (toggledSlug != null && toggledSlug.isNotEmpty) ? toggledSlug : null,
-              },
-              onConflict: 'user_id,tenant_id',
-            );
-          } else if (isAdding == false) {
-            await supabase
+          if (toggledStoreId != null && uuidRegex.hasMatch(toggledStoreId)) {
+            if (isAdding == true) {
+              try {
+                await supabase.from('customer_favorites').insert({
+                  'user_id': userId,
+                  'tenant_id': toggledStoreId,
+                  'tenant_slug':
+                      (toggledSlug != null && toggledSlug.isNotEmpty)
+                          ? toggledSlug
+                          : null,
+                });
+              } catch (insErr) {
+                // Ignore duplicate constraint 23505 cleanly
+                debugPrint(
+                    '[SessionService] customer_favorites insert notice: $insErr');
+              }
+            } else if (isAdding == false) {
+              await supabase
+                  .from('customer_favorites')
+                  .delete()
+                  .eq('user_id', userId)
+                  .eq('tenant_id', toggledStoreId);
+            }
+          } else {
+            final existingRows = await supabase
                 .from('customer_favorites')
-                .delete()
-                .eq('user_id', userId)
-                .eq('tenant_id', toggledStoreId);
+                .select('tenant_id')
+                .eq('user_id', userId);
+            final existingIds = <String>{
+              for (final r in existingRows)
+                if (r['tenant_id'] != null)
+                  r['tenant_id'].toString().trim().toLowerCase()
+            };
+            for (final id in favList) {
+              final clean = id.trim();
+              if (uuidRegex.hasMatch(clean) &&
+                  !existingIds.contains(clean.toLowerCase())) {
+                try {
+                  await supabase.from('customer_favorites').insert({
+                    'user_id': userId,
+                    'tenant_id': clean,
+                  });
+                } catch (_) {}
+              }
+            }
           }
-        } catch (_) {}
+        } catch (e) {
+          debugPrint('[SessionService] customer_favorites sync notice: $e');
+        }
       }
 
-      // 2. Read-merge-upsert customer_carts.metadata (preserving saved_addresses & other keys)
-      try {
-        final existingCart = await supabase
-            .from('customer_carts')
-            .select('metadata, user_email')
-            .eq('user_id', userId)
-            .maybeSingle();
+      // 2. Read-merge-upsert customer_carts.metadata (preservando saved_addresses)
+      Future<void> syncCartMetadata() async {
+        try {
+          final existingCart = await supabase
+              .from('customer_carts')
+              .select('metadata, user_email')
+              .eq('user_id', userId)
+              .maybeSingle();
 
-        final existingMeta = (existingCart != null && existingCart['metadata'] is Map)
-            ? Map<String, dynamic>.from(existingCart['metadata'] as Map)
-            : <String, dynamic>{};
+          final existingMeta =
+              (existingCart != null && existingCart['metadata'] is Map)
+                  ? Map<String, dynamic>.from(existingCart['metadata'] as Map)
+                  : <String, dynamic>{};
 
-        existingMeta['favorite_store_ids'] = favList;
+          existingMeta['favorite_store_ids'] = favList;
 
-        await supabase.from('customer_carts').upsert(
-          {
-            'user_id': userId,
-            'user_email': _currentUser?.email.isNotEmpty == true
-                ? _currentUser!.email
-                : authUser?.email,
-            'metadata': existingMeta,
-            'updated_at': DateTime.now().toIso8601String(),
-          },
-          onConflict: 'user_id',
-        );
-      } catch (e) {
-        debugPrint('[SessionService] customer_carts favorites upsert notice: $e');
+          await supabase.from('customer_carts').upsert(
+            {
+              'user_id': userId,
+              'user_email': _currentUser?.email.isNotEmpty == true
+                  ? _currentUser!.email
+                  : authUser?.email,
+              'metadata': existingMeta,
+              'updated_at': DateTime.now().toUtc().toIso8601String(),
+            },
+            onConflict: 'user_id',
+          );
+        } catch (e) {
+          debugPrint(
+              '[SessionService] customer_carts favorites upsert notice: $e');
+        }
       }
 
       // 3. Supabase Auth user_metadata
-      if (authUser != null) {
+      Future<void> syncAuthMeta() async {
+        if (authUser == null) return;
         try {
           await supabase.auth.updateUser(
             UserAttributes(data: {'favorite_store_ids': favList}),
@@ -376,18 +469,32 @@ class SessionService extends ChangeNotifier {
       }
 
       // 4. Backend endpoint (uses service_role)
-      try {
-        await http
-            .put(
-              Uri.parse('${AppConfig.backendBaseUrl}/users/$userId/favorites'),
-              headers: {'Content-Type': 'application/json'},
-              body: jsonEncode({
-                'favorites': favList,
-                'email': _currentUser?.email ?? authUser?.email,
-              }),
-            )
-            .timeout(const Duration(seconds: 5));
-      } catch (_) {}
+      Future<void> syncBackendFavorites() async {
+        for (final base in _backendCandidateUrls) {
+          try {
+            final res = await http
+                .put(
+                  Uri.parse('$base/users/$userId/favorites'),
+                  headers: {'Content-Type': 'application/json'},
+                  body: jsonEncode({
+                    'favorites': favList,
+                    'email': _currentUser?.email ?? authUser?.email,
+                  }),
+                )
+                .timeout(const Duration(seconds: 8));
+            if (res.statusCode >= 200 && res.statusCode < 300) {
+              return;
+            }
+          } catch (_) {}
+        }
+      }
+
+      await Future.wait([
+        syncFavoritesTable(),
+        syncCartMetadata(),
+        syncAuthMeta(),
+        syncBackendFavorites(),
+      ]);
     } catch (e) {
       debugPrint('[SessionService] _pushFavoritesToCloud error: $e');
     }

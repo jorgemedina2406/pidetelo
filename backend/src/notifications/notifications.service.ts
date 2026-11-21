@@ -170,6 +170,7 @@ export class NotificationsService implements OnModuleInit {
   }) {
     if (!this.firebaseInitialized || !topic) return { success: false };
     const cleanTopic = topic.replace(/[^a-zA-Z0-9_\.~%]+/g, '_');
+    const collapseTag = payload.data?.collapseTag || (payload.data?.orderId ? `order_${payload.data.orderId}` : undefined);
     try {
       const response = await getMessaging().send({
         topic: cleanTopic,
@@ -186,9 +187,11 @@ export class NotificationsService implements OnModuleInit {
             priority: 'max',
             defaultVibrateTimings: true,
             visibility: 'public',
+            ...(collapseTag ? { tag: collapseTag } : {}),
           }
         },
         apns: {
+          ...(collapseTag ? { headers: { 'apns-collapse-id': collapseTag } } : {}),
           payload: {
             aps: {
               sound: 'default',
@@ -218,6 +221,7 @@ export class NotificationsService implements OnModuleInit {
     }
 
     const uniqueTokens = Array.from(new Set(payload.tokens));
+    const collapseTag = payload.data?.collapseTag || (payload.data?.orderId ? `order_${payload.data.orderId}` : undefined);
 
     try {
       const response = await getMessaging().sendEachForMulticast({
@@ -235,9 +239,11 @@ export class NotificationsService implements OnModuleInit {
             priority: 'max',
             defaultVibrateTimings: true,
             visibility: 'public',
+            ...(collapseTag ? { tag: collapseTag } : {}),
           }
         },
         apns: {
+          ...(collapseTag ? { headers: { 'apns-collapse-id': collapseTag } } : {}),
           payload: {
             aps: {
               sound: 'default',
@@ -281,54 +287,100 @@ export class NotificationsService implements OnModuleInit {
   }
 
   // --- NOTIFICACIONES ESPECÍFICAS DE FLUJO DE PEDIDOS ---
+  private extractCustomerUid(order: any): string | undefined {
+    const rawNotes = String(order?.notes || '');
+    const match = rawNotes.match(/\[UID:([0-9a-fA-F-]+)\]/i);
+    return match?.[1] || order?.user_id || order?.customer_id || order?.customerId || undefined;
+  }
+
   async notifyOrderStatus(order: any, newStatus: string) {
     if (!order) return;
     const orderNumber = order.order_number || order.orderNumber || `#${(order.id || '').substring(0, 6)}`;
-    const customerId = order.user_id || order.customer_id || order.customerId;
+    const normalizedStatus = String(newStatus || '').trim().toLowerCase();
+    const customerUserId = this.extractCustomerUid(order);
+
+    let riderName = String(order.driver_name || order.driverName || order.rider_name || '').trim();
+    if (!riderName && order.driver_id) {
+      try {
+        const { data: dbRider } = await this.supabase
+          .getClient()
+          .from('riders')
+          .select('name')
+          .eq('id', order.driver_id)
+          .maybeSingle();
+        if (dbRider?.name) {
+          riderName = String(dbRider.name).trim();
+        }
+      } catch (_) {}
+    }
+    const riderLabel = riderName || 'Tu repartidor';
 
     let title = `📦 Pedido ${orderNumber}`;
-    let body = `El estado de tu pedido ha cambiado a: ${newStatus}`;
+    let body = `El estado de tu pedido cambió a: ${normalizedStatus}`;
 
-    switch (newStatus) {
+    switch (normalizedStatus) {
       case 'confirmed':
       case 'in_kitchen':
-        title = `🍳 Pedido Confirmado ${orderNumber}`;
-        body = 'El comercio ha confirmado tu orden y ya está en preparación.';
+        title = `🍳 Pedido en preparación ${orderNumber}`;
+        body = `El comercio confirmó tu orden ${orderNumber} y ya la está preparando.`;
+        break;
+      case 'assigned_driver':
+      case 'rider_accepted':
+        title = `🛵 Repartidor asignado ${orderNumber}`;
+        body = `${riderLabel} aceptó tu pedido ${orderNumber} y va rumbo al comercio.`;
+        break;
+      case 'at_merchant':
+        title = `📍 Repartidor en el comercio ${orderNumber}`;
+        body = `${riderLabel} ya llegó al local para retirar tu pedido ${orderNumber}.`;
         break;
       case 'ready_for_pickup':
-        title = `📦 Pedido Listo ${orderNumber}`;
-        body = 'Tu pedido está empacado y listo para ser entregado al repartidor.';
+        title = `🛍️ Pedido listo para retiro ${orderNumber}`;
+        body = `Tu pedido ${orderNumber} está empacado y listo para ser retirado.`;
+        break;
+      case 'picked_up':
+        title = `📦 Pedido retirado del local ${orderNumber}`;
+        body = `${riderLabel} ya tiene tu pedido ${orderNumber} y está por salir.`;
         break;
       case 'dispatched':
       case 'on_the_way':
       case 'on_way':
-        title = `🛵 ¡Tu pedido va en camino! ${orderNumber}`;
-        body = 'El repartidor recogió tu pedido y va en dirección a tu ubicación.';
+        title = `🚀 ¡Tu pedido va en camino! ${orderNumber}`;
+        body = `${riderLabel} salió con tu pedido ${orderNumber} hacia tu dirección.`;
         break;
       case 'at_door':
-        title = `🔔 ¡El repartidor está afuera! ${orderNumber}`;
-        body = 'El repartidor ha llegado con tu entrega.';
+        title = `🚪 ¡Repartidor en tu puerta! ${orderNumber}`;
+        body = `${riderLabel} llegó con tu pedido ${orderNumber}. Ten listo tu PIN de entrega.`;
         break;
       case 'delivered':
-        title = `✅ ¡Pedido Entregado! ${orderNumber}`;
-        body = 'Buen provecho. Gracias por pedir con Pídetelo.';
+        title = `🎉 ¡Pedido entregado! ${orderNumber}`;
+        body = `Tu orden ${orderNumber} fue entregada exitosamente. ¡Buen provecho!`;
         break;
       case 'cancelled':
-        title = `❌ Pedido Cancelado ${orderNumber}`;
-        body = 'Tu pedido ha sido cancelado. Puedes revisar los detalles en la app.';
+        title = `❌ Pedido cancelado ${orderNumber}`;
+        body = `Tu orden ${orderNumber} ha sido cancelada. Puedes revisar los detalles en la app.`;
         break;
     }
+
+    const collapseTag = `order_${String(order.id || orderNumber)}`;
 
     // 1. Guardar en bandeja de notificaciones interna
     await this.create({
       title,
       body,
       type: 'order_status',
-      data: { orderId: order.id, orderNumber, status: newStatus }
+      data: {
+        orderId: order.id,
+        orderNumber,
+        status: normalizedStatus,
+        riderName,
+        customerUserId: customerUserId || '',
+        customerPhone: order.customer_phone || order.customerPhone || '',
+      }
     });
 
     // 2. Enviar Push Remoto a los dispositivos del cliente
     const candidateCustomerIds = [
+      customerUserId,
       order.user_id,
       order.customer_id,
       order.customerId,
@@ -339,17 +391,22 @@ export class NotificationsService implements OnModuleInit {
     ];
 
     const customerTokens = this.getTokensForCandidates(candidateCustomerIds);
+    const pushData: Record<string, string> = {
+      type: 'order_status',
+      orderId: String(order.id || ''),
+      status: normalizedStatus,
+      orderNumber: String(orderNumber),
+      riderName,
+      customerUserId: String(customerUserId || ''),
+      collapseTag,
+    };
+
     if (customerTokens.length > 0) {
       await this.sendPushNotification({
         tokens: customerTokens,
         title,
         body,
-        data: {
-          type: 'order_status',
-          orderId: String(order.id || ''),
-          status: String(newStatus),
-          orderNumber: String(orderNumber)
-        }
+        data: pushData,
       });
     }
 
@@ -358,14 +415,14 @@ export class NotificationsService implements OnModuleInit {
       await this.sendTopicNotification(`order_${order.id}`, {
         title,
         body,
-        data: { type: 'order_status', orderId: String(order.id), status: String(newStatus) }
+        data: pushData,
       });
     }
     if (orderNumber) {
       await this.sendTopicNotification(`order_${orderNumber}`, {
         title,
         body,
-        data: { type: 'order_status', orderNumber: String(orderNumber), status: String(newStatus) }
+        data: pushData,
       });
     }
   }
@@ -375,6 +432,8 @@ export class NotificationsService implements OnModuleInit {
     const orderNumber = order.order_number || order.orderNumber || `#${(order.id || '').substring(0, 6)}`;
     const customer = order.customer_name || 'Cliente Pídetelo';
     const address = order.delivery_address || 'Dirección de Entrega';
+    const customerUserId = this.extractCustomerUid(order);
+    let riderName = '';
 
     // 1. Push urgente al REPARTIDOR (buscar por riderId, user_id, teléfono y email)
     const candidateRiderIds: string[] = [riderId];
@@ -383,8 +442,9 @@ export class NotificationsService implements OnModuleInit {
 
     try {
       const client = this.supabase.getClient();
-      const { data: dbRider } = await client.from('riders').select('id, user_id, phone, email').eq('id', riderId).maybeSingle();
+      const { data: dbRider } = await client.from('riders').select('id, name, user_id, phone, email').eq('id', riderId).maybeSingle();
       if (dbRider) {
+        if (dbRider.name) riderName = String(dbRider.name).trim();
         if (dbRider.user_id) candidateRiderIds.push(dbRider.user_id);
         if (dbRider.phone) candidateRiderIds.push(dbRider.phone);
         if (dbRider.email) candidateRiderIds.push(dbRider.email);
@@ -392,6 +452,7 @@ export class NotificationsService implements OnModuleInit {
     } catch (_) {}
 
     const riderTokens = this.getTokensForCandidates(candidateRiderIds);
+    const riderCollapseTag = `rider_assigned_${String(order.id || orderNumber)}`;
     if (riderTokens.length > 0) {
       await this.sendPushNotification({
         tokens: riderTokens,
@@ -402,20 +463,29 @@ export class NotificationsService implements OnModuleInit {
           orderId: String(order.id || ''),
           orderNumber: String(orderNumber),
           customerName: String(customer),
-          address: String(address)
+          address: String(address),
+          collapseTag: riderCollapseTag,
         }
       });
     }
 
-    // Topic de respaldo para el repartidor y para todos los repartidores
+    // Topic de respaldo para el repartidor
     await this.sendTopicNotification(`rider_${riderId}`, {
       title: `🛵 ¡Nuevo Pedido Asignado! ${orderNumber}`,
       body: `Cliente: ${customer} | Destino: ${address}`,
-      data: { type: 'order_assigned', orderId: String(order.id || ''), orderNumber: String(orderNumber) }
+      data: {
+        type: 'order_assigned',
+        orderId: String(order.id || ''),
+        orderNumber: String(orderNumber),
+        collapseTag: riderCollapseTag,
+      }
     });
 
     // 2. Push informativo al CLIENTE
+    const riderLabel = riderName || 'Un repartidor';
+    const customerCollapseTag = `order_${String(order.id || orderNumber)}`;
     const candidateCustomerIds = [
+      customerUserId,
       order.user_id,
       order.customer_id,
       order.customerId,
@@ -424,26 +494,30 @@ export class NotificationsService implements OnModuleInit {
       order.customer_email,
       order.customerEmail,
     ];
+    const customerPushData: Record<string, string> = {
+      type: 'rider_assigned',
+      orderId: String(order.id || ''),
+      orderNumber: String(orderNumber),
+      riderName,
+      customerUserId: String(customerUserId || ''),
+      collapseTag: customerCollapseTag,
+    };
     const customerTokens = this.getTokensForCandidates(candidateCustomerIds);
     if (customerTokens.length > 0) {
       await this.sendPushNotification({
         tokens: customerTokens,
-        title: `🛵 Repartidor Asignado ${orderNumber}`,
-        body: 'Se ha asignado un repartidor a tu orden. Pronto estará en camino.',
-        data: {
-          type: 'rider_assigned',
-          orderId: String(order.id || ''),
-          orderNumber: String(orderNumber)
-        }
+        title: `🛵 Repartidor asignado ${orderNumber}`,
+        body: `${riderLabel} fue asignado a tu orden ${orderNumber}. Pronto irá rumbo al comercio.`,
+        data: customerPushData,
       });
     }
 
     // Topic de orden para el cliente
     if (order.id) {
       await this.sendTopicNotification(`order_${order.id}`, {
-        title: `🛵 Repartidor Asignado ${orderNumber}`,
-        body: 'Se ha asignado un repartidor a tu orden. Pronto estará en camino.',
-        data: { type: 'rider_assigned', orderId: String(order.id) }
+        title: `🛵 Repartidor asignado ${orderNumber}`,
+        body: `${riderLabel} fue asignado a tu orden ${orderNumber}. Pronto irá rumbo al comercio.`,
+        data: customerPushData,
       });
     }
   }
