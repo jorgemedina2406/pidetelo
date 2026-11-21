@@ -1127,6 +1127,60 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
   private audioUnlocked = false;
   private wakeLockSentinel: any = null;
 
+  // --- DETECCIÓN AUTOMÁTICA DE NUEVA VERSIÓN EN PRODUCCIÓN (EVITA CACHÉ OBSOLETA) ---
+  readonly newAppVersionAvailable = signal(false);
+  private versionCheckInterval: any = null;
+  private currentMainBundle: string | null = null;
+  private isReloadingVersion = false;
+
+  private detectCurrentMainBundle(): string | null {
+    if (typeof document === 'undefined') return null;
+    try {
+      const scripts = Array.from(document.querySelectorAll('script[src]'));
+      for (const s of scripts) {
+        const src = s.getAttribute('src') || '';
+        const m = src.match(/main-[A-Za-z0-9_-]+\.js/);
+        if (m) return m[0];
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  private async checkForNewAppVersion(): Promise<void> {
+    if (!this.currentMainBundle || this.isReloadingVersion || typeof fetch === 'undefined') return;
+    try {
+      const res = await fetch(`/index.html?_v=${Date.now()}`, { cache: 'no-store' });
+      if (!res.ok) return;
+      const html = await res.text();
+      const match = html.match(/main-[A-Za-z0-9_-]+\.js/);
+      if (match && match[0] !== this.currentMainBundle) {
+        this.newAppVersionAvailable.set(true);
+        const hasOpenModal =
+          this.isProductModalOpen() ||
+          this.isRiderModalOpen() ||
+          this.isBulkImportModalOpen() ||
+          this.isUserModalOpen() ||
+          this.isCouponModalOpen() ||
+          this.isNotifyCouponModalOpen() ||
+          this.isNewBranchModalOpen() ||
+          this.isEditBranchModalOpen() ||
+          Boolean(this.verifyingPaymentOrder()) ||
+          Boolean(this.verifyingAdditionContext());
+        const activeTag = typeof document !== 'undefined' ? document.activeElement?.tagName : '';
+        const isTyping = activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT';
+        if (!hasOpenModal && !isTyping) {
+          this.reloadToLatestVersion();
+        }
+      }
+    } catch (_) {}
+  }
+
+  reloadToLatestVersion(): void {
+    if (this.isReloadingVersion || typeof window === 'undefined') return;
+    this.isReloadingVersion = true;
+    window.location.reload();
+  }
+
   async requestScreenWakeLock(): Promise<void> {
     try {
       if (typeof navigator !== 'undefined' && 'wakeLock' in navigator) {
@@ -1149,6 +1203,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         if (document.visibilityState === 'visible') {
           this.requestScreenWakeLock();
           this.initOrResumeAudio();
+          this.checkForNewAppVersion();
         }
       });
     }
@@ -1300,8 +1355,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
           body,
           icon: '/assets/logo.png',
           badge: '/assets/logo.png',
-          tag: replaceKey || tag,
-          renotify: Boolean(replaceKey),
+          tag: tag || replaceKey,
           requireInteraction: options?.requireInteraction ?? true,
         } as any);
         if (replaceKey) {
@@ -1425,7 +1479,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     this.triggerDesktopNotification(
       `⚠️ REPARTIDOR RECHAZÓ ${displayNum}`,
       `${riderName || 'El repartidor'} rechazó el pedido ${displayNum}. Reasigna otro motorizado.`,
-      replaceKey || `rider-rejected-${displayNum}-${Date.now()}`,
+      `${replaceKey || 'rider-rejected-' + displayNum}-rejected-${Date.now()}`,
       false,
       undefined,
       { requireInteraction: false, replaceKey }
@@ -1458,26 +1512,40 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     paymentStatus: string;
     source?: 'realtime' | 'poll' | 'local';
   }): void {
-    if (!this.ordersBaselineInitialized || !params.id) return;
+    if (!params.id) return;
 
     const source = params.source || 'poll';
-    const currPhase = this.resolveRiderPhase(params.status, params.notes, params.driverId);
-    const prev = this.knownOrderLifecycleMap.get(params.id);
+    if (source !== 'local' && !this.ordersBaselineInitialized) return;
 
-    if (source === 'poll' && prev) {
+    const currPhase = this.resolveRiderPhase(params.status, params.notes, params.driverId);
+    const existingPrev = this.knownOrderLifecycleMap.get(params.id);
+
+    if (source !== 'local' && existingPrev) {
       const assignedAge = Date.now() - (this.localAssignedAt.get(params.id) || 0);
-      if (prev.driverId && assignedAge < 8000 && !params.driverId) {
+      // Ignorar payloads parciales o polls atrasados que traen driverId vacío sin rechazo/cancelación
+      if (
+        existingPrev.driverId &&
+        !params.driverId &&
+        currPhase !== 'rejected' &&
+        currPhase !== 'cancelled' &&
+        (assignedAge < 10000 || source === 'realtime')
+      ) {
         return;
       }
+      // Evitar regresiones de fase tanto en realtime (eventos fuera de orden) como en polling
       if (
         currPhase !== 'rejected' &&
         currPhase !== 'cancelled' &&
-        params.driverId === prev.driverId &&
-        this.PHASE_RANK[currPhase] < this.PHASE_RANK[prev.riderPhase]
+        params.driverId === existingPrev.driverId &&
+        this.PHASE_RANK[currPhase] < this.PHASE_RANK[existingPrev.riderPhase]
       ) {
         return;
       }
     }
+
+    const prev = existingPrev || (source === 'local'
+      ? { status: '', driverId: '', riderPhase: 'none' as OrderRiderPhase, paymentStatus: '' }
+      : undefined);
 
     this.knownOrderLifecycleMap.set(params.id, {
       status: params.status || '',
@@ -1494,12 +1562,18 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     const replaceKey = `order-lifecycle-${params.id}`;
 
     if (params.driverId && prev.driverId !== params.driverId) {
-      this.clearLifecycleDedupPrefixes(params.id, ['accepted:', 'at_merchant:', 'on_the_way:', 'rejected:']);
+      this.clearLifecycleDedupPrefixes(params.id, ['assigned:', 'accepted:', 'at_merchant:', 'on_the_way:', 'rejected:']);
     }
+
+    const alreadyAssignedSameDriver =
+      Boolean(params.driverId) &&
+      prev.driverId === params.driverId &&
+      this.PHASE_RANK[prev.riderPhase] >= this.PHASE_RANK['assigned_pending'];
 
     if (
       currPhase === 'assigned_pending' &&
       Boolean(params.driverId) &&
+      !alreadyAssignedSameDriver &&
       (prev.driverId !== params.driverId || prev.riderPhase === 'none' || prev.riderPhase === 'rejected')
     ) {
       this.clearLifecycleDedupPrefixes(params.id, ['rejected:']);
@@ -1507,7 +1581,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         toastType: 'info',
         title: `🛵 Repartidor asignado ${orderNum}`,
         message: `${riderName} fue asignado al pedido de ${customer}. Esperando su confirmación.`,
-        desktopTag: replaceKey,
+        desktopTag: `${replaceKey}-assigned-${params.driverId}`,
         replaceKey,
       });
     } else if (currPhase === 'accepted' && prev.riderPhase !== 'accepted') {
@@ -1516,7 +1590,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         toastType: 'success',
         title: `✅ Repartidor aceptó ${orderNum}`,
         message: `${riderName} confirmó el pedido de ${customer} y va rumbo al local.`,
-        desktopTag: replaceKey,
+        desktopTag: `${replaceKey}-accepted-${params.driverId || 'any'}`,
         replaceKey,
       });
     } else if (currPhase === 'at_merchant' && prev.riderPhase !== 'at_merchant') {
@@ -1524,7 +1598,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         toastType: 'info',
         title: `📍 Repartidor llegó al local ${orderNum}`,
         message: `${riderName} ya está en el comercio para retirar el pedido de ${customer}.`,
-        desktopTag: replaceKey,
+        desktopTag: `${replaceKey}-at-merchant-${params.driverId || 'any'}`,
         replaceKey,
         blinkTitle: `📍 Repartidor en local ${orderNum}`
       });
@@ -1537,7 +1611,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         toastType: 'info',
         title: `🚀 Pedido retirado • En camino ${orderNum}`,
         message: `${riderName} retiró el pedido ${orderNum} de ${customer} y va en camino al cliente.`,
-        desktopTag: replaceKey,
+        desktopTag: `${replaceKey}-on-the-way-${params.driverId || 'any'}`,
         replaceKey,
       });
     } else if (currPhase === 'delivered' && prev.riderPhase !== 'delivered') {
@@ -1545,7 +1619,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         toastType: 'success',
         title: `🎉 Pedido entregado ${orderNum}`,
         message: `${riderName} entregó exitosamente el pedido ${orderNum} a ${customer}.`,
-        desktopTag: replaceKey,
+        desktopTag: `${replaceKey}-delivered`,
         replaceKey,
       });
     } else if (currPhase === 'cancelled' && prev.riderPhase !== 'cancelled') {
@@ -1553,7 +1627,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         toastType: 'error',
         title: `❌ Pedido cancelado ${orderNum}`,
         message: `El pedido ${orderNum} de ${customer} fue cancelado.`,
-        desktopTag: replaceKey,
+        desktopTag: `${replaceKey}-cancelled`,
         replaceKey,
       });
     } else if (currPhase === 'rejected' && prev.riderPhase !== 'rejected') {
@@ -2280,7 +2354,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
               let resolvedNotes = (newRow.notes !== undefined && newRow.notes !== null)
                 ? String(newRow.notes)
                 : (existingOrder?.notes || '');
-              if ((newRow.notes === undefined || newRow.notes === null) && newRow.riderTag) {
+              if (newRow.riderTag && !resolvedNotes.includes(String(newRow.riderTag))) {
                 const cleaned = resolvedNotes.replace(/\[RIDER_[A-Z_]+(?::[^\]]*)?\]\s*/g, '').trim();
                 resolvedNotes = cleaned ? `${newRow.riderTag} ${cleaned}` : String(newRow.riderTag);
               }
@@ -2289,8 +2363,10 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
               const resolvedDriverName = newRow.driver_name || newRow.driverName || existingOrder?.driverName;
 
               let patchedStatus = resolvedStatus;
-              if (resolvedStatus === 'in_kitchen' && resolvedDriverId) {
-                if (resolvedNotes.includes('[RIDER_PICKED_UP]')) {
+              if ((resolvedStatus === 'in_kitchen' || resolvedStatus === 'assigned_driver') && resolvedDriverId) {
+                if (resolvedNotes.includes('[RIDER_ON_THE_WAY]')) {
+                  patchedStatus = 'on_the_way';
+                } else if (resolvedNotes.includes('[RIDER_PICKED_UP]')) {
                   patchedStatus = 'picked_up';
                 } else if (resolvedNotes.includes('[RIDER_AT_MERCHANT]')) {
                   patchedStatus = 'at_merchant';
@@ -2303,27 +2379,40 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
                 resolvedNotes.includes('[RIDER_ACCEPTED]') ||
                 resolvedNotes.includes('[RIDER_AT_MERCHANT]') ||
                 resolvedNotes.includes('[RIDER_PICKED_UP]') ||
+                resolvedNotes.includes('[RIDER_ON_THE_WAY]') ||
+                patchedStatus === 'at_merchant' ||
+                patchedStatus === 'picked_up' ||
                 patchedStatus === 'on_the_way' ||
                 patchedStatus === 'delivered';
               const liveRiderRejected = resolvedNotes.includes('[RIDER_REJECTED') && !resolvedDriverId;
 
               if (existingOrder) {
-                const displayDriverName = resolvedDriverId
-                  ? (resolvedDriverName && String(resolvedDriverName).trim().length > 0
-                      ? String(resolvedDriverName).trim()
-                      : (this.resolveRiderDisplayName(String(resolvedDriverId), existingOrder.driverName) || existingOrder.driverName))
-                  : undefined;
-                this.orders.update(list =>
-                  list.map(o => o.id === newRow.id ? {
-                    ...o,
-                    status: patchedStatus as OrderStatus,
-                    driverId: resolvedDriverId ? String(resolvedDriverId) : undefined,
-                    driverName: displayDriverName,
-                    notes: resolvedNotes,
-                    riderAccepted: liveRiderAccepted,
-                    riderRejected: liveRiderRejected,
-                  } : o)
-                );
+                const existingPhase = this.resolveRiderPhase(existingOrder.status, existingOrder.notes, existingOrder.driverId);
+                const incomingPhase = this.resolveRiderPhase(patchedStatus, resolvedNotes, String(resolvedDriverId));
+                const isStaleRegression =
+                  incomingPhase !== 'rejected' &&
+                  incomingPhase !== 'cancelled' &&
+                  String(resolvedDriverId) === (existingOrder.driverId || '') &&
+                  this.PHASE_RANK[incomingPhase] < this.PHASE_RANK[existingPhase];
+
+                if (!isStaleRegression) {
+                  const displayDriverName = resolvedDriverId
+                    ? (resolvedDriverName && String(resolvedDriverName).trim().length > 0
+                        ? String(resolvedDriverName).trim()
+                        : (this.resolveRiderDisplayName(String(resolvedDriverId), existingOrder.driverName) || existingOrder.driverName))
+                    : undefined;
+                  this.orders.update(list =>
+                    list.map(o => o.id === newRow.id ? {
+                      ...o,
+                      status: patchedStatus as OrderStatus,
+                      driverId: resolvedDriverId ? String(resolvedDriverId) : undefined,
+                      driverName: displayDriverName,
+                      notes: resolvedNotes,
+                      riderAccepted: liveRiderAccepted,
+                      riderRejected: liveRiderRejected,
+                    } : o)
+                  );
+                }
               }
 
               this.evaluateOrderLifecycleTransition({
@@ -2369,6 +2458,13 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.setupAudioUnlockListeners();
+    this.currentMainBundle = this.detectCurrentMainBundle();
+    if (this.currentMainBundle) {
+      setTimeout(() => this.checkForNewAppVersion(), 5000);
+      this.versionCheckInterval = setInterval(() => {
+        this.checkForNewAppVersion();
+      }, 60000);
+    }
     if (typeof window !== 'undefined') {
       try {
         localStorage.removeItem('pidetelo_riders_auth');
@@ -2596,6 +2692,10 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     if (this.tabBlinkInterval) {
       clearInterval(this.tabBlinkInterval);
       this.tabBlinkInterval = null;
+    }
+    if (this.versionCheckInterval) {
+      clearInterval(this.versionCheckInterval);
+      this.versionCheckInterval = null;
     }
     if (this.originalDocumentTitle && typeof document !== 'undefined') {
       document.title = this.originalDocumentTitle;
@@ -3728,12 +3828,12 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
 
     const currentOrder = this.orders().find(o => o.id === orderId);
     // Si ya tiene asignado este motorizado y ya había aceptado o está en local/camino, no resetear la aceptación
-    if (currentOrder && currentOrder.driverId === targetRiderId && (currentOrder.riderAccepted || currentOrder.status === 'at_merchant' || currentOrder.status === 'picked_up')) {
+    if (currentOrder && currentOrder.driverId === targetRiderId && (currentOrder.riderAccepted || currentOrder.status === 'at_merchant' || currentOrder.status === 'picked_up' || currentOrder.status === 'on_the_way')) {
       console.log(`[MerchantAdmin] El repartidor ya está asignado y activo en la orden ${orderId}. Manteniendo estado.`);
       return;
     }
 
-    const rider = this.riders().find(r => r.id === targetRiderId);
+    const rider = this.riders().find(r => r.id === targetRiderId) || this.nearbyRiders().find(r => r.id === targetRiderId);
     const busy = this.getBusyRiderIds(orderId);
     if (rider && (rider.status === 'offline' || rider.status === 'delivering' || busy.has(rider.id))) {
       const isDelivering = rider.status === 'delivering' || busy.has(rider.id);
@@ -4663,7 +4763,9 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       this.refreshRidersLocation();
       this.loadStoreUsers();
       if (bFilter) {
+        const reqSeq = ++this.reloadOrdersSeq;
         this.api.getOrders(activeTenantId, undefined, bFilter).subscribe(orders => {
+          if (reqSeq !== this.reloadOrdersSeq) return;
           const isMain = Boolean(this.activeBranch()?.isMain || this.activeBranch()?.name?.toLowerCase().includes('principal'));
           const orderList = (orders || []).filter(o => {
             if (o.branchId === bFilter) return true;

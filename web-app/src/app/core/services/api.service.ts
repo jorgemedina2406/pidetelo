@@ -1929,23 +1929,31 @@ export class ApiService {
     const rawNotes = (row.notes || '').toString();
     let cleanNotes = rawNotes;
 
-    if (rawNotes.includes('[RIDER_ACCEPTED]')) {
+    const hasAcceptedTag =
+      rawNotes.includes('[RIDER_ACCEPTED]') ||
+      rawNotes.includes('[RIDER_AT_MERCHANT]') ||
+      rawNotes.includes('[RIDER_PICKED_UP]') ||
+      rawNotes.includes('[RIDER_ON_THE_WAY]');
+    const isAcceptedByStatus =
+      row.status === 'at_merchant' ||
+      row.status === 'picked_up' ||
+      row.status === 'on_the_way' ||
+      row.status === 'delivered';
+
+    if (hasAcceptedTag || isAcceptedByStatus) {
       riderAccepted = true;
-      cleanNotes = cleanNotes.replace('[RIDER_ACCEPTED]', '').trim();
-    } else if (rawNotes.includes('[RIDER_AT_MERCHANT]')) {
-      riderAccepted = true;
-      cleanNotes = cleanNotes.replace('[RIDER_AT_MERCHANT]', '').trim();
-    } else if (rawNotes.includes('[RIDER_PICKED_UP]')) {
-      riderAccepted = true;
-      cleanNotes = cleanNotes.replace('[RIDER_PICKED_UP]', '').trim();
-    } else if (rawNotes.includes('[RIDER_REJECTED')) {
+    }
+    if (rawNotes.includes('[RIDER_REJECTED') && !row.driver_id) {
       riderRejected = true;
       const match = rawNotes.match(/\[RIDER_REJECTED(?::([^\]]+))?\]/);
       if (match && match[1]) {
         rejectedRiderName = match[1];
       }
-      cleanNotes = cleanNotes.replace(/\[RIDER_REJECTED(?::[^\]]+)?\]/, '').trim();
     }
+    cleanNotes = cleanNotes
+      .replace(/\[RIDER_(?:ACCEPTED|AT_MERCHANT|PICKED_UP|ON_THE_WAY)\]\s*/g, '')
+      .replace(/\[RIDER_REJECTED(?::[^\]]+)?\]\s*/g, '')
+      .trim();
 
     const fxMatch = rawNotes.match(/\[FX:rate=([0-9.]+)\|total_bs=([0-9.]+)(?:\|delivery_bs=([0-9.]+))?(?:\|subtotal_bs=([0-9.]+))?\]/);
     if (fxMatch) {
@@ -1959,9 +1967,11 @@ export class ApiService {
     const currency = row.currency || 'USD';
 
     let mappedStatus = (row.status as any) || 'received';
-    if (row.status === 'in_kitchen') {
+    if (row.status === 'in_kitchen' || row.status === 'assigned_driver') {
       if (row.driver_id) {
-        if (rawNotes.includes('[RIDER_PICKED_UP]')) {
+        if (rawNotes.includes('[RIDER_ON_THE_WAY]')) {
+          mappedStatus = 'on_the_way';
+        } else if (rawNotes.includes('[RIDER_PICKED_UP]')) {
           mappedStatus = 'picked_up';
         } else if (rawNotes.includes('[RIDER_AT_MERCHANT]')) {
           mappedStatus = 'at_merchant';
