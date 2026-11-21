@@ -39,6 +39,7 @@ export interface CartState {
   isApplyingCoupon: boolean;
   pagoMovilReference: string;
   pagoMovilBank: string;
+  liveExchangeRate: number | null;
 }
 
 const initialState: CartState = {
@@ -70,7 +71,8 @@ const initialState: CartState = {
   couponErrorMessage: null,
   isApplyingCoupon: false,
   pagoMovilReference: '',
-  pagoMovilBank: ''
+  pagoMovilBank: '',
+  liveExchangeRate: null
 };
 
 const CART_STORAGE_KEY = 'pidetelo_web_cart_v1';
@@ -303,12 +305,14 @@ export const CartStore = signalStore(
     });
 
     const exchangeRate = computed(() => {
+      const live = store.liveExchangeRate();
+      if (live && live > 1) return live;
       const bRate = store.selectedBranch()?.currencySettings?.exchangeRate ||
                     store.selectedBranch()?.exchangeRate;
-      if (bRate && bRate > 0 && bRate !== 45.5) return bRate;
+      if (bRate && bRate > 0 && bRate !== 45.5 && bRate !== 52.8 && bRate !== 54.5) return bRate;
       const tRate = store.activeTenant()?.currencySettings?.exchangeRate;
-      if (tRate && tRate > 0 && tRate !== 45.5) return tRate;
-      return 52.80;
+      if (tRate && tRate > 0 && tRate !== 45.5 && tRate !== 52.8 && tRate !== 54.5) return tRate;
+      return bRate || tRate || 896.12;
     });
 
     const subtotalVes = computed(() => {
@@ -373,6 +377,12 @@ export const CartStore = signalStore(
   withMethods((store) => ({
     setStoreProducts(products: Product[]): void {
       patchState(store, { storeProducts: products });
+    },
+
+    setLiveExchangeRate(rate: number): void {
+      if (rate && rate > 1) {
+        patchState(store, { liveExchangeRate: Number(rate.toFixed(2)) });
+      }
     },
 
     isDifferentStore(targetTenantId?: string, targetBranchId?: string): boolean {
@@ -779,9 +789,7 @@ export const CartStore = signalStore(
         randomPin = next4Digit();
       }
 
-      const rate = store.selectedBranch()?.currencySettings?.exchangeRate ||
-                   store.selectedBranch()?.exchangeRate ||
-                   store.activeTenant()?.currencySettings?.exchangeRate || 52.80;
+      const rate = store.exchangeRate();
       const isPagoMovil = store.paymentMethod() === 'mobile_transfer';
 
       const order: Order = {
@@ -883,9 +891,7 @@ export const CartStore = signalStore(
         online: 'Pago Online'
       };
 
-      const rate = store.selectedBranch()?.currencySettings?.exchangeRate ||
-                   store.selectedBranch()?.exchangeRate ||
-                   store.activeTenant()?.currencySettings?.exchangeRate || 52.80;
+      const rate = store.exchangeRate();
       const totalBs = (order.total * rate).toFixed(2);
       const subtotalBs = (order.subtotal * rate).toFixed(2);
       const deliveryBs = (order.deliveryFee * rate).toFixed(2);

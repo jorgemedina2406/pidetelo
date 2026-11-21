@@ -1167,7 +1167,15 @@ class ApiService {
     String paymentMethod = 'cash',
     String? paymentReference,
     String? paymentOriginBank,
+    double? exchangeRate,
   }) async {
+    final liveRate = await DolarApiService().fetchRate();
+    final resolvedLiveRate = liveRate > 1
+        ? liveRate
+        : ((exchangeRate != null && exchangeRate > 1)
+            ? exchangeRate
+            : DolarApiService().officialRate);
+
     final uuidRegex = RegExp(
       r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
     );
@@ -1208,6 +1216,7 @@ class ApiService {
         'paymentReference': (paymentReference ?? '').trim(),
         'paymentOriginBank': (paymentOriginBank ?? '').trim(),
         'extraSubtotal': extraSubtotal,
+        'exchangeRate': resolvedLiveRate,
       };
       final res = await http
           .post(
@@ -1271,11 +1280,18 @@ class ApiService {
       final deliveryFee = (currentOrder['delivery_fee'] as num?)?.toDouble() ?? 0.0;
       final existingNotes = currentOrder['notes']?.toString() ?? '';
 
-      double rate = (currentOrder['exchange_rate'] as num?)?.toDouble() ?? 0.0;
+      double rate = (liveRate > 1) ? liveRate : 0.0;
+      final orderRate = (currentOrder['exchange_rate'] as num?)?.toDouble() ?? 0.0;
+      if (rate <= 1 && orderRate > 1 && orderRate != 45.5 && orderRate != 52.8 && orderRate != 54.5) {
+        rate = orderRate;
+      }
       if (rate <= 1) {
         final fxMatch = RegExp(r'\[FX:rate=([0-9.]+)').firstMatch(existingNotes);
         if (fxMatch != null) {
-          rate = double.tryParse(fxMatch.group(1)!) ?? 0.0;
+          final parsedFx = double.tryParse(fxMatch.group(1)!) ?? 0.0;
+          if (parsedFx > 1 && parsedFx != 45.5 && parsedFx != 52.8 && parsedFx != 54.5) {
+            rate = parsedFx;
+          }
         }
       }
       if (rate <= 1 && currentOrder['branch_id'] != null) {
@@ -1286,9 +1302,15 @@ class ApiService {
               .eq('id', currentOrder['branch_id'].toString())
               .maybeSingle();
           if (bRow != null && bRow['exchange_rate'] != null) {
-            rate = (bRow['exchange_rate'] as num).toDouble();
+            final bRate = (bRow['exchange_rate'] as num).toDouble();
+            if (bRate > 1 && bRate != 45.5 && bRate != 52.8 && bRate != 54.5) {
+              rate = bRate;
+            }
           }
         } catch (_) {}
+      }
+      if (rate <= 1) {
+        rate = resolvedLiveRate;
       }
 
       // Insert order_items FIRST so Realtime UPDATE on orders already sees new rows in DB
@@ -1341,6 +1363,7 @@ class ApiService {
         'updated_at': nowIso,
       };
       if (rate > 1) {
+        updateData['exchange_rate'] = rate;
         updateData['total_bs'] = double.parse((updatedTot * rate).toStringAsFixed(2));
         updateData['subtotal_bs'] = double.parse((updatedSub * rate).toStringAsFixed(2));
       }

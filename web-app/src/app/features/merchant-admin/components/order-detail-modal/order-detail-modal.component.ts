@@ -19,7 +19,10 @@ export class OrderDetailModalComponent {
   @Output() verifyAdditionPayment = new EventEmitter<{ order: Order; addition: OrderAddition }>();
 
   get effectiveRate(): number {
-    return this.order?.exchangeRate || this.activeExchangeRate || 45.50;
+    const ordRate = this.order?.exchangeRate || 0;
+    const isLegacy = ordRate <= 1 || ordRate === 45.5 || ordRate === 52.8 || ordRate === 54.5;
+    if (!isLegacy) return ordRate;
+    return this.activeExchangeRate || ordRate || 45.50;
   }
 
   get baseItems() {
@@ -49,7 +52,16 @@ export class OrderDetailModalComponent {
   }
 
   getAdditionBs(add: OrderAddition): number {
-    if (add.amountBs !== undefined && add.amountBs !== null) return add.amountBs;
+    const implied = add.amountBs && add.amountUsd > 0 ? add.amountBs / add.amountUsd : 0;
+    if (add.status === 'verified' && add.amountBs !== undefined && add.amountBs !== null && implied >= 100) {
+      return add.amountBs;
+    }
+    if (this.activeExchangeRate && this.activeExchangeRate > 100) {
+      return Number((add.amountUsd * this.activeExchangeRate).toFixed(2));
+    }
+    if (add.amountBs !== undefined && add.amountBs !== null && implied >= 100) {
+      return add.amountBs;
+    }
     return Number((add.amountUsd * this.effectiveRate).toFixed(2));
   }
 

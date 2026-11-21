@@ -50,7 +50,7 @@ class DolarApiService extends ChangeNotifier {
             _officialRate;
 
         if (rate > 0) {
-          _officialRate = rate;
+          _officialRate = double.parse(rate.toStringAsFixed(2));
           _lastUpdated = DateTime.tryParse(data['fechaActualizacion'] ?? '') ?? DateTime.now();
 
           final prefs = await SharedPreferences.getInstance();

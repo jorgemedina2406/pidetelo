@@ -10,6 +10,7 @@ import '../../../core/models/order_model.dart';
 import '../../../core/models/branch_model.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/services/cart_service.dart';
+import '../../../core/services/dolar_api_service.dart';
 import '../../../core/services/notification_service.dart';
 import '../../../core/theme/app_theme.dart';
 
@@ -3173,6 +3174,11 @@ class _AppendItemsModalState extends State<_AppendItemsModal> {
       } catch (_) {}
     }
 
+    final liveRate = await DolarApiService().fetchRate();
+    if (liveRate > 1) {
+      _exchangeRate = liveRate;
+    }
+
     if (branchId != null && branchId.isNotEmpty) {
       try {
         final b = await ApiService().fetchBranchById(branchId);
@@ -3182,7 +3188,12 @@ class _AppendItemsModalState extends State<_AppendItemsModal> {
               .map((m) => m.toLowerCase().trim())
               .where((m) => m.isNotEmpty)
               .toList();
-          if (b.exchangeRate != null && b.exchangeRate! > 1) {
+          if ((_exchangeRate == null || _exchangeRate! <= 1) &&
+              b.exchangeRate != null &&
+              b.exchangeRate! > 1 &&
+              b.exchangeRate != 45.5 &&
+              b.exchangeRate != 52.8 &&
+              b.exchangeRate != 54.5) {
             _exchangeRate = b.exchangeRate;
           }
         }
@@ -3320,6 +3331,7 @@ class _AppendItemsModalState extends State<_AppendItemsModal> {
       paymentReference:
           _paymentMethod == 'mobile_transfer' ? cleanRefDigits : '',
       paymentOriginBank: _bankController.text.trim(),
+      exchangeRate: _exchangeRate,
     );
 
     if (mounted) {

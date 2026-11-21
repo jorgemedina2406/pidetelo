@@ -731,8 +731,8 @@
                         </div>
                         <div class="text-right shrink-0">
                           <span class="font-black text-xs block">+${{ add.amountUsd.toFixed(2) }}</span>
-                          @if (add.amountBs) {
-                            <span class="text-[9.5px] font-mono opacity-80">Bs. {{ add.amountBs.toFixed(2) }}</span>
+                          @if (getAdditionBs(add) > 0) {
+                            <span class="text-[9.5px] font-mono opacity-80">Bs. {{ getAdditionBs(add).toFixed(2) }}</span>
                           }
                         </div>
                       </div>
@@ -1056,19 +1056,24 @@
                   @if (appendPaymentMethod() === 'cash') {
                     <div class="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-800 dark:text-amber-300 font-medium">
                       ℹ️ Le entregarás el adicional de <strong>${{ appendSubtotal().toFixed(2) }}</strong>
-                      @if (order()?.exchangeRate && order()!.exchangeRate! > 1) {
-                        <span> (≈ Bs. {{ (appendSubtotal() * order()!.exchangeRate!).toFixed(2) }})</span>
+                      @if (effectiveExchangeRate() > 1) {
+                        <span> (≈ Bs. {{ (appendSubtotal() * effectiveExchangeRate()).toFixed(2) }} • Tasa BCV: {{ effectiveExchangeRate().toFixed(2) }} Bs/$)</span>
                       }
                       en efectivo al repartidor al recibir tu pedido.
                     </div>
                   } @else {
                     <div class="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/40 text-xs space-y-2">
-                      <div class="font-bold text-blue-900 dark:text-blue-300 flex items-center justify-between">
+                      <div class="font-bold text-blue-900 dark:text-blue-300 flex items-center justify-between gap-2">
                         <span>Datos de Pago Móvil de la Tienda:</span>
-                        @if (order()?.exchangeRate && order()!.exchangeRate! > 1) {
-                          <span class="font-mono text-brand-600 dark:text-brand-400 font-extrabold">
-                            Bs. {{ (appendSubtotal() * order()!.exchangeRate!).toFixed(2) }}
-                          </span>
+                        @if (effectiveExchangeRate() > 1) {
+                          <div class="text-right">
+                            <span class="font-mono text-brand-600 dark:text-brand-400 font-extrabold block">
+                              Bs. {{ (appendSubtotal() * effectiveExchangeRate()).toFixed(2) }}
+                            </span>
+                            <span class="text-[9.5px] text-slate-500 dark:text-slate-400 font-mono font-normal">
+                              Tasa BCV: {{ effectiveExchangeRate().toFixed(2) }} Bs/$
+                            </span>
+                          </div>
                         }
                       </div>
 

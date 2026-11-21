@@ -23,6 +23,38 @@ export class OrdersService {
     return pin;
   }
 
+  private cachedOfficialRate: { rate: number; fetchedAt: number } | null = null;
+
+  private isLegacyPlaceholderRate(rate: number): boolean {
+    return !rate || isNaN(rate) || rate <= 1 || rate === 45.5 || rate === 52.8 || rate === 54.5;
+  }
+
+  private async fetchOfficialDolarApiRate(): Promise<number | null> {
+    const now = Date.now();
+    if (this.cachedOfficialRate && now - this.cachedOfficialRate.fetchedAt < 10 * 60 * 1000) {
+      return this.cachedOfficialRate.rate;
+    }
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 4000);
+      const res = await fetch('https://ve.dolarapi.com/v1/dolares/oficial', {
+        headers: { Accept: 'application/json' },
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      if (res.ok) {
+        const data: any = await res.json();
+        const raw = Number(data?.promedio ?? data?.venta ?? 0);
+        if (raw > 1) {
+          const rounded = Number(raw.toFixed(2));
+          this.cachedOfficialRate = { rate: rounded, fetchedAt: now };
+          return rounded;
+        }
+      }
+    } catch (_) {}
+    return this.cachedOfficialRate?.rate ?? null;
+  }
+
   async create(orderPayload: any) {
     if (!orderPayload) {
       throw new BadRequestException('El cuerpo de la solicitud no puede estar vacío.');
@@ -163,13 +195,24 @@ export class OrdersService {
       finalNotes = `[PIN:${resolvedPin}] ${finalNotes}`.trim();
     }
 
-    // Resolver tasa de cambio oficial/referencial del momento del pedido
-    let exchangeRate = Number(orderHeader.exchange_rate) || 0;
+    // Resolver tasa de cambio oficial/referencial del momento del pedido (DolarApi oficial primero)
+    const liveOfficialRate = await this.fetchOfficialDolarApiRate();
+    let exchangeRate = liveOfficialRate || 0;
+    const headerRate = Number(orderHeader.exchange_rate) || 0;
+    let fallbackBranchRate = 0;
+    let fallbackTenantRate = 0;
+
+    if (!exchangeRate && !this.isLegacyPlaceholderRate(headerRate)) {
+      exchangeRate = headerRate;
+    }
     if (!exchangeRate && resolvedBranchId) {
       try {
         const { data: bData } = await client.from('branches').select('exchange_rate').eq('id', resolvedBranchId).maybeSingle();
         if (bData?.exchange_rate) {
-          exchangeRate = Number(bData.exchange_rate);
+          fallbackBranchRate = Number(bData.exchange_rate) || 0;
+          if (!this.isLegacyPlaceholderRate(fallbackBranchRate)) {
+            exchangeRate = fallbackBranchRate;
+          }
         }
       } catch (_) {}
     }
@@ -177,18 +220,21 @@ export class OrdersService {
       try {
         const { data: tData } = await client.from('tenants').select('exchange_rate').eq('id', resolvedTenantId).maybeSingle();
         if (tData?.exchange_rate) {
-          exchangeRate = Number(tData.exchange_rate);
+          fallbackTenantRate = Number(tData.exchange_rate) || 0;
+          if (!this.isLegacyPlaceholderRate(fallbackTenantRate)) {
+            exchangeRate = fallbackTenantRate;
+          }
         }
       } catch (_) {}
     }
     if (!exchangeRate) {
-      exchangeRate = 45.50; // Fallback predeterminado
+      exchangeRate = headerRate || fallbackBranchRate || fallbackTenantRate || 45.50;
     }
 
-    const subtotalBs = Number(orderHeader.subtotal_bs) || Number((subtotal * exchangeRate).toFixed(2));
-    const deliveryFeeBs = Number(orderHeader.delivery_fee_bs) || Number((deliveryFee * exchangeRate).toFixed(2));
-    const discountBs = Number(orderHeader.discount_bs) || Number((discount * exchangeRate).toFixed(2));
-    const totalBs = Number(orderHeader.total_bs) || Number((total * exchangeRate).toFixed(2));
+    const subtotalBs = Number((subtotal * exchangeRate).toFixed(2));
+    const deliveryFeeBs = Number((deliveryFee * exchangeRate).toFixed(2));
+    const discountBs = Number((discount * exchangeRate).toFixed(2));
+    const totalBs = Number((total * exchangeRate).toFixed(2));
     const currency = orderHeader.currency || 'USD';
 
     // Inmutable histórico: dejamos una huella [FX:...] en las notas como salvaguarda
@@ -723,11 +769,24 @@ export class OrdersService {
     const isUuid = (val?: string) =>
       Boolean(val && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val));
 
-    let exchangeRate = Number(order.exchange_rate) || 0;
+    const liveOfficialRate = await this.fetchOfficialDolarApiRate();
+    const payloadRate = !Array.isArray(bodyOrItems) ? Number(bodyOrItems?.exchangeRate || 0) : 0;
     const rawNotes = (order.notes || '').toString();
-    if (!exchangeRate) {
-      const fxMatch = rawNotes.match(/\[FX:rate=([0-9.]+)/);
-      if (fxMatch) exchangeRate = Number(fxMatch[1]) || 0;
+    const fxMatchPre = rawNotes.match(/\[FX:rate=([0-9.]+)/);
+    const orderRate = Number(order.exchange_rate) || 0;
+    const fxRate = fxMatchPre ? Number(fxMatchPre[1]) || 0 : 0;
+    let branchRate = 0;
+    let tenantRate = 0;
+
+    let exchangeRate = liveOfficialRate || 0;
+    if (!exchangeRate && !this.isLegacyPlaceholderRate(payloadRate)) {
+      exchangeRate = payloadRate;
+    }
+    if (!exchangeRate && !this.isLegacyPlaceholderRate(orderRate)) {
+      exchangeRate = orderRate;
+    }
+    if (!exchangeRate && !this.isLegacyPlaceholderRate(fxRate)) {
+      exchangeRate = fxRate;
     }
     if (!exchangeRate && order.branch_id) {
       try {
@@ -736,7 +795,10 @@ export class OrdersService {
           .select('exchange_rate')
           .eq('id', order.branch_id)
           .maybeSingle();
-        if (bData?.exchange_rate) exchangeRate = Number(bData.exchange_rate) || 0;
+        branchRate = Number(bData?.exchange_rate) || 0;
+        if (!this.isLegacyPlaceholderRate(branchRate)) {
+          exchangeRate = branchRate;
+        }
       } catch (_) {}
     }
     if (!exchangeRate && order.tenant_id) {
@@ -746,8 +808,14 @@ export class OrdersService {
           .select('exchange_rate')
           .eq('id', order.tenant_id)
           .maybeSingle();
-        if (tData?.exchange_rate) exchangeRate = Number(tData.exchange_rate) || 0;
+        tenantRate = Number(tData?.exchange_rate) || 0;
+        if (!this.isLegacyPlaceholderRate(tenantRate)) {
+          exchangeRate = tenantRate;
+        }
       } catch (_) {}
+    }
+    if (!exchangeRate) {
+      exchangeRate = payloadRate || orderRate || fxRate || branchRate || tenantRate || 0;
     }
 
     let addedSubtotal = 0;
@@ -827,6 +895,7 @@ export class OrdersService {
       notes: updatedNotes,
       updated_at: nowIso,
     };
+    if (rate > 1) updatePayload.exchange_rate = rate;
     if (newSubtotalBs !== null) updatePayload.subtotal_bs = newSubtotalBs;
     if (newTotalBs !== null) updatePayload.total_bs = newTotalBs;
 
@@ -835,10 +904,18 @@ export class OrdersService {
       updErr &&
       (updErr.code === '42703' ||
         updErr.message?.includes('total_bs') ||
-        updErr.message?.includes('subtotal_bs'))
+        updErr.message?.includes('subtotal_bs') ||
+        updErr.message?.includes('exchange_rate'))
     ) {
-      delete updatePayload.subtotal_bs;
-      delete updatePayload.total_bs;
+      if (updErr.message?.includes('exchange_rate')) {
+        delete updatePayload.exchange_rate;
+      } else {
+        delete updatePayload.subtotal_bs;
+        delete updatePayload.total_bs;
+        if (updErr.code === '42703') {
+          delete updatePayload.exchange_rate;
+        }
+      }
       const retry = await client.from('orders').update(updatePayload).eq('id', order.id);
       updErr = retry.error;
     }

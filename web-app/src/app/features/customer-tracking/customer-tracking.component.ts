@@ -8,6 +8,7 @@ import { ApiService } from '../../core/services/api.service';
 import { SupabaseService } from '../../core/services/supabase.service';
 import { ThemeService } from '../../core/services/theme.service';
 import { I18nService } from '../../core/services/i18n.service';
+import { CurrencyService } from '../../core/services/currency.service';
 import { AuthStore } from '../../core/stores/auth.store';
 import { Order, parseOrderAdditions, OrderAddition, isOrderAdditionItem, updateAdditionTagInNotes } from '../../core/models/order.model';
 import { Product } from '../../core/models/product.model';
@@ -26,8 +27,16 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
   readonly auth = inject(AuthStore);
   readonly theme = inject(ThemeService);
   readonly i18n = inject(I18nService);
+  private readonly currency = inject(CurrencyService);
 
   readonly order = signal<Order | null>(null);
+  readonly liveExchangeRate = signal<number | null>(null);
+  readonly effectiveExchangeRate = computed(() => {
+    const live = this.liveExchangeRate();
+    if (live && live > 1) return live;
+    const ordRate = this.order()?.exchangeRate;
+    return ordRate && ordRate > 1 ? ordRate : 0;
+  });
   readonly etaMinutes = signal<number>(25);
   readonly speedKmh = signal<number>(0);
   readonly distanceKm = signal<number>(0);
@@ -95,6 +104,22 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
 
   canAppendItems(ord: Order | null): boolean {
     return Boolean(ord && this.appendableStatuses.has(ord.status));
+  }
+
+  getAdditionBs(add: OrderAddition): number {
+    const live = this.liveExchangeRate();
+    const implied = add.amountBs && add.amountUsd > 0 ? add.amountBs / add.amountUsd : 0;
+    if (add.status === 'verified' && add.amountBs != null && implied >= 100) {
+      return add.amountBs;
+    }
+    if (live && live > 1) {
+      return Number((add.amountUsd * live).toFixed(2));
+    }
+    if (add.amountBs != null && add.amountBs > 0) {
+      return add.amountBs;
+    }
+    const rate = this.effectiveExchangeRate();
+    return rate > 1 ? Number((add.amountUsd * rate).toFixed(2)) : 0;
   }
 
   readonly filteredStoreProducts = computed(() => {
@@ -174,6 +199,9 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
     this.appendPaymentRef.set('');
     this.appendOriginBank.set('');
     this.isAppendModalOpen.set(true);
+    this.currency.getOfficialRate().then(r => {
+      if (r && r > 1) this.liveExchangeRate.set(r);
+    });
 
     const branchId = (ord as any).branchId || (ord as any).branch_id;
     if (ord.tenantId) {
@@ -265,6 +293,10 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
     }));
 
     const extraSubtotal = this.appendSubtotal();
+    const fetchedLive = await this.currency.getOfficialRate();
+    if (fetchedLive && fetchedLive > 1) {
+      this.liveExchangeRate.set(fetchedLive);
+    }
     let backendSucceeded = false;
 
     try {
@@ -276,7 +308,8 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
             paymentMethod: method,
             paymentReference: ref || undefined,
             paymentOriginBank: originBank || undefined,
-            extraSubtotal
+            extraSubtotal,
+            exchangeRate: this.effectiveExchangeRate() || undefined
           })
         );
         backendSucceeded = true;
@@ -324,7 +357,9 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
 
       const rawNotes = (freshRow.notes || ord.notes || '').toString();
       const fxMatch = rawNotes.match(/\[FX:rate=([0-9.]+)\|total_bs=[0-9.]+(?:\|delivery_bs=([0-9.]+))?(?:\|subtotal_bs=[0-9.]+)?\]/);
-      const rate = Number(freshRow.exchange_rate ?? fxMatch?.[1] ?? ord.exchangeRate ?? 0) || 1.0;
+      const live = this.liveExchangeRate();
+      const dbRate = Number(freshRow.exchange_rate ?? fxMatch?.[1] ?? ord.exchangeRate ?? 0) || 0;
+      const rate = (live && live > 1) ? live : (dbRate > 1 ? dbRate : 1.0);
       const newTotalBs = rate > 1 ? Number((newTotal * rate).toFixed(2)) : null;
       const newSubtotalBs = rate > 1 ? Number((newSubtotal * rate).toFixed(2)) : null;
       const extraBs = rate > 1 ? Number((extraSubtotal * rate).toFixed(2)) : 0;
@@ -374,6 +409,7 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
         notes: newNotes,
         updated_at: nowIso
       };
+      if (rate > 1) updatePayload.exchange_rate = rate;
       if (newTotalBs !== null) updatePayload.total_bs = newTotalBs;
       if (newSubtotalBs !== null) updatePayload.subtotal_bs = newSubtotalBs;
 
@@ -487,6 +523,9 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
 
   ngOnInit(): void {
     this.loadRecentGuestOrders();
+    this.currency.getOfficialRate().then(r => {
+      if (r && r > 1) this.liveExchangeRate.set(r);
+    });
     this.route.paramMap.subscribe(params => {
       const orderIdParam = params.get('orderId') || '';
       if (orderIdParam) {

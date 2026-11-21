@@ -96,6 +96,7 @@ export class OrdersController {
           paymentReference?: string;
           paymentOriginBank?: string;
           extraSubtotal?: number;
+          exchangeRate?: number;
         }
       | any[],
   ) {

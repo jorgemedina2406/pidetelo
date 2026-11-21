@@ -79,17 +79,17 @@ export class StoreViewComponent implements OnInit {
   readonly pendingBranchSwitch = signal<Branch | null>(null);
 
   readonly activeBranchRate = computed(() => {
+    const live = this.liveBcvRate();
+    if (live && live > 1) return Number(live.toFixed(2));
+
     const bRate = this.cart.selectedBranch()?.currencySettings?.exchangeRate ||
                   this.cart.selectedBranch()?.exchangeRate;
-    if (bRate && bRate > 0 && bRate !== 45.50) return Number(bRate.toFixed(2));
+    if (bRate && bRate > 0 && bRate !== 45.50 && bRate !== 52.80 && bRate !== 54.50) return Number(bRate.toFixed(2));
 
     const tRate = this.tenant()?.currencySettings?.exchangeRate;
-    if (tRate && tRate > 0 && tRate !== 45.50) return Number(tRate.toFixed(2));
+    if (tRate && tRate > 0 && tRate !== 45.50 && tRate !== 52.80 && tRate !== 54.50) return Number(tRate.toFixed(2));
 
-    const live = this.liveBcvRate();
-    if (live && live > 0) return Number(live.toFixed(2));
-
-    return Number((bRate || tRate || 52.80).toFixed(2));
+    return Number((bRate || tRate || 896.12).toFixed(2));
   });
 
   readonly isStoreOpen = computed(() => {
@@ -286,7 +286,9 @@ export class StoreViewComponent implements OnInit {
   private fetchLiveBcvRate(): void {
     this.currency.fetchDolarApiRate('oficial').then(liveData => {
       if (liveData && typeof liveData.promedio === 'number' && liveData.promedio > 0) {
-        this.liveBcvRate.set(Number(liveData.promedio.toFixed(2)));
+        const rounded = Number(liveData.promedio.toFixed(2));
+        this.liveBcvRate.set(rounded);
+        this.cart.setLiveExchangeRate(rounded);
       }
     }).catch(() => {});
   }

@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 import { TenantCurrencySettings } from '../models/tenant.model';
 
 export interface FormattedPrice {
@@ -24,6 +24,17 @@ export interface DolarApiResponse {
 })
 export class CurrencyService {
   readonly defaultBcvRate = 879.12; // DolarApi oficial
+  readonly liveOfficialRate = signal<number | null>(null);
+  private cachedOfficialFetchedAt = 0;
+
+  async getOfficialRate(force = false): Promise<number | null> {
+    const cached = this.liveOfficialRate();
+    if (!force && cached && cached > 1 && Date.now() - this.cachedOfficialFetchedAt < 10 * 60 * 1000) {
+      return cached;
+    }
+    await this.fetchDolarApiRate('oficial');
+    return this.liveOfficialRate();
+  }
 
   /**
    * Fetches official BCV or Parallel exchange rate from https://ve.dolarapi.com
@@ -33,6 +44,12 @@ export class CurrencyService {
       const res = await fetch(`https://ve.dolarapi.com/v1/dolares/${fuente}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data: DolarApiResponse = await res.json();
+      if (fuente === 'oficial' && typeof data?.promedio === 'number' && data.promedio > 1) {
+        const rounded = Number(data.promedio.toFixed(2));
+        data.promedio = rounded;
+        this.liveOfficialRate.set(rounded);
+        this.cachedOfficialFetchedAt = Date.now();
+      }
       return data;
     } catch (err) {
       console.warn(`[CurrencyService] Fallback for dolarapi.com/${fuente}:`, err);
@@ -42,7 +59,7 @@ export class CurrencyService {
         nombre: fuente === 'oficial' ? 'Dólar Oficial (BCV)' : 'Dólar Paralelo',
         compra: null,
         venta: null,
-        promedio: this.defaultBcvRate,
+        promedio: this.liveOfficialRate() || this.defaultBcvRate,
         fechaActualizacion: new Date().toISOString()
       };
     }

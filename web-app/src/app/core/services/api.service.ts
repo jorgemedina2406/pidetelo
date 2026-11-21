@@ -2872,6 +2872,7 @@ export class ApiService {
       paymentReference?: string;
       paymentOriginBank?: string;
       extraSubtotal?: number;
+      exchangeRate?: number;
     }
   ): Observable<any> {
     return this.http.post<any>(this.baseUrl + '/orders/' + orderId + '/append-items', payload);

@@ -1705,9 +1705,18 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       .filter((d): d is string => Boolean(d && d.trim().length > 0));
     const addedSummary = descriptions.length > 0 ? descriptions.join(', ') : undefined;
     const addedAmountUsd = Number(addedList.reduce((s, a) => s + (a.amountUsd || 0), 0).toFixed(2));
+    const live = this.liveExchangeRate();
+    const rate = (live && live > 1)
+      ? live
+      : (Number(exchangeRate) > 1 ? Number(exchangeRate) : (this.activeExchangeRate() || 0));
+    const hasReliableBs = addedList.every(a => {
+      if (!a.amountBs || a.amountUsd <= 0) return false;
+      const implied = a.amountBs / a.amountUsd;
+      if (implied < 100) return false;
+      return a.status === 'verified' || !(live && live > 1);
+    });
     const totalBsRaw = addedList.reduce((s, a) => s + (a.amountBs || 0), 0);
-    const rate = Number(exchangeRate) || 0;
-    const addedAmountBs = totalBsRaw > 0
+    const addedAmountBs = hasReliableBs && totalBsRaw > 0
       ? Number(totalBsRaw.toFixed(2))
       : (rate > 1 && addedAmountUsd > 0 ? Number((addedAmountUsd * rate).toFixed(2)) : undefined);
     const hasMobile = addedList.some(a => a.method === 'mobile_transfer');
@@ -3578,11 +3587,32 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     return Math.max(0, Number(((order.total || 0) - addSum).toFixed(2)));
   }
 
+  getAdditionEffectiveRate(addition: OrderAddition, order: Order | null | undefined): number {
+    const implied = addition.amountBs && addition.amountUsd > 0 ? addition.amountBs / addition.amountUsd : 0;
+    if (addition.status === 'verified' && implied >= 100) {
+      return Number(implied.toFixed(2));
+    }
+    const live = this.liveExchangeRate();
+    if (live && live > 1) return live;
+    if (implied >= 100) return Number(implied.toFixed(2));
+    const active = this.activeExchangeRate();
+    if (active && active > 1) return active;
+    return order?.exchangeRate || 1;
+  }
+
   getAdditionBsAmount(addition: OrderAddition, order: Order | null | undefined): number {
-    if (addition.amountBs !== undefined && addition.amountBs !== null) {
+    const implied = addition.amountBs && addition.amountUsd > 0 ? addition.amountBs / addition.amountUsd : 0;
+    if (addition.status === 'verified' && addition.amountBs !== undefined && addition.amountBs !== null && implied >= 100) {
       return addition.amountBs;
     }
-    const rate = order?.exchangeRate || this.activeExchangeRate() || 1;
+    const live = this.liveExchangeRate();
+    if (live && live > 1) {
+      return Number((addition.amountUsd * live).toFixed(2));
+    }
+    if (addition.amountBs !== undefined && addition.amountBs !== null && implied >= 100) {
+      return addition.amountBs;
+    }
+    const rate = this.activeExchangeRate() || order?.exchangeRate || 1;
     return Number((addition.amountUsd * rate).toFixed(2));
   }
 

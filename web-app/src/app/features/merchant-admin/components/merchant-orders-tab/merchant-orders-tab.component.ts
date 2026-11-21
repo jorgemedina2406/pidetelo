@@ -129,10 +129,17 @@ export class MerchantOrdersTabComponent {
   }
 
   getAdditionBs(add: OrderAddition, order?: Order | null): string {
-    if (add.amountBs !== undefined && add.amountBs !== null) {
+    const implied = add.amountBs && add.amountUsd > 0 ? add.amountBs / add.amountUsd : 0;
+    if (add.status === 'verified' && add.amountBs !== undefined && add.amountBs !== null && implied >= 100) {
       return add.amountBs.toFixed(2);
     }
-    const rate = order?.exchangeRate || this.activeExchangeRate || 1;
+    if (this.activeExchangeRate && this.activeExchangeRate > 100) {
+      return (add.amountUsd * this.activeExchangeRate).toFixed(2);
+    }
+    if (add.amountBs !== undefined && add.amountBs !== null && implied >= 100) {
+      return add.amountBs.toFixed(2);
+    }
+    const rate = this.activeExchangeRate || order?.exchangeRate || 1;
     return (add.amountUsd * rate).toFixed(2);
   }
 
