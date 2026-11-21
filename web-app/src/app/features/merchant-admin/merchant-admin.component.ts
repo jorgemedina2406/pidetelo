@@ -1884,7 +1884,12 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
           customerName: ord.customer?.name || 'Cliente',
           ...summary
         });
-      } else if (currentAdditions.length === 0 && currentItemsCount > prev.itemsCount) {
+      } else if (
+        currentAdditions.length === 0 &&
+        prev.itemsCount > 0 &&
+        currentItemsCount > prev.itemsCount &&
+        currentTotal > prev.total + 0.009
+      ) {
         const extraItems = (ord.items || []).slice(prev.itemsCount);
         const extraSummary = extraItems.map(i => `${i.quantity}x ${i.name}`).join(', ');
         const addedSumFromItems = extraItems.reduce((s, i) => s + Number(i.itemTotal || 0), 0);
@@ -1905,7 +1910,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
 
       this.knownOrderAdditionsMap.set(ord.id, {
         additionsCount: Math.max(prev.additionsCount, currentAdditions.length),
-        itemsCount: currentItemsCount,
+        itemsCount: currentItemsCount > 0 ? currentItemsCount : prev.itemsCount,
         total: currentTotal,
         pendingMobileSig
       });
@@ -2269,7 +2274,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
               if (newRow.id) {
                 this.knownOrderAdditionsMap.set(newRow.id, {
                   additionsCount: parseOrderAdditions(newRow.notes).length,
-                  itemsCount: 0,
+                  itemsCount: -1,
                   total: Number(newRow.total || 0),
                   pendingMobileSig: this.getPendingMobileSignature(newRow.notes)
                 });
@@ -2311,7 +2316,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
                 );
                 this.knownOrderAdditionsMap.set(newRow.id, {
                   additionsCount: newAdditions.length,
-                  itemsCount: prev?.itemsCount ?? existingOrder?.items?.length ?? 0,
+                  itemsCount: prev?.itemsCount ?? (existingOrder?.items?.length || -1),
                   total: Number(newRow.total ?? prev?.total ?? existingOrder?.total ?? 0),
                   pendingMobileSig: newPendingSig
                 });
@@ -2333,7 +2338,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
                 );
                 this.knownOrderAdditionsMap.set(newRow.id, {
                   additionsCount: Math.max(prevCount, newAdditions.length),
-                  itemsCount: prev?.itemsCount ?? existingOrder?.items?.length ?? 0,
+                  itemsCount: prev?.itemsCount ?? (existingOrder?.items?.length || -1),
                   total: Number(newRow.total ?? prev?.total ?? existingOrder?.total ?? 0),
                   pendingMobileSig: newPendingSig
                 });
