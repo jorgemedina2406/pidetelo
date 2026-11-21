@@ -99,6 +99,35 @@ export class MerchantOrdersTabComponent {
     );
   }
 
+  isRiderAcceptedForOrder(order: Order): boolean {
+    const notes = (order.notes || '').toString();
+    return (
+      Boolean(order.riderAccepted) ||
+      order.status === 'at_merchant' ||
+      order.status === 'picked_up' ||
+      order.status === 'on_the_way' ||
+      notes.includes('[RIDER_ACCEPTED]') ||
+      notes.includes('[RIDER_AT_MERCHANT]') ||
+      notes.includes('[RIDER_PICKED_UP]') ||
+      notes.includes('[RIDER_ON_THE_WAY]')
+    );
+  }
+
+  canDispatchOrder(order: Order): boolean {
+    if (order.fulfillmentType === 'pickup') return true;
+    const hasDriver = Boolean(order.driverId && String(order.driverId).trim());
+    return hasDriver && !order.riderRejected && this.isRiderAcceptedForOrder(order);
+  }
+
+  getDispatchDisabledReason(order: Order): string {
+    if (this.canDispatchOrder(order)) return '';
+    const hasDriver = Boolean(order.driverId && String(order.driverId).trim());
+    if (!hasDriver) {
+      return 'Asigna un motorizado antes de despachar';
+    }
+    return 'Esperando que el motorizado acepte el pedido';
+  }
+
   getAdditionBs(add: OrderAddition, order?: Order | null): string {
     if (add.amountBs !== undefined && add.amountBs !== null) {
       return add.amountBs.toFixed(2);

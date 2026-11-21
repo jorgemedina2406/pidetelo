@@ -3767,6 +3767,35 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
           this.openAdditionVerificationModal({ order, addition: pendingAdd });
           return;
         }
+        if (order.fulfillmentType !== 'pickup') {
+          const hasDriver = Boolean(order.driverId && String(order.driverId).trim());
+          const rawNotes = (order.notes || '').toString();
+          const riderAccepted =
+            Boolean(order.riderAccepted) ||
+            order.status === 'at_merchant' ||
+            order.status === 'picked_up' ||
+            order.status === 'on_the_way' ||
+            rawNotes.includes('[RIDER_ACCEPTED]') ||
+            rawNotes.includes('[RIDER_AT_MERCHANT]') ||
+            rawNotes.includes('[RIDER_PICKED_UP]') ||
+            rawNotes.includes('[RIDER_ON_THE_WAY]');
+          if (!hasDriver) {
+            this.showToast(
+              'warning',
+              `Asigna un motorizado ${this.formatOrderNumber(order.orderNumber)}`,
+              'Debes asignar un motorizado y esperar su aceptación antes de despachar el pedido.'
+            );
+            return;
+          }
+          if (!riderAccepted || order.riderRejected) {
+            this.showToast(
+              'warning',
+              `Esperando aceptación ${this.formatOrderNumber(order.orderNumber)}`,
+              'El motorizado asignado aún no ha aceptado el pedido. Espera su confirmación antes de despachar.'
+            );
+            return;
+          }
+        }
       }
     }
     this.advanceOrderStatus(event.orderId, event.status);
@@ -3860,7 +3889,8 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         status: 'assigned_driver',
         riderAccepted: false,
         riderRejected: false,
-        rejectedRiderName: undefined
+        rejectedRiderName: undefined,
+        notes: (o.notes || '').replace(/\[RIDER_[A-Z_]+(?::[^\]]*)?\]\s*/g, '').trim(),
       } : o)
     );
 

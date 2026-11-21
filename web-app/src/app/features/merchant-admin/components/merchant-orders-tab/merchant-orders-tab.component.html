@@ -462,8 +462,9 @@
                 </button>
                 } @else {
                 <button (click)="advanceStatus.emit({ orderId: o.id, status: 'on_the_way' })"
-                  [disabled]="!o.driverId && o.fulfillmentType === 'delivery'"
-                  class="bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white font-bold text-[11px] px-3 py-1 rounded-md shadow-xs transition-all active:scale-95 flex items-center gap-1">
+                  [disabled]="!canDispatchOrder(o)"
+                  [title]="getDispatchDisabledReason(o)"
+                  class="bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-blue-600 cursor-pointer text-white font-bold text-[11px] px-3 py-1 rounded-md shadow-xs transition-all active:scale-95 flex items-center gap-1">
                   <span>{{ o.status === 'picked_up' ? 'Confirmar Despacho' : i18n.t('ma.dispatch') }}</span>
                   <app-icon name="bike" [size]="12"></app-icon>
                 </button>
