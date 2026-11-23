@@ -1496,24 +1496,65 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     Navigator.of(context, rootNavigator: true).pop();
 
     if (result.success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result.message),
-          backgroundColor: const Color(0xFF10B981),
-          behavior: SnackBarBehavior.floating,
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (sCtx) => AlertDialog(
+          backgroundColor: dialogBg,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981)),
+              const SizedBox(width: 8),
+              Text('Cuenta Eliminada', style: GoogleFonts.outfit(color: textColor, fontWeight: FontWeight.w800)),
+            ],
+          ),
+          content: Text(
+            result.message,
+            style: GoogleFonts.outfit(color: subtextColor, fontSize: 13.5, height: 1.4),
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () => Navigator.pop(sCtx),
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
+              child: const Text('Entendido', style: TextStyle(color: Colors.white)),
+            ),
+          ],
         ),
       );
+      if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => CustomerLoginScreen(sessionService: widget.sessionService)),
         (route) => false,
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result.message),
-          backgroundColor: const Color(0xFFEF4444),
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 5),
+      await showDialog<void>(
+        context: context,
+        builder: (eCtx) => AlertDialog(
+          backgroundColor: dialogBg,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              const Icon(Icons.error_outline_rounded, color: Color(0xFFEF4444)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'No se pudo eliminar',
+                  style: GoogleFonts.outfit(color: textColor, fontWeight: FontWeight.w800),
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            result.message,
+            style: GoogleFonts.outfit(color: subtextColor, fontSize: 13.5, height: 1.4),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(eCtx),
+              child: const Text('Cerrar'),
+            ),
+          ],
         ),
       );
     }
@@ -1741,6 +1782,17 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                       onTap: _deleteAccount,
                     ),
                   ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Center(
+                child: Text(
+                  'Pídetelo v1.1.16 (19)',
+                  style: GoogleFonts.outfit(
+                    fontSize: 11,
+                    color: isDark ? Colors.white38 : const Color(0xFF94A3B8),
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
             ],

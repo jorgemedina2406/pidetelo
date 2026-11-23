@@ -541,6 +541,8 @@ class SessionService extends ChangeNotifier {
         );
       }
 
+      String? lastServerError;
+
       for (final base in _backendCandidateUrls) {
         try {
           final res = await http
@@ -550,7 +552,7 @@ class SessionService extends ChangeNotifier {
                   'Content-Type': 'application/json',
                   'Authorization': 'Bearer $token',
                 },
-                body: jsonEncode({}),
+                body: jsonEncode({'accessToken': token}),
               )
               .timeout(const Duration(seconds: 15));
 
@@ -560,7 +562,7 @@ class SessionService extends ChangeNotifier {
             if (parsed is Map) decoded = Map<String, dynamic>.from(parsed);
           } catch (_) {}
 
-          if (res.statusCode >= 200 && res.statusCode < 300) {
+          if (res.statusCode >= 200 && res.statusCode < 300 && decoded['success'] == true) {
             final prefs = await SharedPreferences.getInstance();
             final user = _currentUser;
             final emailOrId = (user != null && user.email.isNotEmpty) ? user.email : user?.id;
@@ -603,12 +605,17 @@ class SessionService extends ChangeNotifier {
             );
           }
 
-          if (res.statusCode >= 400 && res.statusCode < 500) {
+          if (res.statusCode >= 400) {
             final errMsg = decoded['message'];
             final readable = errMsg is List
                 ? errMsg.join(', ')
-                : (errMsg?.toString() ?? 'No se pudo eliminar la cuenta (código ${res.statusCode}).');
-            return (success: false, message: readable);
+                : (errMsg?.toString().trim().isNotEmpty == true
+                    ? errMsg.toString().trim()
+                    : 'No se pudo eliminar la cuenta (código ${res.statusCode}).');
+            lastServerError = readable;
+            if (res.statusCode < 500) {
+              return (success: false, message: readable);
+            }
           }
         } catch (e) {
           debugPrint('[SessionService] deleteAccount attempt failed for $base: $e');
@@ -617,7 +624,7 @@ class SessionService extends ChangeNotifier {
 
       return (
         success: false,
-        message:
+        message: lastServerError ??
             'No pudimos conectar con el servidor. Verifica tu conexión o solicita el borrado en pidetelo.app/legal/eliminar-cuenta',
       );
     } catch (e) {

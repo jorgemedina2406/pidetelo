@@ -130,9 +130,12 @@ export class UsersController {
   @ApiOperation({ summary: 'Eliminar permanentemente la cuenta y datos personales de un cliente autenticado' })
   deleteAccount(
     @Headers('authorization') authorization: string | undefined,
-    @Body() body: { email?: string; password?: string },
+    @Body() body: { email?: string; password?: string; accessToken?: string },
   ) {
-    const token = authorization?.replace(/^Bearer\s+/i, '').trim() || undefined;
+    const token =
+      authorization?.replace(/^Bearer\s+/i, '').trim() ||
+      body?.accessToken?.trim() ||
+      undefined;
     return this.usersService.deleteCustomerAccount({
       accessToken: token,
       email: body?.email,

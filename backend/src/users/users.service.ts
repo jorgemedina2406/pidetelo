@@ -1141,6 +1141,8 @@ export class UsersService {
       throw new BadRequestException('Las cuentas administrativas no pueden eliminarse por esta vía.');
     }
 
+    console.log(`[UsersService] Iniciando eliminación definitiva de cuenta: id=${verifiedId}, email=${verifiedEmail || 'N/A'}`);
+
     // 3. Purga completa de datos personales del usuario en Supabase y disco local
     try {
       await client.from('customer_favorites').delete().eq('user_id', verifiedId);
@@ -1182,13 +1184,36 @@ export class UsersService {
     // 4. Eliminación definitiva en Supabase Auth (crítico)
     const { error: delAuthErr } = await client.auth.admin.deleteUser(verifiedId);
     if (delAuthErr) {
-      const msg = String(delAuthErr.message || '').toLowerCase();
-      if (!msg.includes('not found')) {
+      console.error(`[UsersService] Error en auth.admin.deleteUser(${verifiedId}):`, delAuthErr.message);
+      let stillExists = true;
+      try {
+        const { data: checkAfterErr } = await client.auth.admin.getUserById(verifiedId);
+        stillExists = Boolean(checkAfterErr?.user?.id);
+      } catch (_) {}
+
+      if (stillExists) {
         throw new InternalServerErrorException(
-          'No se pudo eliminar la cuenta del sistema de autenticación. Intenta de nuevo o solicita eliminación manual.',
+          `No se pudo eliminar la cuenta en Supabase Auth: ${delAuthErr.message}`,
         );
       }
     }
+
+    // 5. Verificación posterior obligatoria en Supabase Auth
+    try {
+      const { data: verifyGone } = await client.auth.admin.getUserById(verifiedId);
+      if (verifyGone?.user?.id) {
+        console.error(`[UsersService] Verificación fallida: usuario ${verifiedId} sigue activo en Auth.`);
+        throw new InternalServerErrorException(
+          'La cuenta no pudo eliminarse completamente del servidor de autenticación.',
+        );
+      }
+    } catch (verifyErr: any) {
+      if (verifyErr instanceof InternalServerErrorException) {
+        throw verifyErr;
+      }
+    }
+
+    console.log(`[UsersService] Cuenta eliminada y verificada correctamente: id=${verifiedId}`);
 
     return {
       success: true,
