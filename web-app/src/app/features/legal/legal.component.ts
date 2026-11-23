@@ -1,11 +1,14 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { firstValueFrom } from 'rxjs';
 import { ThemeService } from '../../core/services/theme.service';
 import { IconComponent } from '../../shared/components/icon.component';
+import { environment } from '../../../environments/environment';
 
-export type LegalTab = 'terminos' | 'privacidad' | 'cookies' | 'reclamaciones';
+export type LegalTab = 'terminos' | 'privacidad' | 'cookies' | 'reclamaciones' | 'eliminar-cuenta';
 
 @Component({
   selector: 'app-legal',
@@ -98,6 +101,20 @@ export type LegalTab = 'terminos' | 'privacidad' | 'cookies' | 'reclamaciones';
                   class="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold border-2 transition-all flex items-center gap-2 flex-shrink-0 cursor-pointer">
             <span>📖</span>
             <span>Libro de Reclamaciones</span>
+          </button>
+
+          <button (click)="setTab('eliminar-cuenta')"
+                  [class.border-red-500]="activeTab() === 'eliminar-cuenta'"
+                  [class.text-red-600]="activeTab() === 'eliminar-cuenta'"
+                  [class.dark:text-red-400]="activeTab() === 'eliminar-cuenta'"
+                  [class.bg-red-50]="activeTab() === 'eliminar-cuenta'"
+                  [class.dark:bg-red-950/40]="activeTab() === 'eliminar-cuenta'"
+                  [class.border-transparent]="activeTab() !== 'eliminar-cuenta'"
+                  [class.text-slate-600]="activeTab() !== 'eliminar-cuenta'"
+                  [class.dark:text-slate-400]="activeTab() !== 'eliminar-cuenta'"
+                  class="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold border-2 transition-all flex items-center gap-2 flex-shrink-0 cursor-pointer">
+            <span>🗑️</span>
+            <span>Eliminar Cuenta</span>
           </button>
         </div>
 
@@ -265,11 +282,12 @@ export type LegalTab = 'terminos' | 'privacidad' | 'cookies' | 'reclamaciones';
                   5. Derechos ARCO, Retención y Eliminación de Cuenta
                 </h2>
                 <p>
-                  Tienes derecho de acceder, rectificar o solicitar la eliminación total de tus datos personales e historial de ubicaciones en cualquier momento. Puedes ejercer este derecho directamente desde la sección de Soporte en la app o enviando tu solicitud a:
+                  Tienes derecho de acceder, rectificar o solicitar la eliminación total de tus datos personales en cualquier momento. Puedes eliminar tu cuenta de forma inmediata directamente desde la app móvil en <strong>Perfil → Eliminar Cuenta</strong> o desde nuestro portal web dedicado de eliminación de cuenta:
                 </p>
-                <div class="p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs space-y-1">
-                  <div><strong>Correo de Privacidad:</strong> <a href="mailto:pideteloadomicilio@gmail.com" class="text-brand-600 dark:text-brand-400 font-bold underline">pideteloadomicilio@gmail.com</a></div>
-                  <div><strong>Tiempo de Respuesta:</strong> Menor a 48 horas hábiles para confirmación de eliminación definitiva.</div>
+                <div class="p-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs space-y-2">
+                  <div><strong>Eliminación Inmediata en Línea:</strong> <button type="button" (click)="setTab('eliminar-cuenta')" class="text-brand-600 dark:text-brand-400 font-bold underline cursor-pointer">https://pidetelo.app/legal/eliminar-cuenta</button></div>
+                  <div><strong>Correo de Privacidad:</strong> <a href="mailto:pideteloadomicilio@gmail.com" class="text-brand-600 dark:text-brand-400 font-bold underline">pideteloadomicilio&#64;gmail.com</a></div>
+                  <div><strong>Tiempo de Respuesta:</strong> Inmediato en la app o formulario web; menor a 48 horas hábiles para solicitudes manuales.</div>
                 </div>
               </section>
             </div>
@@ -407,6 +425,152 @@ export type LegalTab = 'terminos' | 'privacidad' | 'cookies' | 'reclamaciones';
             </div>
           }
 
+          <!-- 5. ELIMINACIÓN DE CUENTA Y DATOS (REQUISITO GOOGLE PLAY) -->
+          @if (activeTab() === 'eliminar-cuenta') {
+            <div class="space-y-6 animate-fade-in">
+              <div class="border-b border-slate-100 dark:border-slate-800 pb-4">
+                <span class="text-xs font-bold text-red-600 dark:text-red-400 uppercase tracking-widest">Control de Privacidad & Google Play</span>
+                <h1 class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-1">Eliminación de Cuenta y Datos Personales</h1>
+                <p class="text-xs text-slate-400 mt-1">
+                  Aplicación: <strong>Pídetelo</strong> (<code>com.pidetelo.customer</code>) & Web Oficial <strong>pidetelo.app</strong> • Desarrollador: <strong>Pídetelo Express C.A.</strong>
+                </p>
+              </div>
+
+              <!-- 1. Pasos desde la App -->
+              <section class="space-y-3 text-xs sm:text-sm">
+                <h2 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-red-500"></span>
+                  1. Cómo eliminar tu cuenta desde la App Móvil (Inmediato)
+                </h2>
+                <p>Si tienes la aplicación <strong>Pídetelo</strong> instalada en tu teléfono Android o iOS, puedes borrar tu cuenta al instante siguiendo estos pasos:</p>
+                <ol class="list-decimal list-inside space-y-1.5 pl-2 text-slate-600 dark:text-slate-300">
+                  <li>Abre la app <strong>Pídetelo</strong> con tu sesión iniciada.</li>
+                  <li>En la barra inferior, entra a la pestaña <strong>Perfil</strong>.</li>
+                  <li>Desplázate hasta la parte inferior y toca el botón <strong>Eliminar Cuenta</strong>.</li>
+                  <li>Confirma tocando <strong>«Sí, Eliminar Cuenta»</strong>. Tu cuenta y datos personales se eliminarán de inmediato.</li>
+                </ol>
+              </section>
+
+              <!-- 2. Transparencia de datos -->
+              <section class="space-y-3 text-xs sm:text-sm bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded-2xl p-5">
+                <h2 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-brand-500"></span>
+                  2. ¿Qué datos se eliminan y cuáles se conservan?
+                </h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                  <div class="p-3.5 bg-white dark:bg-slate-900 rounded-xl border border-emerald-500/30 space-y-2">
+                    <h3 class="font-black text-emerald-700 dark:text-emerald-400 text-xs uppercase tracking-wider">✅ Se eliminan permanentemente</h3>
+                    <ul class="list-disc list-inside space-y-1 text-xs text-slate-600 dark:text-slate-400">
+                      <li>Cuenta y credenciales de acceso (Auth).</li>
+                      <li>Nombre completo, correo, teléfono y foto de perfil.</li>
+                      <li>Direcciones de entrega y coordenadas guardadas.</li>
+                      <li>Comercios favoritos, carrito y preferencias.</li>
+                      <li>Tokens de notificaciones push (Firebase FCM).</li>
+                    </ul>
+                  </div>
+                  <div class="p-3.5 bg-white dark:bg-slate-900 rounded-xl border border-amber-500/30 space-y-2">
+                    <h3 class="font-black text-amber-700 dark:text-amber-400 text-xs uppercase tracking-wider">⚖️ Qué se conserva por obligación legal</h3>
+                    <ul class="list-disc list-inside space-y-1 text-xs text-slate-600 dark:text-slate-400">
+                      <li>Registros contables y fiscales mínimos de pedidos ya completados con comercios aliados (números de orden, montos y referencias bancarias exigidas por normativa tributaria y prevención de fraude).</li>
+                      <li>Estos registros no se usan con fines comerciales ni permiten reactivar la cuenta.</li>
+                    </ul>
+                    <p class="text-[11px] text-slate-500 dark:text-slate-400 pt-1">
+                      <strong>Plazo de borrado:</strong> Inmediato al confirmar en la app o en el formulario web; máximo 48 horas hábiles para solicitudes manuales.
+                    </p>
+                  </div>
+                </div>
+              </section>
+
+              <!-- 3. Formulario Eliminación Inmediata con Correo + Contraseña -->
+              <section class="space-y-4 text-xs sm:text-sm border border-red-200 dark:border-red-900/50 bg-red-50/40 dark:bg-red-950/10 rounded-2xl p-5">
+                <div>
+                  <h2 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-red-500"></span>
+                    3. Eliminar cuenta inmediatamente desde la web
+                  </h2>
+                  <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                    Si ya desinstalaste la app, ingresa el correo y la contraseña de tu cuenta de Pídetelo para verificar tu identidad y eliminarla al instante.
+                  </p>
+                </div>
+
+                @if (instantDeleteResult(); as res) {
+                  <div [class]="res.success ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300' : 'bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-300'"
+                       class="p-4 rounded-xl border text-xs font-semibold">
+                    {{ res.message }}
+                  </div>
+                }
+
+                <form (submit)="submitInstantAccountDeletion($event)" class="space-y-3">
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Correo de la Cuenta *</label>
+                      <input type="email" [(ngModel)]="instantDeleteForm.email" name="instantDeleteEmail" required placeholder="tu-correo@gmail.com"
+                             class="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500" />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Contraseña *</label>
+                      <input type="password" [(ngModel)]="instantDeleteForm.password" name="instantDeletePassword" required placeholder="Tu contraseña actual"
+                             class="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500" />
+                    </div>
+                  </div>
+
+                  <label class="flex items-start gap-2.5 text-xs text-slate-600 dark:text-slate-300 cursor-pointer select-none pt-1">
+                    <input type="checkbox" [(ngModel)]="instantDeleteForm.confirmed" name="instantDeleteConfirmed" required
+                           class="mt-0.5 rounded border-slate-300 text-red-600 focus:ring-red-500" />
+                    <span>Entiendo que esta acción es permanente e irreversible y eliminará mi perfil, direcciones guardadas y favoritos en Pídetelo.</span>
+                  </label>
+
+                  <button type="submit"
+                          [disabled]="isInstantDeleting() || !instantDeleteForm.confirmed"
+                          class="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold text-xs shadow-sm transition-all cursor-pointer">
+                    {{ isInstantDeleting() ? 'Eliminando cuenta...' : 'Eliminar Cuenta Permanentemente' }}
+                  </button>
+                </form>
+              </section>
+
+              <!-- 4. Solicitud Manual (cuentas Google OAuth o sin contraseña) -->
+              <section class="space-y-4 text-xs sm:text-sm border border-slate-200 dark:border-slate-800 rounded-2xl p-5 bg-white dark:bg-slate-900">
+                <div>
+                  <h2 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-sky-500"></span>
+                    4. ¿Iniciaste sesión con Google o no recuerdas tu contraseña?
+                  </h2>
+                  <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                    Registra una solicitud de eliminación manual con tu correo asociado. Procesaremos el borrado definitivo en menos de 48 horas hábiles.
+                  </p>
+                </div>
+
+                @if (manualDeleteResult(); as mRes) {
+                  <div [class]="mRes.success ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300' : 'bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-300'"
+                       class="p-4 rounded-xl border text-xs font-semibold space-y-1">
+                    <div>{{ mRes.message }}</div>
+                    @if (mRes.requestId) {
+                      <div class="font-mono text-[11px] opacity-85">Código de solicitud: {{ mRes.requestId }}</div>
+                    }
+                  </div>
+                }
+
+                <form (submit)="submitManualAccountDeletion($event)" class="space-y-3">
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Correo electrónico registrado *</label>
+                    <input type="email" [(ngModel)]="manualDeleteForm.email" name="manualDeleteEmail" required placeholder="tu-correo@gmail.com"
+                           class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500" />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Motivo o comentario (Opcional)</label>
+                    <textarea rows="2" [(ngModel)]="manualDeleteForm.reason" name="manualDeleteReason" placeholder="Ej: Cuenta vinculada con Google, deseo eliminar mis datos..."
+                              class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"></textarea>
+                  </div>
+                  <button type="submit"
+                          [disabled]="isSubmittingManualDelete()"
+                          class="px-5 py-2.5 rounded-xl bg-slate-900 dark:bg-brand-500 hover:opacity-90 disabled:opacity-50 text-white font-bold text-xs shadow-sm transition-all cursor-pointer">
+                    {{ isSubmittingManualDelete() ? 'Registrando solicitud...' : 'Solicitar Eliminación Manual' }}
+                  </button>
+                </form>
+              </section>
+            </div>
+          }
+
         </div>
 
       </main>
@@ -424,10 +588,26 @@ export class LegalComponent implements OnInit {
   readonly theme = inject(ThemeService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly http = inject(HttpClient);
 
   readonly activeTab = signal<LegalTab>('terminos');
   readonly isSubmittingReclamo = signal<boolean>(false);
   readonly isReclamoSubmitted = signal<boolean>(false);
+
+  readonly isInstantDeleting = signal<boolean>(false);
+  readonly instantDeleteResult = signal<{ success: boolean; message: string } | null>(null);
+  instantDeleteForm = {
+    email: '',
+    password: '',
+    confirmed: false
+  };
+
+  readonly isSubmittingManualDelete = signal<boolean>(false);
+  readonly manualDeleteResult = signal<{ success: boolean; message: string; requestId?: string } | null>(null);
+  manualDeleteForm = {
+    email: '',
+    reason: ''
+  };
 
   reclamoForm = {
     nombre: '',
@@ -442,14 +622,14 @@ export class LegalComponent implements OnInit {
   ngOnInit(): void {
     this.route.paramMap.subscribe(params => {
       const doc = params.get('doc') as LegalTab;
-      if (doc && ['terminos', 'privacidad', 'cookies', 'reclamaciones'].includes(doc)) {
+      if (doc && ['terminos', 'privacidad', 'cookies', 'reclamaciones', 'eliminar-cuenta'].includes(doc)) {
         this.activeTab.set(doc);
       }
     });
 
     this.route.queryParamMap.subscribe(params => {
       const tab = params.get('tab') as LegalTab;
-      if (tab && ['terminos', 'privacidad', 'cookies', 'reclamaciones'].includes(tab)) {
+      if (tab && ['terminos', 'privacidad', 'cookies', 'reclamaciones', 'eliminar-cuenta'].includes(tab)) {
         this.activeTab.set(tab);
       }
     });
@@ -492,6 +672,90 @@ export class LegalComponent implements OnInit {
 
     this.isSubmittingReclamo.set(false);
     this.isReclamoSubmitted.set(true);
+  }
+
+  async submitInstantAccountDeletion(e: Event): Promise<void> {
+    e.preventDefault();
+    if (!this.instantDeleteForm.confirmed) return;
+    this.isInstantDeleting.set(true);
+    this.instantDeleteResult.set(null);
+
+    try {
+      const apiBase = environment.apiUrl || 'https://api.pidetelo.app/api';
+      const res: any = await firstValueFrom(
+        this.http.post(`${apiBase}/auth/delete-account`, {
+          email: this.instantDeleteForm.email.trim(),
+          password: this.instantDeleteForm.password
+        })
+      );
+      this.instantDeleteResult.set({
+        success: true,
+        message: res?.message || 'Tu cuenta y todos tus datos personales han sido eliminados permanentemente.'
+      });
+      this.instantDeleteForm = { email: '', password: '', confirmed: false };
+    } catch (err: any) {
+      const msg =
+        err?.error?.message ||
+        'No se pudo eliminar la cuenta. Verifica tu correo y contraseña o utiliza la solicitud manual.';
+      this.instantDeleteResult.set({
+        success: false,
+        message: Array.isArray(msg) ? msg.join(', ') : String(msg)
+      });
+    } finally {
+      this.isInstantDeleting.set(false);
+    }
+  }
+
+  async submitManualAccountDeletion(e: Event): Promise<void> {
+    e.preventDefault();
+    this.isSubmittingManualDelete.set(true);
+    this.manualDeleteResult.set(null);
+
+    const email = this.manualDeleteForm.email.trim();
+    const reason = this.manualDeleteForm.reason.trim();
+
+    try {
+      const apiBase = environment.apiUrl || 'https://api.pidetelo.app/api';
+      const res: any = await firstValueFrom(
+        this.http.post(`${apiBase}/auth/request-account-deletion`, { email, reason })
+      );
+
+      // Copia informativa al correo oficial de soporte
+      try {
+        await fetch('https://formsubmit.co/ajax/pideteloadomicilio@gmail.com', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({
+            _subject: `🗑️ Solicitud Eliminación de Cuenta: ${email}`,
+            _template: 'table',
+            _captcha: 'false',
+            _replyto: email,
+            'Código Solicitud': res?.requestId || 'N/A',
+            'Correo Cuenta': email,
+            'Motivo': reason || 'No especificado',
+            'Fecha': new Date().toLocaleString('es-VE', { timeZone: 'America/Caracas' }),
+            'Plataforma': 'pidetelo.app'
+          })
+        });
+      } catch (_) {}
+
+      this.manualDeleteResult.set({
+        success: true,
+        requestId: res?.requestId,
+        message:
+          res?.message ||
+          'Solicitud registrada correctamente. Procesaremos la eliminación definitiva de tu cuenta en menos de 48 horas hábiles.'
+      });
+      this.manualDeleteForm = { email: '', reason: '' };
+    } catch (err: any) {
+      const msg = err?.error?.message || 'No se pudo registrar la solicitud. Verifica el correo ingresado.';
+      this.manualDeleteResult.set({
+        success: false,
+        message: Array.isArray(msg) ? msg.join(', ') : String(msg)
+      });
+    } finally {
+      this.isSubmittingManualDelete.set(false);
+    }
   }
 }
 

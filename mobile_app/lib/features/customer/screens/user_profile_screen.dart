@@ -1451,7 +1451,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           ],
         ),
         content: Text(
-          'Esta acción es definitiva e irreversible. Se eliminará tu perfil, direcciones guardadas, historial de pedidos y saldo en billetera. ¿Deseas proceder?',
+          'Esta acción es definitiva e irreversible. Se eliminarán permanentemente tu cuenta de acceso, perfil personal, direcciones guardadas, comercios favoritos y preferencias. (Los registros contables mínimos de pedidos ya completados podrán conservarse únicamente por obligación legal/fiscal).\n\n¿Deseas eliminar tu cuenta ahora?',
           style: GoogleFonts.outfit(color: subtextColor, fontSize: 13, height: 1.4),
         ),
         actions: [
@@ -1465,12 +1465,56 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       ),
     );
 
-    if (confirm == true) {
-      await widget.sessionService.logout();
-      if (!mounted) return;
+    if (confirm != true || !mounted) return;
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          backgroundColor: dialogBg,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          content: Row(
+            children: [
+              const CircularProgressIndicator(color: Color(0xFFEF4444)),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  'Eliminando cuenta y datos personales...',
+                  style: GoogleFonts.outfit(color: textColor, fontSize: 14, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    final result = await widget.sessionService.deleteAccount();
+    if (!mounted) return;
+    Navigator.of(context, rootNavigator: true).pop();
+
+    if (result.success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result.message),
+          backgroundColor: const Color(0xFF10B981),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => CustomerLoginScreen(sessionService: widget.sessionService)),
         (route) => false,
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result.message),
+          backgroundColor: const Color(0xFFEF4444),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 5),
+        ),
       );
     }
   }

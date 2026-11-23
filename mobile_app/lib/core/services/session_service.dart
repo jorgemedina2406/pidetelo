@@ -510,11 +510,121 @@ class SessionService extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    try {
+      await Supabase.instance.client.auth.signOut();
+    } catch (_) {}
     _currentUser = null;
     _favoriteStoreIds.clear();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_keyUserData);
     CartService().clearOrders();
     notifyListeners();
+  }
+
+  Future<({bool success, String message})> deleteAccount() async {
+    try {
+      final supabase = Supabase.instance.client;
+      var session = supabase.auth.currentSession;
+      if (session == null || session.isExpired) {
+        try {
+          final refreshed = await supabase.auth.refreshSession();
+          session = refreshed.session ?? session;
+        } catch (_) {}
+      }
+
+      final token = session?.accessToken ?? '';
+      if (token.isEmpty) {
+        return (
+          success: false,
+          message:
+              'Tu sesión expiró. Vuelve a iniciar sesión o solicita la eliminación en pidetelo.app/legal/eliminar-cuenta',
+        );
+      }
+
+      for (final base in _backendCandidateUrls) {
+        try {
+          final res = await http
+              .post(
+                Uri.parse('$base/auth/delete-account'),
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': 'Bearer $token',
+                },
+                body: jsonEncode({}),
+              )
+              .timeout(const Duration(seconds: 15));
+
+          Map<String, dynamic> decoded = {};
+          try {
+            final parsed = jsonDecode(res.body);
+            if (parsed is Map) decoded = Map<String, dynamic>.from(parsed);
+          } catch (_) {}
+
+          if (res.statusCode >= 200 && res.statusCode < 300) {
+            final prefs = await SharedPreferences.getInstance();
+            final user = _currentUser;
+            final emailOrId = (user != null && user.email.isNotEmpty) ? user.email : user?.id;
+            final favKey = _getFavoritesKey(emailOrId);
+
+            final rawId = user?.id.trim() ?? '';
+            final rawEmail = user?.email.trim() ?? '';
+            final userKey = rawId.isNotEmpty
+                ? rawId.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_')
+                : (rawEmail.isNotEmpty
+                    ? rawEmail.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_')
+                    : 'guest');
+
+            final sanCart = (emailOrId ?? '').trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9_]'), '_');
+
+            await Future.wait([
+              prefs.remove(_keyUserData),
+              prefs.remove(favKey),
+              prefs.remove('wallet_balance_$userKey'),
+              prefs.remove('wallet_tx_$userKey'),
+              prefs.remove('notif_orders_$userKey'),
+              prefs.remove('notif_rider_near_$userKey'),
+              prefs.remove('notif_promos_$userKey'),
+              prefs.remove('notif_whatsapp_$userKey'),
+              if (sanCart.isNotEmpty) prefs.remove('user_orders_$sanCart'),
+              if (sanCart.isNotEmpty) prefs.remove('user_addresses_$sanCart'),
+              prefs.remove('global_saved_delivery_addresses'),
+              prefs.remove('global_selected_delivery_address'),
+            ]);
+
+            CartService().clearCart();
+            await logout();
+
+            final msg = decoded['message']?.toString().trim();
+            return (
+              success: true,
+              message: (msg != null && msg.isNotEmpty)
+                  ? msg
+                  : 'Cuenta eliminada permanentemente.',
+            );
+          }
+
+          if (res.statusCode >= 400 && res.statusCode < 500) {
+            final errMsg = decoded['message'];
+            final readable = errMsg is List
+                ? errMsg.join(', ')
+                : (errMsg?.toString() ?? 'No se pudo eliminar la cuenta (código ${res.statusCode}).');
+            return (success: false, message: readable);
+          }
+        } catch (e) {
+          debugPrint('[SessionService] deleteAccount attempt failed for $base: $e');
+        }
+      }
+
+      return (
+        success: false,
+        message:
+            'No pudimos conectar con el servidor. Verifica tu conexión o solicita el borrado en pidetelo.app/legal/eliminar-cuenta',
+      );
+    } catch (e) {
+      return (
+        success: false,
+        message: 'Ocurrió un error inesperado al eliminar la cuenta: $e',
+      );
+    }
   }
 }

@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/config/app_config.dart';
+import '../../../core/constants/legal_terms.dart';
 import '../../../core/models/user_model.dart';
 import '../../../core/services/session_service.dart';
 import '../../../core/services/notification_service.dart';
@@ -669,6 +671,56 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
                         ),
                       ),
                     ),
+                    const SizedBox(height: 14),
+                    Center(
+                      child: Wrap(
+                        alignment: WrapAlignment.center,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 4,
+                        children: [
+                          Text(
+                            'Al continuar aceptas nuestros',
+                            style: GoogleFonts.outfit(fontSize: 11, color: const Color(0xFF94A3B8)),
+                          ),
+                          GestureDetector(
+                            onTap: () => _openLegalLink(
+                              'https://pidetelo.app/legal/terminos',
+                              'Términos y Condiciones',
+                              LegalTerms.termsAndConditions,
+                            ),
+                            child: Text(
+                              'Términos de Uso',
+                              style: GoogleFonts.outfit(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF4A8F29),
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            'y',
+                            style: GoogleFonts.outfit(fontSize: 11, color: const Color(0xFF94A3B8)),
+                          ),
+                          GestureDetector(
+                            onTap: () => _openLegalLink(
+                              'https://pidetelo.app/legal/privacidad',
+                              'Política de Privacidad',
+                              LegalTerms.privacyPolicy,
+                            ),
+                            child: Text(
+                              'Política de Privacidad',
+                              style: GoogleFonts.outfit(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF4A8F29),
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -780,6 +832,38 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Future<void> _openLegalLink(String url, String title, String fallbackContent) async {
+    try {
+      final uri = Uri.parse(url);
+      if (await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+        return;
+      }
+    } catch (_) {}
+
+    if (!mounted) return;
+    showDialog<void>(
+      context: context,
+      builder: (dCtx) => AlertDialog(
+        title: Text(title, style: GoogleFonts.outfit(fontWeight: FontWeight.w800)),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: Text(
+              fallbackContent,
+              style: GoogleFonts.outfit(fontSize: 12, height: 1.5, color: const Color(0xFF475569)),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dCtx),
+            child: const Text('Cerrar'),
+          ),
+        ],
       ),
     );
   }

@@ -78,8 +78,9 @@ e) Detectar y prevenir fraudes, pagos duplicados o conductas abusivas.
 4.2. No Comercialización: Pídetelo jamás vende, alquila ni comercializa bases de datos personales ni de ubicación a agencias publicitarias o terceros ajenos a la operativa del servicio.
 4.3. Acceso Limitado: Los datos de entrega del cliente (dirección y número) solo son accesibles temporalmente para el comercio y el repartidor asignado durante la vigencia del pedido en curso.
 
-5. CONSERVACIÓN Y ELIMINACIÓN DE DATOS
-Los datos personales se conservan durante el tiempo que la cuenta permanezca activa. El usuario tiene el derecho de solicitar en cualquier momento la actualización, corrección o eliminación total de sus datos personales y registros de ubicación mediante la sección de Soporte en la aplicación o escribiendo al canal oficial: pideteloadomicilio@gmail.com.
+5. CONSERVACIÓN Y ELIMINACIÓN DE DATOS Y CUENTA
+Los datos personales se conservan durante el tiempo que la cuenta permanezca activa. El usuario puede eliminar su cuenta de forma inmediata y permanente directamente dentro de la aplicación móvil en Perfil -> Eliminar Cuenta, o a través de nuestro portal web oficial en https://pidetelo.app/legal/eliminar-cuenta.
+Al confirmar la eliminación se suprimen de inmediato su cuenta de acceso, perfil personal, direcciones guardadas, comercios favoritos, carrito y tokens de notificaciones push. Únicamente se conservan los registros contables y fiscales mínimos de pedidos ya completados con comercios aliados cuando así lo exige la normativa vigente, sin fines comerciales ni reactivación de cuenta. Para consultas o solicitudes manuales (por ejemplo, cuentas vinculadas con Google sin contraseña), escríbenos a pideteloadomicilio@gmail.com (respuesta menor a 48 horas hábiles).
 
 6. CONSENTIMIENTO
 Al registrarse y utilizar las aplicaciones de Pídetelo, el usuario otorga su consentimiento expreso, informado e inequívoco para el tratamiento de sus datos personales conforme a las finalidades descritas en esta política.

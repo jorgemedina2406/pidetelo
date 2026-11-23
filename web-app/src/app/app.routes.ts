@@ -83,6 +83,14 @@ export const routes: Routes = [
     redirectTo: 'super-admin'
   },
   {
+    path: 'eliminar-cuenta',
+    redirectTo: 'legal/eliminar-cuenta'
+  },
+  {
+    path: 'privacidad',
+    redirectTo: 'legal/privacidad'
+  },
+  {
     path: '**',
     redirectTo: 'explorar'
   }

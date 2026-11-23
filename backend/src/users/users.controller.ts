@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, Query } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, Query, Headers } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { UsersService, CreateStoreUserDto } from './users.service.js';
 
@@ -97,5 +97,25 @@ export class UsersController {
   @ApiOperation({ summary: 'Registrar nuevo cliente con confirmación inmediata (sin límite de correo)' })
   registerCustomer(@Body() body: { email: string; password: string; name: string; phone?: string }) {
     return this.usersService.registerCustomer(body);
+  }
+
+  @Post('auth/delete-account')
+  @ApiOperation({ summary: 'Eliminar permanentemente la cuenta y datos personales de un cliente autenticado' })
+  deleteAccount(
+    @Headers('authorization') authorization: string | undefined,
+    @Body() body: { email?: string; password?: string },
+  ) {
+    const token = authorization?.replace(/^Bearer\s+/i, '').trim() || undefined;
+    return this.usersService.deleteCustomerAccount({
+      accessToken: token,
+      email: body?.email,
+      password: body?.password,
+    });
+  }
+
+  @Post('auth/request-account-deletion')
+  @ApiOperation({ summary: 'Registrar solicitud de eliminación de cuenta (p. ej. usuarios OAuth o sin clave)' })
+  requestAccountDeletion(@Body() body: { email: string; reason?: string }) {
+    return this.usersService.requestAccountDeletion(body);
   }
 }

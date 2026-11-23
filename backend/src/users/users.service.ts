@@ -1029,4 +1029,163 @@ export class UsersService {
       favorites: cleanList,
     };
   }
+
+  private removePushTokensForUser(userId: string): void {
+    try {
+      const tokensPath = path.join(process.cwd(), 'data', 'push_tokens.json');
+      if (!fs.existsSync(tokensPath)) return;
+      const raw = fs.readFileSync(tokensPath, 'utf-8');
+      const list = JSON.parse(raw);
+      if (!Array.isArray(list)) return;
+      const cleanId = String(userId).trim().toLowerCase();
+      const filtered = list.filter((r: any) => String(r?.userId || '').trim().toLowerCase() !== cleanId);
+      if (filtered.length !== list.length) {
+        fs.writeFileSync(tokensPath, JSON.stringify(filtered, null, 2), 'utf-8');
+      }
+    } catch (err) {
+      console.warn('[UsersService] Error limpiando tokens FCM del usuario eliminado:', err);
+    }
+  }
+
+  async deleteCustomerAccount(params: { accessToken?: string; email?: string; password?: string }) {
+    const client = this.supabase.getClient();
+    const rawToken = params.accessToken?.replace(/^Bearer\s+/i, '').trim() || '';
+    const cleanEmailInput = params.email?.trim().toLowerCase() || '';
+    const passwordInput = params.password || '';
+
+    let verifiedId = '';
+    let verifiedEmail = '';
+    let role = '';
+
+    // 1. Verificar identidad con JWT de sesión o con correo + contraseña
+    if (rawToken) {
+      try {
+        const { data, error } = await client.auth.getUser(rawToken);
+        if (!error && data?.user?.id) {
+          verifiedId = data.user.id;
+          verifiedEmail = (data.user.email || cleanEmailInput).toLowerCase().trim();
+          role = String(data.user.user_metadata?.['role'] || '').toUpperCase();
+        }
+      } catch (_) {}
+    }
+
+    if (!verifiedId && cleanEmailInput && passwordInput) {
+      const verified = await this.supabase.verifyUserCredentials(cleanEmailInput, passwordInput);
+      if (!verified) {
+        throw new UnauthorizedException('Credenciales inválidas. Verifica tu correo y contraseña.');
+      }
+      verifiedId = verified.id;
+      verifiedEmail = verified.email;
+      try {
+        const { data: authUser } = await client.auth.admin.getUserById(verifiedId);
+        role = String(authUser?.user?.user_metadata?.['role'] || '').toUpperCase();
+      } catch (_) {}
+    }
+
+    if (!verifiedId) {
+      throw new UnauthorizedException(
+        'Debes iniciar sesión o ingresar tu correo y contraseña para eliminar la cuenta.',
+      );
+    }
+
+    // 2. Proteger cuentas administrativas
+    if (verifiedEmail === 'jorge@pidetelo.com' || role === 'SUPER_ADMIN') {
+      throw new BadRequestException('Las cuentas administrativas no pueden eliminarse por esta vía.');
+    }
+
+    // 3. Purga completa de datos personales del usuario en Supabase y disco local
+    try {
+      await client.from('customer_favorites').delete().eq('user_id', verifiedId);
+    } catch (_) {}
+
+    try {
+      await client.from('customer_carts').delete().eq('user_id', verifiedId);
+      if (verifiedEmail) {
+        await client.from('customer_carts').delete().eq('user_email', verifiedEmail);
+      }
+    } catch (_) {}
+
+    try {
+      await client.from('customer_profiles').delete().eq('id', verifiedId);
+      if (verifiedEmail) {
+        await client.from('customer_profiles').delete().eq('email', verifiedEmail);
+      }
+    } catch (_) {}
+
+    try {
+      await client.from('profiles').delete().eq('id', verifiedId);
+      if (verifiedEmail) {
+        await client.from('profiles').delete().eq('email', verifiedEmail);
+      }
+    } catch (_) {}
+
+    this.removePushTokensForUser(verifiedId);
+
+    this.localUsers.delete(verifiedId);
+    if (verifiedEmail) {
+      for (const [k, u] of this.localUsers.entries()) {
+        if (u.email?.toLowerCase() === verifiedEmail) {
+          this.localUsers.delete(k);
+        }
+      }
+    }
+    this.saveToDisk();
+
+    // 4. Eliminación definitiva en Supabase Auth (crítico)
+    const { error: delAuthErr } = await client.auth.admin.deleteUser(verifiedId);
+    if (delAuthErr) {
+      const msg = String(delAuthErr.message || '').toLowerCase();
+      if (!msg.includes('not found')) {
+        throw new InternalServerErrorException(
+          'No se pudo eliminar la cuenta del sistema de autenticación. Intenta de nuevo o solicita eliminación manual.',
+        );
+      }
+    }
+
+    return {
+      success: true,
+      deletedUserId: verifiedId,
+      message: 'Tu cuenta y todos tus datos personales han sido eliminados permanentemente.',
+    };
+  }
+
+  async requestAccountDeletion(payload: { email: string; reason?: string }) {
+    const cleanEmail = String(payload?.email || '').trim().toLowerCase();
+    if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      throw new BadRequestException('Ingresa un correo electrónico válido.');
+    }
+
+    const requestId = `del_${randomUUID().slice(0, 8)}`;
+    const record = {
+      id: requestId,
+      email: cleanEmail,
+      reason: String(payload?.reason || '').trim().slice(0, 500),
+      requestedAt: new Date().toISOString(),
+      status: 'pending',
+    };
+
+    try {
+      const requestsPath = path.resolve(process.cwd(), 'data', 'account_deletion_requests.json');
+      const dir = path.dirname(requestsPath);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      let list: any[] = [];
+      if (fs.existsSync(requestsPath)) {
+        try {
+          const parsed = JSON.parse(fs.readFileSync(requestsPath, 'utf-8'));
+          if (Array.isArray(parsed)) list = parsed;
+        } catch (_) {}
+      }
+      list.push(record);
+      fs.writeFileSync(requestsPath, JSON.stringify(list, null, 2), 'utf-8');
+    } catch (err) {
+      console.warn('[UsersService] Error guardando account_deletion_requests.json:', err);
+    }
+
+    return {
+      success: true,
+      requestId,
+      message:
+        'Solicitud registrada correctamente. Procesaremos la eliminación definitiva de tu cuenta en menos de 48 horas hábiles.',
+    };
+  }
 }
