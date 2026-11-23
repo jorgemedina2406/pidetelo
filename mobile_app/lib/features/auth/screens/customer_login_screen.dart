@@ -27,11 +27,64 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
   final _passwordController = TextEditingController();
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _challengeAnswerController = TextEditingController();
 
   bool _isLoading = false;
   bool _isRegister = false;
   bool _keepMeSignedIn = true;
   bool _obscurePassword = true;
+  String _challengeToken = '';
+  String _challengePrompt = '';
+  bool _isLoadingChallenge = false;
+  String? _challengeError;
+
+  List<String> get _backendCandidateUrls => [
+        AppConfig.backendBaseUrl,
+        if (AppConfig.backendBaseUrl != 'https://api.pidetelo.app/api')
+          'https://api.pidetelo.app/api',
+      ];
+
+  Future<void> _loadRegisterChallenge() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoadingChallenge = true;
+      _challengeError = null;
+    });
+
+    for (final base in _backendCandidateUrls) {
+      try {
+        final res = await http
+            .get(Uri.parse('$base/auth/register-challenge'))
+            .timeout(const Duration(seconds: 8));
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          final decoded = jsonDecode(res.body);
+          if (decoded is Map &&
+              decoded['challengeToken'] != null &&
+              decoded['prompt'] != null) {
+            if (!mounted) return;
+            setState(() {
+              _challengeToken = decoded['challengeToken'].toString();
+              _challengePrompt = decoded['prompt'].toString();
+              _challengeAnswerController.clear();
+              _isLoadingChallenge = false;
+              _challengeError = null;
+            });
+            return;
+          }
+        }
+      } catch (e) {
+        debugPrint('[CustomerLogin] challenge load error ($base): $e');
+      }
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _isLoadingChallenge = false;
+      _challengeToken = '';
+      _challengePrompt = '';
+      _challengeError = 'No pudimos cargar la verificación. Toca para reintentar.';
+    });
+  }
 
   @override
   void initState() {
@@ -154,6 +207,7 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
     _passwordController.dispose();
     _nameController.dispose();
     _phoneController.dispose();
+    _challengeAnswerController.dispose();
     super.dispose();
   }
 
@@ -188,6 +242,21 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
       return;
     }
 
+    final challengeAnswer = _challengeAnswerController.text.trim();
+    if (_isRegister && (_challengeToken.isEmpty || challengeAnswer.isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Por favor resuelve la verificación humana antes de registrarte.'),
+          backgroundColor: Color(0xFFEF4444),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      if (_challengeToken.isEmpty) {
+        _loadRegisterChallenge();
+      }
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     String registeredName = name;
@@ -199,49 +268,62 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
 
       if (_isRegister) {
         User? createdUser;
-        try {
-          final authRes = await supabase.auth.signUp(
-            email: email,
-            password: password,
-            data: {
-              'full_name': name,
-              'phone': phone,
-              'role': 'CUSTOMER',
-            },
-          );
-          createdUser = authRes.user;
-        } catch (signupErr) {
-          final errStr = signupErr.toString().toLowerCase();
-          // Fallback vía backend Admin API si Supabase alcanza el límite de envío de correos
-          if (errStr.contains('rate') || errStr.contains('429') || errStr.contains('email')) {
-            try {
-              final regUri = Uri.parse('${AppConfig.backendBaseUrl}/auth/register-customer');
-              final resp = await http.post(
-                regUri,
-                headers: {'Content-Type': 'application/json'},
-                body: jsonEncode({
-                  'email': email,
-                  'password': password,
-                  'name': name,
-                  'phone': phone,
-                }),
-              ).timeout(const Duration(seconds: 6));
+        String? backendErrorMsg;
+        bool registeredViaBackend = false;
 
-              if (resp.statusCode == 200 || resp.statusCode == 201) {
-                final loginRes = await supabase.auth.signInWithPassword(
-                  email: email,
-                  password: password,
-                );
-                createdUser = loginRes.user;
-              } else {
-                throw signupErr;
-              }
-            } catch (_) {
-              throw signupErr;
+        for (final base in _backendCandidateUrls) {
+          try {
+            final regUri = Uri.parse('$base/auth/register-customer');
+            final resp = await http
+                .post(
+                  regUri,
+                  headers: {'Content-Type': 'application/json'},
+                  body: jsonEncode({
+                    'email': email,
+                    'password': password,
+                    'name': name,
+                    'phone': phone,
+                    'challengeToken': _challengeToken,
+                    'challengeAnswer': challengeAnswer,
+                    'website': '',
+                  }),
+                )
+                .timeout(const Duration(seconds: 12));
+
+            Map<String, dynamic> decoded = {};
+            try {
+              final raw = jsonDecode(resp.body);
+              if (raw is Map) decoded = Map<String, dynamic>.from(raw);
+            } catch (_) {}
+
+            if (resp.statusCode >= 200 && resp.statusCode < 300) {
+              registeredViaBackend = true;
+              final loginRes = await supabase.auth.signInWithPassword(
+                email: email,
+                password: password,
+              );
+              createdUser = loginRes.user;
+              break;
             }
-          } else {
-            rethrow;
+
+            if (resp.statusCode >= 400 && resp.statusCode < 500) {
+              final rawMsg = decoded['message'];
+              backendErrorMsg = rawMsg is List
+                  ? rawMsg.join(', ')
+                  : (rawMsg?.toString() ?? 'No se pudo completar el registro.');
+              break;
+            }
+          } catch (e) {
+            debugPrint('[CustomerLogin] registerCustomer attempt ($base) error: $e');
           }
+        }
+
+        if (!registeredViaBackend) {
+          _loadRegisterChallenge();
+          throw Exception(
+            backendErrorMsg ??
+                'No se pudo validar tu registro en el servidor. Verifica tu conexión e inténtalo de nuevo.',
+          );
         }
 
         userId = createdUser?.id ?? 'cust_${DateTime.now().millisecondsSinceEpoch}';
@@ -539,6 +621,143 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
                           ],
                         ),
                       ),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: _challengeError != null
+                                ? const Color(0xFFFCA5A5)
+                                : const Color(0xFFE2E8F0),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(Icons.verified_user_outlined, size: 15, color: Color(0xFF4A8F29)),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Verificación humana',
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFF334155),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                GestureDetector(
+                                  onTap: _isLoadingChallenge ? null : _loadRegisterChallenge,
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.refresh_rounded, size: 14, color: Color(0xFF4A8F29)),
+                                      const SizedBox(width: 3),
+                                      Text(
+                                        'Cambiar',
+                                        style: GoogleFonts.outfit(
+                                          fontSize: 11.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: const Color(0xFF4A8F29),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            if (_isLoadingChallenge)
+                              Row(
+                                children: [
+                                  const SizedBox(
+                                    width: 14,
+                                    height: 14,
+                                    child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF4A8F29)),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Cargando verificación...',
+                                    style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFF64748B)),
+                                  ),
+                                ],
+                              )
+                            else if (_challengeError != null)
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      _challengeError!,
+                                      style: GoogleFonts.outfit(fontSize: 11.5, color: const Color(0xFFDC2626)),
+                                    ),
+                                  ),
+                                  TextButton(
+                                    onPressed: _loadRegisterChallenge,
+                                    child: const Text('Reintentar'),
+                                  ),
+                                ],
+                              )
+                            else
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(color: const Color(0xFFCBD5E1)),
+                                    ),
+                                    child: Text(
+                                      _challengePrompt.isNotEmpty ? _challengePrompt : '-- + -- = ?',
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w800,
+                                        color: const Color(0xFF0F172A),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(color: const Color(0xFFCBD5E1)),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                                      child: TextField(
+                                        controller: _challengeAnswerController,
+                                        keyboardType: TextInputType.number,
+                                        style: GoogleFonts.outfit(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w700,
+                                          color: const Color(0xFF0F172A),
+                                        ),
+                                        decoration: InputDecoration(
+                                          isDense: true,
+                                          filled: false,
+                                          fillColor: Colors.transparent,
+                                          contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                                          hintText: 'Respuesta',
+                                          hintStyle: GoogleFonts.outfit(fontSize: 13, color: const Color(0xFF94A3B8)),
+                                          border: InputBorder.none,
+                                          enabledBorder: InputBorder.none,
+                                          focusedBorder: InputBorder.none,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                          ],
+                        ),
+                      ),
                     ],
                     const SizedBox(height: 14),
 
@@ -651,7 +870,13 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
                     // Toggle register/login in Spanish
                     Center(
                       child: GestureDetector(
-                        onTap: () => setState(() => _isRegister = !_isRegister),
+                        onTap: () {
+                          final next = !_isRegister;
+                          setState(() => _isRegister = next);
+                          if (next && _challengeToken.isEmpty && !_isLoadingChallenge) {
+                            _loadRegisterChallenge();
+                          }
+                        },
                         child: RichText(
                           text: TextSpan(
                             style: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF64748B)),

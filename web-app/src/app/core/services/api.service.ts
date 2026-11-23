@@ -2939,4 +2939,22 @@ export class ApiService {
   notifyStockIssue(orderId: string, payload: { productName: string; customMessage?: string }): Observable<any> {
     return this.http.post<any>(this.baseUrl + '/orders/' + orderId + '/notify-stock-issue', payload);
   }
+
+  getRegisterChallenge(): Observable<{ challengeToken: string; prompt: string; minDelayMs: number; expiresInSeconds: number }> {
+    return this.http.get<{ challengeToken: string; prompt: string; minDelayMs: number; expiresInSeconds: number }>(
+      this.baseUrl + '/auth/register-challenge'
+    );
+  }
+
+  registerCustomer(payload: {
+    email: string;
+    password: string;
+    name: string;
+    phone?: string;
+    challengeToken: string;
+    challengeAnswer: string;
+    website?: string;
+  }): Observable<any> {
+    return this.http.post<any>(this.baseUrl + '/auth/register-customer', payload);
+  }
 }

@@ -598,13 +598,52 @@
                     </div>
                   </div>
 
+                  <!-- Campo honeypot oculto (trampa para bots) -->
+                  <div class="sr-only" aria-hidden="true">
+                    <label>Sitio web</label>
+                    <input type="text"
+                           [ngModel]="regWebsiteHoneypot()"
+                           (ngModelChange)="regWebsiteHoneypot.set($event)"
+                           name="website"
+                           tabindex="-1"
+                           autocomplete="off" />
+                  </div>
+
+                  <!-- Verificación humana anti-bots -->
+                  <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-2">
+                    <div class="flex items-center justify-between gap-2">
+                      <span class="text-[11px] font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                        <span>🛡️</span>
+                        <span>Verificación humana (Anti-bots)</span>
+                      </span>
+                      <button type="button"
+                              (click)="loadRegistrationChallenge()"
+                              [disabled]="regChallengeLoading()"
+                              class="text-[10.5px] font-bold text-brand-600 dark:text-brand-400 hover:underline disabled:opacity-50 cursor-pointer">
+                        ↻ Nuevo reto
+                      </button>
+                    </div>
+                    <div class="flex items-center gap-2.5">
+                      <div class="px-3 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 font-mono text-xs font-black text-slate-900 dark:text-white shrink-0">
+                        {{ regChallengeLoading() ? '...' : (regChallengePrompt() || 'Sin cargar') }}
+                      </div>
+                      <input type="number"
+                             inputmode="numeric"
+                             [ngModel]="regChallengeAnswer()"
+                             (ngModelChange)="regChallengeAnswer.set($event)"
+                             name="regChallengeAnswer"
+                             placeholder="Tu respuesta"
+                             class="flex-1 text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white p-2 focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500" />
+                    </div>
+                  </div>
+
                   <div class="flex items-center justify-between gap-3 pt-1">
                     <a routerLink="/login" class="text-[11px] text-slate-500 dark:text-slate-400 hover:text-brand-500 transition-colors">
                       ¿Ya tienes cuenta? <b class="text-slate-700 dark:text-slate-300">Iniciar Sesión</b>
                     </a>
 
                     <button type="submit" 
-                            [disabled]="isRegistering() || !isRegPasswordValid() || !regEmail()"
+                            [disabled]="isRegistering() || !isRegPasswordValid() || !regEmail() || !regChallengeAnswer().trim()"
                             class="px-4 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer">
                       @if (isRegistering()) {
                         <span class="inline-block animate-spin rounded-full h-3 w-3 border-2 border-white border-t-transparent"></span>

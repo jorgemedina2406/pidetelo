@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, InternalServerErrorException, ConflictEx
 import { SupabaseService } from '../supabase/supabase.service.js';
 import { PlansService } from '../plans/plans.service.js';
 import { LoginBruteForceService } from '../common/security/login-brute-force.service.js';
+import { AntiBotService } from '../common/security/anti-bot.service.js';
 import { randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -26,6 +27,7 @@ export class UsersService {
     private supabase: SupabaseService,
     private plansService: PlansService,
     @Optional() private bruteForce?: LoginBruteForceService,
+    @Optional() private antiBot?: AntiBotService,
   ) {
     this.loadFromDisk();
   }
@@ -833,14 +835,44 @@ export class UsersService {
     return user;
   }
 
-  async registerCustomer(payload: { email: string; password: string; name: string; phone?: string }) {
+  getRegistrationChallenge() {
+    if (!this.antiBot) {
+      throw new InternalServerErrorException('Servicio de verificación humana no disponible.');
+    }
+    return this.antiBot.issueChallenge();
+  }
+
+  async registerCustomer(payload: {
+    email: string;
+    password: string;
+    name: string;
+    phone?: string;
+    challengeToken?: string;
+    challengeAnswer?: string;
+    website?: string;
+    honeypot?: string;
+    clientIp?: string;
+  }) {
     const cleanEmail = (payload.email || '').toLowerCase().trim();
     const cleanName = (payload.name || '').trim() || (cleanEmail ? cleanEmail.split('@')[0] : 'Cliente');
     const cleanPhone = (payload.phone || '').trim();
+    const clientIp = payload.clientIp || 'unknown';
 
     if (!cleanEmail || !payload.password) {
       throw new BadRequestException('Email y contraseña son obligatorios');
     }
+
+    this.antiBot?.verifyRegistrationSubmission({
+      clientIp,
+      email: cleanEmail,
+      password: payload.password,
+      name: cleanName,
+      phone: cleanPhone,
+      challengeToken: payload.challengeToken,
+      challengeAnswer: payload.challengeAnswer,
+      website: payload.website,
+      honeypot: payload.honeypot,
+    });
 
     const client = this.supabase.getClient();
     const { data, error } = await client.auth.admin.createUser({
@@ -859,6 +891,22 @@ export class UsersService {
         throw new BadRequestException('Este correo electrónico ya se encuentra registrado');
       }
       throw new BadRequestException(error.message);
+    }
+
+    this.antiBot?.recordSuccessfulRegistration(clientIp);
+
+    if (data?.user?.id) {
+      try {
+        await client.from('profiles').upsert({
+          id: data.user.id,
+          full_name: cleanName,
+          email: cleanEmail,
+          phone: cleanPhone,
+          role: 'CUSTOMER',
+          is_active: true,
+          updated_at: new Date().toISOString(),
+        });
+      } catch (_) {}
     }
 
     return {

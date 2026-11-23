@@ -56,6 +56,11 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
   readonly isRegistering = signal<boolean>(false);
   readonly registrationSuccess = signal<boolean>(false);
   readonly registrationError = signal<string>('');
+  readonly regChallengeToken = signal<string>('');
+  readonly regChallengePrompt = signal<string>('');
+  readonly regChallengeAnswer = signal<string>('');
+  readonly regChallengeLoading = signal<boolean>(false);
+  readonly regWebsiteHoneypot = signal<string>('');
   readonly showDownloadModal = signal<boolean>(false);
 
   // Corrección y Reenvío de Pago Móvil Rechazado
@@ -537,6 +542,9 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
 
   ngOnInit(): void {
     this.loadRecentGuestOrders();
+    if (!this.auth.isAuthenticated()) {
+      this.loadRegistrationChallenge();
+    }
     this.currency.getOfficialRate().then(r => {
       if (r && r > 1) this.liveExchangeRate.set(r);
     });
@@ -1153,9 +1161,26 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
     }
   }
 
+  loadRegistrationChallenge(): void {
+    this.regChallengeLoading.set(true);
+    this.api.getRegisterChallenge().subscribe({
+      next: (res) => {
+        this.regChallengeToken.set(res?.challengeToken || '');
+        this.regChallengePrompt.set(res?.prompt || '');
+        this.regChallengeAnswer.set('');
+        this.regChallengeLoading.set(false);
+      },
+      error: () => {
+        this.regChallengeLoading.set(false);
+      }
+    });
+  }
+
   async quickRegister(): Promise<void> {
     const email = this.regEmail().trim();
     const password = this.regPassword();
+    const challengeAnswer = this.regChallengeAnswer().trim();
+    const challengeToken = this.regChallengeToken().trim();
 
     if (!email || !email.includes('@')) {
       this.registrationError.set('Ingresa un correo electrónico válido.');
@@ -1164,6 +1189,10 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
     const specialRegex = /[-!@#$%^&*(),.?":{}|<>_+=~`[\]\\/]/;
     if (!password || password.length < 8 || !/[A-Z]/.test(password) || !specialRegex.test(password)) {
       this.registrationError.set('La contraseña debe tener al menos 8 caracteres, incluir al menos una letra mayúscula y un carácter especial (*, ., @, etc).');
+      return;
+    }
+    if (!challengeToken || !challengeAnswer) {
+      this.registrationError.set('Completa la verificación humana (operación matemática) antes de registrarte.');
       return;
     }
 
@@ -1175,10 +1204,22 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
       const customerName = ord?.customer.name || 'Cliente';
       const customerPhone = ord?.customer.phone || '';
 
+      await firstValueFrom(
+        this.api.registerCustomer({
+          email,
+          password,
+          name: customerName,
+          phone: customerPhone,
+          challengeToken,
+          challengeAnswer,
+          website: this.regWebsiteHoneypot(),
+        })
+      );
+
       try {
-        await this.supabase.signUpWithEmail(email, password, customerName, 'CUSTOMER');
+        await this.supabase.signInWithEmail(email, password);
       } catch (err) {
-        console.warn('[Tracking] Registro Supabase secundario:', err);
+        console.warn('[Tracking] Inicio de sesión Supabase secundario:', err);
       }
 
       this.auth.loginAsCustomer({
@@ -1189,7 +1230,9 @@ export class CustomerTrackingComponent implements OnInit, AfterViewInit, OnDestr
 
       this.registrationSuccess.set(true);
     } catch (err: any) {
-      this.registrationError.set(err?.message || 'Error al crear la cuenta.');
+      const msg = err?.error?.message || err?.message || 'Error al crear la cuenta.';
+      this.registrationError.set(Array.isArray(msg) ? msg.join(', ') : String(msg));
+      this.loadRegistrationChallenge();
     } finally {
       this.isRegistering.set(false);
     }

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, Query, Headers } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, Query, Headers, Req } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { UsersService, CreateStoreUserDto } from './users.service.js';
 
@@ -93,10 +93,37 @@ export class UsersController {
     return this.usersService.login(body.email, body.password);
   }
 
+  @Get('auth/register-challenge')
+  @ApiOperation({ summary: 'Generar reto humano firmado (anti-bots) para registro de clientes' })
+  getRegisterChallenge() {
+    return this.usersService.getRegistrationChallenge();
+  }
+
   @Post('auth/register-customer')
-  @ApiOperation({ summary: 'Registrar nuevo cliente con confirmación inmediata (sin límite de correo)' })
-  registerCustomer(@Body() body: { email: string; password: string; name: string; phone?: string }) {
-    return this.usersService.registerCustomer(body);
+  @ApiOperation({ summary: 'Registrar nuevo cliente con validación anti-bots y confirmación inmediata' })
+  registerCustomer(
+    @Req() req: any,
+    @Body()
+    body: {
+      email: string;
+      password: string;
+      name: string;
+      phone?: string;
+      challengeToken?: string;
+      challengeAnswer?: string;
+      website?: string;
+      honeypot?: string;
+    },
+  ) {
+    const rawIp =
+      (req?.headers?.['x-forwarded-for'] as string) ||
+      req?.socket?.remoteAddress ||
+      req?.ip ||
+      'unknown';
+    return this.usersService.registerCustomer({
+      ...body,
+      clientIp: String(rawIp),
+    });
   }
 
   @Post('auth/delete-account')
