@@ -28,6 +28,11 @@
                   <app-icon [name]="src.icon" [size]="11"></app-icon>
                   <span>{{ src.label }}</span>
                 </span>
+                @if (isAgeRestricted) {
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/40">
+                  🔞 +18
+                </span>
+                }
               </div>
               <p class="text-xs text-slate-400">
                 Registrado el {{ formatOrderTime(order.createdAt) }}
@@ -46,6 +51,13 @@
 
         <!-- Body / Scrollable Content -->
         <div class="p-5 space-y-5 overflow-y-auto flex-1 text-xs">
+
+          @if (isAgeRestricted) {
+          <div class="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/40 text-rose-800 dark:text-rose-200 flex items-center gap-2.5 font-bold">
+            <span class="text-lg shrink-0">🔞</span>
+            <span>Pedido con restricción de edad (+18) — Recordar al motorizado verificar documento de identidad (Cédula) al entregar.</span>
+          </div>
+          }
 
           <!-- Cliente & Despacho -->
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 bg-slate-50 dark:bg-slate-850 rounded-2xl border border-slate-100 dark:border-slate-800">

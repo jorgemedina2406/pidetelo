@@ -6,6 +6,7 @@ import '../../../core/services/api_service.dart';
 import '../../../core/services/cart_service.dart';
 import '../../../core/services/session_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/age_restriction_helper.dart';
 import 'order_success_screen.dart';
 import 'map_address_picker_screen.dart';
 
@@ -368,10 +369,14 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
         : (_selectedPayment == 'zelle' ? _zelleRefController.text.trim() : '');
 
     try {
+      final userNotes = _notesController.text.trim();
+      final String? combinedNotes = cart.hasAgeRestrictedItems
+          ? (userNotes.isEmpty ? '[AGE_18_PLUS]' : '[AGE_18_PLUS] $userNotes')
+          : (userNotes.isNotEmpty ? userNotes : null);
       final createdOrder = await cart.createOrderFromCartAsync(
         paymentMethod: paymentLabel,
         user: SessionService().currentUser,
-        notes: _notesController.text.isNotEmpty ? _notesController.text : null,
+        notes: combinedNotes,
         paymentReference: refToSave,
       );
 
@@ -700,7 +705,36 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                 ),
               ),
 
-              const SizedBox(height: 18),
+              const SizedBox(height: 14),
+
+              if (cart.hasAgeRestrictedItems) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE11D48).withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFE11D48).withOpacity(0.4)),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('🔞', style: TextStyle(fontSize: 15)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Pedido +18: Al confirmar declaras ser mayor de 18 años. El motorizado podrá solicitar tu cédula de identidad al entregar.',
+                          style: GoogleFonts.outfit(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: isDark ? const Color(0xFFFDA4AF) : const Color(0xFF9F1239),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+              ],
 
               // Botones de acción
               Row(
@@ -920,7 +954,17 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                                               ),
                                               const SizedBox(height: 4),
                                               InkWell(
-                                                onTap: () => cart.addItem(sug, quantity: 1),
+                                                onTap: () async {
+                                                  if (AgeRestrictionHelper.isProductAgeRestricted(sug) &&
+                                                      !AgeRestrictionHelper.isSessionVerified) {
+                                                    final ok = await AgeRestrictionHelper.ensureAgeVerified(
+                                                      context,
+                                                      isProduct: true,
+                                                    );
+                                                    if (!ok || !mounted) return;
+                                                  }
+                                                  cart.addItem(sug, quantity: 1);
+                                                },
                                                 child: Container(
                                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
                                                   decoration: BoxDecoration(
@@ -1862,6 +1906,26 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          if (cart.hasAgeRestrictedItems)
+                            Container(
+                              width: double.infinity,
+                              margin: const EdgeInsets.only(bottom: 8),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE11D48).withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: const Color(0xFFE11D48).withOpacity(0.4)),
+                              ),
+                              child: Text(
+                                '🔞 Pedido +18: El motorizado podrá solicitar tu cédula al entregar.',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.outfit(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: isDark ? const Color(0xFFFDA4AF) : const Color(0xFF9F1239),
+                                ),
+                              ),
+                            ),
                           if (_checkoutInlineError != null && _checkoutInlineError!.isNotEmpty)
                             Container(
                               width: double.infinity,

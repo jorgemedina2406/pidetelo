@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, catchError, map, of, from, firstValueFrom, switchMap, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { Tenant } from '../models/tenant.model';
+import { Tenant, isStoreAgeRestricted } from '../models/tenant.model';
 import { Product, ProductCategory } from '../models/product.model';
 import { Order } from '../models/order.model';
 import { Branch, SubscriptionPlan, PlatformSettings, TenantAddons } from '../models/branch.model';
@@ -1662,6 +1662,11 @@ export class ApiService {
         row.branding.logoUrl = row.branding.logoUrl || row.logoUrl;
         row.branding.bannerUrl = row.branding.bannerUrl || row.bannerUrl;
       }
+      row.isAgeRestricted = Boolean(
+        row.isAgeRestricted ??
+        row.is_age_restricted ??
+        isStoreAgeRestricted(row)
+      );
       return row as Tenant;
     }
 
@@ -1708,6 +1713,7 @@ export class ApiService {
         return row.is_active ?? true;
       })(),
       isFeatured: Boolean(row.is_featured ?? row.isFeatured ?? false),
+      isAgeRestricted: isStoreAgeRestricted(row),
       contact: {
         whatsappNumber: row.whatsapp_number || row.phone || '',
         phone: row.phone || '',
@@ -1863,6 +1869,7 @@ export class ApiService {
       isPopular: Boolean(row.is_popular ?? row.isPopular ?? false),
       isFeatured: Boolean(row.is_featured ?? row.isFeatured ?? false),
       isOnSale: Boolean(row.is_on_sale ?? row.isOnSale ?? false),
+      isAgeRestricted: Boolean(row.is_age_restricted ?? row.isAgeRestricted ?? false),
       compareAtPrice: (row.compare_at_price || row.compareAtPrice) ? Number(row.compare_at_price || row.compareAtPrice) : undefined,
       discountPercentage: Number(row.discount_percentage ?? row.discountPercentage) || 0,
       sku: row.sku || '',
@@ -1954,6 +1961,7 @@ export class ApiService {
       .replace(/\[RIDER_(?:ACCEPTED|AT_MERCHANT|PICKED_UP|ON_THE_WAY)\]\s*/g, '')
       .replace(/\[RIDER_REJECTED(?::[^\]]+)?\]\s*/g, '')
       .replace(/\[PAGO_MOTIVO:[^\]]*\]\s*/g, '')
+      .replace(/\[AGE_18_PLUS\]\s*/gi, '')
       .trim();
 
     const fxMatch = rawNotes.match(/\[FX:rate=([0-9.]+)\|total_bs=([0-9.]+)(?:\|delivery_bs=([0-9.]+))?(?:\|subtotal_bs=([0-9.]+))?\]/);

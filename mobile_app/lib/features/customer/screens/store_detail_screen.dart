@@ -8,6 +8,7 @@ import '../../../core/services/api_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/services/session_service.dart';
 import '../../../core/services/dolar_api_service.dart';
+import '../../../core/utils/age_restriction_helper.dart';
 import '../widgets/branch_selector_bottom_sheet.dart';
 import 'checkout_sheet.dart';
 
@@ -66,6 +67,20 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
     DolarApiService().fetchRate().then((_) {
       if (mounted) setState(() {});
     });
+
+    if (AgeRestrictionHelper.isStoreAgeRestricted(widget.storeData) &&
+        !AgeRestrictionHelper.isSessionVerified) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted) return;
+        final verified = await AgeRestrictionHelper.ensureAgeVerified(
+          context,
+          storeName: widget.storeData['name']?.toString(),
+        );
+        if (!verified && mounted) {
+          Navigator.of(context).pop();
+        }
+      });
+    }
   }
 
   Future<void> _loadBranches() async {
@@ -211,7 +226,17 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
     }
   }
 
-  void _openProductSheet(Product product) {
+  Future<void> _openProductSheet(Product product) async {
+    if (AgeRestrictionHelper.isProductAgeRestricted(product, store: widget.storeData) &&
+        !AgeRestrictionHelper.isSessionVerified) {
+      final verified = await AgeRestrictionHelper.ensureAgeVerified(
+        context,
+        storeName: widget.storeData['name']?.toString(),
+        isProduct: true,
+      );
+      if (!verified || !mounted) return;
+    }
+
     final isDark = widget.sessionService?.isDarkMode ?? (Theme.of(context).brightness == Brightness.dark);
     final sheetBg = isDark ? const Color(0xFF0F172A) : Colors.white;
     final cardBg = isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC);
@@ -771,6 +796,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                       whatsapp: widget.storeData['whatsappNumber']?.toString(),
                                       accentColor: widget.storeData['accentColor']?.toString(),
                                       baseDeliveryFee: (widget.storeData['baseDeliveryFee'] as num?)?.toDouble(),
+                                      isStoreAgeRestricted: AgeRestrictionHelper.isStoreAgeRestricted(widget.storeData),
                                     );
                                   }
 
@@ -787,6 +813,7 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                     whatsapp: widget.storeData['whatsappNumber']?.toString(),
                                     accentColor: widget.storeData['accentColor']?.toString(),
                                     baseDeliveryFee: (widget.storeData['baseDeliveryFee'] as num?)?.toDouble(),
+                                    isStoreAgeRestricted: AgeRestrictionHelper.isStoreAgeRestricted(widget.storeData),
                                   );
                                   Navigator.pop(ctx);
                                   ScaffoldMessenger.of(context).showSnackBar(
@@ -1059,6 +1086,8 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                               _buildBadge(Icons.schedule_rounded, dynamicDeliveryTime, const Color(0xFF38BDF8)),
                               _buildBadge(Icons.delivery_dining_rounded, 'Envío $feeStr', AppTheme.riderAccent),
                               _buildBadge(Icons.currency_exchange_rounded, 'Tasa: ${rate.toStringAsFixed(2)} Bs/\$', const Color(0xFF10B981)),
+                              if (AgeRestrictionHelper.isStoreAgeRestricted(store))
+                                _buildBadge(Icons.verified_user_rounded, '🔞 +18 Mayoría de edad', const Color(0xFFE11D48)),
                             ],
                           );
                         },
@@ -1439,6 +1468,22 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                           ),
                                         ),
                                       ),
+                                    if (AgeRestrictionHelper.isProductAgeRestricted(prod))
+                                      Positioned(
+                                        top: 6,
+                                        right: 6,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFE11D48),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            '🔞 +18',
+                                            style: GoogleFonts.outfit(fontSize: 8.5, fontWeight: FontWeight.w900, color: Colors.white),
+                                          ),
+                                        ),
+                                      ),
                                   ],
                                 ),
                                 Padding(
@@ -1574,6 +1619,26 @@ class _StoreDetailScreenState extends State<StoreDetailScreen> {
                                             ),
                                             child: Text(
                                               '⭐ DESTACADO',
+                                              style: GoogleFonts.outfit(
+                                                fontSize: 8.5,
+                                                fontWeight: FontWeight.w900,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      if (AgeRestrictionHelper.isProductAgeRestricted(prod))
+                                        Positioned(
+                                          top: 6,
+                                          right: 6,
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFE11D48),
+                                              borderRadius: BorderRadius.circular(6),
+                                            ),
+                                            child: Text(
+                                              '🔞 +18',
                                               style: GoogleFonts.outfit(
                                                 fontSize: 8.5,
                                                 fontWeight: FontWeight.w900,

@@ -10,6 +10,7 @@ import '../../../core/services/dolar_api_service.dart';
 import '../../../core/services/session_service.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/age_restriction_helper.dart';
 import '../widgets/branch_selector_bottom_sheet.dart';
 import 'store_detail_screen.dart';
 import 'checkout_sheet.dart';
@@ -3311,6 +3312,26 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                       ),
                     ),
                   ),
+                  if (AgeRestrictionHelper.isStoreAgeRestricted(store))
+                    Positioned(
+                      bottom: 8,
+                      right: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 7, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE11D48),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          '🔞 +18',
+                          style: GoogleFonts.outfit(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white),
+                        ),
+                      ),
+                    ),
                   Positioned(
                     top: 8,
                     right: 8,
@@ -3451,12 +3472,36 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Expanded(
-                            child: Text(
-                              store['name'] ?? 'Comercio',
-                              style: GoogleFonts.outfit(
-                                  fontSize: 15, fontWeight: FontWeight.w700),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                            child: Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    store['name'] ?? 'Comercio',
+                                    style: GoogleFonts.outfit(
+                                        fontSize: 15, fontWeight: FontWeight.w700),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                if (AgeRestrictionHelper.isStoreAgeRestricted(store)) ...[
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 5, vertical: 1.5),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFE11D48),
+                                      borderRadius: BorderRadius.circular(5),
+                                    ),
+                                    child: Text(
+                                      '+18',
+                                      style: GoogleFonts.outfit(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w900,
+                                          color: Colors.white),
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
                           Container(

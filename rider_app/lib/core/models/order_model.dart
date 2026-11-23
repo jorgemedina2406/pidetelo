@@ -254,7 +254,9 @@ class DeliveryOrder {
   final String? branchId;
   final String? companyId;
   final String? driverId;
+  final String? notes;
   String get tenantId => companyId ?? branchId ?? 'general';
+  bool get isAgeRestricted => (notes ?? '').toUpperCase().contains('[AGE_18_PLUS]');
 
   DeliveryOrder({
     required this.id,
@@ -289,6 +291,7 @@ class DeliveryOrder {
     this.branchId,
     this.companyId,
     this.driverId,
+    this.notes,
   });
 
   Map<String, dynamic> toJson() => {
@@ -324,6 +327,7 @@ class DeliveryOrder {
         'branchId': branchId,
         'companyId': companyId,
         'driverId': driverId,
+        'notes': notes,
       };
 
   factory DeliveryOrder.fromJson(Map<String, dynamic> json) => DeliveryOrder(
@@ -372,5 +376,6 @@ class DeliveryOrder {
         branchId: json['branchId'] ?? json['branch_id'],
         companyId: json['companyId'] ?? json['tenant_id'],
         driverId: json['driverId'] ?? json['driver_id'],
+        notes: json['notes']?.toString(),
       );
 }

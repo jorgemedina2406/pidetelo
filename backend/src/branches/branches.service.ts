@@ -274,11 +274,14 @@ export class BranchesService {
     const logoUrl = branch.logo_url || meta.logo_url || tenant.logo_url || tenant.branding?.logoUrl || defaultLogo;
     const bannerUrl = branch.banner_url || meta.banner_url || tenant.banner_url || tenant.branding?.bannerUrl || defaultBanner;
 
+    const rawCs = branch.currency_settings || branch.currencySettings || meta.currency_settings || {};
     const currencySettings = {
+      ...rawCs,
       baseCurrency,
       displayMode,
       exchangeRate,
-      lastRateUpdate: meta.currency_settings?.lastRateUpdate || new Date().toISOString()
+      lastRateUpdate: meta.currency_settings?.lastRateUpdate || rawCs.lastRateUpdate || new Date().toISOString(),
+      ...(rawCs.isAgeRestricted !== undefined ? { isAgeRestricted: Boolean(rawCs.isAgeRestricted) } : {}),
     };
 
     const defaultDeliveryTiers = [
@@ -664,7 +667,11 @@ export class BranchesService {
       metaToSave.display_mode = branchPayload.displayMode || branchPayload.display_mode;
     }
     if (branchPayload.currencySettings !== undefined || branchPayload.currency_settings !== undefined) {
-      metaToSave.currency_settings = branchPayload.currencySettings || branchPayload.currency_settings;
+      const existingMeta = this.getBranchMetadata(id);
+      metaToSave.currency_settings = {
+        ...(existingMeta.currency_settings || {}),
+        ...(branchPayload.currencySettings || branchPayload.currency_settings),
+      };
     }
     if (branchPayload.deliveryTiers !== undefined || branchPayload.delivery_tiers !== undefined) {
       metaToSave.delivery_tiers = branchPayload.deliveryTiers || branchPayload.delivery_tiers;

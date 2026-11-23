@@ -1,7 +1,7 @@
 import { Component, Input, Output, EventEmitter, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { Tenant } from '../../../../core/models/tenant.model';
+import { Tenant, isStoreAgeRestricted } from '../../../../core/models/tenant.model';
 import { Branch } from '../../../../core/models/branch.model';
 import { ThemeService } from '../../../../core/services/theme.service';
 import { FavoritesService } from '../../../../core/services/favorites.service';
@@ -51,6 +51,10 @@ export class StoreHeaderComponent implements OnInit {
   getDeliveryFee(store: Tenant): string {
     const fee = this.selectedBranch?.baseDeliveryFee ?? store.deliverySettings?.baseDeliveryFee ?? 0;
     return fee.toFixed(2);
+  }
+
+  isAgeRestrictedStore(store?: Tenant | null): boolean {
+    return isStoreAgeRestricted(store);
   }
 
   getFallbackLogo(name?: string): string {

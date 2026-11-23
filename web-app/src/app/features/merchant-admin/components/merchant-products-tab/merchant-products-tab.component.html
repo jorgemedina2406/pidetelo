@@ -132,6 +132,12 @@
                 [class.bg-red-500]="!prod.isAvailable" [class.text-white]="!prod.isAvailable">
                 {{ prod.isAvailable ? i18n.t('ma.inStock') : i18n.t('ma.outOfStock') }}
               </span>
+              @if (prod.isAgeRestricted) {
+              <span class="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[9px] font-black bg-rose-600 text-white shadow-xs"
+                title="Producto restringido para mayores de 18 años">
+                🔞 +18
+              </span>
+              }
             </div>
 
             <div class="p-3.5 space-y-1">
@@ -248,6 +254,12 @@
                   [class.bg-red-500/15]="!prod.isAvailable" [class.text-red-500]="!prod.isAvailable">
                   {{ prod.isAvailable ? 'En Stock' : 'Agotado' }}
                 </span>
+                @if (prod.isAgeRestricted) {
+                <span class="text-[9px] font-black px-1.5 py-0.2 rounded bg-rose-600 text-white"
+                  title="Producto restringido para mayores de 18 años">
+                  🔞 +18
+                </span>
+                }
               </div>
               <p class="text-[10px] text-slate-500 dark:text-slate-400 truncate max-w-md mt-0.5">{{ prod.description
                 }}</p>

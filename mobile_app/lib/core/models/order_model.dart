@@ -180,6 +180,7 @@ class Product {
   final bool isPopular;
   final bool isFeatured;
   final bool isOnSale;
+  final bool isAgeRestricted;
   final double? compareAtPrice;
   final int? discountPercentage;
   final String? branchId;
@@ -196,6 +197,7 @@ class Product {
     this.isPopular = false,
     this.isFeatured = false,
     this.isOnSale = false,
+    this.isAgeRestricted = false,
     this.compareAtPrice,
     this.discountPercentage,
     this.branchId,
@@ -213,6 +215,7 @@ class Product {
         'isPopular': isPopular,
         'isFeatured': isFeatured,
         'isOnSale': isOnSale,
+        'isAgeRestricted': isAgeRestricted,
         'compareAtPrice': compareAtPrice,
         'discountPercentage': discountPercentage,
         'branch_id': branchId,
@@ -236,6 +239,7 @@ class Product {
       isPopular: json['isPopular'] ?? json['is_popular'] ?? false,
       isFeatured: json['isFeatured'] ?? json['is_featured'] ?? false,
       isOnSale: json['isOnSale'] ?? json['is_on_sale'] ?? false,
+      isAgeRestricted: json['isAgeRestricted'] ?? json['is_age_restricted'] ?? false,
       compareAtPrice: (json['compareAtPrice'] as num?)?.toDouble() ?? (json['compare_at_price'] as num?)?.toDouble(),
       discountPercentage: (json['discountPercentage'] as num?)?.toInt() ?? (json['discount_percentage'] as num?)?.toInt(),
       branchId: json['branch_id'] ?? json['branchId'],

@@ -1787,7 +1787,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               const SizedBox(height: 16),
               Center(
                 child: Text(
-                  'Pídetelo v1.1.16 (19)',
+                  'Pídetelo v1.1.17 (20)',
                   style: GoogleFonts.outfit(
                     fontSize: 11,
                     color: isDark ? Colors.white38 : const Color(0xFF94A3B8),

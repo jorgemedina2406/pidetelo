@@ -285,6 +285,14 @@
                       <span class="text-[10px] text-slate-400 block">Mostrar badge de promoción y precio tachado</span>
                     </div>
                   </label>
+
+                  <label class="flex items-center gap-2.5 p-2.5 bg-white dark:bg-slate-900 rounded-xl border border-rose-200 dark:border-rose-900/60 cursor-pointer hover:border-rose-500 transition-colors">
+                    <input type="checkbox" [(ngModel)]="editingProduct.isAgeRestricted" name="prodIsAgeRestricted" class="rounded text-rose-600 focus:ring-rose-600 w-4 h-4" />
+                    <div>
+                      <span class="font-bold text-xs block text-rose-700 dark:text-rose-300">🔞 Producto solo para mayores de 18 años (+18)</span>
+                      <span class="text-[10px] text-slate-500 dark:text-slate-400 block">Exige confirmación de mayoría de edad y alerta al motorizado verificar cédula al entregar.</span>
+                    </div>
+                  </label>
                 </div>
 
                 @if (editingProduct.isOnSale) {

@@ -44,6 +44,12 @@
 
                   <!-- BADGES DE OFERTA Y DESTACADOS -->
                   <div class="absolute top-2.5 left-2.5 flex flex-wrap gap-1">
+                    @if (prod.isAgeRestricted) {
+                      <span class="px-2 py-0.5 rounded-full bg-rose-700 text-white font-black text-[10px] shadow-sm uppercase tracking-wider"
+                            title="Solo para mayores de 18 años">
+                        🔞 +18
+                      </span>
+                    }
                     @if (prod.isOnSale && prod.isAvailable) {
                       <span class="px-2 py-0.5 rounded-full bg-rose-600 text-white font-black text-[10px] shadow-sm uppercase tracking-wider">
                         🔥 {{ prod.discountPercentage ? prod.discountPercentage + '% OFF' : 'OFERTA' }}
@@ -124,6 +130,12 @@
                       <h4 class="font-bold text-sm text-slate-900 dark:text-white truncate group-hover:text-brand-500 transition-colors">
                         {{ prod.name }}
                       </h4>
+                      @if (prod.isAgeRestricted) {
+                        <span class="px-1.5 py-0.2 bg-rose-600 text-white text-[9px] font-black uppercase rounded"
+                              title="Solo para mayores de 18 años">
+                          🔞 +18
+                        </span>
+                      }
                       @if (prod.isPopular || prod.isFeatured) {
                         <span class="px-1.5 py-0.2 bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-[9px] font-black uppercase rounded">
                           ★ Destacado

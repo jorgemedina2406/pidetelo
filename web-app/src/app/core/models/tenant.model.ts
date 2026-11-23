@@ -74,6 +74,8 @@ export interface Tenant {
   subcategories?: string[]; // e.g. ["Hamburguesas", "Sushi"]
   isActive: boolean;
   isFeatured?: boolean;
+  isAgeRestricted?: boolean;
+  is_age_restricted?: boolean;
   address?: string;
   phone?: string;
   whatsapp_number?: string;
@@ -96,5 +98,24 @@ export interface Tenant {
   branches?: any[];
   riderPayoutPolicy?: any;
   rider_payout_policy?: any;
+}
+
+export function isStoreAgeRestricted(tenant?: any): boolean {
+  if (!tenant) return false;
+  const explicit =
+    tenant.isAgeRestricted ??
+    tenant.is_age_restricted ??
+    tenant.currencySettings?.isAgeRestricted ??
+    tenant.currency_settings?.isAgeRestricted ??
+    tenant.branches?.[0]?.currencySettings?.isAgeRestricted ??
+    tenant.branches?.[0]?.currency_settings?.isAgeRestricted;
+  if (explicit !== undefined && explicit !== null) {
+    return Boolean(explicit);
+  }
+  const norm = String(tenant.category || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+  return /licor|bodeg|alcohol|cervez|cervec|vinot|licorer/.test(norm);
 }
 

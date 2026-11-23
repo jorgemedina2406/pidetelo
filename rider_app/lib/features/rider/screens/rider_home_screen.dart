@@ -1218,6 +1218,33 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
                       ],
                     ),
                     const SizedBox(height: 12),
+                    if (activeOrder.isAgeRestricted) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE11D48).withOpacity(0.18),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFFE11D48), width: 1.2),
+                        ),
+                        child: Row(
+                          children: [
+                            const Text('🔞', style: TextStyle(fontSize: 16)),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'PEDIDO +18 — Solicitar Cédula al Cliente al Entregar',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFFFDA4AF),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                    ],
                     Text(
                       'Comercio: ${activeOrder.merchantName}',
                       style: GoogleFonts.outfit(
@@ -1410,6 +1437,33 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
                       ],
                     ),
                     const SizedBox(height: 12),
+                    if (activeOrder.isAgeRestricted) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE11D48).withOpacity(0.18),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFFE11D48), width: 1.2),
+                        ),
+                        child: Row(
+                          children: [
+                            const Text('🔞', style: TextStyle(fontSize: 16)),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'PEDIDO +18 — Solicitar Cédula al Cliente al Entregar',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFFFDA4AF),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                    ],
                     Text(
                       'Comercio: ${activeOrder.merchantName}',
                       style: GoogleFonts.outfit(
@@ -1559,14 +1613,43 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                ord.merchantName,
-                style: GoogleFonts.outfit(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
+              Expanded(
+                child: Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        ord.merchantName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.outfit(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    if (ord.isAgeRestricted) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE11D48),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          '🔞 +18',
+                          style: GoogleFonts.outfit(
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
+              const SizedBox(width: 8),
               Text(
                 '+${_dolarApi.formatUsdWithBs(ord.deliveryFee)}',
                 style: GoogleFonts.outfit(
@@ -2481,7 +2564,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
         const SizedBox(height: 16),
         Center(
           child: Text(
-            'Pídetelo Rider v1.1.17 (20)',
+            'Pídetelo Rider v1.1.18 (21)',
             style: GoogleFonts.outfit(
               fontSize: 11,
               color: Colors.white38,

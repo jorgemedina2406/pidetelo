@@ -22,7 +22,7 @@ type OrderRiderPhase =
   | 'rejected'
   | 'cancelled';
 import { AppUser, UserRole } from '../../core/models/user.model';
-import { Tenant, CurrencyDisplayMode, DeliveryTier } from '../../core/models/tenant.model';
+import { Tenant, CurrencyDisplayMode, DeliveryTier, isStoreAgeRestricted } from '../../core/models/tenant.model';
 import { Branch, SubscriptionPlan } from '../../core/models/branch.model';
 import { Coupon } from '../../core/models/coupon.model';
 import { IconComponent } from '../../shared/components/icon.component';
@@ -533,6 +533,7 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     baseCurrency: 'USD' as 'USD' | 'VES',
     displayMode: 'usd_and_bs' as CurrencyDisplayMode,
     exchangeRate: 896.12,
+    isAgeRestricted: false,
     acceptedPaymentMethods: ['cash_usd', 'mobile_transfer', 'cash_local'] as string[],
     pagoMovilBank: '',
     pagoMovilPhone: '',
@@ -638,6 +639,13 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
     this.brandingForm.exchangeRate = Number(branch.exchangeRate ?? curr?.exchangeRate ?? tenant.currencySettings?.exchangeRate ?? cached?.exchangeRate ?? 45.50);
     this.brandingForm.baseCurrency = (branch.baseCurrency || curr?.baseCurrency || tenant.currencySettings?.baseCurrency || cached?.baseCurrency || 'USD') as 'USD' | 'VES';
     this.brandingForm.displayMode = (branch.displayMode || curr?.displayMode || tenant.currencySettings?.displayMode || cached?.displayMode || 'usd_and_bs') as CurrencyDisplayMode;
+    this.brandingForm.isAgeRestricted = Boolean(
+      curr?.isAgeRestricted ??
+      tenant.isAgeRestricted ??
+      tenant.is_age_restricted ??
+      cached?.isAgeRestricted ??
+      isStoreAgeRestricted(tenant)
+    );
 
     const rawMethods = branch.acceptedPaymentMethods ?? 
                        (branch as any).accepted_payment_methods ?? 
@@ -4166,6 +4174,8 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         is_popular: Boolean(prodToSave.isPopular),
         is_featured: Boolean(prodToSave.isFeatured),
         is_on_sale: Boolean(prodToSave.isOnSale),
+        is_age_restricted: Boolean(prodToSave.isAgeRestricted),
+        isAgeRestricted: Boolean(prodToSave.isAgeRestricted),
         compare_at_price: prodToSave.compareAtPrice ? Number(prodToSave.compareAtPrice) : null,
         discount_percentage: Number(prodToSave.discountPercentage) || 0,
         track_stock: Boolean(prodToSave.trackStock),
@@ -4195,6 +4205,8 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         is_popular: Boolean(prodToSave.isPopular),
         is_featured: Boolean(prodToSave.isFeatured),
         is_on_sale: Boolean(prodToSave.isOnSale),
+        is_age_restricted: Boolean(prodToSave.isAgeRestricted),
+        isAgeRestricted: Boolean(prodToSave.isAgeRestricted),
         compare_at_price: prodToSave.compareAtPrice ? Number(prodToSave.compareAtPrice) : null,
         discount_percentage: Number(prodToSave.discountPercentage) || 0,
         track_stock: Boolean(prodToSave.trackStock),
@@ -4726,14 +4738,16 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         displayMode: this.brandingForm.displayMode,
         exchangeRate: Number(this.brandingForm.exchangeRate),
         lastRateUpdate: new Date().toISOString(),
-        acceptedPaymentMethods: this.brandingForm.acceptedPaymentMethods || []
+        acceptedPaymentMethods: this.brandingForm.acceptedPaymentMethods || [],
+        isAgeRestricted: Boolean(this.brandingForm.isAgeRestricted)
       },
       currency_settings: {
         baseCurrency: this.brandingForm.baseCurrency,
         displayMode: this.brandingForm.displayMode,
         exchangeRate: Number(this.brandingForm.exchangeRate),
         lastRateUpdate: new Date().toISOString(),
-        acceptedPaymentMethods: this.brandingForm.acceptedPaymentMethods || []
+        acceptedPaymentMethods: this.brandingForm.acceptedPaymentMethods || [],
+        isAgeRestricted: Boolean(this.brandingForm.isAgeRestricted)
       }
     };
 
@@ -4775,6 +4789,8 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         tagline: this.brandingForm.tagline,
         logoUrl: this.brandingForm.logoUrl,
         bannerUrl: this.brandingForm.bannerUrl,
+        isAgeRestricted: Boolean(this.brandingForm.isAgeRestricted),
+        is_age_restricted: Boolean(this.brandingForm.isAgeRestricted),
         branding: {
           accentColor: this.brandingForm.accentColor,
           logoUrl: this.brandingForm.logoUrl,
@@ -4822,12 +4838,15 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
         display_mode: this.brandingForm.displayMode,
         accepted_payment_methods: this.brandingForm.acceptedPaymentMethods,
         acceptedPaymentMethods: this.brandingForm.acceptedPaymentMethods,
+        is_age_restricted: Boolean(this.brandingForm.isAgeRestricted),
+        isAgeRestricted: Boolean(this.brandingForm.isAgeRestricted),
         currency_settings: {
           baseCurrency: this.brandingForm.baseCurrency,
           displayMode: this.brandingForm.displayMode,
           exchangeRate: Number(this.brandingForm.exchangeRate),
           lastRateUpdate: new Date().toISOString(),
-          acceptedPaymentMethods: this.brandingForm.acceptedPaymentMethods
+          acceptedPaymentMethods: this.brandingForm.acceptedPaymentMethods,
+          isAgeRestricted: Boolean(this.brandingForm.isAgeRestricted)
         },
         business_hours: {
           open: this.brandingForm.openTime,

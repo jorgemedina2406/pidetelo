@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/app_config.dart';
 import '../models/order_model.dart';
 import '../models/branch_model.dart';
+import '../utils/age_restriction_helper.dart';
 import 'dolar_api_service.dart';
 import 'cart_service.dart';
 import 'session_service.dart';
@@ -568,6 +569,7 @@ class ApiService {
       'isPromo': false,
       'promoText': '',
       'isFeatured': item['is_featured'] ?? item['isFeatured'] ?? false,
+      'isAgeRestricted': AgeRestrictionHelper.isStoreAgeRestricted(item),
       'branches': branchesList,
     };
   }
@@ -757,6 +759,7 @@ class ApiService {
               isPopular: item['is_popular'] ?? item['isPopular'] ?? false,
               isFeatured: item['is_featured'] ?? item['isFeatured'] ?? false,
               isOnSale: item['is_on_sale'] ?? item['isOnSale'] ?? false,
+              isAgeRestricted: item['is_age_restricted'] == true || item['isAgeRestricted'] == true,
               compareAtPrice: (item['compare_at_price'] as num?)?.toDouble() ?? (item['compareAtPrice'] as num?)?.toDouble(),
               discountPercentage: (item['discount_percentage'] as num?)?.toInt() ?? (item['discountPercentage'] as num?)?.toInt(),
               branchId: item['branch_id'] ?? item['branchId'],
@@ -822,6 +825,7 @@ class ApiService {
           isPopular: item['is_popular'] ?? false,
           isFeatured: item['is_featured'] ?? false,
           isOnSale: item['is_on_sale'] ?? false,
+          isAgeRestricted: item['is_age_restricted'] == true || item['isAgeRestricted'] == true,
           compareAtPrice: (item['compare_at_price'] as num?)?.toDouble(),
           discountPercentage: (item['discount_percentage'] as num?)?.toInt(),
           branchId: item['branch_id'],
@@ -1031,7 +1035,13 @@ class ApiService {
       }
 
       final currentUserId = supabase.auth.currentUser?.id ?? SessionService().currentUser?.id;
+      final bool hasAgeRestricted =
+          (order.notes ?? '').contains('[AGE_18_PLUS]') ||
+          order.items.any((i) => AgeRestrictionHelper.isProductAgeRestricted(i.product));
       final noteParts = <String>['[PIN:${order.pin}]'];
+      if (hasAgeRestricted) {
+        noteParts.add('[AGE_18_PLUS]');
+      }
       if (currentUserId != null && currentUserId.isNotEmpty) {
         noteParts.add('[UID:$currentUserId]');
       }
@@ -1039,7 +1049,10 @@ class ApiService {
         noteParts.add('[PAGO_ORIGEN:${order.paymentOriginBank.trim()}]');
       }
       if ((order.notes ?? '').trim().isNotEmpty) {
-        noteParts.add(order.notes!.trim());
+        final cleanedOrderNotes = order.notes!.replaceAll('[AGE_18_PLUS]', '').trim();
+        if (cleanedOrderNotes.isNotEmpty) {
+          noteParts.add(cleanedOrderNotes);
+        }
       }
       notesExtra = noteParts.join(' ');
 

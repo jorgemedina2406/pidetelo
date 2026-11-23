@@ -2,7 +2,7 @@ import { computed } from '@angular/core';
 import { signalStore, withState, withComputed, withMethods, patchState } from '@ngrx/signals';
 import { CartItem, CustomerInfo, FulfillmentType, Order, PaymentMethod, SelectedModifier } from '../../../core/models/order.model';
 import { Product } from '../../../core/models/product.model';
-import { Tenant, DeliveryTier } from '../../../core/models/tenant.model';
+import { Tenant, DeliveryTier, isStoreAgeRestricted } from '../../../core/models/tenant.model';
 import { Branch } from '../../../core/models/branch.model';
 import { Coupon } from '../../../core/models/coupon.model';
 
@@ -350,6 +350,11 @@ export const CartStore = signalStore(
       }).slice(0, 4);
     });
 
+    const hasAgeRestrictedItems = computed(() => {
+      if (isStoreAgeRestricted(store.activeTenant())) return true;
+      return store.items().some(i => Boolean(i.isAgeRestricted));
+    });
+
     return {
       totalItemsCount,
       subtotal,
@@ -371,7 +376,8 @@ export const CartStore = signalStore(
       deliveryFeeVes,
       couponDiscountVes,
       totalVes,
-      suggestedProducts
+      suggestedProducts,
+      hasAgeRestrictedItems
     };
   }),
   withMethods((store) => ({
@@ -462,7 +468,8 @@ export const CartStore = signalStore(
           selectedModifiers: [],
           notes: '',
           imageUrl: product.imageUrl,
-          itemTotal: product.price
+          itemTotal: product.price,
+          isAgeRestricted: Boolean(product.isAgeRestricted)
         };
         updatedItems = [...store.items(), newItem];
       }
@@ -549,7 +556,8 @@ export const CartStore = signalStore(
           selectedModifiers,
           itemTotal,
           notes,
-          imageUrl: product.imageUrl
+          imageUrl: product.imageUrl,
+          isAgeRestricted: Boolean(product.isAgeRestricted)
         };
         newItems = [...store.items(), newItem];
       }

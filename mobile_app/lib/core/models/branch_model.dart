@@ -135,6 +135,7 @@ class Branch {
   final bool hasFeaturedBanners;
   final List<String> acceptedPaymentMethods;
   final bool hasValidPaymentMethods;
+  final bool isAgeRestricted;
 
   const Branch({
     required this.id,
@@ -174,6 +175,7 @@ class Branch {
     this.hasFeaturedBanners = false,
     this.acceptedPaymentMethods = const [],
     this.hasValidPaymentMethods = true,
+    this.isAgeRestricted = false,
   });
 
   bool get isPaymentValid {
@@ -394,6 +396,7 @@ class Branch {
     bool? hasFeaturedBanners,
     List<String>? acceptedPaymentMethods,
     bool? hasValidPaymentMethods,
+    bool? isAgeRestricted,
   }) {
     return Branch(
       id: id ?? this.id,
@@ -431,6 +434,7 @@ class Branch {
           acceptedPaymentMethods ?? this.acceptedPaymentMethods,
       hasValidPaymentMethods:
           hasValidPaymentMethods ?? this.hasValidPaymentMethods,
+      isAgeRestricted: isAgeRestricted ?? this.isAgeRestricted,
     );
   }
 
@@ -566,6 +570,12 @@ class Branch {
       hasValidPaymentMethods: json['has_valid_payment_methods'] ??
           json['hasValidPaymentMethods'] ??
           true,
+      isAgeRestricted: json['is_age_restricted'] == true ||
+          json['isAgeRestricted'] == true ||
+          (json['currency_settings'] is Map &&
+              json['currency_settings']['isAgeRestricted'] == true) ||
+          (json['currencySettings'] is Map &&
+              json['currencySettings']['isAgeRestricted'] == true),
       acceptedPaymentMethods: (json['accepted_payment_methods'] is List &&
               (json['accepted_payment_methods'] as List).isNotEmpty)
           ? (json['accepted_payment_methods'] as List)

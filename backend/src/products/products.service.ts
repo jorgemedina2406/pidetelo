@@ -47,6 +47,13 @@ export class ProductsService {
   private mergeProductWithMetadata(product: any): any {
     if (!product) return product;
     const meta = this.getProductMetadata(product.id);
+    const isAgeRestricted = Boolean(
+      product.is_age_restricted ??
+      product.isAgeRestricted ??
+      meta.is_age_restricted ??
+      meta.isAgeRestricted ??
+      false
+    );
     return {
       ...product,
       is_popular: Boolean(product.is_popular ?? meta.is_popular ?? false),
@@ -55,6 +62,8 @@ export class ProductsService {
       isFeatured: Boolean(product.is_featured ?? meta.is_featured ?? false),
       is_on_sale: Boolean(product.is_on_sale ?? meta.is_on_sale ?? false),
       isOnSale: Boolean(product.is_on_sale ?? meta.is_on_sale ?? false),
+      is_age_restricted: isAgeRestricted,
+      isAgeRestricted,
       compare_at_price: (product.compare_at_price ?? meta.compare_at_price) ? Number(product.compare_at_price ?? meta.compare_at_price) : null,
       compareAtPrice: (product.compare_at_price ?? meta.compare_at_price) ? Number(product.compare_at_price ?? meta.compare_at_price) : null,
       discount_percentage: Number(product.discount_percentage ?? meta.discount_percentage) || 0,
@@ -228,6 +237,7 @@ export class ProductsService {
       is_popular: Boolean(productData.is_popular ?? productData.isPopular ?? false),
       is_featured: Boolean(productData.is_featured ?? productData.isFeatured ?? false),
       is_on_sale: Boolean(productData.is_on_sale ?? productData.isOnSale ?? false),
+      is_age_restricted: Boolean(productData.is_age_restricted ?? productData.isAgeRestricted ?? false),
       compare_at_price: productData.compare_at_price || productData.compareAtPrice ? Number(productData.compare_at_price || productData.compareAtPrice) : null,
       discount_percentage: Number(productData.discount_percentage ?? productData.discountPercentage) || 0,
       track_stock: Boolean(productData.track_stock ?? productData.trackStock ?? false),
@@ -259,6 +269,7 @@ export class ProductsService {
       delete fallbackRow.is_popular;
       delete fallbackRow.is_featured;
       delete fallbackRow.is_on_sale;
+      delete fallbackRow.is_age_restricted;
       delete fallbackRow.compare_at_price;
       delete fallbackRow.discount_percentage;
       const { data: retryData, error: retryErr } = await this.supabase
@@ -282,6 +293,8 @@ export class ProductsService {
       is_popular: productRow.is_popular,
       is_featured: productRow.is_featured,
       is_on_sale: productRow.is_on_sale,
+      is_age_restricted: productRow.is_age_restricted,
+      isAgeRestricted: productRow.is_age_restricted,
       compare_at_price: productRow.compare_at_price,
       discount_percentage: productRow.discount_percentage,
     });
@@ -331,6 +344,9 @@ export class ProductsService {
     }
     if (updateData.is_on_sale !== undefined || updateData.isOnSale !== undefined) {
       productRow.is_on_sale = Boolean(updateData.is_on_sale ?? updateData.isOnSale);
+    }
+    if (updateData.is_age_restricted !== undefined || updateData.isAgeRestricted !== undefined) {
+      productRow.is_age_restricted = Boolean(updateData.is_age_restricted ?? updateData.isAgeRestricted);
     }
     if (updateData.compare_at_price !== undefined || updateData.compareAtPrice !== undefined) {
       const val = updateData.compare_at_price ?? updateData.compareAtPrice;
@@ -390,6 +406,7 @@ export class ProductsService {
       delete fallbackRow.is_popular;
       delete fallbackRow.is_featured;
       delete fallbackRow.is_on_sale;
+      delete fallbackRow.is_age_restricted;
       delete fallbackRow.compare_at_price;
       delete fallbackRow.discount_percentage;
       const { data: retryData, error: retryErr } = await this.supabase
@@ -415,13 +432,19 @@ export class ProductsService {
       }
     }
 
-    this.saveProductMetadata(id, {
-      is_popular: productRow.is_popular,
-      is_featured: productRow.is_featured,
-      is_on_sale: productRow.is_on_sale,
-      compare_at_price: productRow.compare_at_price,
-      discount_percentage: productRow.discount_percentage,
-    });
+    const metaPatch: Record<string, any> = {};
+    if (productRow.is_popular !== undefined) metaPatch.is_popular = productRow.is_popular;
+    if (productRow.is_featured !== undefined) metaPatch.is_featured = productRow.is_featured;
+    if (productRow.is_on_sale !== undefined) metaPatch.is_on_sale = productRow.is_on_sale;
+    if (productRow.is_age_restricted !== undefined) {
+      metaPatch.is_age_restricted = productRow.is_age_restricted;
+      metaPatch.isAgeRestricted = productRow.is_age_restricted;
+    }
+    if (productRow.compare_at_price !== undefined) metaPatch.compare_at_price = productRow.compare_at_price;
+    if (productRow.discount_percentage !== undefined) metaPatch.discount_percentage = productRow.discount_percentage;
+    if (Object.keys(metaPatch).length > 0) {
+      this.saveProductMetadata(id, metaPatch);
+    }
     return this.findById(id);
   }
 

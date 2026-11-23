@@ -70,6 +70,12 @@
                     [class.bg-red-600]="!isStoreOpen.isOpen">
                 {{ isStoreOpen.isOpen ? 'Abierto ahora' : 'Cerrado' }}
               </span>
+              @if (isAgeRestrictedStore(store)) {
+                <span class="px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider shadow-sm bg-rose-600 text-white"
+                      title="Comercio exclusivo para mayores de 18 años">
+                  🔞 +18
+                </span>
+              }
             </div>
             <p class="text-xs sm:text-sm text-slate-200 mt-0.5 line-clamp-1">{{ selectedBranch?.tagline || store.tagline }}</p>
           </div>

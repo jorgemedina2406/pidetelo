@@ -166,6 +166,7 @@ export class ProductFormModalComponent implements OnChanges {
       isPopular: false,
       isFeatured: false,
       isOnSale: false,
+      isAgeRestricted: false,
       trackStock: false,
       stockQuantity: 0,
       previousStock: 0,

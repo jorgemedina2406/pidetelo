@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/order_model.dart';
 import '../models/user_model.dart';
 import '../models/branch_model.dart';
+import '../utils/age_restriction_helper.dart';
 import 'api_service.dart';
 import 'dolar_api_service.dart';
 
@@ -64,6 +65,7 @@ class CartService extends ChangeNotifier {
   String? _currentStoreWhatsapp;
   String? _currentStoreAccentColor;
   double? _currentStoreBaseDeliveryFee;
+  bool _currentStoreIsAgeRestricted = false;
   DeliveryAddress _selectedAddress = const DeliveryAddress(
     id: '',
     title: 'Sin dirección',
@@ -100,6 +102,10 @@ class CartService extends ChangeNotifier {
   String? get currentStoreWhatsapp => _currentStoreWhatsapp;
   String? get currentStoreAccentColor => _currentStoreAccentColor;
   double? get currentStoreBaseDeliveryFee => _currentStoreBaseDeliveryFee;
+  bool get hasAgeRestrictedItems =>
+      _currentStoreIsAgeRestricted ||
+      (_currentBranch?.isAgeRestricted == true) ||
+      _items.any((i) => AgeRestrictionHelper.isProductAgeRestricted(i.product));
 
   double get effectiveExchangeRate =>
       (_currentStoreExchangeRate != null && _currentStoreExchangeRate! > 0)
@@ -451,6 +457,7 @@ class CartService extends ChangeNotifier {
     String? whatsapp,
     String? accentColor,
     double? baseDeliveryFee,
+    bool? isStoreAgeRestricted,
   }) {
     _items.clear();
     _currentBranch = branch;
@@ -464,6 +471,7 @@ class CartService extends ChangeNotifier {
     if (whatsapp != null && whatsapp.isNotEmpty) _currentStoreWhatsapp = whatsapp;
     if (accentColor != null && accentColor.isNotEmpty) _currentStoreAccentColor = accentColor;
     if (baseDeliveryFee != null && baseDeliveryFee > 0) _currentStoreBaseDeliveryFee = baseDeliveryFee;
+    _currentStoreIsAgeRestricted = isStoreAgeRestricted == true;
     notifyListeners();
     saveCartToStorage();
   }
@@ -531,12 +539,14 @@ class CartService extends ChangeNotifier {
     String? whatsapp,
     String? accentColor,
     double? baseDeliveryFee,
+    bool? isStoreAgeRestricted,
   }) {
     if (exchangeRate != null && exchangeRate > 0) _currentStoreExchangeRate = exchangeRate;
     if (displayMode != null && displayMode.isNotEmpty) _currentStoreDisplayMode = displayMode;
     if (whatsapp != null && whatsapp.isNotEmpty) _currentStoreWhatsapp = whatsapp;
     if (accentColor != null && accentColor.isNotEmpty) _currentStoreAccentColor = accentColor;
     if (baseDeliveryFee != null && baseDeliveryFee > 0) _currentStoreBaseDeliveryFee = baseDeliveryFee;
+    if (isStoreAgeRestricted != null) _currentStoreIsAgeRestricted = isStoreAgeRestricted;
 
     if (branch != null) {
       if (_currentBranch != null && _currentBranch!.id != branch.id) {
@@ -610,6 +620,7 @@ class CartService extends ChangeNotifier {
         _currentStoreWhatsapp = null;
         _currentStoreAccentColor = null;
         _currentStoreBaseDeliveryFee = null;
+        _currentStoreIsAgeRestricted = false;
       }
       notifyListeners();
       saveCartToStorage();
@@ -627,6 +638,7 @@ class CartService extends ChangeNotifier {
     _currentStoreWhatsapp = null;
     _currentStoreAccentColor = null;
     _currentStoreBaseDeliveryFee = null;
+    _currentStoreIsAgeRestricted = false;
     notifyListeners();
     discardSavedCart();
   }

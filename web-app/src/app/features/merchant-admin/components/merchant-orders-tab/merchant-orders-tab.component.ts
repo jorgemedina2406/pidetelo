@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '../../../../shared/components/icon.component';
 import { I18nService } from '../../../../core/services/i18n.service';
-import { Order, OrderStatus, parseOrderAdditions, OrderAddition, isOrderAdditionItem, getOrderSourceMeta, OrderSourceMeta, formatOrderDateTime } from '../../../../core/models/order.model';
+import { Order, OrderStatus, parseOrderAdditions, OrderAddition, isOrderAdditionItem, getOrderSourceMeta, OrderSourceMeta, formatOrderDateTime, isOrderAgeRestricted } from '../../../../core/models/order.model';
 import { Branch } from '../../../../core/models/branch.model';
 import { Rider } from '../../merchant-admin.component';
 
@@ -153,5 +153,9 @@ export class MerchantOrdersTabComponent {
 
   formatOrderTime(iso?: string | null): string {
     return formatOrderDateTime(iso);
+  }
+
+  isAgeRestrictedOrder(order?: Order | null): boolean {
+    return isOrderAgeRestricted(order?.notes);
   }
 }

@@ -670,6 +670,7 @@ class RiderService extends ChangeNotifier {
           row['company_id']?.toString() ??
           tenant['id']?.toString(),
       driverId: row['driver_id']?.toString(),
+      notes: row['notes']?.toString(),
     );
   }
 
@@ -863,6 +864,7 @@ class RiderService extends ChangeNotifier {
         branchId: order.branchId,
         companyId: order.companyId ?? fetchedTenantId,
         driverId: cleanDriverId,
+        notes: updatedNotes ?? order.notes,
       );
 
       _activeOrder = assignedOrder;

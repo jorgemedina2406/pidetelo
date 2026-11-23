@@ -290,6 +290,7 @@ export class CheckoutModalComponent {
         total_bs: order.totalBs,
         delivery_pin: order.deliveryPin,
         notes: [
+          this.cart.hasAgeRestrictedItems() ? '[AGE_18_PLUS]' : '',
           order.deliveryPin ? `[PIN:${order.deliveryPin}]` : '',
           order.paymentOriginBank ? `[PAGO_ORIGEN:${order.paymentOriginBank}]` : '',
           order.customer.notes || ''

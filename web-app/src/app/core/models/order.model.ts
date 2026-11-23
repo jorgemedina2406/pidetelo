@@ -46,6 +46,7 @@ export interface CartItem {
   itemTotal: number; // (unitPrice + sum(modifiers)) * quantity
   notes?: string;
   imageUrl?: string;
+  isAgeRestricted?: boolean;
 }
 
 export interface CustomerInfo {
@@ -325,5 +326,9 @@ export function formatOrderDateTime(iso?: string | null): string {
   } catch {
     return date.toLocaleString('es-VE');
   }
+}
+
+export function isOrderAgeRestricted(notes?: string | null): boolean {
+  return /\[AGE_18_PLUS\]/i.test(String(notes || ''));
 }
 

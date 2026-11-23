@@ -89,6 +89,12 @@
           <app-icon [name]="src.icon" [size]="10"></app-icon>
           <span>{{ src.shortLabel }}</span>
         </span>
+        @if (isAgeRestrictedOrder(o)) {
+        <span title="Pedido con restricción de edad (+18): el motorizado debe verificar cédula al entregar"
+          class="text-[9px] font-black px-2 py-0.5 rounded-full border bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/40 inline-flex items-center gap-1 shrink-0">
+          <span>🔞 +18 · Verificar Cédula</span>
+        </span>
+        }
       </ng-template>
 
       @if (ordersSubTab === 'kanban') {

@@ -92,6 +92,15 @@ export class TenantsService {
     }
   }
 
+  private isCategoryAgeRestricted(category?: string): boolean {
+    if (!category) return false;
+    const norm = String(category)
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+    return /licor|bodeg|alcohol|cervez|cervec|vinot|licorer/.test(norm);
+  }
+
   private getTenantMetadata(tenantId: string): Record<string, any> {
     try {
       const data = this.loadMetadata();
@@ -375,12 +384,15 @@ export class TenantsService {
         };
         const bTiers = b.delivery_tiers ?? bm.delivery_tiers ?? bm.deliveryTiers ?? deliveryTiers;
         const bRate = Number(b.exchange_rate ?? bm.exchange_rate ?? bm.currency_settings?.exchangeRate ?? exchangeRate);
+        const bRawCs = b.currency_settings || b.currencySettings || bm.currency_settings || {};
         const bCurrSettings = {
+          ...bRawCs,
           baseCurrency: b.base_currency ?? bm.base_currency ?? bm.currency_settings?.baseCurrency ?? baseCurrency,
           displayMode: b.display_mode ?? bm.display_mode ?? bm.currency_settings?.displayMode ?? displayMode,
           exchangeRate: bRate,
-          lastRateUpdate: bm.currency_settings?.lastRateUpdate || new Date().toISOString(),
-          acceptedPaymentMethods: bPaymentMethods
+          lastRateUpdate: bm.currency_settings?.lastRateUpdate || bRawCs.lastRateUpdate || new Date().toISOString(),
+          acceptedPaymentMethods: bPaymentMethods,
+          ...(bRawCs.isAgeRestricted !== undefined ? { isAgeRestricted: Boolean(bRawCs.isAgeRestricted) } : {}),
         };
         const rawBh = b.business_hours ?? bm.business_hours ?? { open: '11:00', close: '23:00', isOpenToday: true };
         const sDays = rawBh?.scheduleDays || bm.business_hours?.scheduleDays || null;
@@ -507,6 +519,15 @@ export class TenantsService {
       scheduleDays: tenantSDays
     };
     const tenantScheduleStatus = this.calculateScheduleStatus(tenantHours);
+    const explicitAge = t.is_age_restricted ??
+      t.isAgeRestricted ??
+      meta.is_age_restricted ??
+      meta.isAgeRestricted ??
+      firstBranch?.currency_settings?.isAgeRestricted ??
+      firstBranch?.currencySettings?.isAgeRestricted;
+    const isAgeRestricted = explicitAge !== undefined
+      ? Boolean(explicitAge)
+      : this.isCategoryAgeRestricted(category);
 
     return {
       ...t,
@@ -535,6 +556,8 @@ export class TenantsService {
       tagline,
       is_featured: isFeatured,
       isFeatured,
+      is_age_restricted: isAgeRestricted,
+      isAgeRestricted,
       rating: calculatedRating,
       review_count: calculatedReviewCount,
       reviewCount: calculatedReviewCount,
@@ -706,6 +729,10 @@ export class TenantsService {
     if (updateData.is_featured !== undefined || updateData.isFeatured !== undefined) {
       metaToSave.is_featured = Boolean(updateData.is_featured ?? updateData.isFeatured);
     }
+    if (updateData.is_age_restricted !== undefined || updateData.isAgeRestricted !== undefined) {
+      metaToSave.is_age_restricted = Boolean(updateData.is_age_restricted ?? updateData.isAgeRestricted);
+      metaToSave.isAgeRestricted = metaToSave.is_age_restricted;
+    }
     if (updateData.delivery_tiers !== undefined || updateData.deliveryTiers !== undefined) {
       metaToSave.delivery_tiers = updateData.delivery_tiers || updateData.deliveryTiers;
     }
@@ -845,6 +872,25 @@ export class TenantsService {
           .eq('company_id', id);
       }
 
+      if (metaToSave.is_age_restricted !== undefined) {
+        const { data: branchRows } = await this.supabase
+          .getClient()
+          .from('branches')
+          .select('id, currency_settings')
+          .eq('company_id', id);
+        for (const br of branchRows || []) {
+          const mergedCs = {
+            ...(br.currency_settings || {}),
+            isAgeRestricted: metaToSave.is_age_restricted,
+          };
+          await this.supabase
+            .getClient()
+            .from('branches')
+            .update({ currency_settings: mergedCs, updated_at: new Date().toISOString() })
+            .eq('id', br.id);
+        }
+      }
+
       // 2. Parámetros específicos de la sede principal (contacto, dirección y coordenadas matriz)
       const mainBranchUpdate: any = { updated_at: new Date().toISOString() };
       if (updateData.name !== undefined) {
@@ -915,9 +961,15 @@ export class TenantsService {
       throw new InternalServerErrorException(`Error creando comercio en base de datos: ${tErr.message}`);
     }
 
+    const createdIsAgeRestricted = payload.is_age_restricted !== undefined || payload.isAgeRestricted !== undefined
+      ? Boolean(payload.is_age_restricted ?? payload.isAgeRestricted)
+      : this.isCategoryAgeRestricted(payload.category);
+
     this.saveTenantMetadata(tenantId, {
       category: payload.category || 'Restaurantes',
-      subcategories: payload.subcategories || []
+      subcategories: payload.subcategories || [],
+      is_age_restricted: createdIsAgeRestricted,
+      isAgeRestricted: createdIsAgeRestricted,
     });
 
     // 1.1 Crear automáticamente la Sede Principal en la tabla branches

@@ -426,6 +426,33 @@ class _RiderNavigationScreenState extends State<RiderNavigationScreen>
                 textAlign: TextAlign.center,
                 style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xFF94A3B8)),
               ),
+              if (_order.isAgeRestricted) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE11D48).withOpacity(0.18),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFE11D48), width: 1.2),
+                  ),
+                  child: Row(
+                    children: [
+                      const Text('🔞', style: TextStyle(fontSize: 16)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'PEDIDO +18: Verifica la cédula de identidad (mayor de 18 años) antes de entregar.',
+                          style: GoogleFonts.outfit(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFFFDA4AF),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 24),
               TextField(
                 controller: _pinController,
@@ -962,6 +989,34 @@ class _RiderNavigationScreenState extends State<RiderNavigationScreen>
                   const SizedBox(height: 14),
                   const Divider(color: Color(0xFF334155), height: 1),
                   const SizedBox(height: 14),
+
+                  if (_order.isAgeRestricted) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE11D48).withOpacity(0.18),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFE11D48), width: 1.2),
+                      ),
+                      child: Row(
+                        children: [
+                          const Text('🔞', style: TextStyle(fontSize: 16)),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'PEDIDO +18: Verifica la cédula de identidad (mayor de 18 años) antes de entregar.',
+                              style: GoogleFonts.outfit(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFFFDA4AF),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
 
                   // Distance & Fee metrics
                   Row(

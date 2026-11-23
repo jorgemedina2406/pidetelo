@@ -36,6 +36,7 @@ export interface Product {
   isPopular?: boolean;
   isFeatured?: boolean;
   isOnSale?: boolean;
+  isAgeRestricted?: boolean;
   discountPercentage?: number;
   tags?: string[];
   modifierGroups?: ProductModifierGroup[];
@@ -45,5 +46,36 @@ export interface Product {
   trackStock?: boolean;
   stockQuantity?: number | null;
   previousStock?: number | null;
+}
+
+function normalizeAgeCheckText(value?: string | null): string {
+  return String(value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+export function isProductAgeRestricted(
+  product?: Partial<Product> | null,
+  categoryName?: string | null,
+  tenant?: any
+): boolean {
+  if (!product && !tenant) return false;
+  if (product && Boolean((product as any).isAgeRestricted ?? (product as any).is_age_restricted)) {
+    return true;
+  }
+  if (tenant) {
+    const explicitTenant = tenant.isAgeRestricted ?? tenant.is_age_restricted;
+    if (explicitTenant === true) return true;
+    const storeCat = normalizeAgeCheckText(tenant.category);
+    if (/licor|bodeg|alcohol|cervez|cervec|vinot|licorer/.test(storeCat)) {
+      return true;
+    }
+  }
+  const catText = normalizeAgeCheckText(categoryName);
+  if (catText && /licor|cervez|vino|ron|whisky|vodka|tequila|ginebra|coctel|trago|alcohol/.test(catText)) {
+    return true;
+  }
+  return false;
 }
 

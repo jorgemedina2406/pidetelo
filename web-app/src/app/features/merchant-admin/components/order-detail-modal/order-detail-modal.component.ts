@@ -1,6 +1,6 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Order, parseOrderAdditions, OrderAddition, isOrderAdditionItem, getOrderSourceMeta, OrderSourceMeta, formatOrderDateTime } from '../../../../core/models/order.model';
+import { Order, parseOrderAdditions, OrderAddition, isOrderAdditionItem, getOrderSourceMeta, OrderSourceMeta, formatOrderDateTime, isOrderAgeRestricted } from '../../../../core/models/order.model';
 import { IconComponent } from '../../../../shared/components/icon.component';
 
 @Component({
@@ -99,6 +99,10 @@ export class OrderDetailModalComponent {
 
   get sourceMeta(): OrderSourceMeta {
     return getOrderSourceMeta(this.order?.source);
+  }
+
+  get isAgeRestricted(): boolean {
+    return isOrderAgeRestricted(this.order?.notes);
   }
 
   formatOrderTime(iso?: string | null): string {

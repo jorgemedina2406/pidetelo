@@ -407,6 +407,13 @@
           </div>
         </div>
 
+        @if (cart.hasAgeRestrictedItems()) {
+          <div class="p-3 rounded-xl bg-rose-500/10 border border-rose-500/35 text-rose-700 dark:text-rose-300 text-[11px] font-bold flex items-start gap-2">
+            <span class="text-sm shrink-0">🔞</span>
+            <span>Pedido +18: Confirmas ser mayor de 18 años. El motorizado podrá solicitar tu cédula de identidad al momento de la entrega.</span>
+          </div>
+        }
+
         <button (click)="promptConfirmOrder()"
                 [disabled]="isSubmitting() || !cart.customer().name || !cart.customer().phone || availablePaymentMethods().length === 0"
                 class="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] disabled:opacity-40 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-emerald-600/25 flex items-center justify-center gap-2 transition-all cursor-pointer disabled:cursor-not-allowed">
@@ -487,6 +494,13 @@
             </div>
           </div>
         </div>
+
+        @if (cart.hasAgeRestrictedItems()) {
+          <div class="p-3 rounded-xl bg-rose-500/10 border border-rose-500/35 text-rose-700 dark:text-rose-300 text-[11px] font-bold flex items-start gap-2">
+            <span class="text-sm shrink-0">🔞</span>
+            <span>Pedido +18: Confirmas ser mayor de 18 años. El motorizado podrá solicitar tu cédula de identidad al momento de la entrega.</span>
+          </div>
+        }
 
         <div class="flex items-center gap-3">
           <button (click)="cancelConfirmOrder()"

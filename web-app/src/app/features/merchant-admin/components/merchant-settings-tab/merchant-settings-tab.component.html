@@ -657,6 +657,23 @@
               </div>
             </div>
 
+            <!-- Restricción de Mayoría de Edad (+18) para Licores / Bodegones -->
+            <div class="p-4 rounded-xl bg-rose-50/70 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/50 flex items-center justify-between gap-4">
+              <div class="space-y-0.5">
+                <div class="text-xs font-extrabold text-rose-800 dark:text-rose-300 flex items-center gap-1.5">
+                  <span>🔞</span>
+                  <span>Comercio exclusivo para mayores de 18 años (+18)</span>
+                </div>
+                <p class="text-[11px] text-rose-700/80 dark:text-rose-300/80 leading-relaxed">
+                  Actívalo si vendes licores o bebidas alcohólicas (Licorerías / Bodegones). Exige confirmar mayoría de edad al cliente y alerta al motorizado verificar cédula al entregar.
+                </p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                <input type="checkbox" [(ngModel)]="brandingForm.isAgeRestricted" class="sr-only peer" />
+                <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-rose-600"></div>
+              </label>
+            </div>
+
             <!-- Mini Live Mockup de Cabecera de la Tienda -->
             <div class="pt-2">
               <span class="text-[10px] uppercase font-bold text-slate-400 block mb-2">Vista Previa de tu Cabecera

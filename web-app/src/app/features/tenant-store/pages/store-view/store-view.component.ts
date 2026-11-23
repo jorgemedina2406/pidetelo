@@ -4,8 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { ApiService } from '../../../../core/services/api.service';
 import { CartStore } from '../../stores/cart.store';
-import { Tenant } from '../../../../core/models/tenant.model';
-import { Product, ProductCategory } from '../../../../core/models/product.model';
+import { Tenant, isStoreAgeRestricted } from '../../../../core/models/tenant.model';
+import { Product, ProductCategory, isProductAgeRestricted } from '../../../../core/models/product.model';
 import { ProductDetailModalComponent } from '../../components/product-detail-modal/product-detail-modal.component';
 import { CartDrawerComponent } from '../../components/cart-drawer/cart-drawer.component';
 import { CheckoutModalComponent } from '../../components/checkout-modal/checkout-modal.component';
@@ -77,6 +77,43 @@ export class StoreViewComponent implements OnInit {
   readonly storeSwitchModalData = signal<{ title: string; message: string; type: 'store' | 'branch' } | null>(null);
   readonly pendingProductAdd = signal<{ product: Product; quantity: number; modifiers: any[]; notes?: string } | null>(null);
   readonly pendingBranchSwitch = signal<Branch | null>(null);
+  readonly isAgeGateOpen = signal<boolean>(false);
+  readonly ageGateContext = signal<'store' | 'product'>('store');
+  readonly pendingAgeRestrictedProduct = signal<Product | null>(null);
+
+  private readonly AGE_VERIFIED_STORAGE_KEY = 'pidetelo_age_18_verified';
+
+  private isAgeVerifiedInSession(): boolean {
+    if (typeof window === 'undefined') return false;
+    try {
+      return window.sessionStorage.getItem(this.AGE_VERIFIED_STORAGE_KEY) === 'true';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  confirmAgeVerification(): void {
+    if (typeof window !== 'undefined') {
+      try {
+        window.sessionStorage.setItem(this.AGE_VERIFIED_STORAGE_KEY, 'true');
+      } catch (_) {}
+    }
+    const pending = this.pendingAgeRestrictedProduct();
+    this.pendingAgeRestrictedProduct.set(null);
+    this.isAgeGateOpen.set(false);
+    if (pending) {
+      this.activeModalProduct.set(pending);
+    }
+  }
+
+  rejectAgeVerification(): void {
+    const ctx = this.ageGateContext();
+    this.pendingAgeRestrictedProduct.set(null);
+    this.isAgeGateOpen.set(false);
+    if (ctx === 'store') {
+      this.router.navigate(['/explorar']);
+    }
+  }
 
   readonly activeBranchRate = computed(() => {
     const live = this.liveBcvRate();
@@ -276,6 +313,14 @@ export class StoreViewComponent implements OnInit {
         const bId = this.cart.selectedBranch()?.id;
         this.loadCatalog(t.id, bId);
         this.fetchLiveBcvRate();
+
+        if (isStoreAgeRestricted(t) && !this.isAgeVerifiedInSession()) {
+          this.pendingAgeRestrictedProduct.set(null);
+          this.ageGateContext.set('store');
+          this.isAgeGateOpen.set(true);
+        } else {
+          this.isAgeGateOpen.set(false);
+        }
       },
       error: () => {
         this.router.navigate(['/']);
@@ -297,13 +342,26 @@ export class StoreViewComponent implements OnInit {
     this.api.getCategories(tenantId).subscribe({
       next: (cats) => {
         this.categories.set(cats || []);
+        const t = this.tenant();
+        this.products.update(list =>
+          list.map(p => {
+            const cName = (cats || []).find(c => c.id === p.categoryId)?.name;
+            return { ...p, isAgeRestricted: isProductAgeRestricted(p, cName, t) };
+          })
+        );
       }
     });
 
     this.api.getProducts(tenantId, branchId, true).subscribe({
       next: (prods) => {
-        this.products.set(prods || []);
-        this.cart.setStoreProducts(prods || []);
+        const cats = this.categories();
+        const t = this.tenant();
+        const enriched = (prods || []).map(p => {
+          const cName = cats.find(c => c.id === p.categoryId)?.name;
+          return { ...p, isAgeRestricted: isProductAgeRestricted(p, cName, t) };
+        });
+        this.products.set(enriched);
+        this.cart.setStoreProducts(enriched);
         this.isLoading.set(false);
       },
       error: () => {
@@ -353,6 +411,13 @@ export class StoreViewComponent implements OnInit {
   }
 
   openProductDetail(product: Product): void {
+    const catName = this.categories().find(c => c.id === product.categoryId)?.name;
+    if (isProductAgeRestricted(product, catName, this.tenant()) && !this.isAgeVerifiedInSession()) {
+      this.pendingAgeRestrictedProduct.set(product);
+      this.ageGateContext.set('product');
+      this.isAgeGateOpen.set(true);
+      return;
+    }
     this.activeModalProduct.set(product);
   }
 
