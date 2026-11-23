@@ -264,6 +264,7 @@ export class MetricsService {
         riderId: o.rider_id,
         riderName: r?.name || (o.rider_id ? 'Repartidor asignado' : 'Sin asignar'),
         riderPlate: r?.vehicle_plate || '',
+        source: o.source || 'whatsapp_link',
         status: o.status || 'pending',
         fulfillmentType: o.fulfillment_type || 'delivery',
         paymentMethod: o.payment_method || 'pago_movil',

@@ -5,6 +5,7 @@ import { I18nService } from '../../../../core/services/i18n.service';
 import { ApiService } from '../../../../core/services/api.service';
 import { IconComponent } from '../../../../shared/components/icon.component';
 import { Tenant } from '../../../../core/models/tenant.model';
+import { getOrderSourceMeta, OrderSourceMeta, formatOrderDateTime } from '../../../../core/models/order.model';
 
 @Component({
   selector: 'app-super-admin-metrics',
@@ -184,6 +185,7 @@ export class SuperAdminMetricsComponent implements OnInit {
     const headers = [
       'ID Pedido',
       'Nro Pedido',
+      'Canal',
       'Comercio',
       'Sucursal',
       'Cliente',
@@ -201,6 +203,7 @@ export class SuperAdminMetricsComponent implements OnInit {
     const rows = orders.map((o: any) => [
       `"${o.id || ''}"`,
       `"${o.orderNumber || o.order_number || ''}"`,
+      `"${getOrderSourceMeta(o.source).label}"`,
       `"${(o.tenantName || o.tenant_name || '').replace(/"/g, '""')}"`,
       `"${(o.branchName || o.branch_name || '').replace(/"/g, '""')}"`,
       `"${(o.customerName || o.customer_name || '').replace(/"/g, '""')}"`,
@@ -212,7 +215,7 @@ export class SuperAdminMetricsComponent implements OnInit {
       (o.totalBs || 0).toFixed(2),
       `"${o.paymentMethod || o.payment_method || ''}"`,
       `"${o.status || ''}"`,
-      `"${o.createdAt || o.created_at || ''}"`
+      `"${formatOrderDateTime(o.createdAt || o.created_at)}"`
     ]);
 
     const csvContent = '\uFEFF' + [headers.join(','), ...rows.map((r: string[]) => r.join(','))].join('\r\n');
@@ -426,5 +429,13 @@ export class SuperAdminMetricsComponent implements OnInit {
       case 'pending': return 'Pendiente';
       default: return status || 'Pendiente';
     }
+  }
+
+  getSourceMeta(source?: string | null): OrderSourceMeta {
+    return getOrderSourceMeta(source);
+  }
+
+  formatOrderTime(iso?: string | null): string {
+    return formatOrderDateTime(iso);
   }
 }

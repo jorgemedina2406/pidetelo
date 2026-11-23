@@ -11,7 +11,7 @@
               <app-icon name="clipboard-list" [size]="20"></app-icon>
             </div>
             <div>
-              <div class="flex items-center gap-2">
+              <div class="flex items-center gap-2 flex-wrap">
                 <h3 class="font-black text-lg">Comanda {{ order.orderNumber }}</h3>
                 <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase"
                   [class.bg-emerald-500/15]="order.status === 'delivered'"
@@ -22,9 +22,15 @@
                   [class.text-amber-600]="order.status !== 'delivered' && order.status !== 'cancelled'">
                   {{ order.status === 'delivered' ? 'Entregado' : order.status === 'cancelled' ? 'Cancelado' : order.status }}
                 </span>
+                @let src = sourceMeta;
+                <span [ngClass]="src.badgeClass" [title]="src.title"
+                  class="px-2 py-0.5 rounded-full text-[10px] font-bold border inline-flex items-center gap-1">
+                  <app-icon [name]="src.icon" [size]="11"></app-icon>
+                  <span>{{ src.label }}</span>
+                </span>
               </div>
               <p class="text-xs text-slate-400">
-                Registrado el {{ order.createdAt | date:'medium' }}
+                Registrado el {{ formatOrderTime(order.createdAt) }}
                 @if (order.branchName) {
                 • Sede: <strong>{{ order.branchName }}</strong>
                 }

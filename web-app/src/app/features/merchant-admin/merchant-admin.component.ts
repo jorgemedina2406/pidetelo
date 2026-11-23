@@ -9,7 +9,7 @@ import { AuthStore } from '../../core/stores/auth.store';
 import { ThemeService } from '../../core/services/theme.service';
 import { I18nService } from '../../core/services/i18n.service';
 import { Product, ProductModifierGroup, ProductCategory } from '../../core/models/product.model';
-import { Order, OrderStatus, OrderAddition, parseOrderAdditions, updateAdditionTagInNotes } from '../../core/models/order.model';
+import { Order, OrderStatus, OrderAddition, parseOrderAdditions, updateAdditionTagInNotes, getOrderSourceMeta, formatOrderDateTime } from '../../core/models/order.model';
 
 type OrderRiderPhase =
   | 'none'
@@ -5472,10 +5472,11 @@ export class MerchantAdminComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const headers = ['Nro Pedido', 'Fecha y Hora', 'Cliente', 'Telefono', 'Tipo', 'Sucursal', 'Estado', 'Metodo de Pago', 'Total USD', 'Total Bs'];
+    const headers = ['Nro Pedido', 'Fecha y Hora', 'Canal', 'Cliente', 'Telefono', 'Tipo', 'Sucursal', 'Estado', 'Metodo de Pago', 'Total USD', 'Total Bs'];
     const rows = ordersList.map(o => [
       `"${o.orderNumber || o.id}"`,
-      `"${o.createdAt ? new Date(o.createdAt).toLocaleString() : ''}"`,
+      `"${formatOrderDateTime(o.createdAt)}"`,
+      `"${getOrderSourceMeta(o.source).label}"`,
       `"${(o.customer?.name || 'Cliente').replace(/"/g, '""')}"`,
       `"${o.customer?.phone || ''}"`,
       `"${o.fulfillmentType === 'pickup' ? 'Para Llevar / Retiro' : 'Delivery'}"`,

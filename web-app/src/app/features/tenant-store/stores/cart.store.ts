@@ -800,7 +800,7 @@ export const CartStore = signalStore(
         tenantName: store.cartTenantName() || tenant?.name || branch?.companyName || 'Comercio',
         branchId: store.cartBranchId() || branch?.id,
         branchName: store.cartBranchName() || branch?.name,
-        source: 'whatsapp_link',
+        source: 'marketplace_web',
         status: 'received',
         fulfillmentType: store.fulfillmentType(),
         paymentMethod: store.paymentMethod(),

@@ -385,7 +385,13 @@
               @for (o of paginatedOrders(); track (o.id || $index)) {
                 <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
                   <td class="p-3 font-mono font-bold text-slate-900 dark:text-white">
-                    #{{ o.orderNumber || o.order_number || (o.id?.slice(0, 8)) }}
+                    <div>#{{ o.orderNumber || o.order_number || (o.id?.slice(0, 8)) }}</div>
+                    @let src = getSourceMeta(o.source);
+                    <span [ngClass]="src.badgeClass" [title]="src.title"
+                      class="mt-1 text-[9px] font-sans font-bold px-2 py-0.5 rounded-full border inline-flex items-center gap-1">
+                      <app-icon [name]="src.icon" [size]="10"></app-icon>
+                      <span>{{ src.shortLabel }}</span>
+                    </span>
                   </td>
                   <td class="p-3">
                     <div class="font-bold text-slate-900 dark:text-white truncate max-w-[150px]">{{ o.tenantName || 'Comercio' }}</div>
@@ -427,7 +433,7 @@
                     </span>
                   </td>
                   <td class="p-3 text-right text-slate-400 text-[11px] font-mono">
-                    {{ o.createdAt ? (o.createdAt | date:'short') : 'Reciente' }}
+                    {{ formatOrderTime(o.createdAt || o.created_at) }}
                   </td>
                 </tr>
               } @empty {

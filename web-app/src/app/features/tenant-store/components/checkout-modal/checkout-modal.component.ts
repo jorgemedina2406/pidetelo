@@ -265,7 +265,7 @@ export class CheckoutModalComponent {
         tenant_id: resolvedTenantId,
         branch_id: order.branchId || null,
         order_number: order.orderNumber,
-        source: 'whatsapp_link',
+        source: 'marketplace_web',
         status: 'received',
         fulfillment_type: order.fulfillmentType,
         payment_method: order.paymentMethod,

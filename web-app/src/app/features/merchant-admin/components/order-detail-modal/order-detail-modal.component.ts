@@ -1,6 +1,6 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Order, parseOrderAdditions, OrderAddition, isOrderAdditionItem } from '../../../../core/models/order.model';
+import { Order, parseOrderAdditions, OrderAddition, isOrderAdditionItem, getOrderSourceMeta, OrderSourceMeta, formatOrderDateTime } from '../../../../core/models/order.model';
 import { IconComponent } from '../../../../shared/components/icon.component';
 
 @Component({
@@ -95,5 +95,13 @@ export class OrderDetailModalComponent {
       .map(m => m.optionName || m.option_name || m.name || '')
       .filter((n: string) => typeof n === 'string' && n.trim().length > 0)
       .join(', ');
+  }
+
+  get sourceMeta(): OrderSourceMeta {
+    return getOrderSourceMeta(this.order?.source);
+  }
+
+  formatOrderTime(iso?: string | null): string {
+    return formatOrderDateTime(iso);
   }
 }

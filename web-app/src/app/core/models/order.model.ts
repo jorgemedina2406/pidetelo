@@ -9,7 +9,7 @@ export type OrderStatus =
   | 'delivered'
   | 'cancelled';
 
-export type OrderSource = 'whatsapp_link' | 'marketplace_web' | 'mobile_app';
+export type OrderSource = 'whatsapp_link' | 'marketplace_web' | 'mobile_app' | 'merchant_manual';
 
 export type FulfillmentType = 'delivery' | 'pickup';
 
@@ -254,5 +254,76 @@ export function updateAdditionTagInNotes(
   }
 
   return notes.replace(targetRaw, updatedTag);
+}
+
+export interface OrderSourceMeta {
+  label: string;       // 'App Móvil' | 'App Web' | 'Manual'
+  shortLabel: string;  // 'App Móvil' | 'Web' | 'Manual'
+  icon: 'smartphone' | 'globe' | 'store';
+  badgeClass: string;
+  title: string;
+  isMobileApp: boolean;
+}
+
+export function getOrderSourceMeta(source?: string | null): OrderSourceMeta {
+  const normalized = String(source || '').trim().toLowerCase();
+  if (normalized === 'mobile_app' || normalized === 'mobile_app_flutter' || normalized === 'app_movil') {
+    return {
+      label: 'App Móvil',
+      shortLabel: 'App Móvil',
+      icon: 'smartphone',
+      badgeClass: 'bg-violet-500/15 text-violet-700 dark:text-violet-300 border-violet-500/30',
+      title: 'Pedido realizado desde la App Móvil',
+      isMobileApp: true,
+    };
+  }
+  if (normalized === 'merchant_manual') {
+    return {
+      label: 'Manual',
+      shortLabel: 'Manual',
+      icon: 'store',
+      badgeClass: 'bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-500/30',
+      title: 'Pedido registrado manualmente desde el panel',
+      isMobileApp: false,
+    };
+  }
+  return {
+    label: 'App Web',
+    shortLabel: 'Web',
+    icon: 'globe',
+    badgeClass: 'bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/30',
+    title: normalized === 'whatsapp_link'
+      ? 'Pedido realizado desde la Web / Enlace'
+      : 'Pedido realizado desde la App Web',
+    isMobileApp: false,
+  };
+}
+
+export function formatOrderDateTime(iso?: string | null): string {
+  if (!iso) return '—';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '—';
+  try {
+    const parts = new Intl.DateTimeFormat('es-VE', {
+      timeZone: 'America/Caracas',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    }).formatToParts(date);
+    const get = (type: string) => parts.find(p => p.type === type)?.value || '';
+    const day = get('day');
+    const month = get('month');
+    const year = get('year');
+    const hour = get('hour');
+    const minute = get('minute');
+    const period = get('dayPeriod').replace(/\./g, '').replace(/\s+/g, '').toLowerCase();
+    const ampm = period.includes('p') ? 'pm' : 'am';
+    return `${day}/${month}/${year} · ${hour}:${minute} ${ampm}`;
+  } catch {
+    return date.toLocaleString('es-VE');
+  }
 }
 
