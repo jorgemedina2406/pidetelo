@@ -2461,8 +2461,202 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
             ),
           ),
         ),
+        const SizedBox(height: 12),
+
+        // Delete Account Button (Danger Zone)
+        ElevatedButton.icon(
+          onPressed: _deleteAccount,
+          icon: const Icon(Icons.delete_forever_rounded, size: 18),
+          label: Text('Eliminar Cuenta', style: GoogleFonts.outfit(fontWeight: FontWeight.w700)),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF450A0A),
+            foregroundColor: const Color(0xFFFCA5A5),
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: const BorderSide(color: Color(0xFFEF4444), width: 1.2),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Center(
+          child: Text(
+            'Pídetelo Rider v1.1.17 (20)',
+            style: GoogleFonts.outfit(
+              fontSize: 11,
+              color: Colors.white38,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
       ],
     );
+  }
+
+  Future<void> _deleteAccount() async {
+    final hasSession = Supabase.instance.client.auth.currentSession != null;
+    final pwdController = TextEditingController();
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dCtx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E293B),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: Color(0xFFEF4444)),
+            const SizedBox(width: 8),
+            Text('Eliminar Cuenta', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.w800)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Esta acción es definitiva e irreversible. Se eliminarán permanentemente tu cuenta de acceso, perfil de repartidor, documentos cargados y tokens de notificaciones. (Los registros contables mínimos de despachos ya completados podrán conservarse únicamente por obligación legal/fiscal).\n\n¿Deseas eliminar tu cuenta ahora?',
+              style: GoogleFonts.outfit(color: const Color(0xFFCBD5E1), fontSize: 13, height: 1.4),
+            ),
+            if (!hasSession) ...[
+              const SizedBox(height: 14),
+              TextField(
+                controller: pwdController,
+                obscureText: true,
+                style: const TextStyle(color: Colors.white, fontSize: 13.5),
+                decoration: InputDecoration(
+                  labelText: 'Confirma tu contraseña',
+                  labelStyle: const TextStyle(color: Color(0xFF94A3B8)),
+                  filled: true,
+                  fillColor: const Color(0xFF0F172A),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dCtx, false),
+            child: const Text('Cancelar', style: TextStyle(color: Color(0xFF94A3B8))),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dCtx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444)),
+            child: const Text('Sí, Eliminar Cuenta', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    final pwdText = pwdController.text.trim();
+    pwdController.dispose();
+
+    if (confirm != true || !mounted) return;
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          backgroundColor: const Color(0xFF1E293B),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          content: Row(
+            children: [
+              const CircularProgressIndicator(color: Color(0xFFEF4444)),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  'Eliminando cuenta de repartidor...',
+                  style: GoogleFonts.outfit(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    _locationService.stopTracking();
+    try {
+      await BackgroundOrderService().stopService();
+    } catch (_) {}
+
+    final result = await widget.sessionService.deleteAccount(
+      password: pwdText.isNotEmpty ? pwdText : null,
+    );
+
+    if (!mounted) return;
+    Navigator.of(context, rootNavigator: true).pop();
+
+    if (result.success) {
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (sCtx) => AlertDialog(
+          backgroundColor: const Color(0xFF1E293B),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981)),
+              const SizedBox(width: 8),
+              Text('Cuenta Eliminada', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.w800)),
+            ],
+          ),
+          content: Text(
+            result.message,
+            style: GoogleFonts.outfit(color: const Color(0xFFCBD5E1), fontSize: 13.5, height: 1.4),
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () => Navigator.pop(sCtx),
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
+              child: const Text('Entendido', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      );
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (_) => RiderLoginScreen(sessionService: widget.sessionService),
+        ),
+        (route) => false,
+      );
+    } else {
+      final readable = result.message == 'NEED_PASSWORD'
+          ? 'Tu sesión expiró. Vuelve a iniciar sesión o solicita la eliminación en pidetelo.app/legal/eliminar-cuenta.'
+          : result.message;
+      await showDialog<void>(
+        context: context,
+        builder: (eCtx) => AlertDialog(
+          backgroundColor: const Color(0xFF1E293B),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              const Icon(Icons.error_outline_rounded, color: Color(0xFFEF4444)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'No se pudo eliminar',
+                  style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.w800),
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            readable,
+            style: GoogleFonts.outfit(color: const Color(0xFFCBD5E1), fontSize: 13.5, height: 1.4),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(eCtx),
+              child: const Text('Cerrar', style: TextStyle(color: Color(0xFF94A3B8))),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   Widget _buildProfileRow(String label, String value) {

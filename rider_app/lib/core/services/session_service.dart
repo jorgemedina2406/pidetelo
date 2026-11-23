@@ -19,6 +19,12 @@ class SessionService extends ChangeNotifier {
   String? _lastErrorMessage;
   bool _isDarkMode = true; // Por defecto modo oscuro (Dark Theme prioritario)
 
+  List<String> get _backendCandidateUrls => [
+        AppConfig.backendBaseUrl,
+        if (AppConfig.backendBaseUrl != 'https://api.pidetelo.app/api')
+          'https://api.pidetelo.app/api',
+      ];
+
   RiderUser? get currentRider => _currentRider;
   bool get isAuthenticated => _currentRider != null;
   bool get isInitialized => _isInitialized;
@@ -429,6 +435,8 @@ class SessionService extends ChangeNotifier {
     required String vehiclePlate,
     required String idDocumentBase64,
     required String selfieBase64,
+    required String challengeToken,
+    required String challengeAnswer,
   }) async {
     final cleanEmail = email.trim().toLowerCase();
     final cleanPlate = vehiclePlate.trim().toUpperCase().replaceAll(' ', '');
@@ -450,6 +458,10 @@ class SessionService extends ChangeNotifier {
       _lastErrorMessage = 'El número de teléfono móvil es obligatorio y debe ser válido.';
       return false;
     }
+    if (challengeToken.trim().isEmpty || challengeAnswer.trim().isEmpty) {
+      _lastErrorMessage = 'Completa la verificación humana antes de registrarte.';
+      return false;
+    }
 
     // Validación preliminar de formato y tamaño
     if (idDocumentBase64.length < 1500) {
@@ -465,64 +477,85 @@ class SessionService extends ChangeNotifier {
       return false;
     }
 
-    // 1. Intentar registrar a través del endpoint oficial de verificación en el Backend
-    try {
-      final response = await http.post(
-        Uri.parse('${AppConfig.backendBaseUrl}/riders/register-with-verification'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'name': name.trim(),
-          'email': cleanEmail,
-          'password': password,
-          'phone': phone.trim(),
-          'national_id': nationalId.trim(),
-          'vehicle_type': vehicleType,
-          'vehicle_model': vehicleModel.trim(),
-          'vehicle_plate': vehiclePlate.trim().toUpperCase(),
-          'id_document_image': idDocumentBase64,
-          'selfie_image': selfieBase64,
-        }),
-      ).timeout(const Duration(seconds: 12));
+    // 1. Intentar registrar a través del endpoint oficial de verificación + anti-bots en el Backend
+    String? serverError;
+    for (final base in _backendCandidateUrls) {
+      try {
+        final response = await http.post(
+          Uri.parse('$base/riders/register-with-verification'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'name': name.trim(),
+            'email': cleanEmail,
+            'password': password,
+            'phone': phone.trim(),
+            'national_id': nationalId.trim(),
+            'vehicle_type': vehicleType,
+            'vehicle_model': vehicleModel.trim(),
+            'vehicle_plate': vehiclePlate.trim().toUpperCase(),
+            'id_document_image': idDocumentBase64,
+            'selfie_image': selfieBase64,
+            'challengeToken': challengeToken.trim(),
+            'challengeAnswer': challengeAnswer.trim(),
+            'website': '',
+          }),
+        ).timeout(const Duration(seconds: 30));
 
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        final decoded = jsonDecode(response.body);
-        if (decoded is Map && decoded['rider'] != null) {
-          final rData = decoded['rider'];
-          final isCert = rData['isCertified'] == true || rData['is_certified'] == true;
-          final vStatus = rData['verificationStatus']?.toString() ?? rData['verification_status']?.toString() ?? (isCert ? 'verified' : 'pending');
-          final rider = RiderUser(
-            id: rData['id']?.toString() ?? '',
-            name: rData['name'] ?? name.trim(),
-            email: cleanEmail,
-            phone: phone.trim(),
-            nationalId: nationalId.trim(),
-            vehicleType: vehicleType,
-            vehicleModel: vehicleModel.trim(),
-            vehiclePlate: vehiclePlate.trim().toUpperCase(),
-            isOnline: isCert,
-            isCertified: isCert,
-            verificationStatus: vStatus,
-            rating: 5.0,
-            paymentAccounts: const [],
-          );
-          await saveRider(rider);
-          return true;
+        Map<String, dynamic> decoded = {};
+        try {
+          final parsed = jsonDecode(response.body);
+          if (parsed is Map) decoded = Map<String, dynamic>.from(parsed);
+        } catch (_) {}
+
+        if (response.statusCode >= 200 && response.statusCode < 300) {
+          if (decoded['rider'] != null) {
+            final rData = decoded['rider'];
+            final isCert = rData['isCertified'] == true || rData['is_certified'] == true;
+            final vStatus = rData['verificationStatus']?.toString() ?? rData['verification_status']?.toString() ?? (isCert ? 'verified' : 'pending');
+            final rider = RiderUser(
+              id: rData['id']?.toString() ?? '',
+              name: rData['name'] ?? name.trim(),
+              email: cleanEmail,
+              phone: phone.trim(),
+              nationalId: nationalId.trim(),
+              vehicleType: vehicleType,
+              vehicleModel: vehicleModel.trim(),
+              vehiclePlate: vehiclePlate.trim().toUpperCase(),
+              isOnline: isCert,
+              isCertified: isCert,
+              verificationStatus: vStatus,
+              rating: 5.0,
+              paymentAccounts: const [],
+            );
+            try {
+              await Supabase.instance.client.auth.signInWithPassword(
+                email: cleanEmail,
+                password: password,
+              );
+            } catch (_) {}
+            await saveRider(rider);
+            return true;
+          }
+        } else if (response.statusCode >= 400) {
+          final rawMsg = decoded['message'];
+          final reason = rawMsg is List
+              ? rawMsg.join(', ')
+              : (rawMsg?.toString().trim().isNotEmpty == true
+                  ? rawMsg.toString().trim()
+                  : 'Las fotografías no superaron la validación de seguridad.');
+          serverError = reason;
+          if (response.statusCode < 500) {
+            _lastErrorMessage = reason;
+            return false;
+          }
         }
-      } else {
-        // El backend procesó las fotos y RECHAZÓ la verificación
-        final decoded = jsonDecode(response.body);
-        final reason = decoded is Map && decoded['message'] != null
-            ? decoded['message'].toString()
-            : 'Las fotografías no superaron la validación de seguridad.';
-        _lastErrorMessage = reason;
-        return false;
+      } catch (e) {
+        debugPrint('[SessionService] Error al conectar con $base/riders/register-with-verification: $e');
+        serverError ??= 'No se pudo conectar con el servidor de verificación para validar y alojar tus documentos ($e).';
       }
-    } catch (e) {
-      debugPrint('[SessionService] Error al conectar con el backend de verificación: $e');
-      _lastErrorMessage = 'No se pudo conectar con el servidor de verificación para validar y alojar tus documentos ($e).';
-      return false;
     }
 
+    _lastErrorMessage = serverError ?? 'No se pudo completar la verificación del motorizado.';
     return false;
   }
 
@@ -589,5 +622,103 @@ class SessionService extends ChangeNotifier {
       await RiderService().reset();
     } catch (_) {}
     notifyListeners();
+  }
+
+  Future<({bool success, String message})> deleteAccount({String? password}) async {
+    try {
+      final supabase = Supabase.instance.client;
+      var session = supabase.auth.currentSession;
+      if (session == null || session.isExpired) {
+        try {
+          final refreshed = await supabase.auth.refreshSession();
+          session = refreshed.session ?? session;
+        } catch (_) {}
+      }
+
+      final token = session?.accessToken ?? '';
+      final trimmedPwd = password?.trim() ?? '';
+      final riderEmail = (_currentRider?.email ?? session?.user.email ?? '').trim().toLowerCase();
+
+      if (token.isEmpty && (riderEmail.isEmpty || trimmedPwd.isEmpty)) {
+        return (
+          success: false,
+          message: 'NEED_PASSWORD',
+        );
+      }
+
+      String? lastServerError;
+      for (final base in _backendCandidateUrls) {
+        try {
+          final headers = <String, String>{
+            'Content-Type': 'application/json',
+            if (token.isNotEmpty) 'Authorization': 'Bearer $token',
+          };
+          final body = <String, dynamic>{
+            if (token.isNotEmpty) 'accessToken': token,
+            if (trimmedPwd.isNotEmpty && riderEmail.isNotEmpty) ...{
+              'email': riderEmail,
+              'password': trimmedPwd,
+            },
+          };
+
+          final res = await http
+              .post(
+                Uri.parse('$base/auth/delete-account'),
+                headers: headers,
+                body: jsonEncode(body),
+              )
+              .timeout(const Duration(seconds: 15));
+
+          Map<String, dynamic> decoded = {};
+          try {
+            final parsed = jsonDecode(res.body);
+            if (parsed is Map) decoded = Map<String, dynamic>.from(parsed);
+          } catch (_) {}
+
+          if (res.statusCode >= 200 && res.statusCode < 300 && decoded['success'] == true) {
+            final prefs = await SharedPreferences.getInstance();
+            await Future.wait([
+              prefs.remove(_keyRiderData),
+              prefs.remove('rider_user_id_v1'),
+            ]);
+            await logout();
+
+            final msg = decoded['message']?.toString().trim();
+            return (
+              success: true,
+              message: (msg != null && msg.isNotEmpty)
+                  ? msg
+                  : 'Cuenta de repartidor eliminada permanentemente.',
+            );
+          }
+
+          if (res.statusCode >= 400) {
+            final errMsg = decoded['message'];
+            final readable = errMsg is List
+                ? errMsg.join(', ')
+                : (errMsg?.toString().trim().isNotEmpty == true
+                    ? errMsg.toString().trim()
+                    : 'No se pudo eliminar la cuenta (código ${res.statusCode}).');
+            lastServerError = readable;
+            if (res.statusCode < 500) {
+              return (success: false, message: readable);
+            }
+          }
+        } catch (e) {
+          debugPrint('[SessionService] deleteAccount attempt failed for $base: $e');
+        }
+      }
+
+      return (
+        success: false,
+        message: lastServerError ??
+            'No pudimos conectar con el servidor. Verifica tu conexión o solicita el borrado en pidetelo.app/legal/eliminar-cuenta',
+      );
+    } catch (e) {
+      return (
+        success: false,
+        message: 'Ocurrió un error inesperado al eliminar la cuenta: $e',
+      );
+    }
   }
 }

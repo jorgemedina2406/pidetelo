@@ -4,6 +4,7 @@ import { BiometricVerificationService } from './biometric-verification.service.j
 import { PlansService } from '../plans/plans.service.js';
 import { TenantsService } from '../tenants/tenants.service.js';
 import { LoginBruteForceService } from '../common/security/login-brute-force.service.js';
+import { AntiBotService } from '../common/security/anti-bot.service.js';
 
 import { randomUUID, randomBytes } from 'crypto';
 
@@ -33,6 +34,7 @@ export class RidersService implements OnModuleInit {
     @Optional() private plansService?: PlansService,
     @Optional() @Inject(forwardRef(() => TenantsService)) private tenantsService?: TenantsService,
     @Optional() private bruteForce?: LoginBruteForceService,
+    @Optional() private antiBot?: AntiBotService,
   ) {
     this.loadFromDisk();
   }
@@ -960,6 +962,11 @@ export class RidersService implements OnModuleInit {
     selfie_image?: string;
     tenant_id?: string;
     branch_id?: string;
+    challengeToken?: string;
+    challengeAnswer?: string;
+    website?: string;
+    honeypot?: string;
+    clientIp?: string;
   }) {
     const cleanName = (payload.name || '').trim();
     const cleanEmail = (payload.email || '').toLowerCase().trim();
@@ -969,6 +976,19 @@ export class RidersService implements OnModuleInit {
     const cleanType = (payload.vehicle_type || 'moto').toLowerCase().trim();
     const cleanModel = (payload.vehicle_model || 'Motocicleta Estándar').trim();
     const cleanPassword = payload.password || 'Rider123!';
+    const clientIp = payload.clientIp || 'unknown';
+
+    this.antiBot?.verifyRegistrationSubmission({
+      clientIp,
+      email: cleanEmail,
+      password: cleanPassword,
+      name: cleanName,
+      phone: cleanPhone,
+      challengeToken: payload.challengeToken,
+      challengeAnswer: payload.challengeAnswer,
+      website: payload.website,
+      honeypot: payload.honeypot,
+    });
 
     if (!cleanPlate || cleanPlate === 'SIN-PLACA' || cleanPlate.length < 3) {
       throw new BadRequestException('La placa del vehículo es obligatoria y debe ser válida (mínimo 3 caracteres alfanuméricos).');
@@ -1055,6 +1075,8 @@ export class RidersService implements OnModuleInit {
       console.error('[RidersService] Error actualizando certificación en Supabase:', updateErr.message);
       throw new InternalServerErrorException(`No se pudo persistir la certificación en la base de datos: ${updateErr.message}`);
     }
+
+    this.antiBot?.recordSuccessfulRegistration(clientIp);
 
     return {
       success: true,

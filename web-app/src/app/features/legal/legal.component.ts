@@ -432,7 +432,7 @@ export type LegalTab = 'terminos' | 'privacidad' | 'cookies' | 'reclamaciones' |
                 <span class="text-xs font-bold text-red-600 dark:text-red-400 uppercase tracking-widest">Control de Privacidad & Google Play</span>
                 <h1 class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-1">Eliminación de Cuenta y Datos Personales</h1>
                 <p class="text-xs text-slate-400 mt-1">
-                  Aplicación: <strong>Pídetelo</strong> (<code>com.pidetelo.customer</code>) & Web Oficial <strong>pidetelo.app</strong> • Desarrollador: <strong>Pídetelo Express C.A.</strong>
+                  Aplicaciones: <strong>Pídetelo</strong> (<code>com.pidetelo.customer</code>), <strong>Pídetelo Repartidor</strong> (<code>com.pidetelo.rider</code>) & Web Oficial <strong>pidetelo.app</strong> • Desarrollador: <strong>Pídetelo Express C.A.</strong>
                 </p>
               </div>
 
@@ -442,9 +442,9 @@ export type LegalTab = 'terminos' | 'privacidad' | 'cookies' | 'reclamaciones' |
                   <span class="w-2 h-2 rounded-full bg-red-500"></span>
                   1. Cómo eliminar tu cuenta desde la App Móvil (Inmediato)
                 </h2>
-                <p>Si tienes la aplicación <strong>Pídetelo</strong> instalada en tu teléfono Android o iOS, puedes borrar tu cuenta al instante siguiendo estos pasos:</p>
+                <p>Si tienes instalada la aplicación <strong>Pídetelo</strong> (Clientes) o <strong>Pídetelo Repartidor</strong> (Riders) en tu teléfono Android o iOS, puedes borrar tu cuenta al instante siguiendo estos pasos:</p>
                 <ol class="list-decimal list-inside space-y-1.5 pl-2 text-slate-600 dark:text-slate-300">
-                  <li>Abre la app <strong>Pídetelo</strong> con tu sesión iniciada.</li>
+                  <li>Abre la app <strong>Pídetelo</strong> o <strong>Pídetelo Repartidor</strong> con tu sesión iniciada.</li>
                   <li>En la barra inferior, entra a la pestaña <strong>Perfil</strong>.</li>
                   <li>Desplázate hasta la parte inferior y toca el botón <strong>Eliminar Cuenta</strong>.</li>
                   <li>Confirma tocando <strong>«Sí, Eliminar Cuenta»</strong>. Tu cuenta y datos personales se eliminarán de inmediato.</li>

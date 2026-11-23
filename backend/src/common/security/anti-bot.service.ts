@@ -71,7 +71,7 @@ const DISPOSABLE_EMAIL_DOMAINS = new Set<string>([
 @Injectable()
 export class AntiBotService {
   private readonly secret: string;
-  private readonly CHALLENGE_TTL_MS = 5 * 60 * 1000;
+  private readonly CHALLENGE_TTL_MS = 10 * 60 * 1000;
   private readonly MIN_HUMAN_DELAY_MS = 1800;
   private readonly RATE_WINDOW_MS = 60 * 60 * 1000;
   private readonly MAX_SUCCESS_PER_IP_HOUR = 3;

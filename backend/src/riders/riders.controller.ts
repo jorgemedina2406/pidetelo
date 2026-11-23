@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Param, Body, Query } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Param, Body, Query, Req } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { RidersService } from './riders.service.js';
 
@@ -72,9 +72,17 @@ export class RidersController {
   }
 
   @Post('register-with-verification')
-  @ApiOperation({ summary: 'Registrar nuevo repartidor con verificación automática biométrica y de documento' })
-  registerWithVerification(@Body() body: any) {
-    return this.ridersService.registerWithVerification(body);
+  @ApiOperation({ summary: 'Registrar nuevo repartidor con verificación automática biométrica, de documento y anti-bots' })
+  registerWithVerification(@Req() req: any, @Body() body: any) {
+    const rawIp =
+      (req?.headers?.['x-forwarded-for'] as string) ||
+      req?.socket?.remoteAddress ||
+      req?.ip ||
+      'unknown';
+    return this.ridersService.registerWithVerification({
+      ...body,
+      clientIp: String(rawIp),
+    });
   }
 
   @Post(':id/verify-certification')

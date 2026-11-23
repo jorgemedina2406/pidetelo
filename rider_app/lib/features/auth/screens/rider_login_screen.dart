@@ -1,8 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../../core/config/app_config.dart';
 import '../../../core/constants/legal_terms.dart';
 import '../../../core/services/session_service.dart';
 import '../widgets/animated_delivery_mascot.dart';
@@ -27,6 +30,7 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
   final _nationalIdController = TextEditingController();
   final _modelController = TextEditingController();
   final _plateController = TextEditingController();
+  final _challengeAnswerController = TextEditingController();
   final String _vehicleType = 'Moto';
 
   // Biometric & ID Document verification state
@@ -39,6 +43,58 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
   bool _isRegister = false;
   bool _keepMeSignedIn = true;
   bool _obscurePassword = true;
+  String _challengeToken = '';
+  String _challengePrompt = '';
+  bool _isLoadingChallenge = false;
+  String? _challengeError;
+
+  List<String> get _backendCandidateUrls => [
+        AppConfig.backendBaseUrl,
+        if (AppConfig.backendBaseUrl != 'https://api.pidetelo.app/api')
+          'https://api.pidetelo.app/api',
+      ];
+
+  Future<void> _loadRegisterChallenge() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoadingChallenge = true;
+      _challengeError = null;
+    });
+
+    for (final base in _backendCandidateUrls) {
+      try {
+        final res = await http
+            .get(Uri.parse('$base/auth/register-challenge'))
+            .timeout(const Duration(seconds: 8));
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          final decoded = jsonDecode(res.body);
+          if (decoded is Map &&
+              decoded['challengeToken'] != null &&
+              decoded['prompt'] != null) {
+            if (!mounted) return;
+            setState(() {
+              _challengeToken = decoded['challengeToken'].toString();
+              _challengePrompt = decoded['prompt'].toString();
+              _challengeAnswerController.clear();
+              _isLoadingChallenge = false;
+              _challengeError = null;
+            });
+            return;
+          }
+        }
+      } catch (e) {
+        debugPrint('[RiderLogin] challenge load error ($base): $e');
+      }
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _isLoadingChallenge = false;
+      _challengeToken = '';
+      _challengePrompt = '';
+      _challengeError = 'No pudimos cargar la verificación. Toca para reintentar.';
+    });
+  }
 
   @override
   void initState() {
@@ -149,6 +205,7 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
     _nationalIdController.dispose();
     _modelController.dispose();
     _plateController.dispose();
+    _challengeAnswerController.dispose();
     super.dispose();
   }
 
@@ -459,6 +516,22 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
         return;
       }
 
+      final challengeAnswer = _challengeAnswerController.text.trim();
+      if (_challengeToken.isEmpty || challengeAnswer.isEmpty) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Por favor resuelve la verificación humana antes de registrarte.'),
+            backgroundColor: Color(0xFFEF4444),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        if (_challengeToken.isEmpty) {
+          _loadRegisterChallenge();
+        }
+        return;
+      }
+
       final ok = await widget.sessionService.registerWithVerification(
         name: name,
         email: email,
@@ -470,11 +543,14 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
         vehiclePlate: plate,
         idDocumentBase64: _idDocumentBase64!,
         selfieBase64: _selfieBase64!,
+        challengeToken: _challengeToken,
+        challengeAnswer: challengeAnswer,
       );
 
       if (!ok) {
         if (!mounted) return;
         setState(() => _isLoading = false);
+        _loadRegisterChallenge();
         final errorMsg = widget.sessionService.lastErrorMessage ??
             'No se pudo completar la certificación. Verifica que las fotos sean nítidas y que tu correo no esté duplicado.';
         ScaffoldMessenger.of(context).showSnackBar(
@@ -792,6 +868,143 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
                           ],
                         ),
                       ),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: _challengeError != null
+                                ? const Color(0xFFFCA5A5)
+                                : const Color(0xFFE2E8F0),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(Icons.verified_user_outlined, size: 15, color: Color(0xFF3F7E24)),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Verificación humana',
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFF334155),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                GestureDetector(
+                                  onTap: _isLoadingChallenge ? null : _loadRegisterChallenge,
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.refresh_rounded, size: 14, color: Color(0xFF3F7E24)),
+                                      const SizedBox(width: 3),
+                                      Text(
+                                        'Cambiar',
+                                        style: GoogleFonts.outfit(
+                                          fontSize: 11.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: const Color(0xFF3F7E24),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            if (_isLoadingChallenge)
+                              Row(
+                                children: [
+                                  const SizedBox(
+                                    width: 14,
+                                    height: 14,
+                                    child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF3F7E24)),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Cargando verificación...',
+                                    style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFF64748B)),
+                                  ),
+                                ],
+                              )
+                            else if (_challengeError != null)
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      _challengeError!,
+                                      style: GoogleFonts.outfit(fontSize: 11.5, color: const Color(0xFFDC2626)),
+                                    ),
+                                  ),
+                                  TextButton(
+                                    onPressed: _loadRegisterChallenge,
+                                    child: const Text('Reintentar'),
+                                  ),
+                                ],
+                              )
+                            else
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(color: const Color(0xFFCBD5E1)),
+                                    ),
+                                    child: Text(
+                                      _challengePrompt.isNotEmpty ? _challengePrompt : '-- + -- = ?',
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w800,
+                                        color: const Color(0xFF0F172A),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(color: const Color(0xFFCBD5E1)),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                                      child: TextField(
+                                        controller: _challengeAnswerController,
+                                        keyboardType: TextInputType.number,
+                                        style: GoogleFonts.outfit(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w700,
+                                          color: const Color(0xFF0F172A),
+                                        ),
+                                        decoration: InputDecoration(
+                                          isDense: true,
+                                          filled: false,
+                                          fillColor: Colors.transparent,
+                                          contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                                          hintText: 'Respuesta',
+                                          hintStyle: GoogleFonts.outfit(fontSize: 13, color: const Color(0xFF94A3B8)),
+                                          border: InputBorder.none,
+                                          enabledBorder: InputBorder.none,
+                                          focusedBorder: InputBorder.none,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                          ],
+                        ),
+                      ),
                     ],
                     const SizedBox(height: 14),
 
@@ -947,7 +1160,13 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
                     // Toggle register/login in Spanish
                     Center(
                       child: GestureDetector(
-                        onTap: () => setState(() => _isRegister = !_isRegister),
+                        onTap: () {
+                          final next = !_isRegister;
+                          setState(() => _isRegister = next);
+                          if (next && _challengeToken.isEmpty && !_isLoadingChallenge) {
+                            _loadRegisterChallenge();
+                          }
+                        },
                         child: RichText(
                           text: TextSpan(
                             style: GoogleFonts.outfit(fontSize: 14, color: const Color(0xFF64748B)),
@@ -965,6 +1184,48 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
                             ],
                           ),
                         ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Center(
+                      child: Wrap(
+                        alignment: WrapAlignment.center,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 4,
+                        children: [
+                          Text(
+                            'Al continuar aceptas nuestros',
+                            style: GoogleFonts.outfit(fontSize: 11, color: const Color(0xFF94A3B8)),
+                          ),
+                          GestureDetector(
+                            onTap: () => _openLegalLink('https://pidetelo.app/legal/terminos'),
+                            child: Text(
+                              'Términos de Uso',
+                              style: GoogleFonts.outfit(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF2E6B1F),
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            'y',
+                            style: GoogleFonts.outfit(fontSize: 11, color: const Color(0xFF94A3B8)),
+                          ),
+                          GestureDetector(
+                            onTap: () => _openLegalLink('https://pidetelo.app/legal/privacidad'),
+                            child: Text(
+                              'Política de Privacidad',
+                              style: GoogleFonts.outfit(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF2E6B1F),
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -1163,5 +1424,17 @@ class _RiderLoginScreenState extends State<RiderLoginScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _openLegalLink(String url) async {
+    try {
+      final uri = Uri.parse(url);
+      if (await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+        return;
+      }
+    } catch (_) {}
+    if (mounted) {
+      _showLegalTermsModal();
+    }
   }
 }

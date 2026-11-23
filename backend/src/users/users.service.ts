@@ -1078,6 +1078,31 @@ export class UsersService {
     };
   }
 
+  private removeLocalRiderRecord(userId: string, email?: string): void {
+    try {
+      const ridersPath = path.resolve(process.cwd(), 'data', 'riders_storage.json');
+      if (!fs.existsSync(ridersPath)) return;
+      const raw = fs.readFileSync(ridersPath, 'utf-8');
+      const list = JSON.parse(raw);
+      if (!Array.isArray(list)) return;
+      const cleanId = String(userId || '').trim().toLowerCase();
+      const cleanEmail = String(email || '').trim().toLowerCase();
+      const filtered = list.filter((r: any) => {
+        const rid = String(r?.id || '').trim().toLowerCase();
+        const rUid = String(r?.user_id || '').trim().toLowerCase();
+        const rEmail = String(r?.email || '').trim().toLowerCase();
+        if (cleanId && (rid === cleanId || rUid === cleanId)) return false;
+        if (cleanEmail && rEmail === cleanEmail) return false;
+        return true;
+      });
+      if (filtered.length !== list.length) {
+        fs.writeFileSync(ridersPath, JSON.stringify(filtered, null, 2), 'utf-8');
+      }
+    } catch (err) {
+      console.warn('[UsersService] Error limpiando riders_storage.json del usuario eliminado:', err);
+    }
+  }
+
   private removePushTokensForUser(userId: string): void {
     try {
       const tokensPath = path.join(process.cwd(), 'data', 'push_tokens.json');
@@ -1169,6 +1194,15 @@ export class UsersService {
       }
     } catch (_) {}
 
+    try {
+      await client.from('riders').delete().eq('user_id', verifiedId);
+      await client.from('riders').delete().eq('id', verifiedId);
+      if (verifiedEmail) {
+        await client.from('riders').delete().eq('email', verifiedEmail);
+      }
+    } catch (_) {}
+
+    this.removeLocalRiderRecord(verifiedId, verifiedEmail);
     this.removePushTokensForUser(verifiedId);
 
     this.localUsers.delete(verifiedId);
