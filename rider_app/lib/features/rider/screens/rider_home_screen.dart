@@ -9,7 +9,6 @@ import '../../../core/models/user_model.dart';
 import '../../../core/services/dolar_api_service.dart';
 import '../../../core/services/rider_service.dart';
 import '../../../core/services/rider_location_service.dart';
-import '../../../core/services/background_order_service.dart';
 import '../../../core/services/notification_service.dart';
 import '../../../core/services/session_service.dart';
 import '../../../core/theme/app_theme.dart';
@@ -39,7 +38,6 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
     _dolarApi.init();
     if (riderId != null && riderId.isNotEmpty) {
       NotificationService().init(riderId: riderId);
-      BackgroundOrderService().startService(riderId);
       _locationService.addListener(_onLocationUpdate);
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _initLocationTrackingWithDisclosure(riderId);
@@ -2595,9 +2593,6 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
         ElevatedButton.icon(
           onPressed: () async {
             _locationService.stopTracking();
-            try {
-              await BackgroundOrderService().stopService();
-            } catch (_) {}
             await widget.sessionService.logout();
             if (!mounted) return;
             Navigator.of(context).pushAndRemoveUntil(
@@ -2639,7 +2634,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
         const SizedBox(height: 16),
         Center(
           child: Text(
-            'Pídetelo Rider v1.1.19 (22)',
+            'Pídetelo Rider v1.1.20 (23)',
             style: GoogleFonts.outfit(
               fontSize: 11,
               color: Colors.white38,
@@ -2736,9 +2731,6 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
     );
 
     _locationService.stopTracking();
-    try {
-      await BackgroundOrderService().stopService();
-    } catch (_) {}
 
     final result = await widget.sessionService.deleteAccount(
       password: pwdText.isNotEmpty ? pwdText : null,

@@ -14,7 +14,7 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION"/>
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" tools:node="remove"/>
     <application
         android:label="Pídetelo Repartidor"
         android:name="${applicationName}"
@@ -58,13 +58,6 @@
                 <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
             </intent-filter>
         </receiver>
-
-        <!-- Foreground Service declaration for background order monitoring -->
-        <service
-            android:name="com.pravera.flutter_foreground_task.service.ForegroundService"
-            android:foregroundServiceType="dataSync"
-            android:stopWithTask="false"
-            android:exported="false" />
 
         <!-- Foreground Service declaration for continuous GPS location tracking -->
         <service

@@ -4,7 +4,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/config/app_config.dart';
 import 'core/services/session_service.dart';
 import 'core/services/notification_service.dart';
-import 'core/services/background_order_service.dart';
 import 'core/services/dolar_api_service.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/screens/rider_login_screen.dart';
@@ -53,14 +52,6 @@ void main() async {
   final currentRiderId = sessionService.currentRider?.id;
   NotificationService().init(riderId: currentRiderId).catchError((e) {
     debugPrint('[RiderApp] NotificationService error: $e');
-  });
-
-  BackgroundOrderService().init().then((_) {
-    if (sessionService.isAuthenticated && sessionService.currentRider?.id != null) {
-      BackgroundOrderService().startService(sessionService.currentRider!.id);
-    }
-  }).catchError((e) {
-    debugPrint('[RiderApp] BackgroundOrderService error: $e');
   });
 
   // Variable para asegurar navegación incluso en arranque en frío (Cold Start)
