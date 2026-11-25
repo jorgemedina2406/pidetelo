@@ -89,6 +89,27 @@
           </div>
           }
 
+          <ng-template #detailItemThumbTpl let-item let-isAddition="isAddition">
+            @let imgUrl = getItemImageUrl(item);
+            @if (imgUrl) {
+            <button type="button" (click)="openItemPhoto(item, isAddition, $event)"
+              [title]="'Ampliar foto de ' + item.name"
+              class="relative w-12 h-12 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 shrink-0 group cursor-zoom-in focus:outline-none focus:ring-2 focus:ring-brand-500">
+              <img [src]="imgUrl" [alt]="item.name" loading="lazy" (error)="onItemImageError(imgUrl)"
+                class="w-full h-full object-cover transition-transform duration-200 group-hover:scale-110" />
+              <span
+                class="absolute inset-0 bg-slate-950/0 group-hover:bg-slate-950/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                <app-icon name="eye" [size]="14" className="text-white"></app-icon>
+              </span>
+            </button>
+            } @else {
+            <div
+              class="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-center text-slate-400 shrink-0">
+              <app-icon name="package" [size]="18"></app-icon>
+            </div>
+            }
+          </ng-template>
+
           <!-- Ítems del Pedido Inicial -->
           <div class="space-y-2">
             <span class="text-[10px] uppercase font-black tracking-wider text-slate-400">
@@ -97,17 +118,20 @@
             <div class="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-100 dark:border-slate-800 rounded-2xl overflow-hidden">
               @for (item of baseItems; track item.cartItemId) {
               <div class="p-3 bg-white dark:bg-slate-900 flex items-start justify-between gap-3">
-                <div>
-                  <div class="font-bold text-slate-800 dark:text-white flex items-center gap-1.5 flex-wrap">
-                    <span>{{ item.quantity }}x {{ item.name }}</span>
+                <div class="flex items-start gap-3 min-w-0 flex-1">
+                  <ng-container *ngTemplateOutlet="detailItemThumbTpl; context: { $implicit: item, isAddition: false }"></ng-container>
+                  <div class="min-w-0 flex-1">
+                    <div class="font-bold text-slate-800 dark:text-white flex items-center gap-1.5 flex-wrap">
+                      <span>{{ item.quantity }}x {{ item.name }}</span>
+                    </div>
+                    @if (getModifiersText(item.selectedModifiers)) {
+                    <div class="text-[11px] text-amber-500 dark:text-amber-400 font-semibold pl-2 mt-0.5">
+                      + {{ getModifiersText(item.selectedModifiers) }}
+                    </div>
+                    }
                   </div>
-                  @if (getModifiersText(item.selectedModifiers)) {
-                  <div class="text-[11px] text-amber-500 dark:text-amber-400 font-semibold pl-2 mt-0.5">
-                    + {{ getModifiersText(item.selectedModifiers) }}
-                  </div>
-                  }
                 </div>
-                <span class="font-mono font-bold text-slate-900 dark:text-white shrink-0">
+                <span class="font-mono font-bold text-slate-900 dark:text-white shrink-0 pt-0.5">
                   ${{ item.itemTotal.toFixed(2) }}
                 </span>
               </div>
@@ -124,20 +148,23 @@
             <div class="divide-y divide-orange-200/60 dark:divide-orange-900/40 border border-orange-300/70 dark:border-orange-800/60 rounded-2xl overflow-hidden">
               @for (item of additionItems; track item.cartItemId) {
               <div class="p-3 bg-orange-50/60 dark:bg-orange-950/20 flex items-start justify-between gap-3">
-                <div>
-                  <div class="font-bold text-orange-950 dark:text-orange-100 flex items-center gap-1.5 flex-wrap">
-                    <span>{{ item.quantity }}x {{ item.name }}</span>
-                    <span class="px-1.5 py-0.5 rounded bg-orange-600 text-white text-[9px] font-black uppercase">
-                      ADICIÓN
-                    </span>
+                <div class="flex items-start gap-3 min-w-0 flex-1">
+                  <ng-container *ngTemplateOutlet="detailItemThumbTpl; context: { $implicit: item, isAddition: true }"></ng-container>
+                  <div class="min-w-0 flex-1">
+                    <div class="font-bold text-orange-950 dark:text-orange-100 flex items-center gap-1.5 flex-wrap">
+                      <span>{{ item.quantity }}x {{ item.name }}</span>
+                      <span class="px-1.5 py-0.5 rounded bg-orange-600 text-white text-[9px] font-black uppercase">
+                        ADICIÓN
+                      </span>
+                    </div>
+                    @if (getModifiersText(item.selectedModifiers)) {
+                    <div class="text-[11px] text-amber-600 dark:text-amber-400 font-semibold pl-2 mt-0.5">
+                      + {{ getModifiersText(item.selectedModifiers) }}
+                    </div>
+                    }
                   </div>
-                  @if (getModifiersText(item.selectedModifiers)) {
-                  <div class="text-[11px] text-amber-600 dark:text-amber-400 font-semibold pl-2 mt-0.5">
-                    + {{ getModifiersText(item.selectedModifiers) }}
-                  </div>
-                  }
                 </div>
-                <span class="font-mono font-black text-orange-700 dark:text-orange-300 shrink-0">
+                <span class="font-mono font-black text-orange-700 dark:text-orange-300 shrink-0 pt-0.5">
                   ${{ item.itemTotal.toFixed(2) }}
                 </span>
               </div>
@@ -258,4 +285,12 @@
 
       </div>
     </div>
+
+    <app-product-image-lightbox
+      [imageUrl]="previewPhoto?.url || null"
+      [title]="previewPhoto?.title || ''"
+      [subtitle]="previewPhoto?.subtitle || ''"
+      [badge]="previewPhoto?.badge || ''"
+      (close)="closeItemPhoto()">
+    </app-product-image-lightbox>
     }

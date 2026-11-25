@@ -409,7 +409,8 @@ export class OrdersService {
     if (error) {
       throw new InternalServerErrorException(`Error fetching orders: ${error.message}`);
     }
-    return (data || []).map((order: any) => this.enrichOrderCurrency(order));
+    const enriched = (data || []).map((order: any) => this.enrichOrderCurrency(order));
+    return this.attachProductImages(enriched);
   }
 
   async findByDriver(driverId: string) {
@@ -423,7 +424,8 @@ export class OrdersService {
     if (error) {
       throw new InternalServerErrorException(`Error fetching driver orders: ${error.message}`);
     }
-    return (data || []).map((order: any) => this.enrichOrderCurrency(order));
+    const enriched = (data || []).map((order: any) => this.enrichOrderCurrency(order));
+    return this.attachProductImages(enriched);
   }
 
   async findById(id: string) {
@@ -446,7 +448,9 @@ export class OrdersService {
     if (error || !data) {
       throw new NotFoundException(`Pedido '${id}' no encontrado`);
     }
-    return this.enrichOrderCurrency(data);
+    const enriched = this.enrichOrderCurrency(data);
+    const [withImages] = await this.attachProductImages([enriched]);
+    return withImages;
   }
 
   private enrichOrderCurrency(order: any): any {
@@ -469,6 +473,70 @@ export class OrdersService {
       subtotal_bs: subtotalBs,
       discount_bs: discountBs,
     };
+  }
+
+  /**
+   * Enriches order_items[*].image_url from the products table in chunks of 200.
+   * Failures are caught silently so order fetching is never blocked.
+   */
+  private async attachProductImages(orders: any[]): Promise<any[]> {
+    if (!Array.isArray(orders) || orders.length === 0) return orders;
+
+    try {
+      const missingIds = new Set<string>();
+      for (const order of orders) {
+        const items = Array.isArray(order?.order_items) ? order.order_items : [];
+        for (const item of items) {
+          const hasImg = typeof item?.image_url === 'string' && item.image_url.trim().length > 0;
+          const pid = item?.product_id ? String(item.product_id).trim() : '';
+          if (!hasImg && pid) {
+            missingIds.add(pid);
+          }
+        }
+      }
+
+      if (missingIds.size === 0) return orders;
+
+      const productIds = Array.from(missingIds);
+      const imageMap = new Map<string, string>();
+      const client = this.supabase.getClient();
+
+      for (let i = 0; i < productIds.length; i += 200) {
+        const chunk = productIds.slice(i, i + 200);
+        const { data: prodRows } = await client
+          .from('products')
+          .select('id, image_url')
+          .in('id', chunk);
+
+        if (Array.isArray(prodRows)) {
+          for (const p of prodRows) {
+            const url = typeof p?.image_url === 'string' ? p.image_url.trim() : '';
+            if (p?.id && url) {
+              imageMap.set(String(p.id), url);
+            }
+          }
+        }
+      }
+
+      if (imageMap.size === 0) return orders;
+
+      return orders.map(order => {
+        if (!Array.isArray(order?.order_items) || order.order_items.length === 0) {
+          return order;
+        }
+        return {
+          ...order,
+          order_items: order.order_items.map((item: any) => {
+            const hasImg = typeof item?.image_url === 'string' && item.image_url.trim().length > 0;
+            if (hasImg || !item?.product_id) return item;
+            const resolvedUrl = imageMap.get(String(item.product_id).trim());
+            return resolvedUrl ? { ...item, image_url: resolvedUrl } : item;
+          }),
+        };
+      });
+    } catch {
+      return orders;
+    }
   }
 
   async updateStatus(id: string, status: string) {

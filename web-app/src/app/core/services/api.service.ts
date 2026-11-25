@@ -1907,23 +1907,28 @@ export class ApiService {
       } as Order;
     }
 
-    const items = (row.order_items || []).map((i: any) => ({
-      cartItemId: i.id || `item-${Date.now()}`,
-      productId: i.product_id || '',
-      name: i.product_name,
-      unitPrice: Number(i.unit_price),
-      quantity: i.quantity,
-      selectedModifiers: Array.isArray(i.selected_modifiers)
-        ? i.selected_modifiers.map((m: any) => ({
-          groupId: m.groupId || m.group_id || '',
-          groupTitle: m.groupTitle || m.group_title || '',
-          optionId: m.optionId || m.option_id || '',
-          optionName: m.optionName || m.option_name || m.name || '',
-          priceDelta: Number(m.priceDelta ?? m.price_delta ?? 0),
-        }))
-        : [],
-      itemTotal: Number(i.item_total),
-    }));
+    const items = (row.order_items || []).map((i: any) => {
+      const productObj = Array.isArray(i.products) ? i.products[0] : i.products;
+      const imageUrl = i.image_url || i.imageUrl || productObj?.image_url || productObj?.imageUrl || undefined;
+      return {
+        cartItemId: i.id || `item-${Date.now()}`,
+        productId: i.product_id || '',
+        name: i.product_name,
+        unitPrice: Number(i.unit_price),
+        quantity: i.quantity,
+        selectedModifiers: Array.isArray(i.selected_modifiers)
+          ? i.selected_modifiers.map((m: any) => ({
+            groupId: m.groupId || m.group_id || '',
+            groupTitle: m.groupTitle || m.group_title || '',
+            optionId: m.optionId || m.option_id || '',
+            optionName: m.optionName || m.option_name || m.name || '',
+            priceDelta: Number(m.priceDelta ?? m.price_delta ?? 0),
+          }))
+          : [],
+        itemTotal: Number(i.item_total),
+        imageUrl,
+      };
+    });
 
     const riderObj = Array.isArray(row.riders) ? row.riders[0] : row.riders;
     const vehicleText = riderObj?.vehicle_model

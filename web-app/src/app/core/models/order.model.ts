@@ -332,3 +332,70 @@ export function isOrderAgeRestricted(notes?: string | null): boolean {
   return /\[AGE_18_PLUS\]/i.test(String(notes || ''));
 }
 
+function normalizeProductImageMatchName(name?: string | null): string {
+  return String(name || '')
+    .replace(/\(\s*adici[oó]n[^)]*\)/gi, '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+export interface OrderItemPhotoPreview {
+  url: string;
+  title: string;
+  subtitle: string;
+  badge: string;
+}
+
+export function formatOrderModifiersText(modifiers?: any[] | null): string {
+  if (!modifiers || !Array.isArray(modifiers)) return '';
+  return modifiers
+    .map(m => m.optionName || m.option_name || m.name || '')
+    .filter((n: string) => typeof n === 'string' && n.trim().length > 0)
+    .join(', ');
+}
+
+export function resolveOrderItemImageUrl(
+  item: any,
+  products?: Array<{ id?: string; name?: string; imageUrl?: string }> | null
+): string | null {
+  const direct = String(item?.imageUrl ?? item?.image_url ?? '').trim();
+  if (direct) return direct;
+
+  if (!Array.isArray(products) || products.length === 0) return null;
+
+  const pid = String(item?.productId ?? item?.product_id ?? '').trim();
+  if (pid) {
+    const byId = products.find(p => String(p?.id || '').trim() === pid);
+    const idUrl = String(byId?.imageUrl || '').trim();
+    if (idUrl) return idUrl;
+  }
+
+  const itemName = normalizeProductImageMatchName(item?.name ?? item?.product_name);
+  if (itemName) {
+    const byName = products.find(p => normalizeProductImageMatchName(p?.name) === itemName);
+    const nameUrl = String(byName?.imageUrl || '').trim();
+    if (nameUrl) return nameUrl;
+  }
+
+  return null;
+}
+
+export function buildOrderItemPhotoPreview(
+  item: CartItem,
+  url: string,
+  isAddition = false
+): OrderItemPhotoPreview {
+  const mods = formatOrderModifiersText(item.selectedModifiers);
+  const priceText = `$${Number(item.itemTotal || 0).toFixed(2)}`;
+  const subtitle = mods ? `+ ${mods} · ${priceText}` : priceText;
+  return {
+    url,
+    title: `${item.quantity}x ${item.name}`,
+    subtitle,
+    badge: isAddition ? 'ADICIÓN' : '',
+  };
+}
+

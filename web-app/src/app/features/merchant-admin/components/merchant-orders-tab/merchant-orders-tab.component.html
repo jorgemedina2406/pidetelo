@@ -111,25 +111,51 @@
         }
       </ng-template>
 
+      <ng-template #orderItemThumbTpl let-item let-isAddition="isAddition">
+        @let imgUrl = getItemImageUrl(item);
+        @if (imgUrl) {
+        <button type="button" (click)="openItemPhoto(item, isAddition, $event)"
+          [title]="'Ampliar foto de ' + item.name"
+          class="relative w-9 h-9 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 shrink-0 group cursor-zoom-in focus:outline-none focus:ring-2 focus:ring-brand-500">
+          <img [src]="imgUrl" [alt]="item.name" loading="lazy" (error)="onItemImageError(imgUrl)"
+            class="w-full h-full object-cover transition-transform duration-200 group-hover:scale-110" />
+          <span
+            class="absolute inset-0 bg-slate-950/0 group-hover:bg-slate-950/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+            <app-icon name="eye" [size]="12" className="text-white"></app-icon>
+          </span>
+        </button>
+        } @else {
+        <div
+          class="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-center text-slate-400 shrink-0">
+          <app-icon name="package" [size]="14"></app-icon>
+        </div>
+        }
+      </ng-template>
+
       <ng-template #orderItemsSplitTpl let-o>
         @let bItems = getBaseItems(o);
         @let aItems = getAdditionItems(o);
-        <div class="text-[11px] space-y-1 py-0.5 text-slate-600 dark:text-slate-300">
+        <div class="text-[11px] space-y-1.5 py-0.5 text-slate-600 dark:text-slate-300">
           @if (aItems.length > 0) {
           <div class="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">
             Pedido Inicial (${{ getBaseTotal(o).toFixed(2) }})
           </div>
           }
           @for (item of bItems; track item.cartItemId) {
-          <div class="flex justify-between">
-            <span class="font-semibold">{{ item.quantity }}x {{ item.name }}</span>
-            <span class="font-bold">${{ item.itemTotal.toFixed(2) }}</span>
+          <div class="flex items-start justify-between gap-2 py-0.5">
+            <div class="flex items-start gap-2 min-w-0 flex-1">
+              <ng-container *ngTemplateOutlet="orderItemThumbTpl; context: { $implicit: item, isAddition: false }"></ng-container>
+              <div class="min-w-0 flex-1">
+                <div class="font-semibold leading-snug break-words">{{ item.quantity }}x {{ item.name }}</div>
+                @if (getModifiersText(item.selectedModifiers)) {
+                <div class="text-[10px] text-amber-500 dark:text-amber-400 font-semibold mt-0.5 leading-snug">
+                  + {{ getModifiersText(item.selectedModifiers) }}
+                </div>
+                }
+              </div>
+            </div>
+            <span class="font-bold shrink-0 pt-0.5">${{ item.itemTotal.toFixed(2) }}</span>
           </div>
-          @if (getModifiersText(item.selectedModifiers)) {
-          <div class="text-[10px] text-amber-500 dark:text-amber-400 font-semibold pl-2">
-            + {{ getModifiersText(item.selectedModifiers) }}
-          </div>
-          }
           }
 
           @if (aItems.length > 0) {
@@ -138,12 +164,22 @@
               ➕ Pedido Adicional
             </div>
             @for (item of aItems; track item.cartItemId) {
-            <div class="flex justify-between items-center text-orange-950 dark:text-orange-200 bg-orange-500/10 px-1.5 py-0.5 rounded">
-              <span class="font-bold flex items-center gap-1 min-w-0 truncate">
-                <span class="truncate">{{ item.quantity }}x {{ item.name }}</span>
-                <span class="text-[8px] px-1 rounded bg-orange-600 text-white font-black uppercase shrink-0">ADICIÓN</span>
-              </span>
-              <span class="font-black shrink-0 ml-1">${{ item.itemTotal.toFixed(2) }}</span>
+            <div class="flex items-start justify-between gap-2 text-orange-950 dark:text-orange-200 bg-orange-500/10 p-1.5 rounded-lg">
+              <div class="flex items-start gap-2 min-w-0 flex-1">
+                <ng-container *ngTemplateOutlet="orderItemThumbTpl; context: { $implicit: item, isAddition: true }"></ng-container>
+                <div class="min-w-0 flex-1">
+                  <div class="font-bold flex items-center gap-1 flex-wrap leading-snug">
+                    <span class="break-words">{{ item.quantity }}x {{ item.name }}</span>
+                    <span class="text-[8px] px-1 rounded bg-orange-600 text-white font-black uppercase shrink-0">ADICIÓN</span>
+                  </div>
+                  @if (getModifiersText(item.selectedModifiers)) {
+                  <div class="text-[10px] text-amber-600 dark:text-amber-400 font-semibold mt-0.5 leading-snug">
+                    + {{ getModifiersText(item.selectedModifiers) }}
+                  </div>
+                  }
+                </div>
+              </div>
+              <span class="font-black shrink-0 ml-1 pt-0.5">${{ item.itemTotal.toFixed(2) }}</span>
             </div>
             }
           </div>
@@ -238,7 +274,7 @@
             <ng-container *ngTemplateOutlet="additionHighlightBannerTpl; context: { $implicit: o }"></ng-container>
             <div class="flex items-start justify-between gap-2">
               <div>
-                <span class="text-brand-500 font-bold text-[10px] font-mono">{{ o.orderNumber }}</span>
+                <button type="button" (click)="openDetail.emit(o)" title="Ver comanda completa" class="text-brand-500 font-bold text-[10px] font-mono hover:underline cursor-pointer text-left">{{ o.orderNumber }}</button>
                 <div class="font-bold text-xs mt-0.5 text-slate-900 dark:text-white">{{ o.customer.name }}</div>
                 <div class="flex items-center gap-1 text-[10px] text-slate-400 font-medium mt-0.5">
                   <app-icon name="clock" [size]="10"></app-icon>
@@ -368,7 +404,7 @@
             <div class="flex items-start justify-between gap-2">
               <div>
                 <div class="flex items-center gap-1.5 flex-wrap">
-                  <span class="text-brand-500 font-bold text-[10px] font-mono">{{ o.orderNumber }}</span>
+                  <button type="button" (click)="openDetail.emit(o)" title="Ver comanda completa" class="text-brand-500 font-bold text-[10px] font-mono hover:underline cursor-pointer text-left">{{ o.orderNumber }}</button>
                   <ng-container *ngTemplateOutlet="orderSourceBadgeTpl; context: { $implicit: o }"></ng-container>
                 </div>
                 <div class="font-bold text-xs mt-0.5 text-slate-900 dark:text-white">{{ o.customer.name }}</div>
@@ -527,7 +563,7 @@
             <div class="flex items-start justify-between gap-2">
               <div>
                 <div class="flex items-center gap-1.5 flex-wrap">
-                  <span class="text-brand-500 font-bold text-[10px] font-mono">{{ o.orderNumber }}</span>
+                  <button type="button" (click)="openDetail.emit(o)" title="Ver comanda completa" class="text-brand-500 font-bold text-[10px] font-mono hover:underline cursor-pointer text-left">{{ o.orderNumber }}</button>
                   <ng-container *ngTemplateOutlet="orderSourceBadgeTpl; context: { $implicit: o }"></ng-container>
                 </div>
                 <div class="font-bold text-xs mt-0.5 text-slate-900 dark:text-white">{{ o.customer.name }}</div>
@@ -791,3 +827,11 @@
       }
 
     </div>
+
+    <app-product-image-lightbox
+      [imageUrl]="previewPhoto?.url || null"
+      [title]="previewPhoto?.title || ''"
+      [subtitle]="previewPhoto?.subtitle || ''"
+      [badge]="previewPhoto?.badge || ''"
+      (close)="closeItemPhoto()">
+    </app-product-image-lightbox>

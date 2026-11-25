@@ -3,14 +3,31 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '../../../../shared/components/icon.component';
 import { I18nService } from '../../../../core/services/i18n.service';
-import { Order, OrderStatus, parseOrderAdditions, OrderAddition, isOrderAdditionItem, getOrderSourceMeta, OrderSourceMeta, formatOrderDateTime, isOrderAgeRestricted } from '../../../../core/models/order.model';
+import {
+  Order,
+  OrderStatus,
+  CartItem,
+  OrderItemPhotoPreview,
+  parseOrderAdditions,
+  OrderAddition,
+  isOrderAdditionItem,
+  getOrderSourceMeta,
+  OrderSourceMeta,
+  formatOrderDateTime,
+  isOrderAgeRestricted,
+  formatOrderModifiersText,
+  resolveOrderItemImageUrl,
+  buildOrderItemPhotoPreview,
+} from '../../../../core/models/order.model';
 import { Branch } from '../../../../core/models/branch.model';
+import { Product } from '../../../../core/models/product.model';
 import { Rider } from '../../merchant-admin.component';
+import { ProductImageLightboxComponent } from '../product-image-lightbox/product-image-lightbox.component';
 
 @Component({
   selector: 'app-merchant-orders-tab',
   standalone: true,
-  imports: [CommonModule, FormsModule, IconComponent],
+  imports: [CommonModule, FormsModule, IconComponent, ProductImageLightboxComponent],
   templateUrl: './merchant-orders-tab.component.html'
 })
 export class MerchantOrdersTabComponent {
@@ -33,7 +50,11 @@ export class MerchantOrdersTabComponent {
   @Input() rejectedAlert: any = null;
   @Input() highlightedAdditionOrderIds: string[] = [];
   @Input() activeExchangeRate = 1;
+  @Input() products: Product[] = [];
   @Input() riders: Rider[] = [];
+
+  previewPhoto: OrderItemPhotoPreview | null = null;
+  private failedImageUrls = new Set<string>();
   @Input() getOwnRidersForOrder!: (order: Order) => Rider[];
   @Input() getNearbyRidersForOrder!: (order: Order) => Rider[];
 
@@ -58,11 +79,30 @@ export class MerchantOrdersTabComponent {
   }
 
   getModifiersText(modifiers: any[]): string {
-    if (!modifiers || !Array.isArray(modifiers)) return '';
-    return modifiers
-      .map(m => m.optionName || m.option_name || m.name || '')
-      .filter((n: string) => typeof n === 'string' && n.trim().length > 0)
-      .join(', ');
+    return formatOrderModifiersText(modifiers);
+  }
+
+  getItemImageUrl(item: CartItem): string | null {
+    const url = resolveOrderItemImageUrl(item, this.products);
+    if (!url || this.failedImageUrls.has(url)) return null;
+    return url;
+  }
+
+  onItemImageError(url?: string | null): void {
+    if (url) {
+      this.failedImageUrls.add(url);
+    }
+  }
+
+  openItemPhoto(item: CartItem, isAddition = false, event?: Event): void {
+    event?.stopPropagation();
+    const url = this.getItemImageUrl(item);
+    if (!url) return;
+    this.previewPhoto = buildOrderItemPhotoPreview(item, url, isAddition);
+  }
+
+  closeItemPhoto(): void {
+    this.previewPhoto = null;
   }
 
   getOrderBsTotal(usd: number, order?: Order | null): string {

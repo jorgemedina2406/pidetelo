@@ -220,6 +220,7 @@
       [rejectedAlert]="rejectedAlert()"
       [highlightedAdditionOrderIds]="highlightedAdditionOrderIds()"
       [activeExchangeRate]="activeExchangeRate()"
+      [products]="products()"
       [riders]="riders()"
       [getOwnRidersForOrder]="getOwnRidersForOrder.bind(this)"
       [getNearbyRidersForOrder]="getNearbyRidersForOrder.bind(this)"
@@ -492,7 +493,7 @@
 </app-order-route-modal>
 
 <!-- MODAL: DETALLE COMPLETO DE PEDIDO -->
-<app-order-detail-modal [isOpen]="isOrderDetailModalOpen()" [order]="selectedOrderDetail()"
+<app-order-detail-modal [isOpen]="isOrderDetailModalOpen()" [order]="selectedOrderDetail()" [products]="products()"
   [activeExchangeRate]="activeExchangeRate()" (close)="closeOrderDetail()" (viewRoute)="onViewOrderRoute($event)"
   (verifyAdditionPayment)="openAdditionVerificationModal($event)">
 </app-order-detail-modal>

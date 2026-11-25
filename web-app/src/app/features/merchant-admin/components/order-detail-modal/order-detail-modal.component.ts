@@ -1,22 +1,48 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Order, parseOrderAdditions, OrderAddition, isOrderAdditionItem, getOrderSourceMeta, OrderSourceMeta, formatOrderDateTime, isOrderAgeRestricted } from '../../../../core/models/order.model';
+import {
+  Order,
+  CartItem,
+  OrderItemPhotoPreview,
+  parseOrderAdditions,
+  OrderAddition,
+  isOrderAdditionItem,
+  getOrderSourceMeta,
+  OrderSourceMeta,
+  formatOrderDateTime,
+  isOrderAgeRestricted,
+  formatOrderModifiersText,
+  resolveOrderItemImageUrl,
+  buildOrderItemPhotoPreview,
+} from '../../../../core/models/order.model';
+import { Product } from '../../../../core/models/product.model';
 import { IconComponent } from '../../../../shared/components/icon.component';
+import { ProductImageLightboxComponent } from '../product-image-lightbox/product-image-lightbox.component';
 
 @Component({
   selector: 'app-order-detail-modal',
   standalone: true,
-  imports: [CommonModule, IconComponent],
+  imports: [CommonModule, IconComponent, ProductImageLightboxComponent],
   templateUrl: './order-detail-modal.component.html'
 })
-export class OrderDetailModalComponent {
+export class OrderDetailModalComponent implements OnChanges {
   @Input() isOpen = false;
   @Input() order: Order | null = null;
+  @Input() products: Product[] = [];
   @Input() activeExchangeRate = 45.50;
+
+  previewPhoto: OrderItemPhotoPreview | null = null;
+  private failedImageUrls = new Set<string>();
 
   @Output() close = new EventEmitter<void>();
   @Output() viewRoute = new EventEmitter<Order>();
   @Output() verifyAdditionPayment = new EventEmitter<{ order: Order; addition: OrderAddition }>();
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if ((changes['isOpen'] && !this.isOpen) || changes['order']) {
+      this.previewPhoto = null;
+    }
+  }
 
   get effectiveRate(): number {
     const ordRate = this.order?.exchangeRate || 0;
@@ -90,11 +116,30 @@ export class OrderDetailModalComponent {
   }
 
   getModifiersText(modifiers: any[]): string {
-    if (!modifiers || !Array.isArray(modifiers)) return '';
-    return modifiers
-      .map(m => m.optionName || m.option_name || m.name || '')
-      .filter((n: string) => typeof n === 'string' && n.trim().length > 0)
-      .join(', ');
+    return formatOrderModifiersText(modifiers);
+  }
+
+  getItemImageUrl(item: CartItem): string | null {
+    const url = resolveOrderItemImageUrl(item, this.products);
+    if (!url || this.failedImageUrls.has(url)) return null;
+    return url;
+  }
+
+  onItemImageError(url?: string | null): void {
+    if (url) {
+      this.failedImageUrls.add(url);
+    }
+  }
+
+  openItemPhoto(item: CartItem, isAddition = false, event?: Event): void {
+    event?.stopPropagation();
+    const url = this.getItemImageUrl(item);
+    if (!url) return;
+    this.previewPhoto = buildOrderItemPhotoPreview(item, url, isAddition);
+  }
+
+  closeItemPhoto(): void {
+    this.previewPhoto = null;
   }
 
   get sourceMeta(): OrderSourceMeta {
