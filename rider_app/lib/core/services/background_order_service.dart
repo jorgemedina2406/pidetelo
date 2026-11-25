@@ -149,8 +149,8 @@ class BackgroundOrderService {
       ),
       foregroundTaskOptions: ForegroundTaskOptions(
         eventAction: ForegroundTaskEventAction.repeat(3000), // Check every 3 seconds
-        autoRunOnBoot: true,
-        autoRunOnMyPackageReplaced: true,
+        autoRunOnBoot: false,
+        autoRunOnMyPackageReplaced: false,
         allowWakeLock: true,
         allowWifiLock: true,
       ),
@@ -162,11 +162,6 @@ class BackgroundOrderService {
       // Save riderId to shared preferences for background isolate access
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('rider_user_id_v1', riderId);
-
-      // Check permissions
-      if (!await FlutterForegroundTask.isIgnoringBatteryOptimizations) {
-        await FlutterForegroundTask.requestIgnoreBatteryOptimization();
-      }
 
       final notifPermission = await FlutterForegroundTask.checkNotificationPermission();
       if (notifPermission != NotificationPermission.granted) {

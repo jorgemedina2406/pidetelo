@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -71,16 +70,7 @@ class RiderLocationService extends ChangeNotifier {
 
       _permissionDenied = false;
 
-      // 3. En Android, solicitar exclusión de optimización de batería si aplica
-      if (defaultTargetPlatform == TargetPlatform.android) {
-        try {
-          if (!await FlutterForegroundTask.isIgnoringBatteryOptimizations) {
-            await FlutterForegroundTask.requestIgnoreBatteryOptimization();
-          }
-        } catch (_) {}
-      }
-
-      // 4. Obtener fijación inicial del sensor GPS con precisión de navegación
+      // 3. Obtener fijación inicial del sensor GPS con precisión de navegación
       try {
         final initialPos = await Geolocator.getCurrentPosition(
           locationSettings: const LocationSettings(

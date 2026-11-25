@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -39,9 +40,83 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
     if (riderId != null && riderId.isNotEmpty) {
       NotificationService().init(riderId: riderId);
       BackgroundOrderService().startService(riderId);
-      _locationService.startTracking(riderId);
       _locationService.addListener(_onLocationUpdate);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _initLocationTrackingWithDisclosure(riderId);
+      });
     }
+  }
+
+  Future<void> _initLocationTrackingWithDisclosure(String riderId) async {
+    try {
+      final perm = await Geolocator.checkPermission();
+      if (perm == LocationPermission.always || perm == LocationPermission.whileInUse) {
+        await _locationService.startTracking(riderId);
+        return;
+      }
+
+      if (perm == LocationPermission.denied && mounted) {
+        final accepted = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => AlertDialog(
+            backgroundColor: const Color(0xFF0F172A),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Row(
+              children: [
+                const Icon(Icons.location_on_rounded, color: AppTheme.primary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Permiso de Ubicación GPS',
+                    style: GoogleFonts.outfit(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            content: Text(
+              'Pídetelo Repartidor recopila tu ubicación GPS en tiempo real mediante una notificación activa para asignarte pedidos cercanos y mostrar tu ruta al comercio y al cliente mientras realizas entregas, incluso cuando apagas la pantalla o usas otra aplicación de mapas.',
+              style: GoogleFonts.outfit(
+                fontSize: 13.5,
+                height: 1.45,
+                color: const Color(0xFFCBD5E1),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: Text(
+                  'Ahora no',
+                  style: GoogleFonts.outfit(color: Colors.white54, fontWeight: FontWeight.w600),
+                ),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: Text(
+                  'Continuar y activar GPS',
+                  style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ),
+        );
+
+        if (accepted != true || !mounted) {
+          return;
+        }
+      }
+    } catch (_) {}
+
+    await _locationService.startTracking(riderId);
   }
 
   @override
@@ -1049,7 +1124,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
     if (_locationService.permissionDenied) {
       return GestureDetector(
         onTap: () {
-          if (riderId != null) _locationService.startTracking(riderId);
+          if (riderId != null) _initLocationTrackingWithDisclosure(riderId);
         },
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -2564,7 +2639,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
         const SizedBox(height: 16),
         Center(
           child: Text(
-            'Pídetelo Rider v1.1.18 (21)',
+            'Pídetelo Rider v1.1.19 (22)',
             style: GoogleFonts.outfit(
               fontSize: 11,
               color: Colors.white38,
