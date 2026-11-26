@@ -326,7 +326,7 @@
             <path
               d="M17.523 15.3414c-.5511 0-.9993-.4486-.9993-1.0007 0-.5512.4482-1.0006.9993-1.0006.5521 0 1.0003.4494 1.0003 1.0006 0 .5521-.4482 1.0007-1.0003 1.0007m-11.046 0c-.5511 0-.9993-.4486-.9993-1.0007 0-.5512.4482-1.0006.9993-1.0006.5521 0 1.0003.4494 1.0003 1.0006 0 .5521-.4482 1.0007-1.0003 1.0007m11.4045-6.02l1.9973-3.4592a.416.416 0 00-.1521-.5676.416.416 0 00-.5676.1521l-2.0223 3.503C15.5838 8.4116 13.854 8.134 12 8.134c-1.854 0-3.5838.2776-5.1368.8157L4.8409 5.4467a.416.416 0 00-.5676-.1521.416.416 0 00-.1521.5676l1.9973 3.4592C2.6889 11.1867.3432 14.6589 0 18.761h24c-.3432-4.1021-2.6889-7.5743-6.1185-9.4396" />
           </svg>
-          <span>Descargar Aplicaciones (APK / iOS)</span>
+          <span>Apps Móviles (Próximamente)</span>
         </button>
         <a href="#contacto"
           class="mobile-nav-link w-full py-3 rounded-xl bg-gradient-to-r from-brand-500 to-amber-500 text-white text-xs font-black text-center shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2">
@@ -394,16 +394,18 @@
             </a>
 
             <div class="flex flex-wrap items-center gap-3">
-              <a href="https://github.com/jorgemedina2406/pidetelo/releases/latest" target="_blank" rel="noopener"
-                class="transition-transform hover:scale-105 active:scale-95 inline-block">
-                <img src="assets/images/download-button-play.svg" alt="Descargar en Google Play"
+              <button type="button"
+                class="open-download-modal transition-transform hover:scale-105 active:scale-95 inline-block cursor-pointer"
+                title="Próximamente en Google Play">
+                <img src="assets/images/download-button-play.svg" alt="Próximamente en Google Play"
                   class="h-12 w-auto rounded-xl shadow-md" />
-              </a>
-              <a href="https://github.com/jorgemedina2406/pidetelo/releases/latest" target="_blank" rel="noopener"
-                class="transition-transform hover:scale-105 active:scale-95 inline-block">
-                <img src="assets/images/download-button-ios.svg" alt="Descargar en App Store"
+              </button>
+              <button type="button"
+                class="open-download-modal transition-transform hover:scale-105 active:scale-95 inline-block cursor-pointer"
+                title="Próximamente en App Store">
+                <img src="assets/images/download-button-ios.svg" alt="Próximamente en App Store"
                   class="h-12 w-auto rounded-xl shadow-md" />
-              </a>
+              </button>
             </div>
           </div>
 
@@ -1609,8 +1611,8 @@
           </button>
           <div
             class="faq-content hidden p-5 pt-0 text-xs text-slate-600 dark:text-slate-300 leading-relaxed border-t border-slate-100 dark:border-white/5">
-            Puedes descargar los instaladores oficiales (.APK para Android y .IPA/TestFlight para iOS) directamente
-            desde esta landing page haciendo clic en el botón superior "Descargar Apps", o solicitando el enlace a
+            Nuestras aplicaciones móviles para Clientes y Repartidores estarán disponibles próximamente en Google Play
+            Store y Apple App Store. Mientras tanto, puedes usar nuestra plataforma web y el bot de WhatsApp o escribir a
             nuestro soporte oficial.
           </div>
         </div>
@@ -1862,77 +1864,80 @@
       </button>
 
       <div>
-        <span class="text-brand-500 font-extrabold text-xs uppercase tracking-widest">Descargas Oficiales</span>
+        <span class="text-brand-500 font-extrabold text-xs uppercase tracking-widest">Próximamente en Tiendas Oficiales</span>
         <h3 class="font-heading font-black text-2xl text-slate-900 dark:text-white mt-1">
-          Descarga las Aplicaciones de Pídetelo
+          Apps de Pídetelo — Próximamente
         </h3>
-        <p class="text-xs text-slate-500 dark:text-slate-300 mt-1">
-          Versión oficial compilada v1.0.1 compatible con dispositivos Android e iOS.
+        <p class="text-xs text-slate-500 dark:text-slate-300 mt-1 leading-relaxed">
+          Actualmente estamos finalizando la publicación oficial en Google Play Store y Apple App Store. ¡Muy pronto podrás descargarlas!
         </p>
       </div>
 
-      <!-- Opciones de Descarga con Logos SVG Oficiales -->
+      <!-- Opciones Próximamente con Logos SVG Oficiales -->
       <div class="space-y-3">
-        <!-- App Cliente APK -->
-        <a href="https://github.com/jorgemedina2406/pidetelo/releases/latest" target="_blank"
-          class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-brand-500 flex items-center justify-between transition-all group shadow-xs">
-          <div class="flex items-center gap-3">
-            <img src="assets/images/download-button-play.svg" alt="Google Play"
-              class="h-10 w-auto rounded-lg shadow-xs" />
-            <div>
-              <div
-                class="font-bold text-xs text-slate-900 dark:text-white group-hover:text-brand-500 transition-colors">
-                App Clientes (Android APK)
+        <!-- App Cliente Android -->
+        <div
+          class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-3 shadow-xs">
+          <div class="flex items-center gap-3 min-w-0">
+            <img src="assets/images/download-button-play.svg" alt="Google Play Store"
+              class="h-10 w-auto rounded-lg shadow-xs shrink-0" />
+            <div class="min-w-0">
+              <div class="font-bold text-xs text-slate-900 dark:text-white truncate">
+                App Clientes (Android)
               </div>
-              <div class="text-[10px] text-slate-500 dark:text-slate-400 font-mono">Pidetelo-Cliente.apk</div>
+              <div class="text-[10px] text-slate-500 dark:text-slate-400">Google Play Store</div>
             </div>
           </div>
           <span
-            class="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-colors">Descargar</span>
-        </a>
+            class="px-3 py-1 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-bold text-[11px] shrink-0">Próximamente</span>
+        </div>
 
-        <!-- App Cliente iOS IPA -->
-        <a href="https://github.com/jorgemedina2406/pidetelo/releases/latest" target="_blank"
-          class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-brand-500 flex items-center justify-between transition-all group shadow-xs">
-          <div class="flex items-center gap-3">
-            <img src="assets/images/download-button-ios.svg" alt="App Store" class="h-10 w-auto rounded-lg shadow-xs" />
-            <div>
-              <div
-                class="font-bold text-xs text-slate-900 dark:text-white group-hover:text-brand-500 transition-colors">
-                App Clientes (iOS IPA)
+        <!-- App Cliente iOS -->
+        <div
+          class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-3 shadow-xs">
+          <div class="flex items-center gap-3 min-w-0">
+            <img src="assets/images/download-button-ios.svg" alt="Apple App Store"
+              class="h-10 w-auto rounded-lg shadow-xs shrink-0" />
+            <div class="min-w-0">
+              <div class="font-bold text-xs text-slate-900 dark:text-white truncate">
+                App Clientes (iOS)
               </div>
-              <div class="text-[10px] text-slate-500 dark:text-slate-400 font-mono">Pidetelo-Cliente.ipa</div>
+              <div class="text-[10px] text-slate-500 dark:text-slate-400">Apple App Store</div>
             </div>
           </div>
           <span
-            class="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition-colors">Descargar</span>
-        </a>
+            class="px-3 py-1 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-bold text-[11px] shrink-0">Próximamente</span>
+        </div>
 
-        <!-- App Rider APK -->
-        <a href="https://github.com/jorgemedina2406/pidetelo/releases/latest" target="_blank"
-          class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-blue-500 flex items-center justify-between transition-all group shadow-xs">
-          <div class="flex items-center gap-3">
+        <!-- App Repartidores -->
+        <div
+          class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-3 shadow-xs">
+          <div class="flex items-center gap-3 min-w-0">
             <div
-              class="w-10 h-10 rounded-xl bg-orange-500/15 text-orange-500 flex items-center justify-center font-black text-sm">
+              class="w-10 h-10 rounded-xl bg-orange-500/15 text-orange-500 flex items-center justify-center font-black text-sm shrink-0">
               🛵
             </div>
-            <div>
-              <div class="font-bold text-xs text-slate-900 dark:text-white group-hover:text-blue-500 transition-colors">
-                App Repartidores (Riders APK & IPA)
+            <div class="min-w-0">
+              <div class="font-bold text-xs text-slate-900 dark:text-white truncate">
+                App Repartidores (Pídetelo Rider)
               </div>
-              <div class="text-[10px] text-slate-500 dark:text-slate-400 font-mono">Pidetelo-Rider.apk & .ipa</div>
+              <div class="text-[10px] text-slate-500 dark:text-slate-400">Google Play & App Store</div>
             </div>
           </div>
           <span
-            class="px-3.5 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs shadow-xs transition-colors">Descargar</span>
-        </a>
+            class="px-3 py-1 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-bold text-[11px] shrink-0">Próximamente</span>
+        </div>
       </div>
 
       <div
-        class="text-[11px] text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-900/40 p-3.5 rounded-xl border border-slate-200 dark:border-white/5">
-        <strong>Nota de instalación en Android:</strong> Si tu teléfono te solicita habilitar <em>"Instalar aplicaciones
-          de fuentes desconocidas"</em>, actívalo para continuar con la instalación del archivo APK descargado.
+        class="text-[11px] text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-900/40 p-3.5 rounded-xl border border-slate-200 dark:border-white/5 leading-relaxed">
+        Mientras lanzamos oficialmente en tiendas, ya puedes explorar comercios, pedir o afiliar tu negocio desde nuestra plataforma web y WhatsApp.
       </div>
+
+      <button type="button"
+        class="close-download-modal w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs transition-colors cursor-pointer">
+        Entendido
+      </button>
 
     </div>
   </div>

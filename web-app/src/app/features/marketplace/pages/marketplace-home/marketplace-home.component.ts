@@ -75,6 +75,7 @@ export class MarketplaceHomeComponent implements OnInit {
   // --- NOTIFICACIONES & CUPONES DISPONIBLES PARA CLIENTE ---
   readonly notifications = signal<any[]>([]);
   readonly isNotificationsModalOpen = signal(false);
+  readonly isAppComingSoonModalOpen = signal(false);
   readonly copiedCouponCode = signal<string | null>(null);
 
   readonly categories = signal<MarketplaceCategory[]>([

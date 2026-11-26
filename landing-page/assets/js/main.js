@@ -229,30 +229,41 @@ function initFaqAccordion() {
 =================================================================== */
 function initDownloadModal() {
   const modal = document.getElementById('download-modal');
+  const mobileMenu = document.getElementById('mobile-menu');
   const openButtons = document.querySelectorAll('.open-download-modal');
   const closeButtons = document.querySelectorAll('.close-download-modal');
 
   if (!modal) return;
 
+  function closeModal() {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+
   openButtons.forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
+      if (mobileMenu) {
+        mobileMenu.classList.add('hidden');
+      }
       modal.classList.remove('hidden');
       modal.classList.add('flex');
     });
   });
 
   closeButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      modal.classList.add('hidden');
-      modal.classList.remove('flex');
-    });
+    btn.addEventListener('click', closeModal);
   });
 
   modal.addEventListener('click', (e) => {
     if (e.target === modal) {
-      modal.classList.add('hidden');
-      modal.classList.remove('flex');
+      closeModal();
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+      closeModal();
     }
   });
 }

@@ -518,24 +518,22 @@
                 Tu plataforma multi-comercio para descubrir menús oficiales, calcular delivery en tiempo real y hacer pedidos directos sin intermediarios costosos.
               </p>
 
-              <!-- App Store & Google Play Official Badges -->
+              <!-- App Store & Google Play Official Badges (Próximamente) -->
               <div class="pt-2 space-y-2.5">
-                <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Descarga la App Móvil</p>
+                <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">App Móvil · Próximamente</p>
                 <div class="flex flex-wrap items-center gap-2.5">
-                  <a href="https://github.com/jorgemedina2406/pidetelo/releases/latest" 
-                     target="_blank" 
-                     rel="noopener"
-                     title="Descargar APK para Android"
-                     class="transition-transform hover:scale-105 active:scale-95 inline-block">
-                    <img src="/assets/download-button-play.svg" alt="Disponible en Google Play" class="h-10 w-auto rounded-lg shadow-xs" />
-                  </a>
-                  <a href="https://github.com/jorgemedina2406/pidetelo/releases/latest" 
-                     target="_blank" 
-                     rel="noopener"
-                     title="Descargar IPA para iOS"
-                     class="transition-transform hover:scale-105 active:scale-95 inline-block">
-                    <img src="/assets/download-button-ios.svg" alt="Descargar en App Store" class="h-10 w-auto rounded-lg shadow-xs" />
-                  </a>
+                  <button type="button"
+                          (click)="isAppComingSoonModalOpen.set(true)"
+                          title="Próximamente disponible en Google Play"
+                          class="transition-transform hover:scale-105 active:scale-95 inline-block cursor-pointer">
+                    <img src="/assets/download-button-play.svg" alt="Próximamente en Google Play" class="h-10 w-auto rounded-lg shadow-xs" />
+                  </button>
+                  <button type="button"
+                          (click)="isAppComingSoonModalOpen.set(true)"
+                          title="Próximamente disponible en App Store"
+                          class="transition-transform hover:scale-105 active:scale-95 inline-block cursor-pointer">
+                    <img src="/assets/download-button-ios.svg" alt="Próximamente en App Store" class="h-10 w-auto rounded-lg shadow-xs" />
+                  </button>
                 </div>
               </div>
             </div>
@@ -558,7 +556,7 @@
               <ul class="space-y-2 text-xs text-slate-600 dark:text-slate-400">
                 <li><a routerLink="/auth/register" class="hover:text-brand-600 dark:hover:text-brand-400 transition-colors">Registra tu Comercio</a></li>
                 <li><a routerLink="/admin" class="hover:text-brand-600 dark:hover:text-brand-400 transition-colors">Merchant Portal</a></li>
-                <li><a href="https://github.com/jorgemedina2406/pidetelo/releases/latest" target="_blank" class="hover:text-brand-600 dark:hover:text-brand-400 transition-colors">App para Repartidores (Riders)</a></li>
+                <li><button type="button" (click)="isAppComingSoonModalOpen.set(true)" class="hover:text-brand-600 dark:hover:text-brand-400 transition-colors cursor-pointer text-left">App para Repartidores (Riders)</button></li>
                 <li><a routerLink="/explorar" class="hover:text-brand-600 dark:hover:text-brand-400 transition-colors">Directorio de Comercios</a></li>
               </ul>
             </div>
@@ -648,6 +646,57 @@
               </button>
             </div>
 
+          </div>
+        </div>
+      }
+
+      <!-- ================= MODAL: APPS MÓVILES PRÓXIMAMENTE ================= -->
+      @if (isAppComingSoonModalOpen()) {
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in"
+             (click)="isAppComingSoonModalOpen.set(false)">
+          <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 max-w-sm w-full space-y-4 shadow-2xl"
+               (click)="$event.stopPropagation()">
+            <div class="text-center space-y-2">
+              <div class="w-12 h-12 rounded-2xl bg-brand-500/10 text-brand-600 dark:text-brand-400 mx-auto flex items-center justify-center">
+                <app-icon name="smartphone" [size]="24"></app-icon>
+              </div>
+              <h3 class="font-bold text-base text-slate-900 dark:text-white">Apps Móviles · Próximamente</h3>
+              <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                Actualmente estamos finalizando la publicación en Google Play Store y Apple App Store. ¡Muy pronto podrás descargarlas!
+              </p>
+            </div>
+
+            <div class="space-y-2 pt-1">
+              <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 flex items-center gap-3">
+                <app-icon name="smartphone" [size]="20" className="text-emerald-500"></app-icon>
+                <div class="flex-1 min-w-0">
+                  <div class="text-xs font-bold text-slate-900 dark:text-white">Google Play Store</div>
+                  <div class="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">Próximamente disponible</div>
+                </div>
+              </div>
+
+              <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 flex items-center gap-3">
+                <app-icon name="smartphone" [size]="20" className="text-slate-800 dark:text-slate-200"></app-icon>
+                <div class="flex-1 min-w-0">
+                  <div class="text-xs font-bold text-slate-900 dark:text-white">Apple App Store</div>
+                  <div class="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">Próximamente disponible</div>
+                </div>
+              </div>
+
+              <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 flex items-center gap-3">
+                <app-icon name="bike" [size]="20" className="text-orange-500"></app-icon>
+                <div class="flex-1 min-w-0">
+                  <div class="text-xs font-bold text-slate-900 dark:text-white">App Repartidores (Riders)</div>
+                  <div class="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">Próximamente disponible</div>
+                </div>
+              </div>
+            </div>
+
+            <button (click)="isAppComingSoonModalOpen.set(false)"
+                    type="button"
+                    class="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs transition-colors cursor-pointer">
+              Entendido
+            </button>
           </div>
         </div>
       }
